@@ -1670,47 +1670,28 @@ function logAudit(leadId, entry, patch={}){
 
 /* ---- Action button click handling ----
    actionUIState drives what's shown below the action buttons. Every action
-   type (Call, Text, Email, Appointment, Other) now follows the same shape:
-   an optional note box that logs the action, then the same three outcome
-   buttons (Sign Up / Follow Up / Decline). We update state and re-render
-   synchronously so the UI responds instantly, independent of how long the
-   Firebase write takes. The write itself is fire-and-forget with a toast
-   on failure. */
+   type (Call, Text, Email, Appointment, Other) now behaves the same way:
+   clicking it immediately logs the action AND shows the Sign Up / Follow
+   Up / Decline outcome buttons straight away — no extra step required to
+   reveal them. An optional note field sits alongside for extra detail.
+   We update state and re-render synchronously so the UI responds
+   instantly, independent of how long the Firebase write takes. The write
+   itself is fire-and-forget with a toast on failure. */
 const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'Appointment', other:'Other contact'};
 
 function handleActionClick(lead, type){
-  actionUIState = {kind:type, stage:'note'};
+  const now = Date.now();
+  actionUIState = {kind:type};
   renderDynamicArea(lead);
+  logAudit(lead.id, {type, text:`${ACTION_LABELS[type]} logged`, byId:currentUser.id, byName:currentUser.name, at:now},
+    lead.status==='new' ? {status:'existing'} : {}).catch(err=> toast('Could not save: '+err.message,'error'));
 }
 
 function renderDynamicArea(lead){
   const area = document.getElementById('dynamicActionArea');
   if(!area) return;
 
-  if(actionUIState && actionUIState.stage === 'note'){
-    const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
-    area.innerHTML = `
-      <div class="inline-form">
-        <div class="field">
-          <label>${label} — add a note (optional)</label>
-          <textarea id="quickNote" placeholder="What did you cover / send?"></textarea>
-        </div>
-        <button class="btn btn-primary btn-sm" id="quickNoteSave">Log ${label.toLowerCase()}</button>
-      </div>`;
-    document.getElementById('quickNoteSave').addEventListener('click', ()=>{
-      const note = document.getElementById('quickNote').value.trim();
-      const text = `${label} logged` + (note? `: ${note}` : '');
-      const kind = actionUIState.kind;
-      logAudit(lead.id, {type:kind, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()},
-        lead.status==='new' ? {status:'existing'} : {}).then(()=>{
-          actionUIState = {kind, stage:'outcome'};
-          refreshLeadModal();
-        }).catch(err=> toast('Could not save: '+err.message,'error'));
-    });
-    return;
-  }
-
-  if(actionUIState && actionUIState.stage === 'outcome'){
+  if(actionUIState && actionUIState.kind && !actionUIState.stage){
     const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
     area.innerHTML = `
       <div class="outcome-panel">
@@ -1720,10 +1701,24 @@ function renderDynamicArea(lead){
           <button class="ob-followup" data-o="followup">Follow Up</button>
           <button class="ob-decline" data-o="decline">Decline</button>
         </div>
+      </div>
+      <div class="inline-form" style="margin-top:10px;">
+        <div class="field" style="margin-bottom:10px;">
+          <label>Add a note (optional)</label>
+          <textarea id="quickNote" placeholder="What did you cover / send?"></textarea>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="quickNoteSave">Save note</button>
       </div>`;
     area.querySelector('[data-o=signup]').addEventListener('click', ()=> openSignup(lead.id));
     area.querySelector('[data-o=followup]').addEventListener('click', ()=>{ actionUIState='followup'; renderDynamicArea(lead); });
     area.querySelector('[data-o=decline]').addEventListener('click', ()=>{ actionUIState='decline'; renderDynamicArea(lead); });
+    document.getElementById('quickNoteSave').addEventListener('click', ()=>{
+      const note = document.getElementById('quickNote').value.trim();
+      if(!note){ toast('Add some detail first.','error'); return; }
+      logAudit(lead.id, {type:actionUIState.kind, text:`${label} note: ${note}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+        .then(()=>{ toast('Note saved','success'); refreshLeadModal(); })
+        .catch(err=> toast('Could not save: '+err.message,'error'));
+    });
     return;
   }
 

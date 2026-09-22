@@ -1107,7 +1107,7 @@ function enterApp(){
   document.getElementById('userNameLbl').textContent = currentUser.name;
   document.getElementById('userRoleLbl').textContent = ROLE_LABEL[currentUser.role]||currentUser.role;
 
-  document.getElementById('newTaskBtn').classList.toggle('hidden', currentUser.role!=='admin' && currentUser.role!=='management');
+  document.getElementById('newTaskBtn').classList.remove('hidden');
   document.getElementById('settingsTab').classList.toggle('hidden', currentUser.role!=='management');
 
   const first = currentUser.name.split(' ')[0];

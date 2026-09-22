@@ -637,23 +637,23 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
       <div class="pots-grid">
         <div class="pot" data-pot="new">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--blue)"></span><h3>New Workflow Cases</h3></div><span class="pot-count" id="count-new">0</span></div>
+          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--blue)"></span><h3>New Cases</h3></div><span class="pot-count" id="count-new">0</span></div>
           <div class="pot-body" id="pot-new"></div>
         </div>
         <div class="pot" data-pot="existing">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--amber)"></span><h3>Existing Workflow Cases</h3></div><span class="pot-count" id="count-existing">0</span></div>
+          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--amber)"></span><h3>Contacted Clients</h3></div><span class="pot-count" id="count-existing">0</span></div>
           <div class="pot-body" id="pot-existing"></div>
-        </div>
-        <div class="pot" data-pot="decline">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--red)"></span><h3>Decline Workflow</h3></div><span class="pot-count" id="count-decline">0</span></div>
-          <div class="pot-body" id="pot-decline"></div>
         </div>
         <div class="pot" data-pot="signedup">
           <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--green)"></span><h3>Sign Ups</h3></div><span class="pot-count" id="count-signedup">0</span></div>
           <div class="pot-body" id="pot-signedup"></div>
         </div>
+        <div class="pot" data-pot="decline">
+          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--red)"></span><h3>Declines - Email not sent</h3></div><span class="pot-count" id="count-decline">0</span></div>
+          <div class="pot-body" id="pot-decline"></div>
+        </div>
         <div class="pot" data-pot="completed">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--teal)"></span><h3>Completed Workflow</h3></div><span class="pot-count" id="count-completed">0</span></div>
+          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--teal)"></span><h3>Declines - Email sent</h3></div><span class="pot-count" id="count-completed">0</span></div>
           <div class="pot-body" id="pot-completed"></div>
         </div>
       </div>
@@ -693,6 +693,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <label for="ntName">Client name</label>
         <input type="text" id="ntName" placeholder="e.g. Sarah Jenkins">
       </div>
+      <div id="ntExtraClients"></div>
+      <button type="button" class="btn btn-secondary btn-sm" id="ntAddClientBtn" style="margin-bottom:18px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>
+        Add client
+      </button>
       <div class="field">
         <label for="ntAdvisor">Advisor (MAPA)</label>
         <select id="ntAdvisor"><option value="">Select an advisor…</option></select>
@@ -1299,9 +1304,42 @@ function leadCardHtml(lead, potKey){
 /* ----------------------------------------------------------------------------
    8) NEW TASK (Admin creates & assigns a lead)
    ---------------------------------------------------------------------------- */
+const MAX_CLIENTS = 4;
+let ntExtraCount = 0;
+
+function ntResetExtraClients(){
+  ntExtraCount = 0;
+  document.getElementById('ntExtraClients').innerHTML = '';
+  document.getElementById('ntAddClientBtn').classList.remove('hidden');
+}
+
+document.getElementById('ntAddClientBtn').addEventListener('click', ()=>{
+  if(ntExtraCount >= MAX_CLIENTS - 1) return;
+  ntExtraCount++;
+  const wrap = document.getElementById('ntExtraClients');
+  const row = document.createElement('div');
+  row.className = 'field';
+  row.innerHTML = `
+    <label>Client name (joint applicant)</label>
+    <div style="display:flex; gap:8px;">
+      <input type="text" class="ntExtraName" placeholder="e.g. Jane Smith" style="flex:1;">
+      <button type="button" class="icon-btn del ntRemoveClient" title="Remove this client">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>`;
+  wrap.appendChild(row);
+  row.querySelector('.ntRemoveClient').addEventListener('click', ()=>{
+    row.remove();
+    ntExtraCount--;
+    document.getElementById('ntAddClientBtn').classList.remove('hidden');
+  });
+  if(ntExtraCount >= MAX_CLIENTS - 1) document.getElementById('ntAddClientBtn').classList.add('hidden');
+});
+
 document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   document.getElementById('ntName').value='';
   document.getElementById('ntDate').value='';
+  ntResetExtraClients();
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   const sel = document.getElementById('ntAdvisor');
   sel.innerHTML = '<option value="">Select an advisor…</option>' + mapas.map(([id,u])=>`<option value="${id}">${esc(u.name)}</option>`).join('');
@@ -1310,10 +1348,12 @@ document.getElementById('newTaskBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('ntSubmit').addEventListener('click', ()=>{
-  const name = document.getElementById('ntName').value.trim();
+  const extraNames = Array.from(document.querySelectorAll('.ntExtraName')).map(i=>i.value.trim()).filter(Boolean);
+  const names = [document.getElementById('ntName').value.trim(), ...extraNames].filter(Boolean);
+  const name = names.join(' & ');
   const advisorId = document.getElementById('ntAdvisor').value;
   const appDate = document.getElementById('ntDate').value;
-  if(!name){ toast("Please enter the client's name.",'error'); return; }
+  if(names.length===0){ toast("Please enter the client's name.",'error'); return; }
   if(!advisorId){ toast('Please choose an advisor.','error'); return; }
   if(!appDate){ toast('Please choose a mortgage application date.','error'); return; }
 
@@ -1322,7 +1362,7 @@ document.getElementById('ntSubmit').addEventListener('click', ()=>{
   const leadRef = db.ref('leads').push();
   const auditId = uidShort();
   const lead = {
-    clientName:name, advisorId, advisorName, appDate,
+    clientName:name, clientNames:names, advisorId, advisorName, appDate,
     status:'new', createdBy:currentUser.id, createdByName:currentUser.name, createdAt:now,
     audit:{ [auditId]: {type:'assigned', text:`Lead assigned to ${advisorName} by ${currentUser.name}`, byId:currentUser.id, byName:currentUser.name, at:now} }
   };

@@ -39,6 +39,7 @@
   --amber:#C4790A;   --amber-bg:#FDF1DF;
   --red:#D3325A;     --red-bg:#FBE7ED;
   --green:#1A9A63;   --green-bg:#E4F7EE;
+  --teal:#0E8F8F;    --teal-bg:#E2F6F6;
 
   --radius-sm:8px;
   --radius:14px;
@@ -281,9 +282,10 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .filter-chip.active{background:var(--ink); color:#fff; border-color:var(--ink);}
 .filter-chip:hover:not(.active){border-color:var(--brand-light); color:var(--brand);}
 
-.pots-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; align-items:start;}
-@media (max-width:1180px){.pots-grid{grid-template-columns:repeat(2,1fr);}}
-@media (max-width:680px){.pots-grid{grid-template-columns:1fr;}}
+.pots-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:16px; align-items:start;}
+@media (max-width:1400px){.pots-grid{grid-template-columns:repeat(3,1fr);}}
+@media (max-width:900px){.pots-grid{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:560px){.pots-grid{grid-template-columns:1fr;}}
 
 .pot{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm);}
 .pot-head{padding:15px 16px 13px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;}
@@ -294,7 +296,8 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .pot[data-pot="new"] .pot-count{background:var(--blue);}
 .pot[data-pot="existing"] .pot-count{background:var(--amber);}
 .pot[data-pot="decline"] .pot-count{background:var(--red);}
-.pot[data-pot="completed"] .pot-count{background:var(--green);}
+.pot[data-pot="signedup"] .pot-count{background:var(--green);}
+.pot[data-pot="completed"] .pot-count{background:var(--teal);}
 .pot-body{padding:10px; display:flex; flex-direction:column; gap:9px; max-height:640px; overflow-y:auto; min-height:80px;}
 .pot-empty{padding:26px 12px; text-align:center; color:var(--text-faint); font-size:12.5px;}
 
@@ -361,7 +364,8 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .status-pill.new{background:var(--blue-bg); color:var(--blue);}
 .status-pill.existing{background:var(--amber-bg); color:var(--amber);}
 .status-pill.decline{background:var(--red-bg); color:var(--red);}
-.status-pill.completed{background:var(--green-bg); color:var(--green);}
+.status-pill.signedup{background:var(--green-bg); color:var(--green);}
+.status-pill.completed{background:var(--teal-bg); color:var(--teal);}
 
 .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0 20px;}
 .info-cell{background:var(--bg); border-radius:10px; padding:11px 13px;}
@@ -619,8 +623,12 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--red)"></span><h3>Decline Workflow</h3></div><span class="pot-count" id="count-decline">0</span></div>
           <div class="pot-body" id="pot-decline"></div>
         </div>
+        <div class="pot" data-pot="signedup">
+          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--green)"></span><h3>Sign Ups</h3></div><span class="pot-count" id="count-signedup">0</span></div>
+          <div class="pot-body" id="pot-signedup"></div>
+        </div>
         <div class="pot" data-pot="completed">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--green)"></span><h3>Completed Workflow</h3></div><span class="pot-count" id="count-completed">0</span></div>
+          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--teal)"></span><h3>Completed Workflow</h3></div><span class="pot-count" id="count-completed">0</span></div>
           <div class="pot-body" id="pot-completed"></div>
         </div>
       </div>
@@ -1058,6 +1066,7 @@ function visibleLeads(){
 
 function potOf(lead){
   if(lead.status==='completed') return 'completed';
+  if(lead.status==='signedup') return 'signedup';
   if(lead.status==='decline') return 'decline';
   if(lead.status==='existing') return 'existing';
   return 'new';
@@ -1085,7 +1094,7 @@ function leadLastActivity(lead){
 function renderDashboard(){
   renderAdvisorFilter();
   const leads = visibleLeads();
-  const buckets = {new:[], existing:[], decline:[], completed:[]};
+  const buckets = {new:[], existing:[], decline:[], signedup:[], completed:[]};
   leads.forEach(l=> buckets[potOf(l)].push(l));
   Object.keys(buckets).forEach(k=>{
     buckets[k].sort((a,b)=>{
@@ -1111,7 +1120,7 @@ function renderDashboard(){
 
 function leadCardHtml(lead, potKey){
   const last = leadLastActivity(lead);
-  const flagColor = {new:'var(--blue)',existing:'var(--amber)',decline:'var(--red)',completed:'var(--green)'}[potKey];
+  const flagColor = {new:'var(--blue)',existing:'var(--amber)',decline:'var(--red)',signedup:'var(--green)',completed:'var(--teal)'}[potKey];
   const showAdvisor = currentUser.role!=='mapa';
   return `
     <div class="lead-card" data-id="${lead.id}">
@@ -1122,7 +1131,7 @@ function leadCardHtml(lead, potKey){
       <div class="lc-meta">
         ${showAdvisor ? `<span class="tag advisor">${esc(lead.advisorName||'Unassigned')}</span>` : ''}
         <span class="tag">App: ${fmtDate(lead.appDate)}</span>
-        ${lead.status==='completed' && lead.commission ? `<span class="tag" style="background:var(--green-bg);color:var(--green)">£${Number(lead.commission).toLocaleString()}</span>` : ''}
+        ${lead.status==='signedup' && lead.commission ? `<span class="tag" style="background:var(--green-bg);color:var(--green)">£${Number(lead.commission).toLocaleString()}</span>` : ''}
       </div>
       <div class="lc-activity">
         <span class="txt">${last ? esc(last.text) : 'No activity yet'}</span>
@@ -1190,7 +1199,7 @@ function refreshLeadModal(){ if(activeLeadId) renderLeadModal(); }
 
 function canAction(lead){
   if(!lead) return false;
-  if(lead.status==='completed') return false;
+  if(lead.status==='completed' || lead.status==='signedup') return false;
   if(currentUser.role==='management') return true;
   if(currentUser.role==='mapa' && lead.advisorId===currentUser.id) return true;
   return false;
@@ -1202,7 +1211,7 @@ function renderLeadModal(){
   const lead = {id: activeLeadId, ...raw};
   document.getElementById('ldClientName').textContent = lead.clientName;
 
-  const statusMap = {new:['new','New'],existing:['existing','In progress'],decline:['decline','Decline pending'],completed:['completed','Completed']};
+  const statusMap = {new:['new','New'],existing:['existing','In progress'],decline:['decline','Decline pending'],signedup:['signedup','Signed up'],completed:['completed','Completed']};
   const [statusClass, statusLabel] = statusMap[lead.status] || ['new','New'];
 
   let infoHtml = `
@@ -1212,7 +1221,7 @@ function renderLeadModal(){
       <div class="info-cell"><div class="lbl">Mortgage app date</div><div class="val">${fmtDate(lead.appDate)}</div></div>
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
-      ${lead.status==='completed' && lead.commission!=null ? `
+      ${lead.status==='signedup' && lead.commission!=null ? `
       <div class="info-cell commission full"><div class="lbl">Commission</div><div class="val">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
       ${lead.declineReason ? `
       <div class="info-cell decline-box full">
@@ -1236,6 +1245,11 @@ function renderLeadModal(){
         <button class="action-btn" data-act="other"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>Other</button>
       </div>
       <div id="dynamicActionArea"></div>
+      ${lead.status==='decline' ? `
+      <div class="outcome-panel" style="border-color:var(--red); background:var(--red-bg);">
+        <div class="op-title" style="color:var(--red);">⚠ This case is sitting in Decline Workflow because the client hasn't been sent their decline reasoning yet.</div>
+        <button id="declineSentBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:13px; font-weight:700;">✓ Decline Reasoning Sent</button>
+      </div>` : ''}
     `;
   }
 
@@ -1246,6 +1260,14 @@ function renderLeadModal(){
       btn.addEventListener('click', ()=> handleActionClick(lead, btn.dataset.act));
     });
     renderDynamicArea(lead);
+    if(lead.status==='decline'){
+      document.getElementById('declineSentBtn').addEventListener('click', ()=>{
+        logAudit(lead.id, {type:'sent', text:'Decline reasoning confirmed sent to client', byId:currentUser.id, byName:currentUser.name, at:Date.now()},
+          {status:'completed', declineSent:true})
+          .then(()=>{ toast('Marked as sent \u2014 moved to Completed Workflow','success'); refreshLeadModal(); })
+          .catch(err=> toast('Could not save: '+err.message,'error'));
+      });
+    }
   }
 
   // audit trail
@@ -1432,7 +1454,7 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
   const val = document.getElementById('commissionInput').value;
   if(val==='' || isNaN(val) || Number(val)<0){ toast('Please enter a valid commission amount.','error'); return; }
   const text = `Signed up — Commission £${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
-  logAudit(leadId, {type:'signup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'completed', commission:Number(val)})
+  logAudit(leadId, {type:'signup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'signedup', commission:Number(val)})
     .then(()=>{
       toast('Lead marked as signed up 🎉','success'); closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();

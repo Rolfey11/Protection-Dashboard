@@ -344,6 +344,7 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 #signupOverlay{z-index:110;}
 #deleteConfirmOverlay{z-index:110;}
 #reassignOverlay{z-index:110;}
+#changeStatusOverlay{z-index:110;}
 .modal{
   background:#fff; border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:100%; max-width:440px;
   max-height:90vh; overflow-y:auto; transform:translateY(14px) scale(.97); transition:transform .2s cubic-bezier(.2,.8,.2,1);
@@ -732,6 +733,34 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="reassignOverlay">Cancel</button>
       <button class="btn btn-primary" id="raSubmit">Reassign</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: CHANGE STATUS (MAPA on own leads, or Management)
+     ============================================================ -->
+<div class="modal-overlay" id="changeStatusOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>Change status</h2><button class="modal-close" data-close="changeStatusOverlay">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13.5px; color:var(--text-muted); margin-bottom:16px;">
+        Manually move <strong id="csClientName" style="color:var(--text);">this lead</strong> to a different pot. This is recorded in the audit trail.
+      </p>
+      <div class="field">
+        <label for="csStatus">Move to</label>
+        <select id="csStatus">
+          <option value="new">New Cases</option>
+          <option value="existing">Contacted Clients</option>
+          <option value="signedup">Sign Ups</option>
+          <option value="decline">Declines - Email not sent</option>
+          <option value="completed">Declines - Email sent</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="changeStatusOverlay">Cancel</button>
+      <button class="btn btn-primary" id="csSubmit">Save</button>
     </div>
   </div>
 </div>
@@ -1462,6 +1491,17 @@ function canAction(lead){
   return false;
 }
 
+/* Separate from canAction: this gates the "Change status" override, which
+   is allowed on ANY lead regardless of whether it's in a terminal state
+   (signed up / fully completed) — it exists specifically to correct
+   mistakes or put a case back into an earlier pot. */
+function canManageLead(lead){
+  if(!lead) return false;
+  if(currentUser.role==='management') return true;
+  if(currentUser.role==='mapa' && lead.advisorId===currentUser.id) return true;
+  return false;
+}
+
 function renderLeadModal(){
   const raw = LEADS[activeLeadId];
   if(!raw){ closeModal('leadOverlay'); return; }
@@ -1493,6 +1533,9 @@ function renderLeadModal(){
         <div class="val" style="font-weight:600;font-size:12px;margin-top:6px;color:${lead.declineSent?'var(--green)':'var(--red)'}">
           ${lead.declineSent? '✓ Decline reasoning sent to client' : '⚠ Decline reasoning NOT yet sent to client'}
         </div>
+        <div class="val" style="font-weight:600;font-size:12px;margin-top:3px;color:${lead.hlpAdded?'var(--green)':'var(--red)'}">
+          ${lead.hlpAdded? '✓ Added to HLP Portal' : '⚠ NOT yet added to HLP Portal'}
+        </div>
       </div>` : ''}
     </div>
   `;
@@ -1505,22 +1548,36 @@ function renderLeadModal(){
         <button class="action-btn" data-act="call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Call</button>
         <button class="action-btn" data-act="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Text</button>
         <button class="action-btn" data-act="email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>Email</button>
+        <button class="action-btn" data-act="appointment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Appointment</button>
         <button class="action-btn" data-act="other"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>Other</button>
       </div>
       <div id="dynamicActionArea"></div>
       ${lead.status==='decline' ? `
       <div class="outcome-panel" style="border-color:var(--red); background:var(--red-bg);">
-        <div class="op-title" style="color:var(--red);">⚠ This case is sitting in Decline Workflow because the client hasn't been sent their decline reasoning yet.</div>
-        <button id="declineSentBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:13px; font-weight:700;">✓ Decline Reasoning Sent</button>
+        <div class="op-title" style="color:var(--red);">⚠ This case is sitting in Decline Workflow because the decline reasoning hasn't been sent to the client and/or it hasn't been added to the HLP portal yet.</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button id="declineSentBtn" ${lead.declineSent?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead.declineSent?'var(--border-2)':'var(--green)'}; color:${lead.declineSent?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead.declineSent?'✓ Decline reasoning sent':'Mark: Decline Reasoning Sent'}</button>
+          <button id="hlpAddedBtn" ${lead.hlpAdded?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead.hlpAdded?'var(--border-2)':'var(--green)'}; color:${lead.hlpAdded?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead.hlpAdded?'✓ Added to HLP Portal':'Mark: Added to HLP Portal'}</button>
+        </div>
       </div>` : ''}
     `;
   }
 
-  document.getElementById('leadLeftPane').innerHTML = infoHtml + actionHtml;
+  const changeStatusHtml = canManageLead(lead) ? `
+    <div class="section-lbl">Manual override</div>
+    <button id="changeStatusBtn" class="btn btn-secondary" style="width:100%; justify-content:center;">Change status</button>
+  ` : '';
+
+  document.getElementById('leadLeftPane').innerHTML = infoHtml + actionHtml + changeStatusHtml;
 
   if(currentUser.role==='management'){
     const rb = document.getElementById('reassignBtn');
     if(rb) rb.addEventListener('click', ()=> openReassign(lead));
+  }
+
+  if(canManageLead(lead)){
+    const csb = document.getElementById('changeStatusBtn');
+    if(csb) csb.addEventListener('click', ()=> openChangeStatus(lead));
   }
 
   if(canAction(lead)){
@@ -1529,12 +1586,14 @@ function renderLeadModal(){
     });
     renderDynamicArea(lead);
     if(lead.status==='decline'){
-      document.getElementById('declineSentBtn').addEventListener('click', ()=>{
-        logAudit(lead.id, {type:'sent', text:'Decline reasoning confirmed sent to client', byId:currentUser.id, byName:currentUser.name, at:Date.now()},
-          {status:'completed', declineSent:true})
-          .then(()=>{ toast('Marked as sent \u2014 moved to Completed Workflow','success'); refreshLeadModal(); })
-          .catch(err=> toast('Could not save: '+err.message,'error'));
-      });
+      const sentBtn = document.getElementById('declineSentBtn');
+      const hlpBtn = document.getElementById('hlpAddedBtn');
+      if(sentBtn && !lead.declineSent){
+        sentBtn.addEventListener('click', ()=> markDeclineFlag(lead, 'declineSent', 'Decline reasoning confirmed sent to client'));
+      }
+      if(hlpBtn && !lead.hlpAdded){
+        hlpBtn.addEventListener('click', ()=> markDeclineFlag(lead, 'hlpAdded', 'Confirmed added to HLP Portal'));
+      }
     }
   }
 
@@ -1558,10 +1617,48 @@ function renderLeadModal(){
 
 function auditIcon(type){
   return {
-    assigned:'📌', call:'📞', text:'💬', email:'✉️', other:'📝',
-    signup:'✅', followup:'📅', decline:'❌', sent:'📤'
+    assigned:'📌', call:'📞', text:'💬', email:'✉️', appointment:'🗓️', other:'📝',
+    signup:'✅', followup:'📅', decline:'❌', sent:'📤', hlp:'🗂️', status:'🔀'
   }[type] || '•';
 }
+
+function markDeclineFlag(lead, field, auditText){
+  const willBeSent = field==='declineSent' ? true : !!lead.declineSent;
+  const willBeHlp = field==='hlpAdded' ? true : !!lead.hlpAdded;
+  const patch = {[field]: true};
+  if(willBeSent && willBeHlp) patch.status = 'completed';
+  logAudit(lead.id, {type: field==='declineSent'?'sent':'hlp', text:auditText, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, patch)
+    .then(()=>{
+      toast(willBeSent && willBeHlp ? 'Both confirmed — moved to Declines - Email sent' : 'Updated', 'success');
+      refreshLeadModal();
+    }).catch(err=> toast('Could not save: '+err.message,'error'));
+}
+
+function openChangeStatus(lead){
+  document.getElementById('csClientName').textContent = lead.clientName;
+  document.getElementById('csStatus').value = lead.status || 'new';
+  document.getElementById('csSubmit').dataset.leadId = lead.id;
+  openModal('changeStatusOverlay');
+}
+
+const STATUS_LABELS = {new:'New Cases', existing:'Contacted Clients', signedup:'Sign Ups', decline:'Declines - Email not sent', completed:'Declines - Email sent'};
+
+document.getElementById('csSubmit').addEventListener('click', function(){
+  const leadId = this.dataset.leadId;
+  const lead = LEADS[leadId];
+  if(!lead) return;
+  const newStatus = document.getElementById('csStatus').value;
+  if(newStatus === (lead.status||'new')){ toast("That's already the current status.",'error'); return; }
+  logAudit(leadId, {
+    type:'status', text:`Status manually changed to "${STATUS_LABELS[newStatus]}" by ${currentUser.name}`,
+    byId:currentUser.id, byName:currentUser.name, at:Date.now()
+  }, {status:newStatus}).then(()=>{
+    toast('Status updated','success');
+    closeModal('changeStatusOverlay');
+    actionUIState = null;
+    refreshLeadModal();
+  }).catch(err=> toast('Could not save: '+err.message,'error'));
+});
 
 function logAudit(leadId, entry, patch={}){
   const auditId = uidShort()+Date.now().toString(36);
@@ -1572,36 +1669,52 @@ function logAudit(leadId, entry, patch={}){
 }
 
 /* ---- Action button click handling ----
-   actionUIState drives what's shown below the action buttons. We update
-   the state and re-render synchronously so the UI responds instantly,
-   independent of how long the Firebase write takes. The Firebase write
-   itself is fire-and-forget with a toast on failure. */
+   actionUIState drives what's shown below the action buttons. Every action
+   type (Call, Text, Email, Appointment, Other) now follows the same shape:
+   an optional note box that logs the action, then the same three outcome
+   buttons (Sign Up / Follow Up / Decline). We update state and re-render
+   synchronously so the UI responds instantly, independent of how long the
+   Firebase write takes. The write itself is fire-and-forget with a toast
+   on failure. */
+const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'Appointment', other:'Other contact'};
+
 function handleActionClick(lead, type){
-  const now = Date.now();
-
-  if(type==='call'){
-    actionUIState = 'call';
-    renderDynamicArea(lead);
-    logAudit(lead.id, {type:'call', text:'Call logged', byId:currentUser.id, byName:currentUser.name, at:now},
-      lead.status==='new' ? {status:'existing'} : {}).catch(err=> toast('Could not save: '+err.message,'error'));
-    return;
-  }
-
-  if(type==='text' || type==='email' || type==='other'){
-    actionUIState = {kind:type};
-    renderDynamicArea(lead);
-    return;
-  }
+  actionUIState = {kind:type, stage:'note'};
+  renderDynamicArea(lead);
 }
 
 function renderDynamicArea(lead){
   const area = document.getElementById('dynamicActionArea');
   if(!area) return;
 
-  if(actionUIState === 'call'){
+  if(actionUIState && actionUIState.stage === 'note'){
+    const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
+    area.innerHTML = `
+      <div class="inline-form">
+        <div class="field">
+          <label>${label} — add a note (optional)</label>
+          <textarea id="quickNote" placeholder="What did you cover / send?"></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" id="quickNoteSave">Log ${label.toLowerCase()}</button>
+      </div>`;
+    document.getElementById('quickNoteSave').addEventListener('click', ()=>{
+      const note = document.getElementById('quickNote').value.trim();
+      const text = `${label} logged` + (note? `: ${note}` : '');
+      const kind = actionUIState.kind;
+      logAudit(lead.id, {type:kind, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()},
+        lead.status==='new' ? {status:'existing'} : {}).then(()=>{
+          actionUIState = {kind, stage:'outcome'};
+          refreshLeadModal();
+        }).catch(err=> toast('Could not save: '+err.message,'error'));
+    });
+    return;
+  }
+
+  if(actionUIState && actionUIState.stage === 'outcome'){
+    const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
     area.innerHTML = `
       <div class="outcome-panel">
-        <div class="op-title">📞 Call outcome</div>
+        <div class="op-title">${label} outcome</div>
         <div class="outcome-buttons">
           <button class="ob-signup" data-o="signup">Sign Up</button>
           <button class="ob-followup" data-o="followup">Follow Up</button>
@@ -1648,9 +1761,14 @@ function renderDynamicArea(lead){
             <option value="">Select a reason…</option>
             <option>Didn't want cover</option>
             <option>Has existing cover already</option>
-            <option>Declined for medical reasons</option>
+            <option>Unable to offer terms</option>
             <option>Not interested</option>
+            <option>Unable to Contact</option>
           </select>
+        </div>
+        <div id="dcContactWarning" class="hidden" style="display:flex; gap:9px; background:var(--amber-bg); border:1.5px solid var(--amber); border-radius:10px; padding:12px 13px; margin-bottom:16px;">
+          <span style="font-size:16px;">⚠️</span>
+          <span style="font-size:12.5px; font-weight:600; color:var(--amber);">Before declining, please ensure you have tried to contact the client 10 times.</span>
         </div>
         <div class="field">
           <label for="dcDetail">Please give detail of why this client has declined</label>
@@ -1660,13 +1778,26 @@ function renderDynamicArea(lead){
           <div class="check-tick" id="dcTick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
           <label id="dcTickLabel">Have you sent decline reasoning to client?</label>
         </div>
+        <div class="checkbox-row">
+          <div class="check-tick" id="dcTick2"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <label id="dcTickLabel2">Have you added to HLP Portal?</label>
+        </div>
         <button class="btn btn-primary btn-sm" id="dcSave">Submit decline</button>
       </div>`;
-    let sent = false;
+
+    document.getElementById('dcReason').addEventListener('change', function(){
+      document.getElementById('dcContactWarning').classList.toggle('hidden', this.value !== 'Unable to Contact');
+    });
+
+    let sent = false, hlp = false;
     const tick = document.getElementById('dcTick');
+    const tick2 = document.getElementById('dcTick2');
     const toggleTick = ()=>{ sent=!sent; tick.classList.toggle('checked', sent); };
+    const toggleTick2 = ()=>{ hlp=!hlp; tick2.classList.toggle('checked', hlp); };
     tick.addEventListener('click', toggleTick);
     document.getElementById('dcTickLabel').addEventListener('click', toggleTick);
+    tick2.addEventListener('click', toggleTick2);
+    document.getElementById('dcTickLabel2').addEventListener('click', toggleTick2);
 
     document.getElementById('dcSave').addEventListener('click', ()=>{
       const reason = document.getElementById('dcReason').value;
@@ -1674,37 +1805,18 @@ function renderDynamicArea(lead){
       if(!reason){ toast('Please select a decline reason.','error'); return; }
       if(!detail){ toast('Please add detail for the decline.','error'); return; }
       const text = `Declined — ${reason}: ${detail}`;
-      const newStatus = sent ? 'completed' : 'decline';
+      const newStatus = (sent && hlp) ? 'completed' : 'decline';
       logAudit(lead.id, {type:'decline', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {
-        status:newStatus, declineReason:reason, declineDetail:detail, declineSent:sent
+        status:newStatus, declineReason:reason, declineDetail:detail, declineSent:sent, hlpAdded:hlp
       }).then(()=>{
         if(sent){
           logAudit(lead.id, {type:'sent', text:'Decline reasoning confirmed sent to client', byId:currentUser.id, byName:currentUser.name, at:Date.now()+1});
         }
+        if(hlp){
+          logAudit(lead.id, {type:'hlp', text:'Confirmed added to HLP Portal', byId:currentUser.id, byName:currentUser.name, at:Date.now()+2});
+        }
         toast('Decline recorded','success'); actionUIState=null; refreshLeadModal();
       }).catch(err=> toast('Could not save: '+err.message,'error'));
-    });
-    return;
-  }
-
-  if(actionUIState && actionUIState.kind){
-    const labels = {text:'Text',email:'Email',other:'Other contact'};
-    const label = labels[actionUIState.kind];
-    area.innerHTML = `
-      <div class="inline-form">
-        <div class="field">
-          <label>${label} — add a note</label>
-          <textarea id="quickNote" placeholder="What did you cover / send?"></textarea>
-        </div>
-        <button class="btn btn-primary btn-sm" id="quickNoteSave">Log ${label.toLowerCase()}</button>
-      </div>`;
-    document.getElementById('quickNoteSave').addEventListener('click', ()=>{
-      const note = document.getElementById('quickNote').value.trim();
-      const text = `${label} logged` + (note? `: ${note}` : '');
-      logAudit(lead.id, {type:actionUIState.kind, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()},
-        lead.status==='new' ? {status:'existing'} : {}).then(()=>{
-          toast(label+' logged','success'); actionUIState=null; refreshLeadModal();
-        }).catch(err=> toast('Could not save: '+err.message,'error'));
     });
     return;
   }

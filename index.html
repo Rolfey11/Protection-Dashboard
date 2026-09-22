@@ -326,6 +326,8 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .modal-overlay.open{opacity:1; pointer-events:auto;}
 /* Sign-up modal can open on top of the lead detail modal, so it needs a higher stacking context */
 #signupOverlay{z-index:110;}
+#deleteConfirmOverlay{z-index:110;}
+#reassignOverlay{z-index:110;}
 .modal{
   background:#fff; border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:100%; max-width:440px;
   max-height:90vh; overflow-y:auto; transform:translateY(14px) scale(.97); transition:transform .2s cubic-bezier(.2,.8,.2,1);
@@ -685,6 +687,28 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 </div>
 
 <!-- ============================================================
+     MODAL: REASSIGN LEAD (Management)
+     ============================================================ -->
+<div class="modal-overlay" id="reassignOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>Reassign lead</h2><button class="modal-close" data-close="reassignOverlay">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13.5px; color:var(--text-muted); margin-bottom:16px;">
+        Move <strong id="raClientName" style="color:var(--text);">this lead</strong> to a different advisor. They'll be notified, and the change is recorded in the audit trail.
+      </p>
+      <div class="field">
+        <label for="raAdvisor">Advisor (MAPA)</label>
+        <select id="raAdvisor"><option value="">Select an advisor…</option></select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="reassignOverlay">Cancel</button>
+      <button class="btn btn-primary" id="raSubmit">Reassign</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
      MODAL: ADD / EDIT USER (Settings)
      ============================================================ -->
 <div class="modal-overlay" id="userOverlay">
@@ -747,7 +771,12 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div>
         <h2 id="ldClientName">Client name</h2>
       </div>
-      <button class="modal-close" data-close="leadOverlay">✕</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="icon-btn del hidden" id="leadDeleteBtn" title="Delete this case">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+        <button class="modal-close" data-close="leadOverlay">✕</button>
+      </div>
     </div>
     <div class="lead-detail-grid">
       <div class="lead-left" id="leadLeftPane"><!-- populated by JS --></div>
@@ -755,6 +784,24 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <div class="audit-head">🕒 Audit trail</div>
         <div class="audit-list" id="auditList"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: DELETE CONFIRMATION (Management only)
+     ============================================================ -->
+<div class="modal-overlay" id="deleteConfirmOverlay">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-head"><h2>Delete this case?</h2><button class="modal-close" data-close="deleteConfirmOverlay">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px; color:var(--text); line-height:1.5;">
+        You're about to permanently delete <strong id="deleteLeadName">this lead</strong>, including its full audit trail. This can't be undone.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="deleteConfirmOverlay">Cancel</button>
+      <button class="btn btn-danger" id="deleteConfirmBtn" style="background:var(--red); color:#fff;">Yes, delete it</button>
     </div>
   </div>
 </div>
@@ -966,13 +1013,16 @@ function attemptLogin(){
   if(!u){ showLoginError('Please select your name.'); return; }
   if(String(u.pin) !== pinBuffer){ showLoginError('Incorrect PIN. Please try again.'); return; }
   currentUser = {id, name:u.name, role:u.role, pin:u.pin};
-  localStorage.setItem('plt_uid', id);
+  // sessionStorage (not localStorage): survives a refresh in this tab, but
+  // is cleared automatically the moment the tab or browser is closed —
+  // switching tabs or backgrounding the browser does NOT log them out.
+  sessionStorage.setItem('plt_uid', id);
   enterApp();
 }
 loginBtn.addEventListener('click', attemptLogin);
 
 function tryAutoLogin(){
-  const saved = localStorage.getItem('plt_uid');
+  const saved = sessionStorage.getItem('plt_uid');
   if(saved && USERS[saved]){
     currentUser = {id:saved, name:USERS[saved].name, role:USERS[saved].role, pin:USERS[saved].pin};
     enterApp();
@@ -981,7 +1031,7 @@ function tryAutoLogin(){
 
 function logout(){
   currentUser = null;
-  localStorage.removeItem('plt_uid');
+  sessionStorage.removeItem('plt_uid');
   document.getElementById('appShell').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
   pinBuffer=''; renderPinDots();
@@ -1065,8 +1115,12 @@ function visibleLeads(){
 }
 
 function potOf(lead){
-  if(lead.status==='completed') return 'completed';
   if(lead.status==='signedup') return 'signedup';
+  // Backwards-compatibility: leads signed up before this pot existed were
+  // saved with status "completed" plus a commission and no decline reason.
+  // Treat those as Sign Ups rather than Completed Workflow.
+  if(lead.status==='completed' && lead.commission!=null && !lead.declineReason) return 'signedup';
+  if(lead.status==='completed') return 'completed';
   if(lead.status==='decline') return 'decline';
   if(lead.status==='existing') return 'existing';
   return 'new';
@@ -1186,6 +1240,48 @@ document.getElementById('ntSubmit').addEventListener('click', ()=>{
   }).catch(err=> toast('Could not save: '+err.message,'error'));
 });
 
+/* ---- Reassign a lead to a different advisor (Management only) ---- */
+function openReassign(lead){
+  document.getElementById('raClientName').textContent = lead.clientName;
+  const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
+  const sel = document.getElementById('raAdvisor');
+  sel.innerHTML = '<option value="">Select an advisor…</option>' +
+    mapas.map(([id,u])=> `<option value="${id}" ${id===lead.advisorId?'selected':''}>${esc(u.name)}</option>`).join('');
+  document.getElementById('raSubmit').dataset.leadId = lead.id;
+  openModal('reassignOverlay');
+}
+
+document.getElementById('raSubmit').addEventListener('click', function(){
+  const leadId = this.dataset.leadId;
+  const lead = LEADS[leadId];
+  if(!lead) return;
+  const newAdvisorId = document.getElementById('raAdvisor').value;
+  if(!newAdvisorId){ toast('Please choose an advisor.','error'); return; }
+  if(newAdvisorId === lead.advisorId){ toast('That\'s already who this lead is assigned to.','error'); return; }
+
+  const newAdvisorName = USERS[newAdvisorId]?.name || 'Unknown';
+  const oldAdvisorName = lead.advisorName || 'Unassigned';
+  const now = Date.now();
+
+  logAudit(leadId, {
+    type:'assigned',
+    text:`Reassigned from ${oldAdvisorName} to ${newAdvisorName} by ${currentUser.name}`,
+    byId:currentUser.id, byName:currentUser.name, at:now
+  }, {advisorId:newAdvisorId, advisorName:newAdvisorName}).then(()=>{
+    db.ref('notifications').push({
+      leadId, leadName:lead.clientName, toUserId:newAdvisorId, toRole:null,
+      message:`A lead has been reassigned to you: ${lead.clientName}`, at:now, readBy:{}
+    });
+    db.ref('notifications').push({
+      leadId, leadName:lead.clientName, toUserId:null, toRole:'management',
+      message:`${lead.clientName} was reassigned from ${oldAdvisorName} to ${newAdvisorName}`, at:now, readBy:{}
+    });
+    toast('Lead reassigned to '+newAdvisorName, 'success');
+    closeModal('reassignOverlay');
+    refreshLeadModal();
+  }).catch(err=> toast('Could not save: '+err.message,'error'));
+});
+
 /* ----------------------------------------------------------------------------
    9) LEAD DETAIL MODAL
    ---------------------------------------------------------------------------- */
@@ -1193,9 +1289,28 @@ function openLead(id){
   activeLeadId = id;
   actionUIState = null;
   renderLeadModal();
+  document.getElementById('leadDeleteBtn').classList.toggle('hidden', currentUser.role!=='management');
   openModal('leadOverlay');
 }
 function refreshLeadModal(){ if(activeLeadId) renderLeadModal(); }
+
+document.getElementById('leadDeleteBtn').addEventListener('click', ()=>{
+  const lead = LEADS[activeLeadId];
+  if(!lead) return;
+  document.getElementById('deleteLeadName').textContent = lead.clientName;
+  openModal('deleteConfirmOverlay');
+});
+
+document.getElementById('deleteConfirmBtn').addEventListener('click', ()=>{
+  if(!activeLeadId) return;
+  const leadId = activeLeadId;
+  db.ref('leads/'+leadId).remove().then(()=>{
+    toast('Case deleted','success');
+    closeModal('deleteConfirmOverlay');
+    closeModal('leadOverlay');
+    activeLeadId = null;
+  }).catch(err=> toast('Could not delete: '+err.message,'error'));
+});
 
 function canAction(lead){
   if(!lead) return false;
@@ -1211,17 +1326,18 @@ function renderLeadModal(){
   const lead = {id: activeLeadId, ...raw};
   document.getElementById('ldClientName').textContent = lead.clientName;
 
+  const potKey = potOf(lead);
   const statusMap = {new:['new','New'],existing:['existing','In progress'],decline:['decline','Decline pending'],signedup:['signedup','Signed up'],completed:['completed','Completed']};
-  const [statusClass, statusLabel] = statusMap[lead.status] || ['new','New'];
+  const [statusClass, statusLabel] = statusMap[potKey] || ['new','New'];
 
   let infoHtml = `
     <span class="status-pill ${statusClass}">${statusLabel}</span>
     <div class="info-grid">
-      <div class="info-cell"><div class="lbl">Advisor</div><div class="val">${esc(lead.advisorName)}</div></div>
+      <div class="info-cell"><div class="lbl">Advisor</div><div class="val">${esc(lead.advisorName)}</div>${currentUser.role==='management' ? `<button id="reassignBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Reassign</button>` : ''}</div>
       <div class="info-cell"><div class="lbl">Mortgage app date</div><div class="val">${fmtDate(lead.appDate)}</div></div>
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
-      ${lead.status==='signedup' && lead.commission!=null ? `
+      ${potKey==='signedup' && lead.commission!=null ? `
       <div class="info-cell commission full"><div class="lbl">Commission</div><div class="val">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
       ${lead.declineReason ? `
       <div class="info-cell decline-box full">
@@ -1254,6 +1370,11 @@ function renderLeadModal(){
   }
 
   document.getElementById('leadLeftPane').innerHTML = infoHtml + actionHtml;
+
+  if(currentUser.role==='management'){
+    const rb = document.getElementById('reassignBtn');
+    if(rb) rb.addEventListener('click', ()=> openReassign(lead));
+  }
 
   if(canAction(lead)){
     document.querySelectorAll('#actionBar .action-btn').forEach(btn=>{

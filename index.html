@@ -1151,10 +1151,22 @@ function renderDashboard(){
   const buckets = {new:[], existing:[], decline:[], signedup:[], completed:[]};
   leads.forEach(l=> buckets[potOf(l)].push(l));
   Object.keys(buckets).forEach(k=>{
-    buckets[k].sort((a,b)=>{
-      const la = leadLastActivity(a), lb = leadLastActivity(b);
-      return (lb?.at||b.createdAt||0) - (la?.at||a.createdAt||0);
-    });
+    if(k==='existing'){
+      // Soonest (or most overdue) call due first; cases with no follow-up
+      // date set fall back to most-recent-activity, after the dated ones.
+      buckets[k].sort((a,b)=>{
+        const da = a.followUpDate ? new Date(a.followUpDate).getTime() : Infinity;
+        const db = b.followUpDate ? new Date(b.followUpDate).getTime() : Infinity;
+        if(da !== db) return da - db;
+        const la = leadLastActivity(a), lb = leadLastActivity(b);
+        return (lb?.at||b.createdAt||0) - (la?.at||a.createdAt||0);
+      });
+    } else {
+      buckets[k].sort((a,b)=>{
+        const la = leadLastActivity(a), lb = leadLastActivity(b);
+        return (lb?.at||b.createdAt||0) - (la?.at||a.createdAt||0);
+      });
+    }
   });
 
   Object.keys(buckets).forEach(potKey=>{
@@ -1172,6 +1184,23 @@ function renderDashboard(){
   });
 }
 
+/* Renders a small coloured "call due" badge for a follow-up date: red if
+   overdue, amber if due today, blue if upcoming. Returns '' if no date set. */
+function followUpBadge(dateStr){
+  if(!dateStr) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dateStr); due.setHours(0,0,0,0);
+  const diffDays = Math.round((due - today) / 86400000);
+
+  let label, colorVar, bgVar;
+  if(diffDays < 0){ label = `Overdue — ${fmtDate(dateStr)}`; colorVar='var(--red)'; bgVar='var(--red-bg)'; }
+  else if(diffDays === 0){ label = 'Call due today'; colorVar='var(--amber)'; bgVar='var(--amber-bg)'; }
+  else if(diffDays === 1){ label = 'Call due tomorrow'; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
+  else{ label = `Call due ${fmtDate(dateStr)}`; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
+
+  return `<span class="tag" style="background:${bgVar};color:${colorVar};font-weight:700;">📞 ${label}</span>`;
+}
+
 function leadCardHtml(lead, potKey){
   const last = leadLastActivity(lead);
   const flagColor = {new:'var(--blue)',existing:'var(--amber)',decline:'var(--red)',signedup:'var(--green)',completed:'var(--teal)'}[potKey];
@@ -1182,6 +1211,7 @@ function leadCardHtml(lead, potKey){
         <div class="lc-name">${esc(lead.clientName)}</div>
         <div class="lc-flag" style="background:${flagColor}"></div>
       </div>
+      ${potKey==='existing' && lead.followUpDate ? `<div class="lc-meta">${followUpBadge(lead.followUpDate)}</div>` : ''}
       <div class="lc-meta">
         ${showAdvisor ? `<span class="tag advisor">${esc(lead.advisorName||'Unassigned')}</span>` : ''}
         <span class="tag">App: ${fmtDate(lead.appDate)}</span>
@@ -1337,6 +1367,11 @@ function renderLeadModal(){
       <div class="info-cell"><div class="lbl">Mortgage app date</div><div class="val">${fmtDate(lead.appDate)}</div></div>
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
+      ${potOf(lead)==='existing' && lead.followUpDate ? `
+      <div class="info-cell full" style="background:var(--amber-bg);">
+        <div class="lbl" style="color:var(--amber);">Next call due</div>
+        <div class="val" style="color:var(--amber);">${followUpBadge(lead.followUpDate).replace(/<[^>]+>/g,'').trim()}</div>
+      </div>` : ''}
       ${potKey==='signedup' && lead.commission!=null ? `
       <div class="info-cell commission full"><div class="lbl">Commission</div><div class="val">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
       ${lead.declineReason ? `
@@ -1485,7 +1520,7 @@ function renderDynamicArea(lead){
       const comment = document.getElementById('fuComment').value.trim();
       if(!date){ toast('Please choose a follow-up date.','error'); return; }
       const text = `Follow-up scheduled for ${fmtDate(date)}` + (comment? ` — ${comment}` : '');
-      logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing'})
+      logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date})
         .then(()=>{ toast('Follow-up saved','success'); actionUIState=null; refreshLeadModal(); })
         .catch(err=> toast('Could not save: '+err.message,'error'));
     });

@@ -228,9 +228,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .brand-text .t1{font-family:var(--fh); font-weight:800; font-size:15px; color:var(--brand);}
 .brand-text .t2{font-size:11px; color:var(--text-muted); font-weight:500;}
 
-.nav-tabs{display:flex; gap:4px; align-items:center; flex:1 1 auto; min-width:0; overflow-x:auto; scrollbar-width:thin;}
-.nav-tabs::-webkit-scrollbar{height:4px;}
-.nav-tabs::-webkit-scrollbar-thumb{background:var(--border-2); border-radius:99px;}
+.nav-tabs{display:flex; gap:4px; align-items:center; flex-shrink:0;}
+
+.daterange-wrap{position:relative; flex-shrink:0; margin-left:6px;}
+.daterange-btn{
+  display:flex; align-items:center; gap:7px; padding:8px 13px; border-radius:9px;
+  border:1.5px solid var(--border); background:#fff; font-size:12.5px; font-weight:600; color:var(--ink-2);
+  white-space:nowrap; transition:.15s;
+}
+.daterange-btn svg:first-child{width:14px; height:14px; stroke:var(--text-faint); flex-shrink:0;}
+.daterange-btn:hover{border-color:var(--brand-light); color:var(--brand);}
+.daterange-btn.active{border-color:var(--brand); background:var(--brand-tint); color:var(--brand);}
+.daterange-panel{
+  position:absolute; top:46px; left:0; width:260px;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-lg);
+  padding:16px; z-index:50; display:none;
+}
+.daterange-panel.open{display:block; animation:popIn .15s ease;}
+.daterange-panel .field{margin-bottom:12px;}
+.daterange-panel .field label{font-size:11px;}
+.daterange-panel-foot{display:flex; justify-content:space-between; align-items:center; margin-top:4px;}
 .nav-tab{
   padding:9px 16px; border-radius:9px; border:none; background:transparent;
   font-size:14px; font-weight:600; color:var(--text-muted); transition:.15s; flex-shrink:0; white-space:nowrap;
@@ -239,6 +256,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .nav-tab.active{background:var(--brand); color:#fff;}
 
 .topbar-right{display:flex; align-items:center; gap:14px; flex-shrink:0; margin-left:auto;}
+
+@media (max-width:1180px){
+  .brand-text .t2{display:none;}
+}
+@media (max-width:1040px){
+  .topbar-right{gap:8px;}
+  .user-meta .ur{display:none;}
+  .nav-tab{padding:9px 11px;}
+}
+@media (max-width:900px){
+  .user-meta{display:none;}
+  .user-chip{padding:5px; gap:0;}
+  .daterange-btn span{display:none;}
+  .daterange-btn{padding:8px 9px;}
+}
+@media (max-width:800px){
+  .brand-text{display:none;}
+  .topbar-inner{padding:0 14px; gap:10px;}
+  .nav-tab{padding:8px 9px; font-size:13px;}
+}
 
 .bell-wrap{position:relative;}
 .bell-btn{
@@ -347,18 +384,6 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
   font-size:13px; width:230px; color:var(--text); transition:border-color .15s, width .15s;
 }
 .search-wrap input:focus{border-color:var(--brand-light); width:270px;}
-
-.date-range-input{
-  padding:6px 10px; border:1.5px solid var(--border-2); border-radius:8px; background:var(--surface);
-  font-size:12.5px; color:var(--text);
-}
-
-.topbar-daterange{display:flex; align-items:center; gap:7px; padding-left:14px; margin-left:10px; border-left:1px solid var(--border); flex-shrink:0;}
-.topbar-daterange span{font-size:11.5px; color:var(--text-faint); font-weight:600; white-space:nowrap;}
-.topbar-daterange .date-range-input{padding:5px 8px; font-size:12px;}
-.topbar-daterange #dateRangeLabel{display:none;}
-@media (max-width:1150px){ .topbar-daterange .to-label{display:none;} }
-@media (max-width:880px){ .topbar-daterange{display:none;} }
 
 .pots-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:16px; align-items:start;}
 @media (max-width:1400px){.pots-grid{grid-template-columns:repeat(3,1fr);}}
@@ -710,14 +735,28 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <button class="nav-tab hidden" data-page="insights" id="insightsTab">Insights</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
-        <div class="topbar-daterange">
-          <span>Date range:</span>
-          <input type="date" id="dateFrom" class="date-range-input">
-          <span class="to-label">to</span>
-          <input type="date" id="dateTo" class="date-range-input">
-          <button class="btn btn-secondary btn-sm" id="dateRangeApply">Apply</button>
-          <button class="btn btn-ghost btn-sm" id="dateRangeReset">Reset</button>
-          <span id="dateRangeLabel"></span>
+      </div>
+
+      <div class="daterange-wrap" id="daterangeWrap">
+        <button class="daterange-btn" id="daterangeBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span id="daterangeBtnLabel">All dates</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="daterange-panel" id="daterangePanel">
+          <div class="field">
+            <label for="dateFrom">From</label>
+            <input type="date" id="dateFrom">
+          </div>
+          <div class="field">
+            <label for="dateTo">To</label>
+            <input type="date" id="dateTo">
+          </div>
+          <div class="daterange-panel-foot">
+            <button class="btn btn-ghost btn-sm" id="dateRangeReset">Reset to all</button>
+            <button class="btn btn-primary btn-sm" id="dateRangeApply">Apply</button>
+          </div>
+          <span id="dateRangeLabel" class="hidden"></span>
         </div>
       </div>
 
@@ -1505,20 +1544,41 @@ document.getElementById('globalSearch').addEventListener('input', function(){
 
 /* Date range: default is "all cases" (both blank). Apply narrows the
    dashboard to leads whose mortgage application date falls in range;
-   Reset clears it. */
+   Reset clears it. Shown as a compact popover button (like the bell) so
+   it doesn't compete for topbar space on smaller screens. */
 function renderDateRangeLabel(){
-  const lbl = document.getElementById('dateRangeLabel');
-  if(!dateRangeFrom && !dateRangeTo){ lbl.textContent = 'Showing all cases'; return; }
-  const from = dateRangeFrom ? fmtDate(dateRangeFrom) : 'the start';
+  const btnLbl = document.getElementById('daterangeBtnLabel');
+  const btn = document.getElementById('daterangeBtn');
+  if(!dateRangeFrom && !dateRangeTo){
+    btnLbl.textContent = 'All dates';
+    btn.classList.remove('active');
+    return;
+  }
+  const from = dateRangeFrom ? fmtDate(dateRangeFrom) : 'start';
   const to = dateRangeTo ? fmtDate(dateRangeTo) : 'now';
-  lbl.textContent = `Showing ${from} → ${to}`;
+  btnLbl.textContent = `${from} → ${to}`;
+  btn.classList.add('active');
 }
+
+document.getElementById('daterangeBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('daterangePanel').classList.toggle('open');
+  document.getElementById('bellPanel')?.classList.remove('open');
+});
+document.addEventListener('click', (e)=>{
+  const panel = document.getElementById('daterangePanel');
+  const wrap = document.getElementById('daterangeWrap');
+  if(panel.classList.contains('open') && wrap && !wrap.contains(e.target)){
+    panel.classList.remove('open');
+  }
+});
 
 document.getElementById('dateRangeApply').addEventListener('click', ()=>{
   dateRangeFrom = document.getElementById('dateFrom').value || null;
   dateRangeTo = document.getElementById('dateTo').value || null;
   renderDateRangeLabel();
   renderDashboard();
+  document.getElementById('daterangePanel').classList.remove('open');
 });
 
 document.getElementById('dateRangeReset').addEventListener('click', ()=>{
@@ -1527,6 +1587,7 @@ document.getElementById('dateRangeReset').addEventListener('click', ()=>{
   document.getElementById('dateTo').value = '';
   renderDateRangeLabel();
   renderDashboard();
+  document.getElementById('daterangePanel').classList.remove('open');
 });
 
 function renderDashboard(){
@@ -2260,6 +2321,7 @@ function renderNotifs(){
 document.getElementById('bellBtn').addEventListener('click', (e)=>{
   e.stopPropagation();
   document.getElementById('bellPanel').classList.toggle('open');
+  document.getElementById('daterangePanel')?.classList.remove('open');
 });
 document.addEventListener('click', (e)=>{
   const panel = document.getElementById('bellPanel');

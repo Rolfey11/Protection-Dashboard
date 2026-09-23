@@ -920,10 +920,16 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <h1>Settings</h1>
           <p class="sub">Manage colleague access — name, user level and PIN.</p>
         </div>
-        <button class="btn btn-primary" id="addUserBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          Add Colleague
-        </button>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-secondary" id="uploadDataBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+            Upload Data
+          </button>
+          <button class="btn btn-primary" id="addUserBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add Colleague
+          </button>
+        </div>
       </div>
       <div class="settings-card">
         <table class="users-table">
@@ -970,7 +976,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <select id="ntAdvisor"><option value="">Select an advisor…</option></select>
       </div>
       <div class="field">
-        <label for="ntDate">Mortgage application date</label>
+        <label for="ntDate">Task Created</label>
         <input type="date" id="ntDate">
       </div>
     </div>
@@ -1027,6 +1033,51 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="changeStatusOverlay">Cancel</button>
       <button class="btn btn-primary" id="csSubmit">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: UPLOAD DATA (Settings — bulk import historical leads)
+     ============================================================ -->
+<div class="modal-overlay" id="uploadDataOverlay">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head"><h2>Upload Data</h2><button class="modal-close" data-close="uploadDataOverlay">✕</button></div>
+    <div class="modal-body">
+
+      <div id="udPickStage">
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
+          Import historical leads from a CSV file. It needs three columns — <strong>Date created</strong>, <strong>Advisor</strong>, and <strong>Client</strong> (for joint clients, separate names with a comma in the same cell, e.g. "John Smith,Jane Smith"). Column order doesn't matter, and the header names are matched automatically.
+        </p>
+        <div class="field">
+          <label for="udFileInput">CSV file</label>
+          <input type="file" id="udFileInput" accept=".csv,text/csv">
+        </div>
+        <div id="udParseError" class="hidden" style="display:flex; gap:9px; background:var(--red-bg); border:1.5px solid var(--red); border-radius:10px; padding:11px 13px; margin-top:4px;">
+          <span style="font-size:15px;">⚠️</span>
+          <span style="font-size:12px; font-weight:600; color:var(--red);" id="udParseErrorText"></span>
+        </div>
+      </div>
+
+      <div id="udPreviewStage" class="hidden">
+        <div class="stat-grid" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:18px;">
+          <div class="stat-card accent"><div class="sv" id="udCountReady">0</div><div class="sl">Ready to import</div></div>
+          <div class="stat-card warn"><div class="sv" id="udCountUnassigned">0</div><div class="sl">Unassigned advisor</div></div>
+          <div class="stat-card bad"><div class="sv" id="udCountSkipped">0</div><div class="sl">Skipped (bad row)</div></div>
+        </div>
+        <div class="section-lbl" style="margin-top:0;">Preview (first 5)</div>
+        <div class="settings-card" style="margin-bottom:4px;">
+          <table class="users-table" id="udPreviewTable">
+            <thead><tr><th>Client</th><th>Advisor</th><th>Task Created</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="uploadDataOverlay">Cancel</button>
+      <button class="btn btn-primary hidden" id="udImportBtn">Import leads</button>
     </div>
   </div>
 </div>
@@ -1190,7 +1241,7 @@ let currentUser = null; // {id, name, role, pin}
 let pinBuffer = "";
 let selectedAdvisorFilter = null; // management/admin advisor filter
 let searchTerm = ''; // global search across name/source/etc.
-let dateRangeFrom = null; // yyyy-mm-dd, filters by mortgage application date
+let dateRangeFrom = null; // yyyy-mm-dd, filters by Task Created date
 let dateRangeTo = null;
 let activeLeadId = null;
 // Drives the transient area under the action buttons. One of:
@@ -1544,7 +1595,7 @@ document.getElementById('globalSearch').addEventListener('input', function(){
 });
 
 /* Date range: default is "all cases" (both blank). Apply narrows the
-   dashboard to leads whose mortgage application date falls in range;
+   dashboard to leads whose Task Created date falls in range;
    Reset clears it. Shown as a compact popover button (like the bell) so
    it doesn't compete for topbar space on smaller screens. */
 function renderDateRangeLabel(){
@@ -1711,7 +1762,7 @@ function leadCardHtml(lead, potKey){
       ${potKey==='signedup' && lead.commission!=null ? `<div class="lc-commission">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div>` : ''}
       <div class="lc-meta">
         ${showAdvisor ? `<span class="tag advisor">${esc(lead.advisorName||'Unassigned')}</span>` : ''}
-        <span class="tag">App: ${fmtDate(lead.appDate)}</span>
+        <span class="tag">Created: ${fmtDate(lead.appDate)}</span>
         ${lead.clientSource ? `<span class="tag">${esc(lead.clientSource)}</span>` : ''}
       </div>
       <div class="lc-activity">
@@ -1798,7 +1849,7 @@ document.getElementById('ntSubmit').addEventListener('click', function(){
   if(names.length===0){ toast("Please enter the client's name.",'error'); return; }
   if(!clientSource){ toast('Please choose a client source.','error'); return; }
   if(!advisorId){ toast('Please choose an advisor.','error'); return; }
-  if(!appDate){ toast('Please choose a mortgage application date.','error'); return; }
+  if(!appDate){ toast('Please choose a Task Created date.','error'); return; }
 
   const btn = this;
   btn.disabled = true;
@@ -1939,7 +1990,7 @@ function renderLeadModal(){
     <span class="status-pill ${statusClass}">${statusLabel}</span>
     <div class="info-grid">
       <div class="info-cell"><div class="lbl">Advisor</div><div class="val">${esc(lead.advisorName)}</div>${currentUser.role==='management' ? `<button id="reassignBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Reassign</button>` : ''}</div>
-      <div class="info-cell"><div class="lbl">Mortgage app date</div><div class="val">${fmtDate(lead.appDate)}</div></div>
+      <div class="info-cell"><div class="lbl">Task Created</div><div class="val">${fmtDate(lead.appDate)}</div></div>
       <div class="info-cell"><div class="lbl">Client source</div><div class="val">${esc(lead.clientSource||'—')}</div></div>
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
@@ -2543,7 +2594,7 @@ function renderInsights(){
 /* ---- CSV export (respects the same advisor + date-range scope) ---- */
 document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
   const leads = insightsLeads();
-  const headers = ['Client Name','Client Source','Advisor','App Date','Pot','Commission','Decline Reason','Decline Detail','Decline Sent','HLP Added','Assigned Date','Last Activity'];
+  const headers = ['Client Name','Client Source','Advisor','Task Created','Pot','Commission','Decline Reason','Decline Detail','Decline Sent','HLP Added','Assigned Date','Last Activity'];
   const csvEscape = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
   const rows = leads.map(l=>{
     const last = leadLastActivity(l);
@@ -2565,6 +2616,167 @@ document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
   a.remove();
   URL.revokeObjectURL(url);
   toast('CSV exported', 'success');
+});
+
+/* ----------------------------------------------------------------------------
+   10.7) UPLOAD DATA — bulk import historical leads from CSV
+   ---------------------------------------------------------------------------- */
+
+/* Minimal CSV parser: handles quoted fields (so a client cell like
+   "John Smith,Jane Smith" wrapped in quotes stays one field, not two),
+   and escaped "" quotes inside a quoted field. */
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field=''; }
+      else if(c === '\r'){ /* skip, \n handles the line break */ }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.length>1 || (r.length===1 && r[0].trim()!==''));
+}
+
+function findCol(headers, ...names){
+  const norm = h => h.trim().toLowerCase();
+  for(const name of names){
+    const idx = headers.findIndex(h => norm(h) === name);
+    if(idx>=0) return idx;
+  }
+  return -1;
+}
+
+let udParsedRows = null; // holds the parsed+matched rows between preview and import
+
+document.getElementById('uploadDataBtn').addEventListener('click', ()=>{
+  document.getElementById('udFileInput').value = '';
+  document.getElementById('udParseError').classList.add('hidden');
+  document.getElementById('udPickStage').classList.remove('hidden');
+  document.getElementById('udPreviewStage').classList.add('hidden');
+  document.getElementById('udImportBtn').classList.add('hidden');
+  udParsedRows = null;
+  openModal('uploadDataOverlay');
+});
+
+document.getElementById('udFileInput').addEventListener('change', function(){
+  const file = this.files[0];
+  if(!file) return;
+  const errBox = document.getElementById('udParseError');
+  const errText = document.getElementById('udParseErrorText');
+  errBox.classList.add('hidden');
+
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    let table;
+    try{ table = parseCSV(String(e.target.result)); }
+    catch(err){ errText.textContent = 'Could not read that file as CSV.'; errBox.classList.remove('hidden'); return; }
+
+    if(table.length < 2){ errText.textContent = 'No data rows found in that file.'; errBox.classList.remove('hidden'); return; }
+
+    const headers = table[0];
+    const dateCol = findCol(headers, 'date created', 'created', 'date');
+    const advisorCol = findCol(headers, 'advisor');
+    const clientCol = findCol(headers, 'client', 'clients', 'client name', 'client names');
+
+    if(dateCol<0 || advisorCol<0 || clientCol<0){
+      errText.textContent = 'Could not find "Date created", "Advisor" and "Client" columns in the header row.';
+      errBox.classList.remove('hidden');
+      return;
+    }
+
+    const userList = Object.entries(USERS);
+    const findAdvisor = (name)=>{
+      const norm = name.trim().toLowerCase();
+      const match = userList.find(([id,u])=> u.name.trim().toLowerCase()===norm);
+      return match ? {id:match[0], name:match[1].name} : null;
+    };
+
+    const ready = [], skipped = [];
+    for(let i=1;i<table.length;i++){
+      const r = table[i];
+      const rawDate = (r[dateCol]||'').trim();
+      const rawAdvisor = (r[advisorCol]||'').trim();
+      const rawClient = (r[clientCol]||'').trim();
+      if(!rawDate || !rawAdvisor || !rawClient){ skipped.push({row:i+1, reason:'missing field'}); continue; }
+      const ts = new Date(rawDate).getTime();
+      if(isNaN(ts)){ skipped.push({row:i+1, reason:'unreadable date'}); continue; }
+
+      const names = rawClient.split(',').map(s=>s.trim()).filter(Boolean);
+      if(names.length===0){ skipped.push({row:i+1, reason:'no client name'}); continue; }
+
+      const advisor = findAdvisor(rawAdvisor);
+      ready.push({
+        clientNames: names,
+        clientName: names.join(' & '),
+        rawAdvisor,
+        advisorId: advisor ? advisor.id : null,
+        advisorName: advisor ? advisor.name : rawAdvisor,
+        ts, appDate: new Date(ts).toISOString().slice(0,10)
+      });
+    }
+
+    udParsedRows = {ready, skipped};
+
+    document.getElementById('udCountReady').textContent = ready.length;
+    document.getElementById('udCountUnassigned').textContent = ready.filter(r=>!r.advisorId).length;
+    document.getElementById('udCountSkipped').textContent = skipped.length;
+
+    const tbody = document.querySelector('#udPreviewTable tbody');
+    tbody.innerHTML = ready.slice(0,5).map(r=> `
+      <tr>
+        <td style="font-weight:600;">${esc(r.clientName)}</td>
+        <td>${r.advisorId ? esc(r.advisorName) : `<span style="color:var(--amber);">${esc(r.advisorName)} (unassigned)</span>`}</td>
+        <td>${fmtDate(r.appDate)}</td>
+      </tr>`).join('') || `<tr><td class="insights-empty">No valid rows found.</td></tr>`;
+
+    document.getElementById('udPickStage').classList.add('hidden');
+    document.getElementById('udPreviewStage').classList.remove('hidden');
+    document.getElementById('udImportBtn').classList.toggle('hidden', ready.length===0);
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('udImportBtn').addEventListener('click', function(){
+  if(!udParsedRows || udParsedRows.ready.length===0) return;
+  const btn = this;
+  btn.disabled = true;
+
+  const updates = {};
+  udParsedRows.ready.forEach(r=>{
+    const leadRef = db.ref('leads').push();
+    const auditId = uidShort()+r.ts.toString(36);
+    const lead = {
+      clientName:r.clientName, clientNames:r.clientNames,
+      advisorId:r.advisorId, advisorName:r.advisorName,
+      appDate:r.appDate, status:'new',
+      createdBy:currentUser.id, createdByName:currentUser.name, createdAt:r.ts,
+      audit:{ [auditId]: {
+        type:'assigned',
+        text: r.advisorId
+          ? `Imported — originally created ${fmtDateTime(r.ts)}, assigned to ${r.advisorName}`
+          : `Imported — originally created ${fmtDateTime(r.ts)}. Advisor "${r.advisorName}" not found — needs reassigning.`,
+        byId:currentUser.id, byName:currentUser.name, at:r.ts
+      }}
+    };
+    updates['leads/'+leadRef.key] = lead;
+  });
+
+  db.ref().update(updates).then(()=>{
+    toast(`Imported ${udParsedRows.ready.length} lead${udParsedRows.ready.length>1?'s':''}`, 'success');
+    closeModal('uploadDataOverlay');
+    udParsedRows = null;
+  }).catch(err=>{ toast('Could not import: '+err.message, 'error'); })
+    .finally(()=>{ btn.disabled = false; });
 });
 
 /* ----------------------------------------------------------------------------

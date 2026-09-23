@@ -14,6 +14,7 @@
      ============================================================ -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <style>
 /* ==========================================================================
@@ -986,7 +987,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <div class="modal-head"><h2>Delete these cases?</h2><button class="modal-close" data-close="bulkDeleteConfirmOverlay">✕</button></div>
     <div class="modal-body">
       <p style="font-size:14px; color:var(--text); line-height:1.5;">
-        You're about to permanently delete <strong id="bdConfirmCount">0</strong> case(s) created between <strong id="bdConfirmRange"></strong>, including their full audit trails. This can't be undone.
+        <strong id="bdConfirmCount">0</strong> case(s) created between <strong id="bdConfirmRange"></strong> will move to the Recycle Bin and disappear from the dashboard. They can be restored from Settings within 30 days before being purged for good.
       </p>
     </div>
     <div class="modal-foot">
@@ -1224,7 +1225,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <div class="modal-head"><h2>Delete this case?</h2><button class="modal-close" data-close="deleteConfirmOverlay">✕</button></div>
     <div class="modal-body">
       <p style="font-size:14px; color:var(--text); line-height:1.5;">
-        You're about to permanently delete <strong id="deleteLeadName">this lead</strong>, including its full audit trail. This can't be undone.
+        <strong id="deleteLeadName">This lead</strong> will move to the Recycle Bin and disappear from the dashboard. Management or Admin can restore it, or permanently remove it, from Settings — it's kept for 30 days before being purged for good.
       </p>
     </div>
     <div class="modal-foot">
@@ -1259,11 +1260,28 @@ table.users-table tr:hover td{background:var(--brand-tint);}
      }
    }
 
-   NOTE: this is a simple internal office tool — PIN codes are checked in
-   the browser, not via Firebase Auth. Open read/write rules above are fine
-   to get started, but anyone with the database URL could read/write data.
-   For anything beyond trusted internal use, tighten the rules (e.g. app-
-   check, or require a shared secret) before relying on this.
+   NOTE ON SECURITY: this app uses real Firebase Authentication behind the
+   scenes — every colleague gets an actual Auth account created the first
+   time they log in (their PIN becomes their password, padded to satisfy
+   Firebase's 6-character minimum), and the app signs them in for real, not
+   just a client-side PIN check. Your Firebase Rules MUST require
+   authentication for this to actually protect anything — set them to:
+
+   {
+     "rules": {
+       ".read": "auth != null",
+       ".write": "auth != null"
+     }
+   }
+
+   This blocks anyone without valid app credentials from reading or writing
+   your database at all. One honest limit: any signed-in colleague can
+   still technically read/write any other colleague's data at the database
+   level (the app's own UI is what keeps a MAPA from seeing management's
+   view) — properly enforcing that per-role at the database itself needs
+   Firebase Admin SDK / Cloud Functions, a genuine backend this static file
+   doesn't have. This still moves you from "open to the whole internet" to
+   "only your team," which is the big lever.
    ---------------------------------------------------------------------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyDzskBKkvqr_tlAmS3rI_DYgfJloXOWkN4",
@@ -1284,6 +1302,23 @@ if(!isConfigured){
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
+// A second, isolated Firebase app instance used only for creating/updating
+// OTHER colleagues' Auth accounts from Settings, so doing so never signs
+// the currently logged-in Management user out of their own session.
+const secondaryApp = firebase.initializeApp(firebaseConfig, 'Secondary');
+const secondaryAuth = secondaryApp.auth();
+// Persist sign-in for the life of this browser tab/session only — closing
+// the tab or browser signs them out, matching the earlier "log out on
+// close" behaviour, but a same-tab refresh keeps them signed in.
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
+
+/* Every colleague's Firebase Auth account uses a synthetic email built from
+   their database key (stable even if their name changes later) and a
+   password derived from their 4-digit PIN, padded to meet Firebase's
+   6-character minimum. The PIN itself is all anyone ever types. */
+function authEmailFor(uid){ return `${uid}@plt.internal`; }
+function authPasswordFor(pin){ return `PLT-${pin}`; }
 
 /* ----------------------------------------------------------------------------
    2) STATE
@@ -1450,31 +1485,68 @@ function attemptLogin(){
   const id = userSelect.value;
   const u = USERS[id];
   if(!u){ showLoginError('Please select your name.'); return; }
-  if(String(u.pin) !== pinBuffer){ showLoginError('Incorrect PIN. Please try again.'); return; }
-  currentUser = {id, name:u.name, role:u.role, pin:u.pin};
-  // sessionStorage (not localStorage): survives a refresh in this tab, but
-  // is cleared automatically the moment the tab or browser is closed —
-  // switching tabs or backgrounding the browser does NOT log them out.
-  sessionStorage.setItem('plt_uid', id);
-  enterApp();
+  if(pinBuffer.length !== 4){ showLoginError('Enter your 4-digit PIN.'); return; }
+
+  loginBtn.disabled = true;
+  const email = authEmailFor(id);
+  const password = authPasswordFor(pinBuffer);
+
+  auth.signInWithEmailAndPassword(email, password).catch(err=>{
+    if(err.code === 'auth/user-not-found'){
+      // First login since security was switched on for this colleague: check
+      // their PIN the old way, then quietly create their real Auth account.
+      if(String(u.pin) !== pinBuffer){ loginBtn.disabled=false; showLoginError('Incorrect PIN. Please try again.'); return; }
+      return auth.createUserWithEmailAndPassword(email, password)
+        .catch(err2=>{ loginBtn.disabled=false; showLoginError('Could not set up your account: '+err2.message); });
+    }
+    if(err.code === 'auth/wrong-password'){
+      loginBtn.disabled=false; showLoginError('Incorrect PIN. Please try again.'); return;
+    }
+    loginBtn.disabled=false; showLoginError('Could not sign in: '+err.message);
+  });
+  // On success (either path), onAuthStateChanged below picks up the new
+  // session and calls enterApp() — nothing further needed here.
 }
 loginBtn.addEventListener('click', attemptLogin);
 
-function tryAutoLogin(){
-  const saved = sessionStorage.getItem('plt_uid');
-  if(saved && USERS[saved]){
-    currentUser = {id:saved, name:USERS[saved].name, role:USERS[saved].role, pin:USERS[saved].pin};
+/* Session detection now runs off real Firebase Auth state (SESSION
+   persistence — survives a same-tab refresh, cleared when the tab/browser
+   closes) instead of our own sessionStorage bookkeeping. Both the auth
+   listener and the users listener can resolve this, in either order. */
+let authChecked = false;
+let pendingAuthUser = null;
+
+auth.onAuthStateChanged(user=>{
+  authChecked = true;
+  pendingAuthUser = user;
+  tryResolveSession();
+});
+
+function tryResolveSession(){
+  if(currentUser) return;
+  if(!authChecked) return;
+  if(!pendingAuthUser) return; // no active session — login screen stays up
+  const uid = pendingAuthUser.email.split('@')[0];
+  const u = USERS[uid];
+  if(u){
+    currentUser = {id:uid, name:u.name, role:u.role, pin:u.pin};
     enterApp();
+  } else {
+    // Signed in at the Auth layer but no matching colleague record — most
+    // likely they were removed in Settings. Don't let a stale credential in.
+    auth.signOut();
   }
 }
 
 function logout(){
+  auth.signOut();
   currentUser = null;
-  sessionStorage.removeItem('plt_uid');
+  pendingAuthUser = null;
   document.getElementById('appShell').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
   pinBuffer=''; renderPinDots();
   userSelect.value='';
+  loginBtn.disabled = false;
 }
 document.getElementById('logoutBtn').addEventListener('click', logout);
 
@@ -1575,7 +1647,7 @@ function renderThemes(){
 db.ref('users').on('value', snap=>{
   USERS = snap.val() || {};
   renderUserSelect();
-  if(!currentUser) tryAutoLogin();
+  tryResolveSession();
   if(currentUser){ renderDashboard(); renderUsersTable(); }
 });
 
@@ -1596,7 +1668,7 @@ db.ref('notifications').on('value', snap=>{
    7) DASHBOARD RENDERING
    ---------------------------------------------------------------------------- */
 function visibleLeads(){
-  let all = Object.entries(LEADS).map(([id,l])=>({id,...l}));
+  let all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted);
   if(currentUser.role==='mapa'){
     all = all.filter(l=> l.advisorId===currentUser.id);
   } else if((currentUser.role==='management' || currentUser.role==='admin') && selectedAdvisorFilter){
@@ -1772,7 +1844,7 @@ function followUpBadge(dateStr){
    don't make calls). */
 function overdueExistingLeads(){
   if(currentUser.role==='admin') return [];
-  const all = Object.entries(LEADS).map(([id,l])=>({id,...l}));
+  const all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted);
   const today = new Date(); today.setHours(0,0,0,0);
   const overdue = all.filter(l=>{
     if(potOf(l)!=='existing' || !l.followUpDate) return false;
@@ -1895,7 +1967,7 @@ document.getElementById('ntName').addEventListener('input', function(){
   const q = normalizeName(this.value);
   const warnBox = document.getElementById('ntDupeWarning');
   if(q.length < 3){ warnBox.classList.add('hidden'); return; }
-  const match = Object.values(LEADS).find(l=> normalizeName(l.clientName).includes(q) || q.includes(normalizeName(l.clientName)));
+  const match = Object.values(LEADS).filter(l=> !l.deleted).find(l=> normalizeName(l.clientName).includes(q) || q.includes(normalizeName(l.clientName)));
   if(match){
     document.getElementById('ntDupeWarningText').textContent =
       `A similar client already exists: "${match.clientName}" (${match.advisorName||'unassigned'}, ${STATUS_LABELS[match.status]||potOf(match)}). Double check this isn't a duplicate.`;
@@ -2015,8 +2087,12 @@ document.getElementById('deleteConfirmBtn').addEventListener('click', function()
   if(!activeLeadId) return;
   const leadId = activeLeadId;
   this.disabled = true;
-  db.ref('leads/'+leadId).remove().then(()=>{
-    toast('Case deleted','success');
+  db.ref().update({
+    ['leads/'+leadId+'/deleted']: true,
+    ['leads/'+leadId+'/deletedAt']: Date.now(),
+    ['leads/'+leadId+'/deletedBy']: currentUser.name
+  }).then(()=>{
+    toast('Moved to Recycle Bin','success');
     closeModal('deleteConfirmOverlay');
     closeModal('leadOverlay');
     activeLeadId = null;
@@ -2463,7 +2539,7 @@ document.getElementById('markAllReadBtn').addEventListener('click', ()=>{
    should reflect a stable, deliberate slice, not whatever's mid-typed in
    the search field. */
 function insightsLeads(){
-  let all = Object.entries(LEADS).map(([id,l])=>({id,...l}));
+  let all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted);
   if(currentUser.role==='mapa'){
     all = all.filter(l=> l.advisorId===currentUser.id);
   } else if(selectedAdvisorFilter){
@@ -2865,7 +2941,7 @@ document.getElementById('bdSearchBtn').addEventListener('click', ()=>{
   const to = document.getElementById('bdTo').value;
   if(!from && !to){ toast('Choose at least a from or to date.', 'error'); return; }
 
-  let all = Object.entries(LEADS).map(([id,l])=>({id,...l}));
+  let all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted);
   if(from){
     const fromTs = new Date(from+'T00:00:00').getTime();
     all = all.filter(l=> l.appDate && new Date(l.appDate+'T00:00:00').getTime() >= fromTs);
@@ -2906,10 +2982,15 @@ document.getElementById('bulkDeleteConfirmBtn').addEventListener('click', functi
   if(!bdMatches || bdMatches.length===0) return;
   const btn = this;
   btn.disabled = true;
+  const now = Date.now();
   const updates = {};
-  bdMatches.forEach(l=> updates['leads/'+l.id] = null);
+  bdMatches.forEach(l=>{
+    updates['leads/'+l.id+'/deleted'] = true;
+    updates['leads/'+l.id+'/deletedAt'] = now;
+    updates['leads/'+l.id+'/deletedBy'] = currentUser.name;
+  });
   db.ref().update(updates).then(()=>{
-    toast(`Deleted ${bdMatches.length} case${bdMatches.length>1?'s':''}`, 'success');
+    toast(`Moved ${bdMatches.length} case${bdMatches.length>1?'s':''} to Recycle Bin`, 'success');
     closeModal('bulkDeleteConfirmOverlay');
     resetBulkDelete();
   }).catch(err=> toast('Could not delete: '+err.message, 'error'))
@@ -2952,11 +3033,45 @@ document.getElementById('uSubmit').addEventListener('click', function(){
   const btn = this;
   btn.disabled = true;
   const payload = {name, role:selectedRole, pin};
-  const ref = editingUserId ? db.ref('users/'+editingUserId) : db.ref('users').push();
-  ref.set(payload).then(()=>{
-    toast('Colleague saved','success');
-    closeModal('userOverlay');
-  }).catch(err=> toast('Could not save: '+err.message,'error'))
+  const isNew = !editingUserId;
+  const userId = editingUserId || db.ref('users').push().key;
+  const oldPin = isNew ? null : USERS[editingUserId]?.pin;
+  const pinChanged = !isNew && String(oldPin) !== String(pin);
+  const email = authEmailFor(userId);
+
+  /* Keep their real Auth account in step with what Management just set,
+     using the isolated secondary app so this never touches Management's
+     own signed-in session. New colleague → create their account now
+     (rather than waiting for their first login) so it's ready immediately.
+     PIN changed → sign in as them with their old password just long enough
+     to update it, then sign back out. If they'd never logged in yet (no
+     Auth account existed to sign into), fall back to creating one fresh. */
+  function syncAuthAccount(){
+    if(isNew){
+      return secondaryAuth.createUserWithEmailAndPassword(email, authPasswordFor(pin))
+        .then(()=> secondaryAuth.signOut())
+        .catch(err=>{ if(err.code!=='auth/email-already-in-use') throw err; });
+    }
+    if(pinChanged){
+      return secondaryAuth.signInWithEmailAndPassword(email, authPasswordFor(oldPin))
+        .then(()=> secondaryAuth.currentUser.updatePassword(authPasswordFor(pin)))
+        .then(()=> secondaryAuth.signOut())
+        .catch(err=>{
+          if(err.code==='auth/user-not-found' || err.code==='auth/wrong-password'){
+            return secondaryAuth.createUserWithEmailAndPassword(email, authPasswordFor(pin)).then(()=> secondaryAuth.signOut());
+          }
+          throw err;
+        });
+    }
+    return Promise.resolve();
+  }
+
+  syncAuthAccount()
+    .then(()=> db.ref('users/'+userId).set(payload))
+    .then(()=>{
+      toast('Colleague saved','success');
+      closeModal('userOverlay');
+    }).catch(err=> toast('Could not save: '+err.message,'error'))
     .finally(()=>{ btn.disabled = false; });
 });
 
@@ -2980,7 +3095,13 @@ function renderUsersTable(){
   body.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{
     const u = USERS[b.dataset.del];
     if(confirm(`Remove ${u.name} from the system? This won't delete any leads already assigned to them.`)){
-      db.ref('users/'+b.dataset.del).remove().then(()=> toast('Colleague removed','success'));
+      const userId = b.dataset.del;
+      secondaryAuth.signInWithEmailAndPassword(authEmailFor(userId), authPasswordFor(u.pin))
+        .then(()=> secondaryAuth.currentUser.delete())
+        .catch(()=>{ /* they may never have logged in yet — nothing to clean up */ })
+        .finally(()=>{
+          db.ref('users/'+userId).remove().then(()=> toast('Colleague removed','success'));
+        });
     }
   }));
 }

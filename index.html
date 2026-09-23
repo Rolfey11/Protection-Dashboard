@@ -228,10 +228,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .brand-text .t1{font-family:var(--fh); font-weight:800; font-size:15px; color:var(--brand);}
 .brand-text .t2{font-size:11px; color:var(--text-muted); font-weight:500;}
 
-.nav-tabs{display:flex; gap:4px; align-items:center;}
+.nav-tabs{display:flex; gap:4px; align-items:center; flex:1 1 auto; min-width:0; overflow-x:auto; scrollbar-width:thin;}
+.nav-tabs::-webkit-scrollbar{height:4px;}
+.nav-tabs::-webkit-scrollbar-thumb{background:var(--border-2); border-radius:99px;}
 .nav-tab{
   padding:9px 16px; border-radius:9px; border:none; background:transparent;
-  font-size:14px; font-weight:600; color:var(--text-muted); transition:.15s;
+  font-size:14px; font-weight:600; color:var(--text-muted); transition:.15s; flex-shrink:0; white-space:nowrap;
 }
 .nav-tab:hover{background:var(--brand-tint); color:var(--brand);}
 .nav-tab.active{background:var(--brand); color:#fff;}
@@ -351,7 +353,7 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
   font-size:12.5px; color:var(--text);
 }
 
-.topbar-daterange{display:flex; align-items:center; gap:7px; padding-left:14px; margin-left:10px; border-left:1px solid var(--border);}
+.topbar-daterange{display:flex; align-items:center; gap:7px; padding-left:14px; margin-left:10px; border-left:1px solid var(--border); flex-shrink:0;}
 .topbar-daterange span{font-size:11.5px; color:var(--text-faint); font-weight:600; white-space:nowrap;}
 .topbar-daterange .date-range-input{padding:5px 8px; font-size:12px;}
 .topbar-daterange #dateRangeLabel{display:none;}
@@ -1696,6 +1698,7 @@ document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   document.getElementById('ntDate').value='';
   document.getElementById('ntSource').value='';
   document.getElementById('ntDupeWarning').classList.add('hidden');
+  document.getElementById('ntSubmit').disabled = false;
   ntResetExtraClients();
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   const sel = document.getElementById('ntAdvisor');
@@ -1722,7 +1725,7 @@ document.getElementById('ntName').addEventListener('input', function(){
   }
 });
 
-document.getElementById('ntSubmit').addEventListener('click', ()=>{
+document.getElementById('ntSubmit').addEventListener('click', function(){
   const extraNames = Array.from(document.querySelectorAll('.ntExtraName')).map(i=>i.value.trim()).filter(Boolean);
   const names = [document.getElementById('ntName').value.trim(), ...extraNames].filter(Boolean);
   const name = names.join(' & ');
@@ -1734,6 +1737,8 @@ document.getElementById('ntSubmit').addEventListener('click', ()=>{
   if(!advisorId){ toast('Please choose an advisor.','error'); return; }
   if(!appDate){ toast('Please choose a mortgage application date.','error'); return; }
 
+  const btn = this;
+  btn.disabled = true;
   const advisorName = USERS[advisorId]?.name || 'Unknown';
   const now = Date.now();
   const leadRef = db.ref('leads').push();
@@ -1756,7 +1761,8 @@ document.getElementById('ntSubmit').addEventListener('click', ()=>{
     });
     toast('Lead assigned to '+advisorName, 'success');
     closeModal('newTaskOverlay');
-  }).catch(err=> toast('Could not save: '+err.message,'error'));
+  }).catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
 });
 
 /* ---- Reassign a lead to a different advisor (Management only) ---- */
@@ -1767,6 +1773,7 @@ function openReassign(lead){
   sel.innerHTML = '<option value="">Select an advisor…</option>' +
     mapas.map(([id,u])=> `<option value="${id}" ${id===lead.advisorId?'selected':''}>${esc(u.name)}</option>`).join('');
   document.getElementById('raSubmit').dataset.leadId = lead.id;
+  document.getElementById('raSubmit').disabled = false;
   openModal('reassignOverlay');
 }
 
@@ -1778,6 +1785,8 @@ document.getElementById('raSubmit').addEventListener('click', function(){
   if(!newAdvisorId){ toast('Please choose an advisor.','error'); return; }
   if(newAdvisorId === lead.advisorId){ toast('That\'s already who this lead is assigned to.','error'); return; }
 
+  const btn = this;
+  btn.disabled = true;
   const newAdvisorName = USERS[newAdvisorId]?.name || 'Unknown';
   const oldAdvisorName = lead.advisorName || 'Unassigned';
   const now = Date.now();
@@ -1798,7 +1807,8 @@ document.getElementById('raSubmit').addEventListener('click', function(){
     toast('Lead reassigned to '+newAdvisorName, 'success');
     closeModal('reassignOverlay');
     refreshLeadModal();
-  }).catch(err=> toast('Could not save: '+err.message,'error'));
+  }).catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
 });
 
 /* ----------------------------------------------------------------------------
@@ -1817,18 +1827,20 @@ document.getElementById('leadDeleteBtn').addEventListener('click', ()=>{
   const lead = LEADS[activeLeadId];
   if(!lead) return;
   document.getElementById('deleteLeadName').textContent = lead.clientName;
+  document.getElementById('deleteConfirmBtn').disabled = false;
   openModal('deleteConfirmOverlay');
 });
 
-document.getElementById('deleteConfirmBtn').addEventListener('click', ()=>{
+document.getElementById('deleteConfirmBtn').addEventListener('click', function(){
   if(!activeLeadId) return;
   const leadId = activeLeadId;
+  this.disabled = true;
   db.ref('leads/'+leadId).remove().then(()=>{
     toast('Case deleted','success');
     closeModal('deleteConfirmOverlay');
     closeModal('leadOverlay');
     activeLeadId = null;
-  }).catch(err=> toast('Could not delete: '+err.message,'error'));
+  }).catch(err=>{ toast('Could not delete: '+err.message,'error'); this.disabled=false; });
 });
 
 function canAction(lead){
@@ -1938,10 +1950,10 @@ function renderLeadModal(){
       const sentBtn = document.getElementById('declineSentBtn');
       const hlpBtn = document.getElementById('hlpAddedBtn');
       if(sentBtn && !lead.declineSent){
-        sentBtn.addEventListener('click', ()=> markDeclineFlag(lead, 'declineSent', 'Decline reasoning confirmed sent to client'));
+        sentBtn.addEventListener('click', ()=> markDeclineFlag(lead, 'declineSent', 'Decline reasoning confirmed sent to client', 'declineSentBtn'));
       }
       if(hlpBtn && !lead.hlpAdded){
-        hlpBtn.addEventListener('click', ()=> markDeclineFlag(lead, 'hlpAdded', 'Confirmed added to HLP Portal'));
+        hlpBtn.addEventListener('click', ()=> markDeclineFlag(lead, 'hlpAdded', 'Confirmed added to HLP Portal', 'hlpAddedBtn'));
       }
     }
   }
@@ -1971,7 +1983,9 @@ function auditIcon(type){
   }[type] || '•';
 }
 
-function markDeclineFlag(lead, field, auditText){
+function markDeclineFlag(lead, field, auditText, btnId){
+  const btn = btnId ? document.getElementById(btnId) : null;
+  if(btn) btn.disabled = true;
   const willBeSent = field==='declineSent' ? true : !!lead.declineSent;
   const willBeHlp = field==='hlpAdded' ? true : !!lead.hlpAdded;
   const patch = {[field]: true};
@@ -1980,13 +1994,14 @@ function markDeclineFlag(lead, field, auditText){
     .then(()=>{
       toast(willBeSent && willBeHlp ? 'Both confirmed — moved to Declines - Email sent' : 'Updated', 'success');
       refreshLeadModal();
-    }).catch(err=> toast('Could not save: '+err.message,'error'));
+    }).catch(err=>{ toast('Could not save: '+err.message,'error'); if(btn) btn.disabled=false; });
 }
 
 function openChangeStatus(lead){
   document.getElementById('csClientName').textContent = lead.clientName;
   document.getElementById('csStatus').value = lead.status || 'new';
   document.getElementById('csSubmit').dataset.leadId = lead.id;
+  document.getElementById('csSubmit').disabled = false;
   openModal('changeStatusOverlay');
 }
 
@@ -1998,6 +2013,8 @@ document.getElementById('csSubmit').addEventListener('click', function(){
   if(!lead) return;
   const newStatus = document.getElementById('csStatus').value;
   if(newStatus === (lead.status||'new')){ toast("That's already the current status.",'error'); return; }
+  const btn = this;
+  btn.disabled = true;
   logAudit(leadId, {
     type:'status', text:`Status manually changed to "${STATUS_LABELS[newStatus]}" by ${currentUser.name}`,
     byId:currentUser.id, byName:currentUser.name, at:Date.now()
@@ -2006,7 +2023,8 @@ document.getElementById('csSubmit').addEventListener('click', function(){
     closeModal('changeStatusOverlay');
     actionUIState = null;
     refreshLeadModal();
-  }).catch(err=> toast('Could not save: '+err.message,'error'));
+  }).catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
 });
 
 function logAudit(leadId, entry, patch={}){
@@ -2061,12 +2079,13 @@ function renderDynamicArea(lead){
     area.querySelector('[data-o=signup]').addEventListener('click', ()=> openSignup(lead.id));
     area.querySelector('[data-o=followup]').addEventListener('click', ()=>{ actionUIState='followup'; renderDynamicArea(lead); });
     area.querySelector('[data-o=decline]').addEventListener('click', ()=>{ actionUIState='decline'; renderDynamicArea(lead); });
-    document.getElementById('quickNoteSave').addEventListener('click', ()=>{
+    document.getElementById('quickNoteSave').addEventListener('click', function(){
       const note = document.getElementById('quickNote').value.trim();
       if(!note){ toast('Add some detail first.','error'); return; }
+      this.disabled = true;
       logAudit(lead.id, {type:actionUIState.kind, text:`${label} note: ${note}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
         .then(()=>{ toast('Note saved','success'); refreshLeadModal(); })
-        .catch(err=> toast('Could not save: '+err.message,'error'));
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
     });
     return;
   }
@@ -2084,14 +2103,15 @@ function renderDynamicArea(lead){
         </div>
         <button class="btn btn-primary btn-sm" id="fuSave">Save follow-up</button>
       </div>`;
-    document.getElementById('fuSave').addEventListener('click', ()=>{
+    document.getElementById('fuSave').addEventListener('click', function(){
       const date = document.getElementById('fuDate').value;
       const comment = document.getElementById('fuComment').value.trim();
       if(!date){ toast('Please choose a follow-up date.','error'); return; }
+      this.disabled = true;
       const text = `Follow-up scheduled for ${fmtDate(date)}` + (comment? ` — ${comment}` : '');
       logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date})
         .then(()=>{ toast('Follow-up saved','success'); actionUIState=null; refreshLeadModal(); })
-        .catch(err=> toast('Could not save: '+err.message,'error'));
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
     });
     return;
   }
@@ -2143,11 +2163,12 @@ function renderDynamicArea(lead){
     tick2.addEventListener('click', toggleTick2);
     document.getElementById('dcTickLabel2').addEventListener('click', toggleTick2);
 
-    document.getElementById('dcSave').addEventListener('click', ()=>{
+    document.getElementById('dcSave').addEventListener('click', function(){
       const reason = document.getElementById('dcReason').value;
       const detail = document.getElementById('dcDetail').value.trim();
       if(!reason){ toast('Please select a decline reason.','error'); return; }
       if(!detail){ toast('Please add detail for the decline.','error'); return; }
+      this.disabled = true;
       const text = `Declined — ${reason}: ${detail}`;
       const newStatus = (sent && hlp) ? 'completed' : 'decline';
       logAudit(lead.id, {type:'decline', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {
@@ -2160,7 +2181,7 @@ function renderDynamicArea(lead){
           logAudit(lead.id, {type:'hlp', text:'Confirmed added to HLP Portal', byId:currentUser.id, byName:currentUser.name, at:Date.now()+2});
         }
         toast('Decline recorded','success'); actionUIState=null; refreshLeadModal();
-      }).catch(err=> toast('Could not save: '+err.message,'error'));
+      }).catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
     });
     return;
   }
@@ -2171,18 +2192,22 @@ function renderDynamicArea(lead){
 function openSignup(leadId){
   document.getElementById('commissionInput').value='';
   document.getElementById('signupSubmit').dataset.leadId = leadId;
+  document.getElementById('signupSubmit').disabled = false;
   openModal('signupOverlay');
 }
 document.getElementById('signupSubmit').addEventListener('click', function(){
   const leadId = this.dataset.leadId;
   const val = document.getElementById('commissionInput').value;
   if(val==='' || isNaN(val) || Number(val)<0){ toast('Please enter a valid commission amount.','error'); return; }
+  const btn = this;
+  btn.disabled = true;
   const text = `Signed up — Commission £${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
   logAudit(leadId, {type:'signup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'signedup', commission:Number(val)})
     .then(()=>{
       toast('Lead marked as signed up 🎉','success'); closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();
-    }).catch(err=> toast('Could not save: '+err.message,'error'));
+    }).catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
 });
 
 /* ----------------------------------------------------------------------------
@@ -2477,6 +2502,7 @@ function openUserModal(userId=null){
   document.getElementById('userModalTitle').textContent = userId? 'Edit Colleague' : 'Add Colleague';
   document.getElementById('uName').value = userId? USERS[userId].name : '';
   document.getElementById('uPin').value = userId? USERS[userId].pin : '';
+  document.getElementById('uSubmit').disabled = false;
   selectedRole = userId? USERS[userId].role : 'mapa';
   updateRoleUI();
   openModal('userOverlay');
@@ -2488,7 +2514,7 @@ document.querySelectorAll('#uRoleRow .role-opt').forEach(opt=>{
   opt.addEventListener('click', ()=>{ selectedRole = opt.dataset.role; updateRoleUI(); });
 });
 
-document.getElementById('uSubmit').addEventListener('click', ()=>{
+document.getElementById('uSubmit').addEventListener('click', function(){
   const name = document.getElementById('uName').value.trim();
   const pin = document.getElementById('uPin').value.trim();
   if(!name){ toast('Please enter a name.','error'); return; }
@@ -2497,12 +2523,15 @@ document.getElementById('uSubmit').addEventListener('click', ()=>{
   const dupe = Object.entries(USERS).find(([id,u])=> id!==editingUserId && u.name.toLowerCase()===name.toLowerCase());
   if(dupe){ toast('A colleague with that name already exists.','error'); return; }
 
+  const btn = this;
+  btn.disabled = true;
   const payload = {name, role:selectedRole, pin};
   const ref = editingUserId ? db.ref('users/'+editingUserId) : db.ref('users').push();
   ref.set(payload).then(()=>{
     toast('Colleague saved','success');
     closeModal('userOverlay');
-  }).catch(err=> toast('Could not save: '+err.message,'error'));
+  }).catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
 });
 
 function renderUsersTable(){

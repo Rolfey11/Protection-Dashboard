@@ -915,31 +915,85 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
     <!-- ============= SETTINGS PAGE ============= -->
     <div id="page-settings" class="hidden">
-      <div class="page-head">
-        <div>
-          <h1>Settings</h1>
-          <p class="sub">Manage colleague access — name, user level and PIN.</p>
+      <div id="settingsColleagueSection">
+        <div class="page-head">
+          <div>
+            <h1>Settings</h1>
+            <p class="sub">Manage colleague access — name, user level and PIN.</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-secondary" id="uploadDataBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+              Upload Data
+            </button>
+            <button class="btn btn-primary" id="addUserBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Add Colleague
+            </button>
+          </div>
         </div>
-        <div style="display:flex; gap:10px;">
-          <button class="btn btn-secondary" id="uploadDataBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-            Upload Data
-          </button>
-          <button class="btn btn-primary" id="addUserBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            Add Colleague
-          </button>
+        <div class="settings-card" style="margin-bottom:34px;">
+          <table class="users-table">
+            <thead><tr><th>Name</th><th>User level</th><th>PIN</th><th></th></tr></thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+          <div id="usersEmpty" class="settings-empty hidden">No colleagues added yet. Click "Add Colleague" to get started.</div>
         </div>
       </div>
-      <div class="settings-card">
-        <table class="users-table">
-          <thead><tr><th>Name</th><th>User level</th><th>PIN</th><th></th></tr></thead>
-          <tbody id="usersTableBody"></tbody>
-        </table>
-        <div id="usersEmpty" class="settings-empty hidden">No colleagues added yet. Click "Add Colleague" to get started.</div>
+
+      <div id="settingsBulkDeleteSection">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1 style="font-size:19px;">Bulk delete cases</h1>
+            <p class="sub">Delete multiple cases at once by their Task Created date range. This can't be undone.</p>
+          </div>
+        </div>
+        <div class="insights-card" style="max-width:640px;">
+          <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;">
+            <div class="field" style="margin-bottom:0; flex:1; min-width:150px;">
+              <label for="bdFrom">From</label>
+              <input type="date" id="bdFrom">
+            </div>
+            <div class="field" style="margin-bottom:0; flex:1; min-width:150px;">
+              <label for="bdTo">To</label>
+              <input type="date" id="bdTo">
+            </div>
+            <button class="btn btn-secondary" id="bdSearchBtn" style="margin-bottom:1px;">Find cases</button>
+          </div>
+
+          <div id="bdResults" class="hidden">
+            <div class="stat-card bad" style="margin-bottom:14px; max-width:220px;">
+              <div class="sv" id="bdCount">0</div>
+              <div class="sl">Cases match this range</div>
+            </div>
+            <div id="bdPreviewWrap" class="hidden">
+              <div class="section-lbl" style="margin-top:0;">Preview (first 8)</div>
+              <table class="mini-table" id="bdPreviewTable" style="margin-bottom:16px;"></table>
+            </div>
+            <button class="btn btn-danger" id="bdDeleteBtn" style="background:var(--red); color:#fff;" disabled>Delete these cases</button>
+          </div>
+        </div>
       </div>
     </div>
   </main>
+</div>
+
+<!-- ============================================================
+     MODAL: BULK DELETE CONFIRMATION (Management / Admin)
+     ============================================================ -->
+<div class="modal-overlay" id="bulkDeleteConfirmOverlay">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head"><h2>Delete these cases?</h2><button class="modal-close" data-close="bulkDeleteConfirmOverlay">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px; color:var(--text); line-height:1.5;">
+        You're about to permanently delete <strong id="bdConfirmCount">0</strong> case(s) created between <strong id="bdConfirmRange"></strong>, including their full audit trails. This can't be undone.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="bulkDeleteConfirmOverlay">Cancel</button>
+      <button class="btn btn-danger" id="bulkDeleteConfirmBtn" style="background:var(--red); color:#fff;">Yes, delete them</button>
+    </div>
+  </div>
 </div>
 
 <!-- ============================================================
@@ -1428,7 +1482,7 @@ function enterApp(){
   document.getElementById('userRoleLbl').textContent = ROLE_LABEL[currentUser.role]||currentUser.role;
 
   document.getElementById('newTaskBtn').classList.remove('hidden');
-  document.getElementById('settingsTab').classList.toggle('hidden', currentUser.role!=='management');
+  document.getElementById('settingsTab').classList.toggle('hidden', currentUser.role!=='management' && currentUser.role!=='admin');
   document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role==='admin');
 
   const first = currentUser.name.split(' ')[0];
@@ -1452,7 +1506,11 @@ function goPage(page){
   document.getElementById('page-insights').classList.toggle('hidden', page!=='insights');
   document.getElementById('page-themes').classList.toggle('hidden', page!=='themes');
   document.getElementById('page-settings').classList.toggle('hidden', page!=='settings');
-  if(page==='settings') renderUsersTable();
+  if(page==='settings'){
+    document.getElementById('settingsColleagueSection').classList.toggle('hidden', currentUser.role!=='management');
+    renderUsersTable();
+    resetBulkDelete();
+  }
   if(page==='dashboard') renderDashboard();
   if(page==='insights') renderInsights();
   if(page==='themes') renderThemes();
@@ -2776,6 +2834,76 @@ document.getElementById('udImportBtn').addEventListener('click', function(){
     closeModal('uploadDataOverlay');
     udParsedRows = null;
   }).catch(err=>{ toast('Could not import: '+err.message, 'error'); })
+    .finally(()=>{ btn.disabled = false; });
+});
+
+/* ----------------------------------------------------------------------------
+   10.8) BULK DELETE CASES BY DATE RANGE (Management / Admin)
+   ---------------------------------------------------------------------------- */
+let bdMatches = null; // leads currently matched by the last search, awaiting deletion
+
+function resetBulkDelete(){
+  bdMatches = null;
+  document.getElementById('bdFrom').value = '';
+  document.getElementById('bdTo').value = '';
+  document.getElementById('bdResults').classList.add('hidden');
+  document.getElementById('bdPreviewWrap').classList.add('hidden');
+  document.getElementById('bdDeleteBtn').disabled = true;
+}
+
+document.getElementById('bdSearchBtn').addEventListener('click', ()=>{
+  const from = document.getElementById('bdFrom').value;
+  const to = document.getElementById('bdTo').value;
+  if(!from && !to){ toast('Choose at least a from or to date.', 'error'); return; }
+
+  let all = Object.entries(LEADS).map(([id,l])=>({id,...l}));
+  if(from){
+    const fromTs = new Date(from+'T00:00:00').getTime();
+    all = all.filter(l=> l.appDate && new Date(l.appDate+'T00:00:00').getTime() >= fromTs);
+  }
+  if(to){
+    const toTs = new Date(to+'T23:59:59').getTime();
+    all = all.filter(l=> l.appDate && new Date(l.appDate+'T00:00:00').getTime() <= toTs);
+  }
+  all.sort((a,b)=> new Date(a.appDate) - new Date(b.appDate));
+  bdMatches = all;
+
+  document.getElementById('bdResults').classList.remove('hidden');
+  document.getElementById('bdCount').textContent = all.length;
+  document.getElementById('bdDeleteBtn').disabled = all.length===0;
+
+  const previewWrap = document.getElementById('bdPreviewWrap');
+  previewWrap.classList.toggle('hidden', all.length===0);
+  if(all.length>0){
+    document.getElementById('bdPreviewTable').innerHTML =
+      `<thead><tr><th>Client</th><th>Advisor</th><th>Task Created</th></tr></thead>
+       <tbody>${all.slice(0,8).map(l=> `
+         <tr><td style="font-weight:600;">${esc(l.clientName)}</td><td>${esc(l.advisorName||'Unassigned')}</td><td>${fmtDate(l.appDate)}</td></tr>
+       `).join('')}</tbody>`;
+  }
+});
+
+document.getElementById('bdDeleteBtn').addEventListener('click', ()=>{
+  if(!bdMatches || bdMatches.length===0) return;
+  document.getElementById('bdConfirmCount').textContent = bdMatches.length;
+  const from = document.getElementById('bdFrom').value;
+  const to = document.getElementById('bdTo').value;
+  document.getElementById('bdConfirmRange').textContent =
+    `${from? fmtDate(from) : 'the start'} and ${to? fmtDate(to) : 'now'}`;
+  openModal('bulkDeleteConfirmOverlay');
+});
+
+document.getElementById('bulkDeleteConfirmBtn').addEventListener('click', function(){
+  if(!bdMatches || bdMatches.length===0) return;
+  const btn = this;
+  btn.disabled = true;
+  const updates = {};
+  bdMatches.forEach(l=> updates['leads/'+l.id] = null);
+  db.ref().update(updates).then(()=>{
+    toast(`Deleted ${bdMatches.length} case${bdMatches.length>1?'s':''}`, 'success');
+    closeModal('bulkDeleteConfirmOverlay');
+    resetBulkDelete();
+  }).catch(err=> toast('Could not delete: '+err.message, 'error'))
     .finally(()=>{ btn.disabled = false; });
 });
 

@@ -521,6 +521,7 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .stat-card.bad .sv{color:var(--red);}
 
 .insights-cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:26px;}
+.insights-cols.single-col{grid-template-columns:1fr;}
 @media (max-width:900px){.insights-cols{grid-template-columns:1fr;}}
 .insights-card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:17px 19px; box-shadow:var(--shadow-sm);}
 .insights-card h4{font-size:13px; font-weight:700; margin-bottom:14px; color:var(--text);}
@@ -807,7 +808,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="page-head">
         <div>
           <h1>Insights</h1>
-          <p class="sub">Management oversight — respects the advisor and date range filters above.</p>
+          <p class="sub" id="insightsSub">Management oversight — respects the advisor and date range filters above.</p>
         </div>
         <button class="btn btn-secondary" id="exportCsvBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
@@ -826,8 +827,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="section-lbl">Commission</div>
       <div class="stat-grid" id="commissionStats"></div>
 
-      <div class="insights-cols">
-        <div class="insights-card">
+      <div class="insights-cols" id="advisorSourceRow">
+        <div class="insights-card" id="byAdvisorCard">
           <h4>By advisor</h4>
           <table class="mini-table" id="advisorTable"></table>
         </div>
@@ -837,12 +838,12 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
       </div>
 
-      <div class="insights-cols">
+      <div class="insights-cols" id="declineWorkloadRow">
         <div class="insights-card">
           <h4>Decline reasons</h4>
           <div id="declineReasonsChart"></div>
         </div>
-        <div class="insights-card">
+        <div class="insights-card" id="workloadCard">
           <h4>Advisor workload — open cases</h4>
           <div id="workloadChart"></div>
         </div>
@@ -1337,7 +1338,7 @@ function enterApp(){
 
   document.getElementById('newTaskBtn').classList.remove('hidden');
   document.getElementById('settingsTab').classList.toggle('hidden', currentUser.role!=='management');
-  document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role!=='management');
+  document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role==='admin');
 
   const first = currentUser.name.split(' ')[0];
   document.getElementById('dashGreeting').textContent = `Welcome back, ${first}`;
@@ -2282,7 +2283,11 @@ document.getElementById('markAllReadBtn').addEventListener('click', ()=>{
    the search field. */
 function insightsLeads(){
   let all = Object.entries(LEADS).map(([id,l])=>({id,...l}));
-  if(selectedAdvisorFilter) all = all.filter(l=> l.advisorId===selectedAdvisorFilter);
+  if(currentUser.role==='mapa'){
+    all = all.filter(l=> l.advisorId===currentUser.id);
+  } else if(selectedAdvisorFilter){
+    all = all.filter(l=> l.advisorId===selectedAdvisorFilter);
+  }
   if(dateRangeFrom){
     const fromTs = new Date(dateRangeFrom+'T00:00:00').getTime();
     all = all.filter(l=> l.appDate && new Date(l.appDate+'T00:00:00').getTime() >= fromTs);
@@ -2299,6 +2304,15 @@ function statCard(value, label, tone=''){
 }
 
 function renderInsights(){
+  const isMapa = currentUser.role==='mapa';
+  document.getElementById('insightsSub').textContent = isMapa
+    ? "Your own performance — respects the date range filter above."
+    : "Management oversight — respects the advisor and date range filters above.";
+  document.getElementById('byAdvisorCard').classList.toggle('hidden', isMapa);
+  document.getElementById('advisorSourceRow').classList.toggle('single-col', isMapa);
+  document.getElementById('workloadCard').classList.toggle('hidden', isMapa);
+  document.getElementById('declineWorkloadRow').classList.toggle('single-col', isMapa);
+
   const leads = insightsLeads();
   const total = leads.length;
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa');

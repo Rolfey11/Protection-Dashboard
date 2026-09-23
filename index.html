@@ -186,7 +186,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .brand-text .t1{font-family:var(--fh); font-weight:800; font-size:15px; color:#4E1339;}
 .brand-text .t2{font-size:11px; color:var(--text-muted); font-weight:500;}
 
-.nav-tabs{display:flex; gap:4px; flex:1;}
+.nav-tabs{display:flex; gap:4px; align-items:center;}
 .nav-tab{
   padding:9px 16px; border-radius:9px; border:none; background:transparent;
   font-size:14px; font-weight:600; color:var(--text-muted); transition:.15s;
@@ -194,7 +194,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .nav-tab:hover{background:var(--brand-tint); color:var(--brand);}
 .nav-tab.active{background:var(--brand); color:#fff;}
 
-.topbar-right{display:flex; align-items:center; gap:14px; flex-shrink:0;}
+.topbar-right{display:flex; align-items:center; gap:14px; flex-shrink:0; margin-left:auto;}
 
 .bell-wrap{position:relative;}
 .bell-btn{
@@ -308,6 +308,13 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
   padding:6px 10px; border:1.5px solid var(--border-2); border-radius:8px; background:#fff;
   font-size:12.5px; color:var(--text);
 }
+
+.topbar-daterange{display:flex; align-items:center; gap:7px; padding-left:14px; margin-left:10px; border-left:1px solid var(--border);}
+.topbar-daterange span{font-size:11.5px; color:var(--text-faint); font-weight:600; white-space:nowrap;}
+.topbar-daterange .date-range-input{padding:5px 8px; font-size:12px;}
+.topbar-daterange #dateRangeLabel{display:none;}
+@media (max-width:1150px){ .topbar-daterange .to-label{display:none;} }
+@media (max-width:880px){ .topbar-daterange{display:none;} }
 
 .pots-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:16px; align-items:start;}
 @media (max-width:1400px){.pots-grid{grid-template-columns:repeat(3,1fr);}}
@@ -595,6 +602,15 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="nav-tabs" id="navTabs">
         <button class="nav-tab active" data-page="dashboard">Dashboard</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
+        <div class="topbar-daterange">
+          <span>Date range:</span>
+          <input type="date" id="dateFrom" class="date-range-input">
+          <span class="to-label">to</span>
+          <input type="date" id="dateTo" class="date-range-input">
+          <button class="btn btn-secondary btn-sm" id="dateRangeApply">Apply</button>
+          <button class="btn btn-ghost btn-sm" id="dateRangeReset">Reset</button>
+          <span id="dateRangeLabel"></span>
+        </div>
       </div>
 
       <div class="topbar-right">
@@ -654,16 +670,6 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       </div>
 
       <div class="filter-row hidden" id="advisorFilterRow"></div>
-
-      <div class="filter-row" id="dateRangeRow" style="align-items:center;">
-        <span style="font-size:12px;font-weight:600;color:var(--text-muted);">Date range:</span>
-        <input type="date" id="dateFrom" class="date-range-input">
-        <span style="font-size:12px;color:var(--text-faint);">to</span>
-        <input type="date" id="dateTo" class="date-range-input">
-        <button class="btn btn-secondary btn-sm" id="dateRangeApply">Apply</button>
-        <button class="btn btn-ghost btn-sm" id="dateRangeReset">Reset to all</button>
-        <span id="dateRangeLabel" style="font-size:11.5px; color:var(--text-faint); font-weight:600;"></span>
-      </div>
 
       <div class="pots-grid">
         <div class="pot" data-pot="new">

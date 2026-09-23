@@ -2219,11 +2219,8 @@ function logAudit(leadId, entry, patch={}){
 const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'Appointment', other:'Other contact'};
 
 function handleActionClick(lead, type){
-  const now = Date.now();
   actionUIState = {kind:type};
   renderDynamicArea(lead);
-  logAudit(lead.id, {type, text:`${ACTION_LABELS[type]} logged`, byId:currentUser.id, byName:currentUser.name, at:now},
-    lead.status==='new' ? {status:'existing'} : {}).catch(err=> toast('Could not save: '+err.message,'error'));
 }
 
 function renderDynamicArea(lead){

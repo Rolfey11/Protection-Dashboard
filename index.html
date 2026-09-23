@@ -415,6 +415,7 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .lead-card .lc-name{font-size:13px; font-weight:700; color:var(--text); line-height:1.2;}
 .lead-card .lc-flag{width:6px; height:6px; border-radius:50%; margin-top:4px; flex-shrink:0;}
 .lead-card .lc-meta{display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px;}
+.lead-card .lc-commission{font-family:var(--fh); font-size:17px; font-weight:800; color:var(--green); margin-bottom:6px; line-height:1.1;}
 .tag{font-size:10px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted);}
 .tag.advisor{background:var(--brand-tint); color:var(--brand);}
 .lead-card .lc-activity{font-size:10.5px; color:var(--text-faint); border-top:1px dashed var(--border); padding-top:5px; display:flex; justify-content:space-between; gap:6px;}
@@ -1707,11 +1708,11 @@ function leadCardHtml(lead, potKey){
         <div class="lc-flag" style="background:${flagColor}"></div>
       </div>
       ${potKey==='existing' && lead.followUpDate ? `<div class="lc-meta">${followUpBadge(lead.followUpDate)}</div>` : ''}
+      ${potKey==='signedup' && lead.commission!=null ? `<div class="lc-commission">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div>` : ''}
       <div class="lc-meta">
         ${showAdvisor ? `<span class="tag advisor">${esc(lead.advisorName||'Unassigned')}</span>` : ''}
         <span class="tag">App: ${fmtDate(lead.appDate)}</span>
         ${lead.clientSource ? `<span class="tag">${esc(lead.clientSource)}</span>` : ''}
-        ${lead.status==='signedup' && lead.commission ? `<span class="tag" style="background:var(--green-bg);color:var(--green)">£${Number(lead.commission).toLocaleString()}</span>` : ''}
       </div>
       <div class="lc-activity">
         <span class="txt">${last ? esc(last.text) : 'No activity yet'}</span>

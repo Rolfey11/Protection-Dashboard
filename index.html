@@ -465,8 +465,42 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .audit-meta{font-size:11px; color:var(--text-faint); margin-top:3px;}
 
 /* ==========================================================================
-   SETTINGS PAGE
+   INSIGHTS PAGE
    ========================================================================== */
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:12px; margin-bottom:26px;}
+.stat-card{background:#fff; border:1px solid var(--border); border-radius:13px; padding:15px 17px; box-shadow:var(--shadow-sm);}
+.stat-card .sv{font-size:23px; font-weight:800; color:var(--text); font-family:var(--fh); line-height:1.15;}
+.stat-card .sl{font-size:11px; color:var(--text-muted); font-weight:600; margin-top:4px;}
+.stat-card.accent .sv{color:var(--brand);}
+.stat-card.good .sv{color:var(--green);}
+.stat-card.warn .sv{color:var(--amber);}
+.stat-card.bad .sv{color:var(--red);}
+
+.insights-cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:26px;}
+@media (max-width:900px){.insights-cols{grid-template-columns:1fr;}}
+.insights-card{background:#fff; border:1px solid var(--border); border-radius:14px; padding:17px 19px; box-shadow:var(--shadow-sm);}
+.insights-card h4{font-size:13px; font-weight:700; margin-bottom:14px; color:var(--text);}
+.insights-empty{font-size:12.5px; color:var(--text-faint); padding:10px 0;}
+
+.mini-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+.mini-table th{text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-faint); padding:6px 4px; border-bottom:1px solid var(--border); font-weight:700;}
+.mini-table td{padding:8px 4px; border-bottom:1px solid var(--border); color:var(--text);}
+.mini-table tr:last-child td{border-bottom:none;}
+
+.bar-row{display:flex; align-items:center; gap:9px; margin-bottom:11px; font-size:12px;}
+.bar-row:last-child{margin-bottom:0;}
+.bar-row .bl{width:120px; flex-shrink:0; color:var(--text-muted); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.bar-track{flex:1; height:8px; background:var(--bg); border-radius:99px; overflow:hidden;}
+.bar-fill{height:100%; background:var(--brand); border-radius:99px; transition:width .3s;}
+.bar-num{width:30px; text-align:right; font-weight:700; color:var(--text); flex-shrink:0;}
+
+.funnel-row{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+.funnel-row:last-child{margin-bottom:0;}
+.funnel-label{width:150px; flex-shrink:0; font-size:12.5px; font-weight:600; color:var(--text-muted);}
+.funnel-track{flex:1; height:22px; background:var(--bg); border-radius:6px; overflow:hidden; position:relative;}
+.funnel-fill{height:100%; border-radius:6px; display:flex; align-items:center; padding-left:8px; font-size:11px; font-weight:700; color:#fff; white-space:nowrap; transition:width .3s;}
+
+
 .settings-card{background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); overflow:hidden;}
 .settings-head{padding:18px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;}
 table.users-table{width:100%; border-collapse:collapse;}
@@ -601,6 +635,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
       <div class="nav-tabs" id="navTabs">
         <button class="nav-tab active" data-page="dashboard">Dashboard</button>
+        <button class="nav-tab hidden" data-page="insights" id="insightsTab">Insights</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
         <div class="topbar-daterange">
           <span>Date range:</span>
@@ -695,6 +730,65 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       </div>
     </div>
 
+    <!-- ============= INSIGHTS PAGE (Management) ============= -->
+    <div id="page-insights" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Insights</h1>
+          <p class="sub">Management oversight — respects the advisor and date range filters above.</p>
+        </div>
+        <button class="btn btn-secondary" id="exportCsvBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          Export CSV
+        </button>
+      </div>
+
+      <div class="section-lbl" style="margin-top:0;">This week</div>
+      <div class="stat-grid" id="weekDigest"></div>
+
+      <div class="section-lbl">Conversion funnel</div>
+      <div class="insights-card" style="margin-bottom:26px;">
+        <div id="funnelChart"></div>
+      </div>
+
+      <div class="section-lbl">Commission</div>
+      <div class="stat-grid" id="commissionStats"></div>
+
+      <div class="insights-cols">
+        <div class="insights-card">
+          <h4>By advisor</h4>
+          <table class="mini-table" id="advisorTable"></table>
+        </div>
+        <div class="insights-card">
+          <h4>By client source</h4>
+          <table class="mini-table" id="sourceTable"></table>
+        </div>
+      </div>
+
+      <div class="insights-cols">
+        <div class="insights-card">
+          <h4>Decline reasons</h4>
+          <div id="declineReasonsChart"></div>
+        </div>
+        <div class="insights-card">
+          <h4>Advisor workload — open cases</h4>
+          <div id="workloadChart"></div>
+        </div>
+      </div>
+
+      <div class="section-lbl">Speed &amp; compliance</div>
+      <div class="stat-grid" id="speedStats"></div>
+
+      <div class="section-lbl">Stale cases — no activity in 5+ days</div>
+      <div class="settings-card" style="margin-bottom:10px;">
+        <table class="users-table" id="agingTable">
+          <thead><tr><th>Client</th><th>Advisor</th><th>Pot</th><th>Last activity</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="agingEmpty" class="settings-empty hidden">Nothing stale right now — nice work.</div>
+      </div>
+    </div>
+
     <!-- ============= SETTINGS PAGE ============= -->
     <div id="page-settings" class="hidden">
       <div class="page-head">
@@ -728,6 +822,10 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="field">
         <label for="ntName">Client name</label>
         <input type="text" id="ntName" placeholder="e.g. Sarah Jenkins">
+      </div>
+      <div id="ntDupeWarning" class="hidden" style="display:flex; gap:9px; background:var(--amber-bg); border:1.5px solid var(--amber); border-radius:10px; padding:11px 13px; margin-bottom:16px; margin-top:-6px;">
+        <span style="font-size:15px;">⚠️</span>
+        <span style="font-size:12px; font-weight:600; color:var(--amber);" id="ntDupeWarningText"></span>
       </div>
       <div id="ntExtraClients"></div>
       <button type="button" class="btn btn-secondary btn-sm" id="ntAddClientBtn" style="margin-bottom:18px;">
@@ -1156,6 +1254,7 @@ function enterApp(){
 
   document.getElementById('newTaskBtn').classList.remove('hidden');
   document.getElementById('settingsTab').classList.toggle('hidden', currentUser.role!=='management');
+  document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role!=='management');
 
   const first = currentUser.name.split(' ')[0];
   document.getElementById('dashGreeting').textContent = `Welcome back, ${first}`;
@@ -1175,9 +1274,11 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
 function goPage(page){
   document.querySelectorAll('.nav-tab').forEach(t=> t.classList.toggle('active', t.dataset.page===page));
   document.getElementById('page-dashboard').classList.toggle('hidden', page!=='dashboard');
+  document.getElementById('page-insights').classList.toggle('hidden', page!=='insights');
   document.getElementById('page-settings').classList.toggle('hidden', page!=='settings');
   if(page==='settings') renderUsersTable();
   if(page==='dashboard') renderDashboard();
+  if(page==='insights') renderInsights();
 }
 
 /* ----------------------------------------------------------------------------
@@ -1466,12 +1567,31 @@ document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   document.getElementById('ntName').value='';
   document.getElementById('ntDate').value='';
   document.getElementById('ntSource').value='';
+  document.getElementById('ntDupeWarning').classList.add('hidden');
   ntResetExtraClients();
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   const sel = document.getElementById('ntAdvisor');
   sel.innerHTML = '<option value="">Select an advisor…</option>' + mapas.map(([id,u])=>`<option value="${id}">${esc(u.name)}</option>`).join('');
   if(mapas.length===0) toast('No MAPAs set up yet — add one under Settings first.', 'error');
   openModal('newTaskOverlay');
+});
+
+/* Live duplicate-name check: catches accidental double-entry by warning
+   (not blocking) when a name closely matches an existing lead already in
+   the system. Simple normalised match, not a hard gate. */
+function normalizeName(s){ return (s||'').toLowerCase().trim().replace(/\s+/g,' '); }
+document.getElementById('ntName').addEventListener('input', function(){
+  const q = normalizeName(this.value);
+  const warnBox = document.getElementById('ntDupeWarning');
+  if(q.length < 3){ warnBox.classList.add('hidden'); return; }
+  const match = Object.values(LEADS).find(l=> normalizeName(l.clientName).includes(q) || q.includes(normalizeName(l.clientName)));
+  if(match){
+    document.getElementById('ntDupeWarningText').textContent =
+      `A similar client already exists: "${match.clientName}" (${match.advisorName||'unassigned'}, ${STATUS_LABELS[match.status]||potOf(match)}). Double check this isn't a duplicate.`;
+    warnBox.classList.remove('hidden');
+  } else {
+    warnBox.classList.add('hidden');
+  }
 });
 
 document.getElementById('ntSubmit').addEventListener('click', ()=>{
@@ -1997,6 +2117,224 @@ document.getElementById('markAllReadBtn').addEventListener('click', ()=>{
   const updates = {};
   myNotifs().forEach(n=> updates[`notifications/${n.id}/readBy/${currentUser.id}`] = true);
   if(Object.keys(updates).length) db.ref().update(updates);
+});
+
+/* ----------------------------------------------------------------------------
+   10.5) INSIGHTS (Management oversight)
+   ---------------------------------------------------------------------------- */
+
+/* Same scope as the dashboard's advisor + date-range filters (from the
+   topbar), but deliberately ignores the free-text search box — analytics
+   should reflect a stable, deliberate slice, not whatever's mid-typed in
+   the search field. */
+function insightsLeads(){
+  let all = Object.entries(LEADS).map(([id,l])=>({id,...l}));
+  if(selectedAdvisorFilter) all = all.filter(l=> l.advisorId===selectedAdvisorFilter);
+  if(dateRangeFrom){
+    const fromTs = new Date(dateRangeFrom+'T00:00:00').getTime();
+    all = all.filter(l=> l.appDate && new Date(l.appDate+'T00:00:00').getTime() >= fromTs);
+  }
+  if(dateRangeTo){
+    const toTs = new Date(dateRangeTo+'T23:59:59').getTime();
+    all = all.filter(l=> l.appDate && new Date(l.appDate+'T00:00:00').getTime() <= toTs);
+  }
+  return all;
+}
+
+function statCard(value, label, tone=''){
+  return `<div class="stat-card ${tone}"><div class="sv">${value}</div><div class="sl">${esc(label)}</div></div>`;
+}
+
+function renderInsights(){
+  const leads = insightsLeads();
+  const total = leads.length;
+  const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa');
+
+  /* ---- This week ---- */
+  const weekAgo = Date.now() - 7*24*60*60*1000;
+  const newThisWeek = leads.filter(l=> (l.createdAt||0) >= weekAgo).length;
+  const signedThisWeek = leads.filter(l=> potOf(l)==='signedup' && Object.values(l.audit||{}).some(a=>a.type==='signup' && a.at>=weekAgo)).length;
+  const declinedThisWeek = leads.filter(l=> l.declineReason && Object.values(l.audit||{}).some(a=>a.type==='decline' && a.at>=weekAgo)).length;
+  const overdueNow = leads.filter(l=>{
+    if(potOf(l)!=='existing' || !l.followUpDate) return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    return new Date(l.followUpDate).setHours(0,0,0,0) < today;
+  }).length;
+
+  document.getElementById('weekDigest').innerHTML =
+    statCard(newThisWeek, 'New leads (7 days)') +
+    statCard(signedThisWeek, 'Signed up (7 days)', 'good') +
+    statCard(declinedThisWeek, 'Declined (7 days)') +
+    statCard(overdueNow, 'Overdue calls right now', overdueNow>0?'bad':'good');
+
+  /* ---- Funnel ---- */
+  const counts = {new:0, existing:0, decline:0, signedup:0, completed:0};
+  leads.forEach(l=> counts[potOf(l)]++);
+  const pct = n => total ? Math.round(n/total*100) : 0;
+  const funnelDefs = [
+    ['New Cases', counts.new, 'var(--blue)'],
+    ['Contacted Clients', counts.existing, 'var(--amber)'],
+    ['Sign Ups', counts.signedup, 'var(--green)'],
+    ['Declines - Email not sent', counts.decline, 'var(--red)'],
+    ['Declines - Email sent', counts.completed, 'var(--teal)']
+  ];
+  document.getElementById('funnelChart').innerHTML = total===0
+    ? `<div class="insights-empty">No leads in this filter/date range yet.</div>`
+    : funnelDefs.map(([label,n,color])=> `
+      <div class="funnel-row">
+        <div class="funnel-label">${label}</div>
+        <div class="funnel-track"><div class="funnel-fill" style="width:${Math.max(pct(n),n>0?6:0)}%; background:${color};">${n>0? n+' · '+pct(n)+'%' : ''}</div></div>
+      </div>`).join('') +
+      `<div style="margin-top:12px; font-size:12px; color:var(--text-muted); font-weight:600;">
+         Overall conversion (Sign Ups ÷ total): <span style="color:var(--green);">${pct(counts.signedup)}%</span>
+       </div>`;
+
+  /* ---- Commission ---- */
+  const signedLeads = leads.filter(l=> potOf(l)==='signedup' && l.commission!=null);
+  const totalCommission = signedLeads.reduce((s,l)=> s+Number(l.commission||0), 0);
+  const avgCommission = signedLeads.length ? totalCommission/signedLeads.length : 0;
+  document.getElementById('commissionStats').innerHTML =
+    statCard('£'+totalCommission.toLocaleString(undefined,{maximumFractionDigits:0}), 'Total commission', 'accent') +
+    statCard('£'+avgCommission.toLocaleString(undefined,{maximumFractionDigits:0}), 'Average per sign-up') +
+    statCard(signedLeads.length, 'Sign-ups counted');
+
+  /* ---- By advisor ---- */
+  const advisorRows = mapas.map(([id,u])=>{
+    const own = leads.filter(l=> l.advisorId===id);
+    const signed = own.filter(l=> potOf(l)==='signedup');
+    const commission = signed.reduce((s,l)=> s+Number(l.commission||0), 0);
+    const convRate = own.length ? Math.round(signed.length/own.length*100) : 0;
+    return {name:u.name, total:own.length, signed:signed.length, convRate, commission};
+  }).sort((a,b)=> b.commission - a.commission);
+
+  document.getElementById('advisorTable').innerHTML = advisorRows.length===0
+    ? `<tr><td class="insights-empty">No MAPAs set up yet.</td></tr>`
+    : `<thead><tr><th>Advisor</th><th>Leads</th><th>Signed up</th><th>Conv.</th><th>Commission</th></tr></thead>
+       <tbody>${advisorRows.map(r=> `
+         <tr><td style="font-weight:600;">${esc(r.name)}</td><td>${r.total}</td><td>${r.signed}</td><td>${r.convRate}%</td><td>£${r.commission.toLocaleString(undefined,{maximumFractionDigits:0})}</td></tr>
+       `).join('')}</tbody>`;
+
+  /* ---- By source ---- */
+  const sources = ['Purchase','Remo','PT / FA'];
+  const sourceRows = sources.map(src=>{
+    const own = leads.filter(l=> l.clientSource===src);
+    const signed = own.filter(l=> potOf(l)==='signedup');
+    const commission = signed.reduce((s,l)=> s+Number(l.commission||0), 0);
+    const convRate = own.length ? Math.round(signed.length/own.length*100) : 0;
+    const avgComm = signed.length ? commission/signed.length : 0;
+    return {src, total:own.length, convRate, avgComm};
+  }).filter(r=> r.total>0);
+
+  document.getElementById('sourceTable').innerHTML = sourceRows.length===0
+    ? `<tr><td class="insights-empty">No sourced leads in this range yet.</td></tr>`
+    : `<thead><tr><th>Source</th><th>Leads</th><th>Conv.</th><th>Avg commission</th></tr></thead>
+       <tbody>${sourceRows.map(r=> `
+         <tr><td style="font-weight:600;">${esc(r.src)}</td><td>${r.total}</td><td>${r.convRate}%</td><td>£${r.avgComm.toLocaleString(undefined,{maximumFractionDigits:0})}</td></tr>
+       `).join('')}</tbody>`;
+
+  /* ---- Decline reasons ---- */
+  const declineLeads = leads.filter(l=> l.declineReason);
+  const reasonCounts = {};
+  declineLeads.forEach(l=> reasonCounts[l.declineReason] = (reasonCounts[l.declineReason]||0)+1);
+  const maxReason = Math.max(1, ...Object.values(reasonCounts));
+  const reasonEntries = Object.entries(reasonCounts).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('declineReasonsChart').innerHTML = reasonEntries.length===0
+    ? `<div class="insights-empty">No declines in this filter/date range yet.</div>`
+    : reasonEntries.map(([reason,n])=> `
+      <div class="bar-row">
+        <div class="bl" title="${esc(reason)}">${esc(reason)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${n/maxReason*100}%; background:var(--red);"></div></div>
+        <div class="bar-num">${n}</div>
+      </div>`).join('');
+
+  /* ---- Advisor workload (open, non-terminal cases) ---- */
+  const workloadRows = mapas.map(([id,u])=>{
+    const open = leads.filter(l=> l.advisorId===id && ['new','existing','decline'].includes(potOf(l))).length;
+    return {name:u.name, open};
+  }).sort((a,b)=> b.open - a.open);
+  const maxWorkload = Math.max(1, ...workloadRows.map(r=>r.open));
+  document.getElementById('workloadChart').innerHTML = workloadRows.length===0
+    ? `<div class="insights-empty">No MAPAs set up yet.</div>`
+    : workloadRows.map(r=> `
+      <div class="bar-row">
+        <div class="bl" title="${esc(r.name)}">${esc(r.name)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${r.open/maxWorkload*100}%;"></div></div>
+        <div class="bar-num">${r.open}</div>
+      </div>`).join('');
+
+  /* ---- Speed & compliance ---- */
+  const contactTimes = [];
+  leads.forEach(l=>{
+    const entries = Object.values(l.audit||{}).sort((a,b)=>a.at-b.at);
+    if(entries.length >= 2) contactTimes.push(entries[1].at - entries[0].at);
+  });
+  const avgContactHrs = contactTimes.length ? (contactTimes.reduce((s,v)=>s+v,0)/contactTimes.length)/3600000 : null;
+
+  const closeTimes = [];
+  leads.forEach(l=>{
+    if(potOf(l)==='signedup' || potOf(l)==='completed'){
+      const entries = Object.values(l.audit||{}).sort((a,b)=>b.at-a.at);
+      if(entries.length && l.createdAt) closeTimes.push(entries[0].at - l.createdAt);
+    }
+  });
+  const avgCloseDays = closeTimes.length ? (closeTimes.reduce((s,v)=>s+v,0)/closeTimes.length)/86400000 : null;
+
+  const withDeclineReason = declineLeads.length;
+  const bothSent = declineLeads.filter(l=> l.declineSent && l.hlpAdded).length;
+  const compliancePct = withDeclineReason ? Math.round(bothSent/withDeclineReason*100) : null;
+
+  document.getElementById('speedStats').innerHTML =
+    statCard(avgContactHrs==null ? '—' : avgContactHrs<1 ? '<1 hr' : Math.round(avgContactHrs)+' hrs', 'Avg. time to first contact') +
+    statCard(avgCloseDays==null ? '—' : avgCloseDays<1 ? '<1 day' : Math.round(avgCloseDays)+' days', 'Avg. time to close') +
+    statCard(compliancePct==null ? '—' : compliancePct+'%', 'Declines fully closed out (email + HLP)', compliancePct==null?'':compliancePct>=80?'good':compliancePct>=50?'warn':'bad');
+
+  /* ---- Stale cases ---- */
+  const staleThresholdMs = 5*24*60*60*1000;
+  const stale = leads.filter(l=> ['new','existing','decline'].includes(potOf(l))).map(l=>{
+    const last = leadLastActivity(l);
+    const lastAt = last?.at || l.createdAt || 0;
+    return {...l, lastAt};
+  }).filter(l=> (Date.now()-l.lastAt) >= staleThresholdMs).sort((a,b)=> a.lastAt-b.lastAt);
+
+  const agingBody = document.querySelector('#agingTable tbody');
+  document.getElementById('agingEmpty').classList.toggle('hidden', stale.length>0);
+  agingBody.innerHTML = stale.map(l=> `
+    <tr style="cursor:pointer;" data-id="${l.id}">
+      <td style="font-weight:600;">${esc(l.clientName)}</td>
+      <td>${esc(l.advisorName||'—')}</td>
+      <td><span class="role-badge ${potOf(l)==='new'?'mapa':potOf(l)==='existing'?'management':'admin'}">${STATUS_LABELS[l.status]||potOf(l)}</span></td>
+      <td style="color:var(--red); font-weight:600;">${timeAgo(l.lastAt)}</td>
+    </tr>`).join('');
+  agingBody.querySelectorAll('tr').forEach(row=>{
+    row.addEventListener('click', ()=> openLead(row.dataset.id));
+  });
+}
+
+/* ---- CSV export (respects the same advisor + date-range scope) ---- */
+document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
+  const leads = insightsLeads();
+  const headers = ['Client Name','Client Source','Advisor','App Date','Pot','Commission','Decline Reason','Decline Detail','Decline Sent','HLP Added','Assigned Date','Last Activity'];
+  const csvEscape = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const rows = leads.map(l=>{
+    const last = leadLastActivity(l);
+    return [
+      l.clientName, l.clientSource||'', l.advisorName||'', l.appDate||'',
+      STATUS_LABELS[l.status]||potOf(l), l.commission!=null? l.commission : '',
+      l.declineReason||'', l.declineDetail||'', l.declineSent?'Yes':'No', l.hlpAdded?'Yes':'No',
+      l.createdAt ? fmtDate(l.createdAt) : '', last ? fmtDateTime(last.at) : ''
+    ].map(csvEscape).join(',');
+  });
+  const csv = [headers.map(csvEscape).join(','), ...rows].join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `protection-lead-tracker-export-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('CSV exported', 'success');
 });
 
 /* ----------------------------------------------------------------------------

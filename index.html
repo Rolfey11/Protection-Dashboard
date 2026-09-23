@@ -1324,6 +1324,14 @@ function fmtDate(d){
   return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 }
 
+/* Used specifically in audit trail entries, e.g. "Call - Follow Up - 30/09/2026" */
+function fmtDateSlash(d){
+  if(!d) return '—';
+  const dt = new Date(d);
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
 function fmtDateTime(ts){
   if(!ts) return '—';
   const dt = new Date(ts);
@@ -2245,9 +2253,9 @@ function renderDynamicArea(lead){
         </div>
         <button class="btn btn-secondary btn-sm" id="quickNoteSave">Save note</button>
       </div>`;
-    area.querySelector('[data-o=signup]').addEventListener('click', ()=> openSignup(lead.id));
-    area.querySelector('[data-o=followup]').addEventListener('click', ()=>{ actionUIState='followup'; renderDynamicArea(lead); });
-    area.querySelector('[data-o=decline]').addEventListener('click', ()=>{ actionUIState='decline'; renderDynamicArea(lead); });
+    area.querySelector('[data-o=signup]').addEventListener('click', ()=> openSignup(lead.id, actionUIState.kind));
+    area.querySelector('[data-o=followup]').addEventListener('click', ()=>{ actionUIState={kind:actionUIState.kind, stage:'followup'}; renderDynamicArea(lead); });
+    area.querySelector('[data-o=decline]').addEventListener('click', ()=>{ actionUIState={kind:actionUIState.kind, stage:'decline'}; renderDynamicArea(lead); });
     document.getElementById('quickNoteSave').addEventListener('click', function(){
       const note = document.getElementById('quickNote').value.trim();
       if(!note){ toast('Add some detail first.','error'); return; }
@@ -2259,7 +2267,8 @@ function renderDynamicArea(lead){
     return;
   }
 
-  if(actionUIState === 'followup'){
+  if(actionUIState && actionUIState.stage === 'followup'){
+    const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
     area.innerHTML = `
       <div class="inline-form">
         <div class="field">
@@ -2277,7 +2286,7 @@ function renderDynamicArea(lead){
       const comment = document.getElementById('fuComment').value.trim();
       if(!date){ toast('Please choose a follow-up date.','error'); return; }
       this.disabled = true;
-      const text = `Follow-up scheduled for ${fmtDate(date)}` + (comment? ` — ${comment}` : '');
+      const text = `${label} - Follow Up - ${fmtDateSlash(date)}` + (comment? ` - ${comment}` : '');
       logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date})
         .then(()=>{ toast('Follow-up saved','success'); actionUIState=null; refreshLeadModal(); })
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
@@ -2285,7 +2294,8 @@ function renderDynamicArea(lead){
     return;
   }
 
-  if(actionUIState === 'decline'){
+  if(actionUIState && actionUIState.stage === 'decline'){
+    const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
     area.innerHTML = `
       <div class="inline-form">
         <div class="field">
@@ -2338,7 +2348,7 @@ function renderDynamicArea(lead){
       if(!reason){ toast('Please select a decline reason.','error'); return; }
       if(!detail){ toast('Please add detail for the decline.','error'); return; }
       this.disabled = true;
-      const text = `Declined — ${reason}: ${detail}`;
+      const text = `${label} - Decline - ${fmtDateSlash(Date.now())} - ${reason}: ${detail}`;
       const newStatus = (sent && hlp) ? 'completed' : 'decline';
       logAudit(lead.id, {type:'decline', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {
         status:newStatus, declineReason:reason, declineDetail:detail, declineSent:sent, hlpAdded:hlp
@@ -2358,19 +2368,21 @@ function renderDynamicArea(lead){
   area.innerHTML = '';
 }
 
-function openSignup(leadId){
+function openSignup(leadId, actionKind){
   document.getElementById('commissionInput').value='';
   document.getElementById('signupSubmit').dataset.leadId = leadId;
+  document.getElementById('signupSubmit').dataset.actionKind = actionKind || '';
   document.getElementById('signupSubmit').disabled = false;
   openModal('signupOverlay');
 }
 document.getElementById('signupSubmit').addEventListener('click', function(){
   const leadId = this.dataset.leadId;
+  const label = ACTION_LABELS[this.dataset.actionKind] || 'Contact';
   const val = document.getElementById('commissionInput').value;
   if(val==='' || isNaN(val) || Number(val)<0){ toast('Please enter a valid commission amount.','error'); return; }
   const btn = this;
   btn.disabled = true;
-  const text = `Signed up — Commission £${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
+  const text = `${label} - Sign Up - ${fmtDateSlash(Date.now())} - Commission £${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
   logAudit(leadId, {type:'signup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'signedup', commission:Number(val)})
     .then(()=>{
       toast('Lead marked as signed up 🎉','success'); closeModal('signupOverlay');

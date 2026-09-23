@@ -968,7 +968,7 @@ let currentUser = null; // {id, name, role, pin}
 let pinBuffer = "";
 let selectedAdvisorFilter = null; // management/admin advisor filter
 let searchTerm = ''; // global search across name/source/etc.
-let dateRangeFrom = null; // yyyy-mm-dd, filters by lead's assigned date
+let dateRangeFrom = null; // yyyy-mm-dd, filters by mortgage application date
 let dateRangeTo = null;
 let activeLeadId = null;
 // Drives the transient area under the action buttons. One of:
@@ -1215,11 +1215,11 @@ function visibleLeads(){
   }
   if(dateRangeFrom){
     const fromTs = new Date(dateRangeFrom+'T00:00:00').getTime();
-    all = all.filter(l=> (l.createdAt||0) >= fromTs);
+    all = all.filter(l=> l.appDate && new Date(l.appDate+'T00:00:00').getTime() >= fromTs);
   }
   if(dateRangeTo){
     const toTs = new Date(dateRangeTo+'T23:59:59').getTime();
-    all = all.filter(l=> (l.createdAt||0) <= toTs);
+    all = all.filter(l=> l.appDate && new Date(l.appDate+'T00:00:00').getTime() <= toTs);
   }
   if(searchTerm){
     const q = searchTerm.toLowerCase();
@@ -1272,7 +1272,8 @@ document.getElementById('globalSearch').addEventListener('input', function(){
 });
 
 /* Date range: default is "all cases" (both blank). Apply narrows the
-   dashboard to leads whose assignment date falls in range; Reset clears it. */
+   dashboard to leads whose mortgage application date falls in range;
+   Reset clears it. */
 function renderDateRangeLabel(){
   const lbl = document.getElementById('dateRangeLabel');
   if(!dateRangeFrom && !dateRangeTo){ lbl.textContent = 'Showing all cases'; return; }

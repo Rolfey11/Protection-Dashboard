@@ -554,6 +554,12 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .insights-card h4{font-size:13px; font-weight:700; margin-bottom:14px; color:var(--text);}
 .insights-empty{font-size:12.5px; color:var(--text-faint); padding:10px 0;}
 
+.myday-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 6px; border-bottom:1px solid var(--border); cursor:pointer; transition:.12s;}
+.myday-row:last-child{border-bottom:none;}
+.myday-row:hover{background:var(--brand-tint); margin:0 -10px; padding-left:16px; padding-right:16px; border-radius:8px;}
+.myday-name{font-size:13.5px; font-weight:700; color:var(--text);}
+.myday-sub{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+
 .mini-table{width:100%; border-collapse:collapse; font-size:12.5px;}
 .mini-table th{text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-faint); padding:6px 4px; border-bottom:1px solid var(--border); font-weight:700;}
 .mini-table td{padding:8px 4px; border-bottom:1px solid var(--border); color:var(--text);}
@@ -820,6 +826,14 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
       <div class="filter-row hidden" id="advisorFilterRow"></div>
 
+      <div id="myDaySection" class="hidden">
+        <div class="section-lbl" style="margin-top:0; display:flex; align-items:center; justify-content:space-between;">
+          <span>My Day</span>
+          <span id="myDayCount" style="font-weight:700; color:var(--brand);"></span>
+        </div>
+        <div class="insights-card" id="myDayCard" style="margin-bottom:26px;"></div>
+      </div>
+
       <div class="pots-grid">
         <div class="pot" data-pot="new">
           <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--blue)"></span><h3>New Cases</h3></div><span class="pot-count" id="count-new">0</span></div>
@@ -973,6 +987,22 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             </div>
             <button class="btn btn-danger" id="bdDeleteBtn" style="background:var(--red); color:#fff;" disabled>Delete these cases</button>
           </div>
+        </div>
+      </div>
+
+      <div id="settingsRecycleBinSection" style="margin-top:34px;">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1 style="font-size:19px;">Recycle Bin</h1>
+            <p class="sub">Deleted cases are kept here for 30 days before being purged for good.</p>
+          </div>
+        </div>
+        <div class="settings-card">
+          <table class="users-table">
+            <thead><tr><th>Client</th><th>Advisor</th><th>Deleted by</th><th>Deleted</th><th>Purges in</th><th></th></tr></thead>
+            <tbody id="recycleBinBody"></tbody>
+          </table>
+          <div id="recycleBinEmpty" class="settings-empty hidden">Recycle Bin is empty.</div>
         </div>
       </div>
     </div>
@@ -1317,7 +1347,13 @@ auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
    their database key (stable even if their name changes later) and a
    password derived from their 4-digit PIN, padded to meet Firebase's
    6-character minimum. The PIN itself is all anyone ever types. */
-function authEmailFor(uid){ return `${uid}@plt.internal`; }
+function authEmailFor(uid){
+  // Most colleagues get an auto-generated Firebase key (already email-safe),
+  // but anyone added by hand directly in the Firebase console early on may
+  // have a key like "James Rolfe" — sanitize so it's always a valid email.
+  const safe = String(uid).toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/-+/g,'-');
+  return `${safe}@plt.internal`;
+}
 function authPasswordFor(pin){ return `PLT-${pin}`; }
 
 /* ----------------------------------------------------------------------------
@@ -1526,10 +1562,14 @@ function tryResolveSession(){
   if(currentUser) return;
   if(!authChecked) return;
   if(!pendingAuthUser) return; // no active session — login screen stays up
-  const uid = pendingAuthUser.email.split('@')[0];
-  const u = USERS[uid];
-  if(u){
-    currentUser = {id:uid, name:u.name, role:u.role, pin:u.pin};
+  // Match by computing each candidate's synthetic email forward, rather
+  // than trying to reverse-extract an id from the (possibly sanitized)
+  // email — sanitization loses information (case, spaces) so it can't be
+  // reliably undone.
+  const matchId = Object.keys(USERS).find(id => authEmailFor(id) === pendingAuthUser.email);
+  if(matchId){
+    const u = USERS[matchId];
+    currentUser = {id:matchId, name:u.name, role:u.role, pin:u.pin};
     enterApp();
   } else {
     // Signed in at the Auth layer but no matching colleague record — most
@@ -1590,6 +1630,7 @@ function goPage(page){
     document.getElementById('settingsColleagueSection').classList.toggle('hidden', currentUser.role!=='management');
     renderUsersTable();
     resetBulkDelete();
+    renderRecycleBin();
   }
   if(page==='dashboard') renderDashboard();
   if(page==='insights') renderInsights();
@@ -1649,6 +1690,9 @@ db.ref('users').on('value', snap=>{
   renderUserSelect();
   tryResolveSession();
   if(currentUser){ renderDashboard(); renderUsersTable(); }
+}, err=>{
+  userSelect.innerHTML = '<option value="">Could not load — check Firebase rules</option>';
+  showLoginError('Could not load colleagues. If this persists, your Firebase database rules likely need adjusting — see the setup notes in this file.');
 });
 
 db.ref('leads').on('value', snap=>{
@@ -1656,6 +1700,7 @@ db.ref('leads').on('value', snap=>{
   if(currentUser){
     renderDashboard();
     if(activeLeadId) refreshLeadModal();
+    if(!document.getElementById('page-settings').classList.contains('hidden')) renderRecycleBin();
   }
 });
 
@@ -1784,6 +1829,7 @@ function renderDashboard(){
   renderDateRangeLabel();
   renderAdvisorFilter();
   renderOverdueBanner();
+  renderMyDay();
   const leads = visibleLeads();
   const buckets = {new:[], existing:[], decline:[], signedup:[], completed:[]};
   leads.forEach(l=> buckets[potOf(l)].push(l));
@@ -1875,6 +1921,73 @@ function renderOverdueBanner(){
   }).join('');
   document.querySelectorAll('#overdueBannerList .ob-chip').forEach(chip=>{
     chip.addEventListener('click', ()=> openLead(chip.dataset.id));
+  });
+}
+
+/* "My Day" — a single worklist for a MAPA combining everything that needs
+   their attention today: overdue/due-today calls, brand new cases they
+   haven't touched yet, and declines still waiting on compliance steps.
+   Management/Admin don't get this — it's specifically to replace scanning
+   five pots every morning with one list. */
+function myDayItems(){
+  if(currentUser.role!=='mapa') return [];
+  const mine = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted && l.advisorId===currentUser.id);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const items = [];
+
+  mine.forEach(l=>{
+    const pot = potOf(l);
+    if(pot==='existing' && l.followUpDate){
+      const due = new Date(l.followUpDate); due.setHours(0,0,0,0);
+      if(due <= today){
+        const overdueDays = Math.round((today-due)/86400000);
+        items.push({
+          lead:l, sortKey:0,
+          reason: overdueDays>0 ? `Overdue call — ${overdueDays}d` : 'Call due today',
+          tone: overdueDays>0 ? 'bad' : 'warn'
+        });
+      }
+    }
+    if(pot==='new' && Object.keys(l.audit||{}).length<=1){
+      items.push({lead:l, sortKey:1, reason:'New — no contact yet', tone:'accent'});
+    }
+    if(pot==='decline'){
+      const reason = (!l.declineSent && !l.hlpAdded) ? 'Decline — reasoning & HLP pending'
+        : !l.declineSent ? 'Decline — reasoning pending' : 'Decline — HLP pending';
+      items.push({lead:l, sortKey:0, reason, tone:'bad'});
+    }
+  });
+
+  items.sort((a,b)=> a.sortKey-b.sortKey);
+  return items;
+}
+
+function renderMyDay(){
+  const section = document.getElementById('myDaySection');
+  if(currentUser.role!=='mapa'){ section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+
+  const items = myDayItems();
+  document.getElementById('myDayCount').textContent = items.length ? `${items.length} to do` : '';
+  const card = document.getElementById('myDayCard');
+  if(items.length===0){
+    card.innerHTML = `<div class="insights-empty">Nothing needs your attention right now — nice work.</div>`;
+    return;
+  }
+  const toneMap = {bad:['var(--red-bg)','var(--red)'], warn:['var(--amber-bg)','var(--amber)'], accent:['var(--brand-tint)','var(--brand)']};
+  card.innerHTML = items.map(it=>{
+    const [bg,fg] = toneMap[it.tone];
+    return `
+      <div class="myday-row" data-id="${it.lead.id}">
+        <div>
+          <div class="myday-name">${esc(it.lead.clientName)}</div>
+          <div class="myday-sub">${it.lead.clientSource ? esc(it.lead.clientSource)+' · ' : ''}Task Created ${fmtDate(it.lead.appDate)}</div>
+        </div>
+        <span class="tag" style="background:${bg}; color:${fg}; font-weight:700;">${esc(it.reason)}</span>
+      </div>`;
+  }).join('');
+  card.querySelectorAll('.myday-row').forEach(row=>{
+    row.addEventListener('click', ()=> openLead(row.dataset.id));
   });
 }
 
@@ -2157,6 +2270,16 @@ function renderLeadModal(){
     </div>
   `;
 
+  const notesHtml = `
+    <div class="section-lbl" style="margin-top:18px;">Notes</div>
+    ${canManageLead(lead) ? `
+      <textarea id="leadNotesInput" placeholder="General notes about this case — anything that doesn't fit the timestamped audit trail." style="width:100%; min-height:70px; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px; font-family:inherit; resize:vertical;">${esc(lead.notes||'')}</textarea>
+      <button class="btn btn-secondary btn-sm" id="leadNotesSave" style="margin-top:8px;">Save notes</button>
+    ` : `
+      <div class="info-cell full"><div class="val" style="font-weight:500; white-space:pre-wrap;">${lead.notes ? esc(lead.notes) : 'No notes yet.'}</div></div>
+    `}
+  `;
+
   let actionHtml = '';
   if(canAction(lead)){
     actionHtml = `
@@ -2185,7 +2308,19 @@ function renderLeadModal(){
     <button id="changeStatusBtn" class="btn btn-secondary" style="width:100%; justify-content:center;">Change status</button>
   ` : '';
 
-  document.getElementById('leadLeftPane').innerHTML = infoHtml + actionHtml + changeStatusHtml;
+  document.getElementById('leadLeftPane').innerHTML = infoHtml + notesHtml + actionHtml + changeStatusHtml;
+
+  const notesSaveBtn = document.getElementById('leadNotesSave');
+  if(notesSaveBtn){
+    notesSaveBtn.addEventListener('click', function(){
+      const val = document.getElementById('leadNotesInput').value;
+      this.disabled = true;
+      db.ref().update({['leads/'+lead.id+'/notes']: val}).then(()=>{
+        toast('Notes saved','success');
+      }).catch(err=> toast('Could not save: '+err.message,'error'))
+        .finally(()=>{ this.disabled = false; });
+    });
+  }
 
   if(currentUser.role==='management'){
     const rb = document.getElementById('reassignBtn');
@@ -2996,6 +3131,75 @@ document.getElementById('bulkDeleteConfirmBtn').addEventListener('click', functi
   }).catch(err=> toast('Could not delete: '+err.message, 'error'))
     .finally(()=>{ btn.disabled = false; });
 });
+
+/* ---- Recycle Bin (Management / Admin) ----
+   There's no server here to purge on a schedule, so ageing-out is handled
+   lazily: whenever Settings is opened, anything past 30 days in the bin
+   gets permanently removed at that point. */
+const RECYCLE_BIN_DAYS = 30;
+
+function renderRecycleBin(){
+  const now = Date.now();
+  const thresholdMs = RECYCLE_BIN_DAYS*24*60*60*1000;
+  const all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> l.deleted);
+
+  const toPurge = all.filter(l=> (now-(l.deletedAt||0)) >= thresholdMs);
+  if(toPurge.length){
+    const updates = {};
+    toPurge.forEach(l=> updates['leads/'+l.id] = null);
+    db.ref().update(updates); // fire-and-forget; the leads listener will refresh the view
+  }
+
+  const remaining = all.filter(l=> (now-(l.deletedAt||0)) < thresholdMs)
+    .sort((a,b)=> (b.deletedAt||0)-(a.deletedAt||0));
+
+  document.getElementById('recycleBinEmpty').classList.toggle('hidden', remaining.length>0);
+  const tbody = document.getElementById('recycleBinBody');
+  tbody.innerHTML = remaining.map(l=>{
+    const daysLeft = Math.max(0, Math.ceil((thresholdMs-(now-(l.deletedAt||0)))/86400000));
+    const urgent = daysLeft<=5;
+    return `
+      <tr>
+        <td style="font-weight:600;">${esc(l.clientName)}</td>
+        <td>${esc(l.advisorName||'Unassigned')}</td>
+        <td>${esc(l.deletedBy||'—')}</td>
+        <td>${fmtDate(l.deletedAt)}</td>
+        <td style="color:${urgent?'var(--red)':'var(--text-muted)'}; font-weight:${urgent?700:400};">${daysLeft} day${daysLeft!==1?'s':''}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn btn-secondary btn-sm" data-restore="${l.id}">Restore</button>
+            <button class="icon-btn del" data-purge="${l.id}" title="Delete permanently now">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('[data-restore]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const id = this.dataset.restore;
+      this.disabled = true;
+      db.ref().update({
+        ['leads/'+id+'/deleted']: null,
+        ['leads/'+id+'/deletedAt']: null,
+        ['leads/'+id+'/deletedBy']: null
+      }).then(()=>{ toast('Case restored','success'); })
+        .catch(err=>{ toast('Could not restore: '+err.message,'error'); this.disabled=false; });
+    });
+  });
+
+  tbody.querySelectorAll('[data-purge]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const id = this.dataset.purge;
+      const lead = LEADS[id];
+      if(!confirm(`Permanently delete ${lead?.clientName||'this case'} right now? This truly cannot be undone.`)) return;
+      this.disabled = true;
+      db.ref('leads/'+id).remove().then(()=>{ toast('Permanently deleted','success'); })
+        .catch(err=>{ toast('Could not delete: '+err.message,'error'); this.disabled=false; });
+    });
+  });
+}
 
 /* ----------------------------------------------------------------------------
    11) SETTINGS — manage colleagues

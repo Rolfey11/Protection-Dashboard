@@ -1583,6 +1583,7 @@ function tryResolveSession(){
   if(matchId){
     const u = USERS[matchId];
     currentUser = {id:matchId, name:u.name, role:u.role, pin:u.pin};
+    startAuthedListeners();
     enterApp();
   } else {
     // Signed in at the Auth layer but no matching colleague record — most
@@ -1592,6 +1593,9 @@ function tryResolveSession(){
 }
 
 function logout(){
+  db.ref('leads').off();
+  db.ref('notifications').off();
+  realtimeListenersStarted = false;
   auth.signOut();
   currentUser = null;
   pendingAuthUser = null;
@@ -1708,19 +1712,35 @@ db.ref('users').on('value', snap=>{
   showLoginError('Could not load colleagues. If this persists, your Firebase database rules likely need adjusting — see the setup notes in this file.');
 });
 
-db.ref('leads').on('value', snap=>{
-  LEADS = snap.val() || {};
-  if(currentUser){
-    renderDashboard();
-    if(activeLeadId) refreshLeadModal();
-    if(!document.getElementById('page-settings').classList.contains('hidden')) renderRecycleBin();
-  }
-});
+/* leads/notifications require auth != null in the rules, so — unlike the
+   users listener above — these must NOT attach until we know we're
+   actually signed in. Attaching too early gets a permission-denied that
+   Firebase does not silently retry later, leaving the dashboard stuck
+   empty even after a successful login. startAuthedListeners() is called
+   from tryResolveSession() the moment a session is confirmed. */
+let realtimeListenersStarted = false;
+function startAuthedListeners(){
+  if(realtimeListenersStarted) return;
+  realtimeListenersStarted = true;
 
-db.ref('notifications').on('value', snap=>{
-  NOTIFS = snap.val() || {};
-  if(currentUser) renderNotifs();
-});
+  db.ref('leads').on('value', snap=>{
+    LEADS = snap.val() || {};
+    if(currentUser){
+      renderDashboard();
+      if(activeLeadId) refreshLeadModal();
+      if(!document.getElementById('page-settings').classList.contains('hidden')) renderRecycleBin();
+    }
+  }, err=>{
+    toast('Could not load leads — check Firebase rules allow reading /leads for signed-in users.', 'error');
+  });
+
+  db.ref('notifications').on('value', snap=>{
+    NOTIFS = snap.val() || {};
+    if(currentUser) renderNotifs();
+  }, err=>{
+    toast('Could not load notifications — check Firebase rules.', 'error');
+  });
+}
 
 /* ----------------------------------------------------------------------------
    7) DASHBOARD RENDERING

@@ -2510,7 +2510,16 @@ function openEditSource(lead){
   document.getElementById('esClientName').textContent = lead.clientName;
   const sources = Object.values(CLIENTSOURCES).sort();
   const sel = document.getElementById('esSource');
-  sel.innerHTML = sources.map(s=> `<option ${s===lead.clientSource?'selected':''}>${esc(s)}</option>`).join('');
+  const currentMatches = lead.clientSource && sources.includes(lead.clientSource);
+  let html = '';
+  if(!currentMatches){
+    // Their current value either was never set, or has since been removed
+    // from Settings — show that honestly rather than silently defaulting
+    // to whatever's first alphabetically.
+    html += `<option value="" selected>${lead.clientSource ? esc(lead.clientSource)+' (no longer in list)' : 'Not set'}</option>`;
+  }
+  html += sources.map(s=> `<option ${s===lead.clientSource?'selected':''}>${esc(s)}</option>`).join('');
+  sel.innerHTML = html;
   document.getElementById('esSubmit').dataset.leadId = lead.id;
   document.getElementById('esSubmit').disabled = false;
   openModal('editSourceOverlay');
@@ -3307,7 +3316,7 @@ function renderClientSources(){
       const name = CLIENTSOURCES[id];
       if(!confirm(`Remove "${name}" from the list of client sources? Leads already using it keep showing it — this only affects future selection.`)) return;
       this.disabled = true;
-      db.ref('clientSources/'+id).remove().catch(err=> toast('Could not remove: '+err.message,'error'));
+      db.ref('clientSources/'+id).remove().catch(err=>{ toast('Could not remove: '+err.message,'error'); this.disabled=false; });
     });
   });
 }

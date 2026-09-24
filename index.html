@@ -1750,7 +1750,7 @@ function visibleLeads(){
   if(currentUser.role==='mapa'){
     all = all.filter(l=> l.advisorId===currentUser.id);
   } else if((currentUser.role==='management' || currentUser.role==='admin') && selectedAdvisorFilter){
-    all = all.filter(l=> l.advisorId===selectedAdvisorFilter);
+    all = selectedAdvisorFilter==='__unassigned__' ? all.filter(l=> !l.advisorId) : all.filter(l=> l.advisorId===selectedAdvisorFilter);
   }
   if(dateRangeFrom){
     const fromTs = new Date(dateRangeFrom+'T00:00:00').getTime();
@@ -1791,8 +1791,10 @@ function renderAdvisorFilter(){
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   if(mapas.length===0){ row.classList.add('hidden'); return; }
   row.classList.remove('hidden');
+  const unassignedCount = Object.values(LEADS).filter(l=> !l.deleted && !l.advisorId).length;
   row.innerHTML = `<span style="font-size:12px;font-weight:600;color:var(--text-muted);margin-right:2px;">Filter by advisor:</span>` +
     `<button class="filter-chip ${!selectedAdvisorFilter?'active':''}" data-adv="">All advisors</button>` +
+    `<button class="filter-chip ${selectedAdvisorFilter==='__unassigned__'?'active':''}" data-adv="__unassigned__" style="${selectedAdvisorFilter==='__unassigned__'?'':'border-color:var(--amber);color:var(--amber);'}">Unassigned${unassignedCount?' ('+unassignedCount+')':''}</button>` +
     mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${id}">${esc(u.name)}</button>`).join('');
   row.querySelectorAll('.filter-chip').forEach(chip=>{
     chip.addEventListener('click', ()=>{ selectedAdvisorFilter = chip.dataset.adv || null; renderDashboard(); });
@@ -2711,7 +2713,7 @@ function insightsLeads(){
   if(currentUser.role==='mapa'){
     all = all.filter(l=> l.advisorId===currentUser.id);
   } else if(selectedAdvisorFilter){
-    all = all.filter(l=> l.advisorId===selectedAdvisorFilter);
+    all = selectedAdvisorFilter==='__unassigned__' ? all.filter(l=> !l.advisorId) : all.filter(l=> l.advisorId===selectedAdvisorFilter);
   }
   if(dateRangeFrom){
     const fromTs = new Date(dateRangeFrom+'T00:00:00').getTime();
@@ -3006,9 +3008,20 @@ document.getElementById('udFileInput').addEventListener('change', function(){
     }
 
     const userList = Object.entries(USERS);
+    const normalizeAdvisorName = (s)=> String(s).replace(/\([^)]*\)/g,'').trim().toLowerCase().replace(/\s+/g,' ');
     const findAdvisor = (name)=>{
-      const norm = name.trim().toLowerCase();
-      const match = userList.find(([id,u])=> u.name.trim().toLowerCase()===norm);
+      const norm = normalizeAdvisorName(name);
+      // Exact match first (after stripping things like "(MAPA)"), then
+      // fall back to a partial match either direction — handles cases like
+      // the CSV saying "Mitch Atkins (MAPA)" against an account named just
+      // "Mitch Atkins".
+      let match = userList.find(([id,u])=> normalizeAdvisorName(u.name)===norm);
+      if(!match){
+        match = userList.find(([id,u])=>{
+          const un = normalizeAdvisorName(u.name);
+          return un.length>0 && (norm.includes(un) || un.includes(norm));
+        });
+      }
       return match ? {id:match[0], name:match[1].name} : null;
     };
 

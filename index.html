@@ -436,6 +436,7 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 #deleteConfirmOverlay{z-index:110;}
 #reassignOverlay{z-index:110;}
 #changeStatusOverlay{z-index:110;}
+#editSourceOverlay{z-index:110;}
 .modal{
   background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:100%; max-width:440px;
   max-height:90vh; overflow-y:auto; transform:translateY(14px) scale(.97); transition:transform .2s cubic-bezier(.2,.8,.2,1);
@@ -559,6 +560,10 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .myday-row:hover{background:var(--brand-tint); margin:0 -10px; padding-left:16px; padding-right:16px; border-radius:8px;}
 .myday-name{font-size:13.5px; font-weight:700; color:var(--text);}
 .myday-sub{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+
+.source-row{display:flex; align-items:center; justify-content:space-between; padding:9px 4px; border-bottom:1px solid var(--border); font-size:13.5px; font-weight:600; color:var(--text);}
+.source-row:last-child{border-bottom:none;}
+.source-empty{font-size:12.5px; color:var(--text-faint); padding:8px 4px;}
 
 .mini-table{width:100%; border-collapse:collapse; font-size:12.5px;}
 .mini-table th{text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-faint); padding:6px 4px; border-bottom:1px solid var(--border); font-weight:700;}
@@ -954,6 +959,20 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           </table>
           <div id="usersEmpty" class="settings-empty hidden">No colleagues added yet. Click "Add Colleague" to get started.</div>
         </div>
+
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1 style="font-size:19px;">Client Sources</h1>
+            <p class="sub">Manage the source options offered on New Task and when editing a lead.</p>
+          </div>
+        </div>
+        <div class="insights-card" style="max-width:480px; margin-bottom:34px;">
+          <div id="clientSourcesList" style="margin-bottom:14px;"></div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="csNewSourceInput" placeholder="e.g. Resi Purchase" style="flex:1; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px;">
+            <button class="btn btn-primary btn-sm" id="csAddSourceBtn">Add</button>
+          </div>
+        </div>
       </div>
 
       <div id="settingsBulkDeleteSection">
@@ -1051,9 +1070,6 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <label for="ntSource">Client source</label>
         <select id="ntSource">
           <option value="">Select a source…</option>
-          <option>Purchase</option>
-          <option>Remo</option>
-          <option>PT / FA</option>
         </select>
       </div>
       <div class="field">
@@ -1118,6 +1134,28 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="changeStatusOverlay">Cancel</button>
       <button class="btn btn-primary" id="csSubmit">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: EDIT CLIENT SOURCE
+     ============================================================ -->
+<div class="modal-overlay" id="editSourceOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>Edit client source</h2><button class="modal-close" data-close="editSourceOverlay">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13.5px; color:var(--text-muted); margin-bottom:16px;">
+        Change the source for <strong id="esClientName" style="color:var(--text);">this lead</strong>.
+      </p>
+      <div class="field">
+        <label for="esSource">Client source</label>
+        <select id="esSource"></select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="editSourceOverlay">Cancel</button>
+      <button class="btn btn-primary" id="esSubmit">Save</button>
     </div>
   </div>
 </div>
@@ -1294,13 +1332,17 @@ table.users-table tr:hover td{background:var(--brand-tint);}
    scenes — every colleague gets an actual Auth account created the first
    time they log in (their PIN becomes their password, padded to satisfy
    Firebase's 6-character minimum), and the app signs them in for real, not
-   just a client-side PIN check. Your Firebase Rules MUST require
-   authentication for this to actually protect anything — set them to:
+   just a client-side PIN check. Your Firebase Rules MUST match this
+   structure for the app to work at all — the login screen needs to read
+   the colleague list BEFORE anyone is authenticated, so /users stays
+   publicly readable while everything else requires sign-in:
 
    {
      "rules": {
-       ".read": "auth != null",
-       ".write": "auth != null"
+       "users": { ".read": true, ".write": "auth != null" },
+       "leads": { ".read": "auth != null", ".write": "auth != null" },
+       "notifications": { ".read": "auth != null", ".write": "auth != null" },
+       "clientSources": { ".read": "auth != null", ".write": "auth != null" }
      }
    }
 
@@ -1362,6 +1404,7 @@ function authPasswordFor(pin){ return `PLT-${pin}`; }
 let USERS = {};        // uid -> {name, role, pin}
 let LEADS = {};        // leadId -> lead object (incl. audit)
 let NOTIFS = {};        // notifId -> notif object
+let CLIENTSOURCES = {}; // sourceId -> name string, managed from Settings
 let currentUser = null; // {id, name, role, pin}
 let pinBuffer = "";
 let selectedAdvisorFilter = null; // management/admin advisor filter
@@ -1648,6 +1691,7 @@ function goPage(page){
     renderUsersTable();
     resetBulkDelete();
     renderRecycleBin();
+    renderClientSources();
   }
   if(page==='dashboard') renderDashboard();
   if(page==='insights') renderInsights();
@@ -1739,6 +1783,25 @@ function startAuthedListeners(){
     if(currentUser) renderNotifs();
   }, err=>{
     toast('Could not load notifications — check Firebase rules.', 'error');
+  });
+
+  const DEFAULT_CLIENT_SOURCES = ['Resi Purchase','Resi Remo','Resi FA','Resi PT','BTL Purchase','BTL Remo','BTL FA','BTL PT','Equity Release','Bridge'];
+  let clientSourcesSeeded = false;
+  db.ref('clientSources').on('value', snap=>{
+    CLIENTSOURCES = snap.val() || {};
+    if(Object.keys(CLIENTSOURCES).length===0 && !clientSourcesSeeded && currentUser.role==='management'){
+      // First time this feature has run — seed the standard list once.
+      clientSourcesSeeded = true;
+      const updates = {};
+      DEFAULT_CLIENT_SOURCES.forEach(name=>{
+        const key = db.ref('clientSources').push().key;
+        updates['clientSources/'+key] = name;
+      });
+      db.ref().update(updates);
+    }
+    if(currentUser && !document.getElementById('page-settings').classList.contains('hidden')) renderClientSources();
+  }, err=>{
+    toast('Could not load client sources — check Firebase rules allow /clientSources.', 'error');
   });
 }
 
@@ -2096,7 +2159,6 @@ document.getElementById('ntAddClientBtn').addEventListener('click', ()=>{
 document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   document.getElementById('ntName').value='';
   document.getElementById('ntDate').value='';
-  document.getElementById('ntSource').value='';
   document.getElementById('ntDupeWarning').classList.add('hidden');
   document.getElementById('ntSubmit').disabled = false;
   ntResetExtraClients();
@@ -2104,6 +2166,9 @@ document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   const sel = document.getElementById('ntAdvisor');
   sel.innerHTML = '<option value="">Select an advisor…</option>' + mapas.map(([id,u])=>`<option value="${id}">${esc(u.name)}</option>`).join('');
   if(mapas.length===0) toast('No MAPAs set up yet — add one under Settings first.', 'error');
+  const sourceSel = document.getElementById('ntSource');
+  const sources = Object.values(CLIENTSOURCES).sort();
+  sourceSel.innerHTML = '<option value="">Select a source…</option>' + sources.map(s=>`<option>${esc(s)}</option>`).join('');
   openModal('newTaskOverlay');
 });
 
@@ -2281,7 +2346,7 @@ function renderLeadModal(){
     <div class="info-grid">
       <div class="info-cell"><div class="lbl">Advisor</div><div class="val">${esc(lead.advisorName)}</div>${currentUser.role==='management' ? `<button id="reassignBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Reassign</button>` : ''}</div>
       <div class="info-cell"><div class="lbl">Task Created</div><div class="val">${fmtDate(lead.appDate)}</div></div>
-      <div class="info-cell"><div class="lbl">Client source</div><div class="val">${esc(lead.clientSource||'—')}</div></div>
+      <div class="info-cell"><div class="lbl">Client source</div><div class="val">${esc(lead.clientSource||'—')}</div>${canManageLead(lead) ? `<button id="editSourceBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Edit</button>` : ''}</div>
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
       ${potOf(lead)==='existing' && lead.followUpDate ? `
@@ -2365,6 +2430,8 @@ function renderLeadModal(){
   if(canManageLead(lead)){
     const csb = document.getElementById('changeStatusBtn');
     if(csb) csb.addEventListener('click', ()=> openChangeStatus(lead));
+    const esb = document.getElementById('editSourceBtn');
+    if(esb) esb.addEventListener('click', ()=> openEditSource(lead));
   }
 
   if(canAction(lead)){
@@ -2430,6 +2497,34 @@ function openChangeStatus(lead){
   document.getElementById('csSubmit').disabled = false;
   openModal('changeStatusOverlay');
 }
+
+function openEditSource(lead){
+  document.getElementById('esClientName').textContent = lead.clientName;
+  const sources = Object.values(CLIENTSOURCES).sort();
+  const sel = document.getElementById('esSource');
+  sel.innerHTML = sources.map(s=> `<option ${s===lead.clientSource?'selected':''}>${esc(s)}</option>`).join('');
+  document.getElementById('esSubmit').dataset.leadId = lead.id;
+  document.getElementById('esSubmit').disabled = false;
+  openModal('editSourceOverlay');
+}
+document.getElementById('esSubmit').addEventListener('click', function(){
+  const leadId = this.dataset.leadId;
+  const newSource = document.getElementById('esSource').value;
+  if(!newSource){ toast('Please choose a source.','error'); return; }
+  const lead = LEADS[leadId];
+  if(lead && lead.clientSource===newSource){ toast('That\'s already the current source.','error'); return; }
+  const btn = this;
+  btn.disabled = true;
+  const oldSource = lead?.clientSource || 'none';
+  logAudit(leadId, {
+    type:'status', text:`Client source changed from "${oldSource}" to "${newSource}" by ${currentUser.name}`,
+    byId:currentUser.id, byName:currentUser.name, at:Date.now()
+  }, {clientSource:newSource}).then(()=>{
+    toast('Client source updated','success');
+    closeModal('editSourceOverlay');
+  }).catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
+});
 
 const STATUS_LABELS = {new:'New Cases', existing:'Contacted Clients', signedup:'Sign Ups', decline:'Declines - Email not sent', completed:'Declines - Email sent'};
 
@@ -2809,7 +2904,7 @@ function renderInsights(){
        `).join('')}</tbody>`;
 
   /* ---- By source ---- */
-  const sources = ['Purchase','Remo','PT / FA'];
+  const sources = Array.from(new Set([...Object.values(CLIENTSOURCES), ...leads.map(l=>l.clientSource).filter(Boolean)])).sort();
   const sourceRows = sources.map(src=>{
     const own = leads.filter(l=> l.clientSource===src);
     const signed = own.filter(l=> potOf(l)==='signedup');
@@ -3183,6 +3278,50 @@ document.getElementById('bulkDeleteConfirmBtn').addEventListener('click', functi
    lazily: whenever Settings is opened, anything past 30 days in the bin
    gets permanently removed at that point. */
 const RECYCLE_BIN_DAYS = 30;
+
+/* ---- Client Sources (Management) ---- */
+function renderClientSources(){
+  const list = Object.entries(CLIENTSOURCES).sort((a,b)=> a[1].localeCompare(b[1]));
+  const wrap = document.getElementById('clientSourcesList');
+  if(!wrap) return;
+  wrap.innerHTML = list.length===0
+    ? `<div class="source-empty">No sources yet — add one below.</div>`
+    : list.map(([id,name])=> `
+      <div class="source-row">
+        <span>${esc(name)}</span>
+        <button class="icon-btn del" data-src-del="${id}" title="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>`).join('');
+  wrap.querySelectorAll('[data-src-del]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const id = this.dataset.srcDel;
+      const name = CLIENTSOURCES[id];
+      if(!confirm(`Remove "${name}" from the list of client sources? Leads already using it keep showing it — this only affects future selection.`)) return;
+      this.disabled = true;
+      db.ref('clientSources/'+id).remove().catch(err=> toast('Could not remove: '+err.message,'error'));
+    });
+  });
+}
+
+document.getElementById('csAddSourceBtn').addEventListener('click', function(){
+  const input = document.getElementById('csNewSourceInput');
+  const name = input.value.trim();
+  if(!name){ toast('Enter a source name first.','error'); return; }
+  const dupe = Object.values(CLIENTSOURCES).some(s=> s.toLowerCase()===name.toLowerCase());
+  if(dupe){ toast('That source already exists.','error'); return; }
+  const btn = this;
+  btn.disabled = true;
+  const ref = db.ref('clientSources').push();
+  ref.set(name).then(()=>{
+    input.value='';
+    toast('Source added','success');
+  }).catch(err=> toast('Could not add: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
+});
+document.getElementById('csNewSourceInput').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); document.getElementById('csAddSourceBtn').click(); }
+});
 
 function renderRecycleBin(){
   const now = Date.now();

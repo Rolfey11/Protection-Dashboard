@@ -1527,16 +1527,29 @@ function attemptLogin(){
   const email = authEmailFor(id);
   const password = authPasswordFor(pinBuffer);
 
+  // Firebase now returns a single generic code for "wrong password" and
+  // "no such account" alike (an anti-enumeration change on Google's end —
+  // the old distinct codes below still appear on some setups, so we check
+  // for all of them). Since we can't tell which case it is from the code
+  // alone, we fall back to checking the PIN against our own database
+  // record — this covers both "first login since security went on" and
+  // an old/incorrect PIN correctly.
+  const genericFailureCodes = ['auth/user-not-found','auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'];
+
   auth.signInWithEmailAndPassword(email, password).catch(err=>{
-    if(err.code === 'auth/user-not-found'){
-      // First login since security was switched on for this colleague: check
-      // their PIN the old way, then quietly create their real Auth account.
+    if(genericFailureCodes.includes(err.code)){
       if(String(u.pin) !== pinBuffer){ loginBtn.disabled=false; showLoginError('Incorrect PIN. Please try again.'); return; }
       return auth.createUserWithEmailAndPassword(email, password)
-        .catch(err2=>{ loginBtn.disabled=false; showLoginError('Could not set up your account: '+err2.message); });
-    }
-    if(err.code === 'auth/wrong-password'){
-      loginBtn.disabled=false; showLoginError('Incorrect PIN. Please try again.'); return;
+        .catch(err2=>{
+          if(err2.code === 'auth/email-already-in-use'){
+            // Their account already existed after all (so this really was
+            // a wrong/outdated password, not a missing account) — the PIN
+            // they typed matches our record but not their actual Auth
+            // password, which shouldn't normally happen. Safest message:
+            loginBtn.disabled=false; showLoginError('Incorrect PIN. Please try again, or ask Management to reset it.'); return;
+          }
+          loginBtn.disabled=false; showLoginError('Could not set up your account: '+err2.message);
+        });
     }
     loginBtn.disabled=false; showLoginError('Could not sign in: '+err.message);
   });

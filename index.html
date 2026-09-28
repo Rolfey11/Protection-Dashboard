@@ -708,7 +708,19 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .fu-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .fu-actions .btn .ico{width:15px; height:15px;}
 .fu-hint{font-size:11.5px; color:var(--text-faint); margin-top:8px;}
-.field input[type=text],.field input[type=date],.field input[type=time],.field input[type=number],.field textarea{
+.fu-invite{display:flex; align-items:flex-start; gap:8px; margin-top:10px; padding:9px 11px; border-radius:9px; font-size:12px; line-height:1.45; background:var(--green-bg); color:var(--green);}
+.fu-invite.none{background:var(--bg); color:var(--text-muted);}
+.fu-invite .ico{width:15px; height:15px; margin-top:1px;}
+.fu-invite b{font-weight:600;}
+.fu-invite .linkish{border:0; background:none; padding:0; font:inherit; font-weight:600; color:var(--brand); text-decoration:underline; cursor:pointer;}
+.label-opt{font-weight:500; color:var(--text-faint);}
+.ce-view{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+.ce-view .val{word-break:break-all;}
+.ce-edit{display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;}
+.ce-edit input{flex:1; min-width:200px; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); font-size:13.5px;}
+.ce-edit input:focus{border-color:var(--brand-light); outline:none;}
+.cal-btn.mail{flex:0 0 auto;}
+.field input[type=text],.field input[type=email],.field input[type=date],.field input[type=time],.field input[type=number],.field textarea{
   width:100%; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm);
   background:var(--surface); color:var(--text); font-size:14px; transition:border-color .15s;
 }
@@ -1555,6 +1567,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div id="ntDupeWarning" class="hidden" style="display:flex; gap:9px; background:var(--amber-bg); border:1.5px solid var(--amber); border-radius:10px; padding:11px 13px; margin-bottom:16px; margin-top:-6px;">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px;flex:none;color:var(--amber);"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
         <span style="font-size:12px; font-weight:600; color:var(--amber);" id="ntDupeWarningText"></span>
+      </div>
+      <div class="field">
+        <label for="ntEmail">Client email <span class="label-opt">(optional)</span></label>
+        <input type="email" id="ntEmail" placeholder="e.g. sarah.jenkins@email.com" autocomplete="off">
+        <div class="field-hint">Used to send the client a calendar invite when a follow-up call is booked.</div>
       </div>
       <div id="ntExtraClients"></div>
       <button type="button" class="btn btn-secondary btn-sm" id="ntAddClientBtn" style="margin-bottom:18px;">
@@ -2820,13 +2837,40 @@ function calEventText(lead){
     lead.followUpNote ? `Notes: ${lead.followUpNote}` : '',
     trackerUrl() ? `Protection Lead Tracker: ${trackerUrl()}` : ''
   ].filter(Boolean);
-  return {title: `Call: ${lead.clientName||'Client'}`, details: lines.join('\n')};
+  return {title: calTitle(lead), details: lines.join('\n')};
 }
+const COMPANY_NAME = 'Michael Usher Mortgage Services';
+function calTitle(lead){ return `Protection Call with ${COMPANY_NAME} - ${lead.clientName||'Client'}`; }
+
+/* What the client sees when they're invited: no internal notes, sources or
+   links, just a friendly confirmation. */
+function clientEventText(lead){
+  const adv = lead.advisorName || 'your adviser';
+  const first = adv.split(' ')[0];
+  return [
+    `Your protection follow-up call with ${adv} from ${COMPANY_NAME}.`,
+    '',
+    `${first} will call you at the time shown. If this time no longer suits you, please reply to this invitation and we'll rearrange.`,
+    '',
+    `Kind regards,`,
+    COMPANY_NAME
+  ].join('\n');
+}
+
+function isEmail(e){ return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(e||'').trim()); }
+function leadEmails(lead){
+  if(!lead || !lead.clientEmails) return [];
+  return (Array.isArray(lead.clientEmails) ? lead.clientEmails : Object.values(lead.clientEmails)).filter(Boolean);
+}
+function parseEmails(text){ return String(text||'').split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean); }
 
 function googleCalUrl(lead){
   const {start, end} = calEventTimes(lead);
-  const {title, details} = calEventText(lead);
+  const emails = leadEmails(lead);
+  const title = calTitle(lead);
+  const details = emails.length ? clientEventText(lead) : calEventText(lead).details;
   const p = new URLSearchParams({action:'TEMPLATE', text:title, dates:`${start}/${end}`, details});
+  if(emails.length) p.set('add', emails.join(','));
   return 'https://calendar.google.com/calendar/render?' + p.toString();
 }
 
@@ -2865,10 +2909,64 @@ function downloadIcs(leads, filename){
 }
 function safeFileName(s){ return String(s||'call').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'call'; }
 
+function clientMailtoUrl(lead){
+  const emails = leadEmails(lead);
+  const names = (lead.clientNames ? Object.values(lead.clientNames) : [lead.clientName||'']).filter(Boolean);
+  const greet = names.length ? names.map(n=> n.trim().split(' ')[0]).join(' and ') : 'there';
+  const d = new Date(isoDay(lead.followUpDate)+'T12:00:00');
+  const when = d.toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long', year:'numeric'}) + (lead.followUpTime ? ` at ${lead.followUpTime}` : '');
+  const adv = lead.advisorName || 'your adviser';
+  const body = [
+    `Dear ${greet},`, '',
+    `Thank you for speaking with us. This is to confirm your protection follow-up call with ${adv} from ${COMPANY_NAME} on ${when}.`, '',
+    `If this time no longer suits you, just reply to this email and we'll rearrange.`, '',
+    'Kind regards,', adv, COMPANY_NAME
+  ].join('\n');
+  const subject = `Your protection call with ${COMPANY_NAME} - ${when}`;
+  return `mailto:${emails.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function clientEmailCellHtml(lead){
+  const emails = leadEmails(lead);
+  const canEdit = canManageLead(lead) || canAction(lead);
+  return `
+      <div class="info-cell full" id="clientEmailCell">
+        <div class="lbl">Client email</div>
+        <div class="ce-view" id="ceView">
+          <div class="val">${emails.length ? esc(emails.join(', ')) : '<span style="color:var(--text-faint); font-weight:500;">Not added yet</span>'}</div>
+          ${canEdit ? `<button type="button" class="btn btn-secondary btn-sm" id="ceEditBtn">${emails.length ? 'Edit' : 'Add email'}</button>` : ''}
+        </div>
+        ${canEdit ? `<div class="ce-edit hidden" id="ceEdit">
+          <input type="email" id="ceInput" value="${esc(emails.join(', '))}" placeholder="client@email.com (separate joint clients with a comma)">
+          <button type="button" class="btn btn-primary btn-sm" id="ceSave">Save</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="ceCancel">Cancel</button>
+        </div>` : ''}
+      </div>`;
+}
+function bindClientEmailCell(lead){
+  const edit = document.getElementById('ceEditBtn'); if(!edit) return;
+  const view = document.getElementById('ceView'), box = document.getElementById('ceEdit'), input = document.getElementById('ceInput');
+  edit.addEventListener('click', ()=>{ view.classList.add('hidden'); box.classList.remove('hidden'); input.focus(); });
+  document.getElementById('ceCancel').addEventListener('click', ()=>{ box.classList.add('hidden'); view.classList.remove('hidden'); });
+  const save = function(){
+    const emails = parseEmails(input.value);
+    const bad = emails.find(e=> !isEmail(e));
+    if(bad){ toast(`"${bad}" doesn't look like an email address.`,'error'); return; }
+    const btn = document.getElementById('ceSave'); btn.disabled = true;
+    const text = emails.length ? `Client email updated to ${emails.join(', ')}` : 'Client email removed';
+    logAudit(lead.id, {type:'other', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {clientEmails: emails.length ? emails : null})
+      .then(()=>{ toast(emails.length ? 'Client email saved' : 'Client email removed', 'success'); refreshLeadModal(); })
+      .catch(err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; });
+  };
+  document.getElementById('ceSave').addEventListener('click', save);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); if(e.key==='Escape') document.getElementById('ceCancel').click(); });
+}
+
 function calButtonsHtml(lead, compact=false){
   return `<div class="cal-btns ${compact?'compact':''}">
     <a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Add to Google Calendar</span></a>
     <button type="button" class="cal-btn" data-cal-ics="${esc(lead.id)}">${ico('calendarCheck')}<span>Calendar file</span></button>
+    ${compact ? `<a class="cal-btn mail" href="${esc(clientMailtoUrl(lead))}" data-cal-google="${esc(lead.id)}" title="Opens your email with a confirmation message ready to check and send">${ico('mail')}<span>Email client</span></a>` : ''}
   </div>`;
 }
 document.addEventListener('click', (e)=>{
@@ -3072,7 +3170,8 @@ document.getElementById('ntAddClientBtn').addEventListener('click', ()=>{
       <button type="button" class="icon-btn del ntRemoveClient" title="Remove this client">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
-    </div>`;
+    </div>
+    <input type="email" class="ntExtraEmail" placeholder="Their email (optional)" autocomplete="off" style="margin-top:8px;">`;
   wrap.appendChild(row);
   row.querySelector('.ntRemoveClient').addEventListener('click', ()=>{
     row.remove();
@@ -3084,6 +3183,7 @@ document.getElementById('ntAddClientBtn').addEventListener('click', ()=>{
 
 document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   document.getElementById('ntName').value='';
+  document.getElementById('ntEmail').value='';
   document.getElementById('ntDate').value='';
   document.getElementById('ntDupeWarning').classList.add('hidden');
   document.getElementById('ntSubmit').disabled = false;
@@ -3127,6 +3227,10 @@ document.getElementById('ntSubmit').addEventListener('click', function(){
   if(!clientSource){ toast('Please choose a client source.','error'); return; }
   if(!advisorId){ toast('Please choose an advisor.','error'); return; }
   if(!appDate){ toast('Please choose a Task Created date.','error'); return; }
+  const emails = [document.getElementById('ntEmail').value, ...Array.from(document.querySelectorAll('.ntExtraEmail')).map(i=>i.value)]
+    .map(e=> e.trim()).filter(Boolean);
+  const badEmail = emails.find(e=> !isEmail(e));
+  if(badEmail){ toast(`"${badEmail}" doesn't look like an email address.`,'error'); return; }
 
   const btn = this;
   btn.disabled = true;
@@ -3136,6 +3240,7 @@ document.getElementById('ntSubmit').addEventListener('click', function(){
   const auditId = uidShort();
   const lead = {
     clientName:name, clientNames:names, clientSource, advisorId, advisorName, appDate,
+    ...(emails.length ? {clientEmails: emails} : {}),
     status:'new', createdBy:currentUser.id, createdByName:currentUser.name, createdAt:now,
     audit:{ [auditId]: {type:'assigned', text:`Lead assigned to ${advisorName} by ${currentUser.name}`, byId:currentUser.id, byName:currentUser.name, at:now} }
   };
@@ -3275,6 +3380,7 @@ function renderLeadModal(){
       <div class="info-cell"><div class="lbl">Client source</div><div class="val">${esc(lead.clientSource||'—')}</div>${canManageLead(lead) ? `<button id="editSourceBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Edit</button>` : ''}</div>
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
+      ${clientEmailCellHtml(lead)}
       ${potOf(lead)==='existing' && lead.followUpDate ? `
       <div class="info-cell full" style="background:var(--amber-bg);">
         <div class="lbl" style="color:var(--amber);">Next call due</div>
@@ -3348,6 +3454,8 @@ function renderLeadModal(){
         .finally(()=>{ this.disabled = false; });
     });
   }
+
+  bindClientEmailCell(lead);
 
   if(currentUser.role==='management'){
     const rb = document.getElementById('reassignBtn');
@@ -3568,6 +3676,7 @@ function renderDynamicArea(lead){
           <button class="btn btn-ghost btn-sm hidden" id="fuSaveOnly">Save without adding to calendar</button>
         </div>
         <div class="fu-hint" id="fuHint">Add a date and time to put the call straight into Google Calendar.</div>
+        <div id="fuInvite"></div>
       </div>`;
     const fuDate = document.getElementById('fuDate'), fuTime = document.getElementById('fuTime');
     const fuSave = document.getElementById('fuSave'), fuSaveOnly = document.getElementById('fuSaveOnly');
@@ -3579,6 +3688,14 @@ function renderDynamicArea(lead){
       document.getElementById('fuHint').textContent = ready
         ? `Saves the follow-up and opens Google Calendar with a 1-hour call at ${fuTime.value} on ${fmtDate(fuDate.value)}. Just click Save there.`
         : 'Add a date and time to put the call straight into Google Calendar.';
+      const em = leadEmails(LEADS[lead.id] || lead);
+      const inv = document.getElementById('fuInvite');
+      if(!ready){ inv.innerHTML = ''; return; }
+      inv.innerHTML = em.length
+        ? `<div class="fu-invite">${ico('mail')}<span>A calendar invite will go to <b>${esc(em.join(', '))}</b>. In Google, click <b>Save</b>, then <b>Send</b>.</span></div>`
+        : `<div class="fu-invite none">${ico('info')}<span>No client email on file, so no invite will be sent. <button type="button" class="linkish" id="fuAddEmail">Add an email</button></span></div>`;
+      const add = document.getElementById('fuAddEmail');
+      if(add) add.addEventListener('click', ()=>{ const b = document.getElementById('ceEditBtn'); if(b){ b.click(); b.closest('.info-cell').scrollIntoView({behavior:'smooth', block:'center'}); } });
     };
     fuDate.addEventListener('input', syncFuButtons); fuTime.addEventListener('input', syncFuButtons);
 
@@ -3591,14 +3708,15 @@ function renderDynamicArea(lead){
       const gTab = addToGoogle ? window.open('about:blank', '_blank') : null;
       fuSave.disabled = fuSaveOnly.disabled = true;
       const when = fmtDateSlash(date) + (time ? ` at ${time}` : '');
-      const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '');
+      const inviteTo = addToGoogle ? leadEmails(LEADS[lead.id] || lead) : [];
+      const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '') + (inviteTo.length ? ` - Calendar invite prepared for ${inviteTo.join(', ')}` : '');
       logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date, followUpTime:time||null})
         .then(()=>{
           if(gTab){
-            const url = googleCalUrl({...lead, followUpDate:date, followUpTime:time, followUpNote:comment});
+            const url = googleCalUrl({...(LEADS[lead.id] || lead), id:lead.id, followUpDate:date, followUpTime:time, followUpNote:comment});
             try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
           }
-          toast(`Follow-up booked for ${fmtDate(date)}${time?' at '+time:''}. ${addToGoogle ? 'Google Calendar opened: click Save there.' : 'Moved to Contacted Clients.'}`,'success');
+          toast(`Follow-up booked for ${fmtDate(date)}${time?' at '+time:''}. ${addToGoogle ? (inviteTo.length ? 'In Google, click Save, then Send to invite the client.' : 'Google Calendar opened: click Save there.') : 'Moved to Contacted Clients.'}`,'success');
           actionUIState=null; refreshLeadModal();
         })
         .catch(err=>{ if(gTab) gTab.close(); toast('Could not save: '+err.message,'error'); fuSave.disabled = fuSaveOnly.disabled = false; });

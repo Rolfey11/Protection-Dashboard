@@ -2495,6 +2495,21 @@ function renderAdvisorFilter(){
   });
 }
 
+/* Audit entries that mean someone actually contacted / progressed the
+   client, as opposed to admin like assigning, notes or detail edits. */
+const CONTACT_TYPES = ['call','text','email','appointment','other','signup','followup','decline'];
+function isContactEntry(a){ return a && CONTACT_TYPES.includes(a.type); }
+/* A logged phone call: a call note, or a Sign Up / Follow Up / Decline
+   saved from the Call button. Older entries have no "via" tag, so fall
+   back to their text, which always starts "Call - ..." or "Call note:". */
+function isCallEntry(a){
+  if(!a) return false;
+  if(a.type==='call') return true;
+  if(!['signup','followup','decline'].includes(a.type)) return false;
+  if(a.via) return a.via==='call';
+  return /^Call (-|note:)/.test(a.text||'');
+}
+
 function leadLastActivity(lead){
   const audit = lead.audit ? Object.values(lead.audit).sort((a,b)=>b.at-a.at) : [];
   return audit[0] || null;
@@ -2680,7 +2695,7 @@ function myDayItems(){
         });
       }
     }
-    if(pot==='new' && Object.keys(l.audit||{}).length<=1){
+    if(pot==='new' && !Object.values(l.audit||{}).some(isContactEntry)){
       items.push({lead:l, sortKey:1, reason:'New — no contact yet', tone:'accent'});
     }
     if(pot==='decline'){
@@ -2925,7 +2940,10 @@ function clientMailtoUrl(lead){
     'Kind regards,', adv, COMPANY_NAME
   ].join('\n');
   const subject = `Your protection call with ${COMPANY_NAME} - ${when}`;
-  return `mailto:${emails.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  // Opens a Gmail compose window in a new tab. (A plain mailto: link does
+  // nothing on computers without a desktop email app set up.)
+  const p = new URLSearchParams({view:'cm', fs:'1', to:emails.join(','), su:subject, body});
+  return 'https://mail.google.com/mail/?' + p.toString();
 }
 
 function clientEmailCellHtml(lead){
@@ -2956,7 +2974,7 @@ function bindClientEmailCell(lead){
     if(bad){ toast(`"${bad}" doesn't look like an email address.`,'error'); return; }
     const btn = document.getElementById('ceSave'); btn.disabled = true;
     const text = emails.length ? `Client email updated to ${emails.join(', ')}` : 'Client email removed';
-    logAudit(lead.id, {type:'other', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {clientEmails: emails.length ? emails : null})
+    logAudit(lead.id, {type:'detail', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {clientEmails: emails.length ? emails : null})
       .then(()=>{ toast(emails.length ? 'Client email saved' : 'Client email removed', 'success'); refreshLeadModal(); })
       .catch(err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; });
   };
@@ -2968,7 +2986,7 @@ function calButtonsHtml(lead, compact=false){
   return `<div class="cal-btns ${compact?'compact':''}">
     <a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Add to Google Calendar</span></a>
     <button type="button" class="cal-btn" data-cal-ics="${esc(lead.id)}">${ico('calendarCheck')}<span>Calendar file</span></button>
-    ${compact ? `<a class="cal-btn mail" href="${esc(clientMailtoUrl(lead))}" data-cal-google="${esc(lead.id)}" title="Opens your email with a confirmation message ready to check and send">${ico('mail')}<span>Email client</span></a>` : ''}
+    ${compact ? `<a class="cal-btn mail" href="${esc(clientMailtoUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}" title="Opens Gmail with a confirmation message ready to check and send">${ico('mail')}<span>Email client</span></a>` : ''}
   </div>`;
 }
 document.addEventListener('click', (e)=>{
@@ -3408,7 +3426,7 @@ function renderLeadModal(){
   const notesHtml = `
     <div class="section-lbl" style="margin-top:18px;">Notes</div>
     ${canManageLead(lead) ? `
-      <textarea id="leadNotesInput" placeholder="General notes about this case — anything that doesn't fit the timestamped audit trail." style="width:100%; min-height:70px; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px; font-family:inherit; resize:vertical;">${esc(lead.notes||'')}</textarea>
+      <textarea id="leadNotesInput" placeholder="General notes about this case. Each save is recorded in the audit trail." style="width:100%; min-height:70px; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px; font-family:inherit; resize:vertical;">${esc(lead.notes||'')}</textarea>
       <button class="btn btn-secondary btn-sm" id="leadNotesSave" style="margin-top:8px;">Save notes</button>
     ` : `
       <div class="info-cell full"><div class="val" style="font-weight:500; white-space:pre-wrap;">${lead.notes ? esc(lead.notes) : 'No notes yet.'}</div></div>
@@ -3448,11 +3466,16 @@ function renderLeadModal(){
   const notesSaveBtn = document.getElementById('leadNotesSave');
   if(notesSaveBtn){
     notesSaveBtn.addEventListener('click', function(){
-      const val = document.getElementById('leadNotesInput').value;
+      const val = document.getElementById('leadNotesInput').value.trim();
+      const before = ((LEADS[lead.id] && LEADS[lead.id].notes) || '').trim();
+      if(val === before){ toast('No changes to save.','error'); return; }
       this.disabled = true;
-      db.ref().update({['leads/'+lead.id+'/notes']: val}).then(()=>{
-        toast('Notes saved','success');
-      }).catch(err=> toast('Could not save: '+err.message,'error'))
+      // Saved on the lead AND recorded in the audit trail, so every change
+      // to the notes is timestamped with who made it.
+      const text = val ? `Notes updated: ${val}` : 'Notes cleared';
+      logAudit(lead.id, {type:'note', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {notes: val})
+        .then(()=>{ toast('Notes saved and added to the audit trail','success'); refreshLeadModal(); })
+        .catch(err=> toast('Could not save: '+err.message,'error'))
         .finally(()=>{ this.disabled = false; });
     });
   }
@@ -3509,7 +3532,7 @@ function renderLeadModal(){
 function auditIcon(type){
   const map = {
     assigned:'pin', call:'phone', text:'message', email:'mail', appointment:'calendar', other:'note',
-    signup:'checkCircle', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', status:'shuffle'
+    signup:'checkCircle', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', status:'shuffle', note:'note', detail:'mail'
   };
   return map[type] ? ico(map[type]) : '•';
 }
@@ -3712,7 +3735,7 @@ function renderDynamicArea(lead){
       const when = fmtDateSlash(date) + (time ? ` at ${time}` : '');
       const inviteTo = addToGoogle ? leadEmails(LEADS[lead.id] || lead) : [];
       const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '') + (inviteTo.length ? ` - Calendar invite prepared for ${inviteTo.join(', ')}` : '');
-      logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date, followUpTime:time||null})
+      logAudit(lead.id, {type:'followup', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date, followUpTime:time||null})
         .then(()=>{
           if(gTab){
             const url = googleCalUrl({...(LEADS[lead.id] || lead), id:lead.id, followUpDate:date, followUpTime:time, followUpNote:comment});
@@ -3784,7 +3807,7 @@ function renderDynamicArea(lead){
       this.disabled = true;
       const text = `${label} - Decline - ${fmtDateSlash(Date.now())} - ${reason}: ${detail}`;
       const newStatus = (sent && hlp) ? 'completed' : 'decline';
-      logAudit(lead.id, {type:'decline', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {
+      logAudit(lead.id, {type:'decline', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {
         status:newStatus, declineReason:reason, declineDetail:detail, declineSent:sent, hlpAdded:hlp
       }).then(()=>{
         if(sent){
@@ -3817,7 +3840,7 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
   const btn = this;
   btn.disabled = true;
   const text = `${label} - Sign Up - ${fmtDateSlash(Date.now())} - Commission £${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
-  logAudit(leadId, {type:'signup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'signedup', commission:Number(val)})
+  logAudit(leadId, {type:'signup', via:this.dataset.actionKind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'signedup', commission:Number(val)})
     .then(()=>{
       toast(`Signed up with £${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})} commission. Moved to Sign Ups.`,'success'); closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();
@@ -4048,7 +4071,8 @@ function renderInsights(){
   const contactTimes = [];
   leads.forEach(l=>{
     const entries = Object.values(l.audit||{}).sort((a,b)=>a.at-b.at);
-    if(entries.length >= 2) contactTimes.push(entries[1].at - entries[0].at);
+    const firstContact = entries.find(isCallEntry); // first contact = first logged phone call
+    if(entries.length && firstContact && firstContact !== entries[0]) contactTimes.push(firstContact.at - entries[0].at);
   });
   const avgContactHrs = contactTimes.length ? (contactTimes.reduce((s,v)=>s+v,0)/contactTimes.length)/3600000 : null;
 
@@ -4066,7 +4090,7 @@ function renderInsights(){
   const compliancePct = withDeclineReason ? Math.round(bothSent/withDeclineReason*100) : null;
 
   document.getElementById('speedStats').innerHTML =
-    statCard(avgContactHrs==null ? '—' : avgContactHrs<1 ? '<1 hr' : Math.round(avgContactHrs)+' hrs', 'Avg. time to first contact') +
+    statCard(avgContactHrs==null ? '—' : avgContactHrs<1 ? '<1 hr' : Math.round(avgContactHrs)+' hrs', 'Avg. time to first call') +
     statCard(avgCloseDays==null ? '—' : avgCloseDays<1 ? '<1 day' : Math.round(avgCloseDays)+' days', 'Avg. time to close') +
     statCard(compliancePct==null ? '—' : compliancePct+'%', 'Declines fully closed out (email + HLP)', compliancePct==null?'':compliancePct>=80?'good':compliancePct>=50?'warn':'bad');
 

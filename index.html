@@ -2927,22 +2927,10 @@ function downloadIcs(leads, filename){
 function safeFileName(s){ return String(s||'call').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'call'; }
 
 function clientMailtoUrl(lead){
-  const emails = leadEmails(lead);
-  const names = (lead.clientNames ? Object.values(lead.clientNames) : [lead.clientName||'']).filter(Boolean);
-  const greet = names.length ? names.map(n=> n.trim().split(' ')[0]).join(' and ') : 'there';
-  const d = new Date(isoDay(lead.followUpDate)+'T12:00:00');
-  const when = d.toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long', year:'numeric'}) + (lead.followUpTime ? ` at ${lead.followUpTime}` : '');
-  const adv = lead.advisorName || 'your adviser';
-  const body = [
-    `Dear ${greet},`, '',
-    `Thank you for speaking with us. This is to confirm your protection follow-up call with ${adv} from ${COMPANY_NAME} on ${when}.`, '',
-    `If this time no longer suits you, just reply to this email and we'll rearrange.`, '',
-    'Kind regards,', adv, COMPANY_NAME
-  ].join('\n');
-  const subject = `Your protection call with ${COMPANY_NAME} - ${when}`;
-  // Opens a Gmail compose window in a new tab. (A plain mailto: link does
-  // nothing on computers without a desktop email app set up.)
-  const p = new URLSearchParams({view:'cm', fs:'1', to:emails.join(','), su:subject, body});
+  // Blank Gmail draft addressed to the client: subject and message are left
+  // empty for the adviser to write. (The calendar invite covers the
+  // booking confirmation itself.)
+  const p = new URLSearchParams({view:'cm', fs:'1', to:leadEmails(lead).join(',')});
   return 'https://mail.google.com/mail/?' + p.toString();
 }
 
@@ -2986,7 +2974,7 @@ function calButtonsHtml(lead, compact=false){
   return `<div class="cal-btns ${compact?'compact':''}">
     <a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Add to Google Calendar</span></a>
     <button type="button" class="cal-btn" data-cal-ics="${esc(lead.id)}">${ico('calendarCheck')}<span>Calendar file</span></button>
-    ${compact ? `<a class="cal-btn mail" href="${esc(clientMailtoUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}" title="Opens Gmail with a confirmation message ready to check and send">${ico('mail')}<span>Email client</span></a>` : ''}
+    ${compact ? `<a class="cal-btn mail" href="${esc(clientMailtoUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}" title="Opens a blank Gmail draft to the client">${ico('mail')}<span>Email client</span></a>` : ''}
   </div>`;
 }
 document.addEventListener('click', (e)=>{

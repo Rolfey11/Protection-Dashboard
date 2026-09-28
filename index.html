@@ -526,7 +526,7 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
   background:var(--red); color:#fff; border-radius:14px; padding:15px 20px; margin-bottom:22px;
   display:flex; align-items:flex-start; gap:13px; box-shadow:0 6px 18px rgba(211,50,90,.3);
 }
-.overdue-banner .ob-icon{font-size:20px; flex-shrink:0; line-height:1.3;}
+.overdue-banner .ob-icon{flex-shrink:0; line-height:0; padding-top:1px;}
 .overdue-banner .ob-body{flex:1;}
 .overdue-banner strong{display:block; font-size:14px; margin-bottom:9px; font-weight:700;}
 .overdue-banner .ob-list{display:flex; flex-wrap:wrap; gap:8px;}
@@ -573,35 +573,98 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 @media (max-width:900px){.pots-grid{grid-template-columns:repeat(2,1fr);}}
 @media (max-width:560px){.pots-grid{grid-template-columns:1fr;}}
 
-.pot{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm);}
-.pot-head{padding:15px 16px 13px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;}
-.pot-head-title{display:flex; align-items:center; gap:8px;}
-.pot-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
-.pot-head h3{font-size:13.5px; font-weight:700; color:var(--text);}
-.pot-count{font-size:11.5px; font-weight:700; color:#fff; background:var(--text-faint); padding:2px 8px; border-radius:99px;}
-.pot[data-pot="new"] .pot-count{background:var(--blue);}
-.pot[data-pot="existing"] .pot-count{background:var(--amber);}
-.pot[data-pot="decline"] .pot-count{background:var(--red);}
-.pot[data-pot="signedup"] .pot-count{background:var(--green);}
-.pot[data-pot="completed"] .pot-count{background:var(--teal);}
-.pot-body{padding:8px; display:flex; flex-direction:column; gap:6px; max-height:720px; overflow-y:auto; min-height:80px;}
-.pot-empty{padding:26px 12px; text-align:center; color:var(--text-faint); font-size:12.5px;}
+.pot{
+  --pot:var(--brand);
+  position:relative; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  overflow:hidden; box-shadow:var(--shadow-sm); transition:box-shadow .25s, border-color .25s;
+}
+.pot::before{content:""; position:absolute; top:0; left:0; right:0; height:3px; background:var(--pot);}
+.pot.flash{animation:potFlash 1.1s ease;}
+@keyframes potFlash{0%,100%{box-shadow:var(--shadow-sm);}30%{box-shadow:0 0 0 3px color-mix(in srgb, var(--pot) 35%, transparent), var(--shadow);}}
+.pot-head{padding:16px 16px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.pot-head-title{display:flex; align-items:center; gap:8px; min-width:0;}
+.pot-head h3{font-size:13px; font-weight:600; color:var(--text); letter-spacing:-.1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.pot-count{
+  flex:none; min-width:24px; text-align:center;
+  font-size:11.5px; font-weight:600; color:var(--text-muted); background:var(--bg);
+  border:1px solid var(--border); padding:1px 8px; border-radius:99px; font-variant-numeric:tabular-nums;
+}
+.pot-body{padding:4px 10px 10px; display:flex; flex-direction:column; gap:8px; max-height:720px; overflow-y:auto; min-height:80px;}
+.pot-empty{padding:26px 12px 22px; text-align:center; color:var(--text-faint); font-size:12.5px; display:flex; flex-direction:column; align-items:center; gap:8px;}
+.pot-empty .pe-ic{width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--bg); color:var(--text-faint); border:1px dashed var(--border-2);}
+.pot-empty .pe-ic .ico{width:18px; height:18px;}
+
+/* ---------- Headline KPI tiles ---------- */
+.kpi-row{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:22px;}
+@media (max-width:1100px){.kpi-row{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:520px){.kpi-row{grid-template-columns:1fr 1fr; gap:10px;} .kpi-val{font-size:24px !important;}}
+.kpi{
+  --tone:var(--text-faint);
+  position:relative; overflow:hidden; text-align:left; font:inherit; color:inherit;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px 18px 15px; box-shadow:var(--shadow-sm);
+  transition:transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s, border-color .2s;
+}
+.kpi:hover{transform:translateY(-3px); box-shadow:0 12px 28px -10px rgba(46,20,38,.22); border-color:var(--border-2);}
+.kpi::after{ /* soft tinted glow in the corner */
+  content:""; position:absolute; width:140px; height:140px; right:-50px; top:-60px; border-radius:50%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--tone) 16%, transparent), transparent 70%);
+  pointer-events:none;
+}
+.kpi.warn{--tone:var(--amber);} .kpi.bad{--tone:var(--red);} .kpi.good{--tone:var(--green);} .kpi.brand{--tone:var(--brand);}
+.kpi-top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.kpi-lbl{font-size:12.5px; font-weight:600; color:var(--text-muted);}
+.kpi-ic{width:30px; height:30px; border-radius:9px; display:grid; place-items:center; color:var(--tone); background:color-mix(in srgb, var(--tone) 12%, transparent);}
+.kpi:not(.warn):not(.bad):not(.good):not(.brand) .kpi-ic{color:var(--ink-2); background:var(--bg);}
+.kpi-ic .ico{width:16px; height:16px;}
+.kpi-val{font-family:var(--fh); font-size:30px; font-weight:700; letter-spacing:-.8px; line-height:1.1; margin:8px 0 6px; font-variant-numeric:tabular-nums; color:var(--text);}
+.kpi.bad .kpi-val{color:var(--red);}
+.kpi-sub{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; font-size:12px; min-height:20px;}
+.kpi-note{color:var(--text-muted);}
+.kpi-delta{display:inline-flex; align-items:center; gap:4px; font-weight:600; padding:1px 7px 1px 5px; border-radius:99px;}
+.kpi-delta .ico{width:13px; height:13px;}
+.kpi-delta.up{color:var(--green); background:var(--green-bg);}
+.kpi-delta.down{color:var(--red); background:var(--red-bg);}
+.kpi-delta.flat{color:var(--text-muted); background:var(--bg); padding-left:7px;}
+
+/* ---------- Shared icon ---------- */
+.ico{width:1em; height:1em; vertical-align:-.14em; flex:none;}
+
+/* ---------- Page transitions ---------- */
+.page-enter{animation:pageIn .38s cubic-bezier(.2,.8,.2,1);}
+@keyframes pageIn{from{opacity:0; transform:translateY(8px);}to{opacity:1; transform:none;}}
 
 .lead-card{
-  background:var(--surface); border:1.5px solid var(--border); border-radius:9px; padding:9px 11px; cursor:pointer;
-  transition:.15s; position:relative;
+  background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:11px 12px; cursor:pointer;
+  position:relative; box-shadow:0 1px 2px rgba(46,20,38,.04);
+  transition:transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s, border-color .2s;
 }
-.lead-card:hover{border-color:var(--brand-light); box-shadow:0 3px 12px rgba(78,19,57,.09); transform:translateY(-1px);}
-.lead-card.overdue{background:var(--red-bg); border-color:var(--red); border-left-width:4px;}
-.lead-card.overdue:hover{border-color:var(--red);}
-.lead-card .lc-top{display:flex; align-items:flex-start; justify-content:space-between; gap:6px; margin-bottom:5px;}
-.lead-card .lc-name{font-size:13px; font-weight:700; color:var(--text); line-height:1.2;}
-.lead-card .lc-flag{width:6px; height:6px; border-radius:50%; margin-top:4px; flex-shrink:0;}
-.lead-card .lc-meta{display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px;}
-.lead-card .lc-commission{font-family:var(--fh); font-size:17px; font-weight:800; color:var(--green); margin-bottom:6px; line-height:1.1;}
+.lead-card:hover{
+  border-color:color-mix(in srgb, var(--brand-light) 45%, var(--border));
+  box-shadow:0 10px 24px -10px rgba(78,19,57,.28), 0 2px 4px rgba(46,20,38,.05);
+  transform:translateY(-3px);
+}
+.lead-card:active{transform:translateY(-1px);}
+.lead-card.overdue{border-color:color-mix(in srgb, var(--red) 40%, var(--border)); box-shadow:inset 3px 0 0 var(--red);}
+.lead-card.overdue:hover{border-color:var(--red); box-shadow:inset 3px 0 0 var(--red), 0 10px 24px -10px color-mix(in srgb, var(--red) 45%, transparent);}
+.lead-card .lc-top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.lead-card .lc-name{font-size:13.5px; font-weight:600; color:var(--text); line-height:1.25; letter-spacing:-.1px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.lc-avatar{
+  flex:none; width:24px; height:24px; border-radius:50%;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; letter-spacing:.2px; color:#fff;
+  background:var(--av); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px color-mix(in srgb, var(--av) 25%, transparent);
+}
+.lc-avatar.none{background:var(--surface); color:var(--amber); border:1.5px dashed var(--amber); box-shadow:none;}
+.lead-card .lc-sub{font-size:11.5px; color:var(--text-muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.lc-sep{margin:0 6px; color:var(--text-faint);}
+.lead-card .lc-meta{display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;}
+.lead-card .lc-meta .tag{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; padding:3px 8px;}
+.lead-card .lc-meta .tag .ico{width:11px; height:11px;}
+.lead-card .lc-commission{font-family:var(--fh); font-size:17px; font-weight:700; color:var(--green); margin-top:6px; line-height:1.1; letter-spacing:-.3px; font-variant-numeric:tabular-nums;}
 .tag{font-size:10px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted);}
 .tag.advisor{background:var(--brand-tint); color:var(--brand);}
-.lead-card .lc-activity{font-size:10.5px; color:var(--text-faint); border-top:1px dashed var(--border); padding-top:5px; display:flex; justify-content:space-between; gap:6px;}
+.lead-card .lc-activity{font-size:11px; color:var(--text-faint); border-top:1px solid var(--border); margin-top:9px; padding-top:7px; display:flex; justify-content:space-between; gap:8px;}
+.lead-card .lc-activity .when{flex:none;}
 .lead-card .lc-activity .txt{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;}
 
 /* ==========================================================================
@@ -709,9 +772,15 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .audit-item{display:flex; gap:11px; margin-bottom:16px; position:relative;}
 .audit-item:last-child{margin-bottom:0;}
 .audit-icon{
-  width:30px; height:30px; border-radius:9px; background:var(--surface); border:1.5px solid var(--border);
-  display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px;
+  width:30px; height:30px; border-radius:9px; background:var(--surface); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--ink-2);
 }
+.audit-icon .ico{width:15px; height:15px;}
+.audit-icon.t-signup{color:var(--green); background:var(--green-bg); border-color:transparent;}
+.audit-icon.t-decline{color:var(--red); background:var(--red-bg); border-color:transparent;}
+.audit-icon.t-followup{color:var(--amber); background:var(--amber-bg); border-color:transparent;}
+.audit-icon.t-call,.audit-icon.t-text,.audit-icon.t-email,.audit-icon.t-appointment{color:var(--blue); background:var(--blue-bg); border-color:transparent;}
+.audit-icon.t-assigned,.audit-icon.t-status{color:var(--brand); background:var(--brand-tint); border-color:transparent;}
 .audit-line{position:absolute; left:14px; top:30px; bottom:-16px; width:1.5px; background:var(--border);}
 .audit-item:last-child .audit-line{display:none;}
 .audit-content{flex:1; padding-top:3px;}
@@ -817,15 +886,41 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 /* ==========================================================================
    TOAST
    ========================================================================== */
-#toastHost{position:fixed; bottom:24px; right:24px; z-index:200; display:flex; flex-direction:column; gap:10px;}
+#toastHost{position:fixed; bottom:24px; right:24px; z-index:200; display:flex; flex-direction:column; align-items:flex-end; gap:10px; pointer-events:none;}
 .toast{
-  background:var(--ink); color:#fff; padding:13px 18px; border-radius:11px; font-size:13.5px; font-weight:600;
-  box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:10px; min-width:240px;
-  animation:toastIn .25s ease;
+  --tc:var(--blue);
+  pointer-events:auto; position:relative; overflow:hidden;
+  width:min(360px, calc(100vw - 32px));
+  display:flex; align-items:flex-start; gap:12px;
+  padding:13px 12px 14px 14px; border-radius:14px;
+  background:var(--surface); color:var(--text);
+  border:1px solid var(--border);
+  box-shadow:0 18px 40px -12px rgba(30,10,25,.28), 0 2px 6px rgba(30,10,25,.06);
+  animation:toastIn .38s cubic-bezier(.2,1.1,.3,1);
 }
-.toast.success{background:var(--green);}
-.toast.error{background:var(--red);}
-@keyframes toastIn{from{opacity:0; transform:translateX(20px);}to{opacity:1; transform:none;}}
+.toast.success{--tc:var(--green);}
+.toast.error{--tc:var(--red);}
+.toast-ic{flex:none; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; color:#fff; background:var(--tc); box-shadow:0 0 0 4px color-mix(in srgb, var(--tc) 16%, transparent);}
+.toast-ic .ico{width:16px; height:16px; stroke-width:2.6;}
+.toast.success .toast-ic{animation:tickPop .45s cubic-bezier(.3,1.6,.5,1) .08s both;}
+.toast-body{flex:1; min-width:0; padding-top:1px;}
+.toast-title{font-size:13.5px; font-weight:700; line-height:1.3;}
+.toast-msg{font-size:12.5px; color:var(--text-muted); margin-top:2px; line-height:1.4;}
+.toast-x{flex:none; border:0; background:none; color:var(--text-faint); width:24px; height:24px; border-radius:7px; display:grid; place-items:center;}
+.toast-x:hover{background:var(--bg); color:var(--text);}
+.toast-x .ico{width:14px; height:14px;}
+.toast-bar{position:absolute; left:0; bottom:0; height:3px; width:100%; background:var(--tc); opacity:.55; transform-origin:left; animation:toastBar linear forwards;}
+.toast:hover .toast-bar{animation-play-state:paused;}
+.toast.out{animation:toastOut .26s ease forwards;}
+@keyframes toastIn{from{opacity:0; transform:translateY(14px) scale(.96);}to{opacity:1; transform:none;}}
+@keyframes toastOut{to{opacity:0; transform:translateX(24px) scale(.97);}}
+@keyframes toastBar{from{transform:scaleX(1);}to{transform:scaleX(0);}}
+@keyframes tickPop{from{transform:scale(.3);}to{transform:scale(1);}}
+@media (max-width:560px){#toastHost{left:16px; right:16px; bottom:16px; align-items:stretch;} .toast{width:auto;}}
+@media (prefers-reduced-motion: reduce){
+  .toast,.toast-ic,.toast-bar,.page-enter,.pot.flash{animation:none !important;}
+  .lead-card,.kpi{transition:none !important;}
+}
 
 /* Setup banner (shown if firebase config not yet filled in) */
 #setupBanner{
@@ -856,7 +951,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 <body>
 
 <div id="setupBanner" class="hidden">
-  ⚠️ <b>Firebase not configured.</b> Open this file and replace the <code>firebaseConfig</code> placeholder near the bottom with your own Firebase project keys, then re-upload. See comments in the code for details.
+  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg> <b>Firebase not configured.</b> Open this file and replace the <code>firebaseConfig</code> placeholder near the bottom with your own Firebase project keys, then re-upload. See comments in the code for details.
 </div>
 
 <!-- ============================================================
@@ -1032,7 +1127,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <!-- ============= DASHBOARD PAGE ============= -->
     <div id="page-dashboard">
       <div class="overdue-banner hidden" id="overdueBanner">
-        <div class="ob-icon">⚠️</div>
+        <div class="ob-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
         <div class="ob-body">
           <strong id="overdueBannerTitle"></strong>
           <div class="ob-list" id="overdueBannerList"></div>
@@ -1057,6 +1152,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
       <div class="filter-row hidden" id="advisorFilterRow"></div>
 
+      <div class="kpi-row" id="dashKpis"></div>
+
       <div id="myDaySection" class="hidden">
         <div class="section-lbl" style="margin-top:0; display:flex; align-items:center; justify-content:space-between;">
           <span>My Day</span>
@@ -1066,24 +1163,24 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       </div>
 
       <div class="pots-grid">
-        <div class="pot" data-pot="new">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--blue)"></span><h3>New Cases</h3></div><span class="pot-count" id="count-new">0</span></div>
+        <div class="pot" data-pot="new" style="--pot:var(--blue)">
+          <div class="pot-head"><div class="pot-head-title"><h3>New Cases</h3></div><span class="pot-count" id="count-new">0</span></div>
           <div class="pot-body" id="pot-new"></div>
         </div>
-        <div class="pot" data-pot="existing">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--amber)"></span><h3>Contacted Clients</h3></div><span class="pot-count" id="count-existing">0</span></div>
+        <div class="pot" data-pot="existing" style="--pot:var(--amber)">
+          <div class="pot-head"><div class="pot-head-title"><h3>Contacted Clients</h3></div><span class="pot-count" id="count-existing">0</span></div>
           <div class="pot-body" id="pot-existing"></div>
         </div>
-        <div class="pot" data-pot="signedup">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--green)"></span><h3>Sign Ups</h3></div><span class="pot-count" id="count-signedup">0</span></div>
+        <div class="pot" data-pot="signedup" style="--pot:var(--green)">
+          <div class="pot-head"><div class="pot-head-title"><h3>Sign Ups</h3></div><span class="pot-count" id="count-signedup">0</span></div>
           <div class="pot-body" id="pot-signedup"></div>
         </div>
-        <div class="pot" data-pot="decline">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--red)"></span><h3>Declines - Email not sent</h3></div><span class="pot-count" id="count-decline">0</span></div>
+        <div class="pot" data-pot="decline" style="--pot:var(--red)">
+          <div class="pot-head"><div class="pot-head-title"><h3>Declined · email pending</h3></div><span class="pot-count" id="count-decline">0</span></div>
           <div class="pot-body" id="pot-decline"></div>
         </div>
-        <div class="pot" data-pot="completed">
-          <div class="pot-head"><div class="pot-head-title"><span class="pot-dot" style="background:var(--teal)"></span><h3>Declines - Email sent</h3></div><span class="pot-count" id="count-completed">0</span></div>
+        <div class="pot" data-pot="completed" style="--pot:var(--teal)">
+          <div class="pot-head"><div class="pot-head-title"><h3>Declined · email sent</h3></div><span class="pot-count" id="count-completed">0</span></div>
           <div class="pot-body" id="pot-completed"></div>
         </div>
       </div>
@@ -1284,7 +1381,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <input type="text" id="ntName" placeholder="e.g. Sarah Jenkins">
       </div>
       <div id="ntDupeWarning" class="hidden" style="display:flex; gap:9px; background:var(--amber-bg); border:1.5px solid var(--amber); border-radius:10px; padding:11px 13px; margin-bottom:16px; margin-top:-6px;">
-        <span style="font-size:15px;">⚠️</span>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px;flex:none;color:var(--amber);"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
         <span style="font-size:12px; font-weight:600; color:var(--amber);" id="ntDupeWarningText"></span>
       </div>
       <div id="ntExtraClients"></div>
@@ -1352,8 +1449,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <option value="new">New Cases</option>
           <option value="existing">Contacted Clients</option>
           <option value="signedup">Sign Ups</option>
-          <option value="decline">Declines - Email not sent</option>
-          <option value="completed">Declines - Email sent</option>
+          <option value="decline">Declined · email pending</option>
+          <option value="completed">Declined · email sent</option>
         </select>
       </div>
     </div>
@@ -1403,7 +1500,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <input type="file" id="udFileInput" accept=".csv,text/csv">
         </div>
         <div id="udParseError" class="hidden" style="display:flex; gap:9px; background:var(--red-bg); border:1.5px solid var(--red); border-radius:10px; padding:11px 13px; margin-top:4px;">
-          <span style="font-size:15px;">⚠️</span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px;flex:none;color:var(--amber);"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
           <span style="font-size:12px; font-weight:600; color:var(--red);" id="udParseErrorText"></span>
         </div>
       </div>
@@ -1471,7 +1568,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
      ============================================================ -->
 <div class="modal-overlay" id="signupOverlay">
   <div class="modal">
-    <div class="modal-head"><h2>Sign Up 🎉</h2><button class="modal-close" data-close="signupOverlay">✕</button></div>
+    <div class="modal-head"><h2>Sign Up</h2><button class="modal-close" data-close="signupOverlay">✕</button></div>
     <div class="modal-body">
       <div class="field">
         <label for="commissionInput">Commission</label>
@@ -1504,7 +1601,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <div class="lead-detail-grid">
       <div class="lead-left" id="leadLeftPane"><!-- populated by JS --></div>
       <div class="lead-right">
-        <div class="audit-head">🕒 Audit trail</div>
+        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail</div>
         <div class="audit-list" id="auditList"></div>
       </div>
     </div>
@@ -1695,13 +1792,59 @@ function esc(str){
   return d.innerHTML;
 }
 
+
+/* ----------------------------------------------------------------------------
+   ICONS — one consistent line-icon set used across the app instead of emoji
+   ---------------------------------------------------------------------------- */
+const ICON_PATHS = {
+  alert:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  checkCircle:'<circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  xCircle:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  message:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+  calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  calendarCheck:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/>',
+  note:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  pin:'<path d="M12 17v5"/><path d="M9 10.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+  folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/><path d="m9 13 2 2 4-4"/>',
+  shuffle:'<path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
+  briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  trendUp:'<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+  trendDown:'<path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>',
+  pound:'<path d="M18 7c0-5.3-8-5.3-8 0v10"/><path d="M6 13h8"/><path d="M6 21h12"/><path d="M6 21c2.5 0 4-1.5 4-4"/>',
+};
+function ico(name, cls=''){
+  return `<svg class="ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]||''}</svg>`;
+}
+
 function toast(msg, type=''){
   const host = document.getElementById('toastHost');
   const t = document.createElement('div');
-  t.className = 'toast ' + type;
-  t.textContent = msg;
+  const kind = type || 'info';
+  const icon = {success:'check', error:'alert', info:'info'}[kind] || 'info';
+  const title = {success:'Done', error:'Something went wrong', info:'Heads up'}[kind] || '';
+  const life = kind==='error' ? 5000 : 3200;
+  t.className = 'toast ' + kind;
+  t.setAttribute('role', kind==='error' ? 'alert' : 'status');
+  t.innerHTML = `<div class="toast-ic">${ico(icon)}</div>
+    <div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg"></div></div>
+    <button class="toast-x" aria-label="Dismiss">${ico('x')}</button>
+    <div class="toast-bar" style="animation-duration:${life}ms"></div>`;
+  t.querySelector('.toast-msg').textContent = msg;
   host.appendChild(t);
-  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(20px)'; t.style.transition='.25s'; setTimeout(()=>t.remove(),250); }, 2800);
+  // keep at most 4 on screen
+  while(host.children.length > 4) host.firstElementChild.remove();
+  let gone = false;
+  const close = ()=>{ if(gone) return; gone = true; t.classList.add('out'); setTimeout(()=>t.remove(), 260); };
+  t.querySelector('.toast-x').addEventListener('click', close);
+  setTimeout(close, life);
 }
 
 function openModal(id){ document.getElementById(id).classList.add('open'); document.body.classList.add('scroll-lock'); }
@@ -1979,6 +2122,8 @@ function goPage(page){
     renderRecycleBin();
     renderClientSources();
   }
+  const shown = document.getElementById('page-'+page);
+  if(shown){ shown.classList.remove('page-enter'); void shown.offsetWidth; shown.classList.add('page-enter'); }
   if(page==='dashboard') renderDashboard();
   if(page==='insights') renderInsights();
   if(page==='themes') renderThemes();
@@ -2222,6 +2367,7 @@ function renderDashboard(){
   renderAdvisorFilter();
   renderOverdueBanner();
   renderMyDay();
+  renderDashKpis();
   const leads = visibleLeads();
   const buckets = {new:[], existing:[], decline:[], signedup:[], completed:[]};
   leads.forEach(l=> buckets[potOf(l)].push(l));
@@ -2248,7 +2394,7 @@ function renderDashboard(){
     document.getElementById('count-'+potKey).textContent = buckets[potKey].length;
     const body = document.getElementById('pot-'+potKey);
     if(buckets[potKey].length===0){
-      body.innerHTML = `<div class="pot-empty">No cases here right now.</div>`;
+      body.innerHTML = `<div class="pot-empty"><div class="pe-ic">${ico('inbox')}</div>${searchTerm ? 'No matches here' : 'Nothing here right now'}</div>`;
       return;
     }
     body.innerHTML = buckets[potKey].map(l=> leadCardHtml(l, potKey)).join('');
@@ -2273,7 +2419,7 @@ function followUpBadge(dateStr){
   else if(diffDays === 1){ label = 'Call due tomorrow'; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
   else{ label = `Call due ${fmtDate(dateStr)}`; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
 
-  return `<span class="tag" style="background:${bgVar};color:${colorVar};font-weight:700;">📞 ${label}</span>`;
+  return `<span class="tag" style="background:${bgVar};color:${colorVar};font-weight:700;">${ico('phone')} ${label}</span>`;
 }
 
 /* Existing-workflow cases whose follow-up date has passed. Scoped to the
@@ -2383,9 +2529,80 @@ function renderMyDay(){
   });
 }
 
+/* Headline figures above the board. They follow the advisor and date
+   filters (so a manager filtering to one MAPA sees that MAPA's numbers) but
+   ignore the search box, so typing a name doesn't make the totals jump. */
+function renderDashKpis(){
+  const host = document.getElementById('dashKpis');
+  if(!host) return;
+  const saved = searchTerm; searchTerm = '';
+  const leads = visibleLeads();
+  searchTerm = saved;
+
+  const DAY = 86400000;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const t0 = today.getTime();
+  const dueDiff = l => { const d = new Date(l.followUpDate); d.setHours(0,0,0,0); return Math.round((d - today)/DAY); };
+
+  const open = leads.filter(l=> ['new','existing'].includes(potOf(l)));
+  const newThisWeek = leads.filter(l=> (l.createdAt||0) >= Date.now()-7*DAY).length;
+  const newLastWeek = leads.filter(l=> (l.createdAt||0) >= Date.now()-14*DAY && (l.createdAt||0) < Date.now()-7*DAY).length;
+
+  const withCall = leads.filter(l=> potOf(l)==='existing' && l.followUpDate);
+  const dueToday = withCall.filter(l=> dueDiff(l)===0).length;
+  const dueTomorrow = withCall.filter(l=> dueDiff(l)===1).length;
+  const overdue = withCall.filter(l=> dueDiff(l)<0);
+  const oldest = overdue.length ? Math.max(...overdue.map(l=> -dueDiff(l))) : 0;
+
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+  const lastMonthStart = new Date(today.getFullYear(), today.getMonth()-1, 1).getTime();
+  const signupAt = l => { const a = Object.values(l.audit||{}).filter(a=>a.type==='signup').sort((x,y)=>y.at-x.at)[0]; return a ? a.at : null; };
+  const signed = leads.filter(l=> potOf(l)==='signedup');
+  const signedThisMonth = signed.filter(l=>{ const at = signupAt(l); return at && at >= monthStart; });
+  const signedLastMonth = signed.filter(l=>{ const at = signupAt(l); return at && at >= lastMonthStart && at < monthStart; }).length;
+  const commission = signedThisMonth.reduce((sum,l)=> sum + (Number(l.commission)||0), 0);
+
+  const delta = (now, before, unit) => {
+    const d = now - before;
+    if(d === 0) return `<span class="kpi-delta flat">No change ${unit}</span>`;
+    return `<span class="kpi-delta ${d>0?'up':'down'}">${ico(d>0?'trendUp':'trendDown')}${d>0?'+':''}${d} ${unit}</span>`;
+  };
+  const tile = (o) => `
+    <button class="kpi ${o.tone||''}" data-jump="${o.jump||''}" type="button">
+      <div class="kpi-top"><span class="kpi-lbl">${o.label}</span><span class="kpi-ic">${ico(o.icon)}</span></div>
+      <div class="kpi-val">${o.value}</div>
+      <div class="kpi-sub">${o.sub}</div>
+    </button>`;
+
+  host.innerHTML =
+    tile({label:'Open cases', icon:'briefcase', value:open.length, jump:'new',
+          sub: `${delta(newThisWeek, newLastWeek, 'vs last week')}<span class="kpi-note">${newThisWeek} new in 7 days</span>`}) +
+    tile({label:'Calls due today', icon:'phone', value:dueToday, jump:'existing', tone: dueToday ? 'warn' : '',
+          sub: `<span class="kpi-note">${dueTomorrow ? dueTomorrow+' due tomorrow' : 'None due tomorrow'}</span>`}) +
+    tile({label:'Overdue calls', icon:'alert', value:overdue.length, jump:'existing', tone: overdue.length ? 'bad' : 'good',
+          sub: overdue.length ? `<span class="kpi-note">Oldest ${oldest} day${oldest>1?'s':''} overdue</span>` : `<span class="kpi-delta up">${ico('check')}All on track</span>`}) +
+    tile({label:'Sign-ups this month', icon:'pound', value:signedThisMonth.length, jump:'signedup', tone:'brand',
+          sub: `<span class="kpi-note">£${commission.toLocaleString(undefined,{maximumFractionDigits:0})} commission</span>${delta(signedThisMonth.length, signedLastMonth, 'vs last month')}`});
+
+  host.querySelectorAll('.kpi').forEach(k=>{
+    k.addEventListener('click', ()=>{
+      const pot = document.querySelector(`.pot[data-pot="${k.dataset.jump}"]`);
+      if(!pot) return;
+      pot.scrollIntoView({behavior:'smooth', block:'nearest'});
+      pot.classList.remove('flash'); void pot.offsetWidth; pot.classList.add('flash');
+    });
+  });
+}
+
+/* Consistent colour per advisor for the little initials circles on cards. */
+function advisorTone(id){
+  const tones = ['#7C3AED','#2563EB','#0891B2','#9333EA','#475569','#4F46E5','#0F766E','#BE185D'];
+  let h = 0; for(const c of String(id||'')) h = (h*31 + c.charCodeAt(0)) >>> 0;
+  return tones[h % tones.length];
+}
+
 function leadCardHtml(lead, potKey){
   const last = leadLastActivity(lead);
-  const flagColor = {new:'var(--blue)',existing:'var(--amber)',decline:'var(--red)',signedup:'var(--green)',completed:'var(--teal)'}[potKey];
   const showAdvisor = currentUser.role!=='mapa';
 
   let isOverdue = false;
@@ -2395,23 +2612,23 @@ function leadCardHtml(lead, potKey){
     isOverdue = due < today;
   }
 
+  const advisor = showAdvisor
+    ? (lead.advisorId
+        ? `<span class="lc-avatar" style="--av:${advisorTone(lead.advisorId)}" title="${esc(lead.advisorName||'')}">${esc(initials(lead.advisorName||'?'))}</span>`
+        : `<span class="lc-avatar none" title="Unassigned">?</span>`)
+    : '';
+  const sub = [lead.clientSource ? esc(lead.clientSource) : '', fmtDate(lead.appDate)].filter(Boolean).join('<span class="lc-sep">·</span>');
+
   return `
     <div class="lead-card ${isOverdue?'overdue':''}" data-id="${lead.id}">
       <div class="lc-top">
         <div class="lc-name">${esc(lead.clientName)}</div>
-        <div class="lc-flag" style="background:${flagColor}"></div>
+        ${advisor}
       </div>
-      ${potKey==='existing' && lead.followUpDate ? `<div class="lc-meta">${followUpBadge(lead.followUpDate)}</div>` : ''}
       ${potKey==='signedup' && lead.commission!=null ? `<div class="lc-commission">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div>` : ''}
-      <div class="lc-meta">
-        ${showAdvisor ? `<span class="tag advisor">${esc(lead.advisorName||'Unassigned')}</span>` : ''}
-        <span class="tag">Created: ${fmtDate(lead.appDate)}</span>
-        ${lead.clientSource ? `<span class="tag">${esc(lead.clientSource)}</span>` : ''}
-      </div>
-      <div class="lc-activity">
-        <span class="txt">${last ? esc(last.text) : 'No activity yet'}</span>
-        <span>${last ? timeAgo(last.at) : ''}</span>
-      </div>
+      <div class="lc-sub">${sub}</div>
+      ${potKey==='existing' && lead.followUpDate ? `<div class="lc-meta">${followUpBadge(lead.followUpDate)}</div>` : ''}
+      ${last ? `<div class="lc-activity"><span class="txt">${esc(last.text)}</span><span class="when">${timeAgo(last.at)}</span></div>` : ''}
     </div>`;
 }
 
@@ -2655,10 +2872,10 @@ function renderLeadModal(){
         <div class="lbl">Decline reason: ${esc(lead.declineReason)}</div>
         <div class="val" style="font-weight:500;font-size:13px;margin-top:4px;">${esc(lead.declineDetail||'')}</div>
         <div class="val" style="font-weight:600;font-size:12px;margin-top:6px;color:${lead.declineSent?'var(--green)':'var(--red)'}">
-          ${lead.declineSent? '✓ Decline reasoning sent to client' : '⚠ Decline reasoning NOT yet sent to client'}
+          ${lead.declineSent? ico('check')+' Decline reasoning sent to client' : ico('alert')+' Decline reasoning NOT yet sent to client'}
         </div>
         <div class="val" style="font-weight:600;font-size:12px;margin-top:3px;color:${lead.hlpAdded?'var(--green)':'var(--red)'}">
-          ${lead.hlpAdded? '✓ Added to HLP Portal' : '⚠ NOT yet added to HLP Portal'}
+          ${lead.hlpAdded? ico('check')+' Added to HLP Portal' : ico('alert')+' NOT yet added to HLP Portal'}
         </div>
       </div>` : ''}
     </div>
@@ -2688,10 +2905,10 @@ function renderLeadModal(){
       <div id="dynamicActionArea"></div>
       ${lead.status==='decline' ? `
       <div class="outcome-panel" style="border-color:var(--red); background:var(--red-bg);">
-        <div class="op-title" style="color:var(--red);">⚠ This case is sitting in Decline Workflow because the decline reasoning hasn't been sent to the client and/or it hasn't been added to the HLP portal yet.</div>
+        <div class="op-title" style="color:var(--red);">${ico('alert')} This case is sitting in Decline Workflow because the decline reasoning hasn't been sent to the client and/or it hasn't been added to the HLP portal yet.</div>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          <button id="declineSentBtn" ${lead.declineSent?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead.declineSent?'var(--border-2)':'var(--green)'}; color:${lead.declineSent?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead.declineSent?'✓ Decline reasoning sent':'Mark: Decline Reasoning Sent'}</button>
-          <button id="hlpAddedBtn" ${lead.hlpAdded?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead.hlpAdded?'var(--border-2)':'var(--green)'}; color:${lead.hlpAdded?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead.hlpAdded?'✓ Added to HLP Portal':'Mark: Added to HLP Portal'}</button>
+          <button id="declineSentBtn" ${lead.declineSent?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead.declineSent?'var(--border-2)':'var(--green)'}; color:${lead.declineSent?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead.declineSent?ico('check')+' Decline reasoning sent':'Mark: Decline Reasoning Sent'}</button>
+          <button id="hlpAddedBtn" ${lead.hlpAdded?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead.hlpAdded?'var(--border-2)':'var(--green)'}; color:${lead.hlpAdded?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead.hlpAdded?ico('check')+' Added to HLP Portal':'Mark: Added to HLP Portal'}</button>
         </div>
       </div>` : ''}
     `;
@@ -2753,7 +2970,7 @@ function renderLeadModal(){
   } else {
     auditList.innerHTML = entries.map(e=> `
       <div class="audit-item">
-        <div class="audit-icon">${auditIcon(e.type)}</div>
+        <div class="audit-icon t-${e.type}">${auditIcon(e.type)}</div>
         <div class="audit-line"></div>
         <div class="audit-content">
           <div class="audit-text">${esc(e.text)}</div>
@@ -2764,10 +2981,11 @@ function renderLeadModal(){
 }
 
 function auditIcon(type){
-  return {
-    assigned:'📌', call:'📞', text:'💬', email:'✉️', appointment:'🗓️', other:'📝',
-    signup:'✅', followup:'📅', decline:'❌', sent:'📤', hlp:'🗂️', status:'🔀'
-  }[type] || '•';
+  const map = {
+    assigned:'pin', call:'phone', text:'message', email:'mail', appointment:'calendar', other:'note',
+    signup:'checkCircle', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', status:'shuffle'
+  };
+  return map[type] ? ico(map[type]) : '•';
 }
 
 function markDeclineFlag(lead, field, auditText, btnId){
@@ -2779,7 +2997,7 @@ function markDeclineFlag(lead, field, auditText, btnId){
   if(willBeSent && willBeHlp) patch.status = 'completed';
   logAudit(lead.id, {type: field==='declineSent'?'sent':'hlp', text:auditText, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, patch)
     .then(()=>{
-      toast(willBeSent && willBeHlp ? 'Both confirmed — moved to Declines - Email sent' : 'Updated', 'success');
+      toast(willBeSent && willBeHlp ? 'Both confirmed. Moved to Declined · email sent.' : (field==='declineSent' ? 'Decline reasoning marked as sent' : 'Marked as added to HLP Portal'), 'success');
       refreshLeadModal();
     }).catch(err=>{ toast('Could not save: '+err.message,'error'); if(btn) btn.disabled=false; });
 }
@@ -2829,7 +3047,7 @@ document.getElementById('esSubmit').addEventListener('click', function(){
     .finally(()=>{ btn.disabled = false; });
 });
 
-const STATUS_LABELS = {new:'New Cases', existing:'Contacted Clients', signedup:'Sign Ups', decline:'Declines - Email not sent', completed:'Declines - Email sent'};
+const STATUS_LABELS = {new:'New Cases', existing:'Contacted Clients', signedup:'Sign Ups', decline:'Declined · email pending', completed:'Declined · email sent'};
 
 document.getElementById('csSubmit').addEventListener('click', function(){
   const leadId = this.dataset.leadId;
@@ -2843,7 +3061,7 @@ document.getElementById('csSubmit').addEventListener('click', function(){
     type:'status', text:`Status manually changed to "${STATUS_LABELS[newStatus]}" by ${currentUser.name}`,
     byId:currentUser.id, byName:currentUser.name, at:Date.now()
   }, {status:newStatus}).then(()=>{
-    toast('Status updated','success');
+    toast(`${lead.clientName||'Lead'} moved to ${STATUS_LABELS[newStatus]}`,'success');
     closeModal('changeStatusOverlay');
     actionUIState = null;
     refreshLeadModal();
@@ -2932,7 +3150,7 @@ function renderDynamicArea(lead){
       this.disabled = true;
       const text = `${label} - Follow Up - ${fmtDateSlash(date)}` + (comment? ` - ${comment}` : '');
       logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date})
-        .then(()=>{ toast('Follow-up saved','success'); actionUIState=null; refreshLeadModal(); })
+        .then(()=>{ toast(`Follow-up booked for ${fmtDate(date)}. Moved to Contacted Clients.`,'success'); actionUIState=null; refreshLeadModal(); })
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
     });
     return;
@@ -2954,7 +3172,7 @@ function renderDynamicArea(lead){
           </select>
         </div>
         <div id="dcContactWarning" class="hidden" style="display:flex; gap:9px; background:var(--amber-bg); border:1.5px solid var(--amber); border-radius:10px; padding:12px 13px; margin-bottom:16px;">
-          <span style="font-size:16px;">⚠️</span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px;flex:none;color:var(--amber);"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
           <span style="font-size:12.5px; font-weight:600; color:var(--amber);">Before declining, please ensure you have tried to contact the client 10 times.</span>
         </div>
         <div class="field">
@@ -3003,7 +3221,7 @@ function renderDynamicArea(lead){
         if(hlp){
           logAudit(lead.id, {type:'hlp', text:'Confirmed added to HLP Portal', byId:currentUser.id, byName:currentUser.name, at:Date.now()+2});
         }
-        toast('Decline recorded','success'); actionUIState=null; refreshLeadModal();
+        toast(`Decline recorded. Moved to ${STATUS_LABELS[newStatus]}.`,'success'); actionUIState=null; refreshLeadModal();
       }).catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
     });
     return;
@@ -3029,7 +3247,7 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
   const text = `${label} - Sign Up - ${fmtDateSlash(Date.now())} - Commission £${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
   logAudit(leadId, {type:'signup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'signedup', commission:Number(val)})
     .then(()=>{
-      toast('Lead marked as signed up 🎉','success'); closeModal('signupOverlay');
+      toast(`Signed up with £${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})} commission. Moved to Sign Ups.`,'success'); closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();
     }).catch(err=> toast('Could not save: '+err.message,'error'))
     .finally(()=>{ btn.disabled = false; });
@@ -3167,8 +3385,8 @@ function renderInsights(){
     ['New Cases', counts.new, 'var(--blue)'],
     ['Contacted Clients', counts.existing, 'var(--amber)'],
     ['Sign Ups', counts.signedup, 'var(--green)'],
-    ['Declines - Email not sent', counts.decline, 'var(--red)'],
-    ['Declines - Email sent', counts.completed, 'var(--teal)']
+    ['Declined · email pending', counts.decline, 'var(--red)'],
+    ['Declined · email sent', counts.completed, 'var(--teal)']
   ];
   document.getElementById('funnelChart').innerHTML = total===0
     ? `<div class="insights-empty">No leads in this filter/date range yet.</div>`

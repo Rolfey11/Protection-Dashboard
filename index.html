@@ -2870,6 +2870,7 @@ function googleCalUrl(lead){
   const title = calTitle(lead);
   const details = emails.length ? clientEventText(lead) : calEventText(lead).details;
   const p = new URLSearchParams({action:'TEMPLATE', text:title, dates:`${start}/${end}`, details});
+  p.set('location', emails.length ? `Phone call: ${lead.advisorName || 'your adviser'} will call you` : 'Phone call');
   if(emails.length) p.set('add', emails.join(','));
   return 'https://calendar.google.com/calendar/render?' + p.toString();
 }
@@ -2893,6 +2894,7 @@ function icsEvent(lead){
     `DTSTART:${calEventTimes(lead).start}`,
     `DTEND:${calEventTimes(lead).end}`,
     `SUMMARY:${icsEscape(title)}`,
+    'LOCATION:Phone call',
     `DESCRIPTION:${icsEscape(details)}`,
     trackerUrl() ? `URL:${trackerUrl()}` : '',
     'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEscape(title)}`,'TRIGGER:-PT15M','END:VALARM',
@@ -3184,7 +3186,7 @@ document.getElementById('ntAddClientBtn').addEventListener('click', ()=>{
 document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   document.getElementById('ntName').value='';
   document.getElementById('ntEmail').value='';
-  document.getElementById('ntDate').value='';
+  document.getElementById('ntDate').value = isoDay(new Date()); // defaults to today; bulk upload keeps its own dates
   document.getElementById('ntDupeWarning').classList.add('hidden');
   document.getElementById('ntSubmit').disabled = false;
   ntResetExtraClients();
@@ -3692,7 +3694,7 @@ function renderDynamicArea(lead){
       const inv = document.getElementById('fuInvite');
       if(!ready){ inv.innerHTML = ''; return; }
       inv.innerHTML = em.length
-        ? `<div class="fu-invite">${ico('mail')}<span>A calendar invite will go to <b>${esc(em.join(', '))}</b>. In Google, click <b>Save</b>, then <b>Send</b>.</span></div>`
+        ? `<div class="fu-invite">${ico('mail')}<span>A calendar invite will go to <b>${esc(em.join(', '))}</b>. In Google, click <b>Save</b>, then <b>Send</b>. If a Google Meet link appears, click the <b>×</b> next to it first.</span></div>`
         : `<div class="fu-invite none">${ico('info')}<span>No client email on file, so no invite will be sent. <button type="button" class="linkish" id="fuAddEmail">Add an email</button></span></div>`;
       const add = document.getElementById('fuAddEmail');
       if(add) add.addEventListener('click', ()=>{ const b = document.getElementById('ceEditBtn'); if(b){ b.click(); b.closest('.info-cell').scrollIntoView({behavior:'smooth', block:'center'}); } });

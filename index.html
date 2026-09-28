@@ -694,7 +694,21 @@ main{max-width:1360px; margin:0 auto; padding:28px 24px 60px;}
 .modal-body{padding:20px 22px;}
 .modal-foot{padding:16px 22px 22px; display:flex; gap:10px; justify-content:flex-end;}
 
-.field input[type=text],.field input[type=date],.field input[type=number],.field textarea{
+.field{margin-bottom:18px;}
+.field label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-2); margin-bottom:7px; letter-spacing:.1px;}
+.field select{
+  width:100%; padding:12px 14px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm);
+  background:var(--surface); color:var(--text); font-size:14.5px; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237B6E77' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 14px center;
+  transition:border-color .15s;
+}
+.field select:focus{border-color:var(--brand-light);}
+.field-row{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:12px;}
+.fu-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.fu-actions .btn .ico{width:15px; height:15px;}
+.fu-hint{font-size:11.5px; color:var(--text-faint); margin-top:8px;}
+.field input[type=text],.field input[type=date],.field input[type=time],.field input[type=number],.field textarea{
   width:100%; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm);
   background:var(--surface); color:var(--text); font-size:14px; transition:border-color .15s;
 }
@@ -966,7 +980,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 }
 .cal-btn .ico{width:14px; height:14px;}
 .cal-btn:hover{border-color:var(--brand-light); color:var(--brand); background:var(--brand-tint);}
-.cal-btn.google{background:var(--brand); border-color:var(--brand); color:#fff;}
+.cal-btn.google{flex:1.5; background:var(--brand); border-color:var(--brand); color:#fff;}
+.cal-chip b{font-weight:700; margin-right:4px; font-variant-numeric:tabular-nums;}
 .cal-btn.google:hover{background:var(--brand-dark); border-color:var(--brand-dark); color:#fff;}
 .cal-btns.compact{margin-top:10px;}
 .cal-btns.compact .cal-btn{flex:0 0 auto;}
@@ -1397,7 +1412,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             </div>
             <div id="calDayList"></div>
           </div>
-          <p class="cal-help"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span><b>Google Calendar</b> opens the event ready to save, and you can set a time before saving. <b>Calendar file</b> works with Outlook and iPhone. If a call is moved in the tracker, add it again and delete the old one.</span></p>
+          <p class="cal-help"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span><b>Add to Google Calendar</b> opens a 1-hour call at the booked time (9am if no time was set), ready to save. You can change the time before saving. <b>Calendar file</b> works with Outlook and iPhone. If a call is moved in the tracker, add it again and delete the old one.</span></p>
         </aside>
       </div>
     </div>
@@ -2568,17 +2583,18 @@ function renderDashboard(){
 
 /* Renders a small coloured "call due" badge for a follow-up date: red if
    overdue, amber if due today, blue if upcoming. Returns '' if no date set. */
-function followUpBadge(dateStr){
+function followUpBadge(dateStr, timeStr){
   if(!dateStr) return '';
+  const at = timeStr ? ` at ${timeStr}` : '';
   const today = new Date(); today.setHours(0,0,0,0);
   const due = new Date(dateStr); due.setHours(0,0,0,0);
   const diffDays = Math.round((due - today) / 86400000);
 
   let label, colorVar, bgVar;
-  if(diffDays < 0){ label = `Overdue — ${fmtDate(dateStr)}`; colorVar='var(--red)'; bgVar='var(--red-bg)'; }
-  else if(diffDays === 0){ label = 'Call due today'; colorVar='var(--amber)'; bgVar='var(--amber-bg)'; }
-  else if(diffDays === 1){ label = 'Call due tomorrow'; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
-  else{ label = `Call due ${fmtDate(dateStr)}`; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
+  if(diffDays < 0){ label = `Overdue — ${fmtDate(dateStr)}${at}`; colorVar='var(--red)'; bgVar='var(--red-bg)'; }
+  else if(diffDays === 0){ label = `Call due today${at}`; colorVar='var(--amber)'; bgVar='var(--amber-bg)'; }
+  else if(diffDays === 1){ label = `Call due tomorrow${at}`; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
+  else{ label = `Call due ${fmtDate(dateStr)}${at}`; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
 
   return `<span class="tag" style="background:${bgVar};color:${colorVar};font-weight:700;">${ico('phone')} ${label}</span>`;
 }
@@ -2778,8 +2794,22 @@ function calendarCalls(){
   else if(selectedAdvisorFilter){
     all = selectedAdvisorFilter==='__unassigned__' ? all.filter(l=> !l.advisorId) : all.filter(l=> l.advisorId===selectedAdvisorFilter);
   }
-  return all.map(l=> ({...l, day: isoDay(l.followUpDate)})).sort((a,b)=> a.day.localeCompare(b.day) || (a.clientName||'').localeCompare(b.clientName||''));
+  return all.map(l=> ({...l, day: isoDay(l.followUpDate)})).sort((a,b)=> a.day.localeCompare(b.day) || (a.followUpTime||'99').localeCompare(b.followUpTime||'99') || (a.clientName||'').localeCompare(b.clientName||''));
 }
+
+/* Start/end of the calendar event: the booked time (or 9am if none was
+   set), lasting one hour. Returned as UTC stamps so Google, Outlook and
+   Apple all place it correctly whatever time zone they're set to. */
+const CAL_DEFAULT_TIME = '09:00';
+function calEventTimes(lead){
+  const [h,m] = (lead.followUpTime || CAL_DEFAULT_TIME).split(':').map(Number);
+  const start = new Date(isoDay(lead.followUpDate)+'T00:00:00');
+  start.setHours(h||0, m||0, 0, 0);
+  const end = new Date(start.getTime() + 60*60*1000);
+  const utc = d => d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  return {start: utc(start), end: utc(end)};
+}
+function fmtCallTime(lead){ return lead.followUpTime ? lead.followUpTime : ''; }
 
 function calEventText(lead){
   const lines = [
@@ -2787,15 +2817,16 @@ function calEventText(lead){
     `Client: ${lead.clientName||''}`,
     lead.clientSource ? `Source: ${lead.clientSource}` : '',
     lead.advisorName ? `Adviser: ${lead.advisorName}` : '',
+    lead.followUpNote ? `Notes: ${lead.followUpNote}` : '',
     trackerUrl() ? `Protection Lead Tracker: ${trackerUrl()}` : ''
   ].filter(Boolean);
   return {title: `Call: ${lead.clientName||'Client'}`, details: lines.join('\n')};
 }
 
 function googleCalUrl(lead){
-  const day = isoDay(lead.followUpDate);
+  const {start, end} = calEventTimes(lead);
   const {title, details} = calEventText(lead);
-  const p = new URLSearchParams({action:'TEMPLATE', text:title, dates:`${compactDay(day)}/${compactDay(nextIsoDay(day))}`, details});
+  const p = new URLSearchParams({action:'TEMPLATE', text:title, dates:`${start}/${end}`, details});
   return 'https://calendar.google.com/calendar/render?' + p.toString();
 }
 
@@ -2815,13 +2846,12 @@ function icsEvent(lead){
     'BEGIN:VEVENT',
     `UID:plt-${lead.id}-${compactDay(day)}@protection-lead-tracker`,
     `DTSTAMP:${stamp}`,
-    `DTSTART;VALUE=DATE:${compactDay(day)}`,
-    `DTEND;VALUE=DATE:${compactDay(nextIsoDay(day))}`,
+    `DTSTART:${calEventTimes(lead).start}`,
+    `DTEND:${calEventTimes(lead).end}`,
     `SUMMARY:${icsEscape(title)}`,
     `DESCRIPTION:${icsEscape(details)}`,
     trackerUrl() ? `URL:${trackerUrl()}` : '',
-    'TRANSP:TRANSPARENT',
-    'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEscape(title)}`,'TRIGGER;RELATED=START:PT9H','END:VALARM',
+    'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEscape(title)}`,'TRIGGER:-PT15M','END:VALARM',
     'END:VEVENT'
   ].filter(Boolean).map(icsFold).join('\r\n');
 }
@@ -2837,7 +2867,7 @@ function safeFileName(s){ return String(s||'call').replace(/[^a-z0-9]+/gi,'-').r
 
 function calButtonsHtml(lead, compact=false){
   return `<div class="cal-btns ${compact?'compact':''}">
-    <a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Google Calendar</span></a>
+    <a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Add to Google Calendar</span></a>
     <button type="button" class="cal-btn" data-cal-ics="${esc(lead.id)}">${ico('calendarCheck')}<span>Calendar file</span></button>
   </div>`;
 }
@@ -2870,7 +2900,7 @@ function calItemHtml(l){
     <div class="cal-item ${d.tone}" data-open="${esc(l.id)}">
       <div class="cal-item-top">
         <div class="cal-item-name">${esc(l.clientName)}</div>
-        <span class="cal-due ${d.tone}">${d.label}</span>
+        <span class="cal-due ${d.tone}">${d.label}${l.followUpTime ? ' · '+l.followUpTime : ''}</span>
       </div>
       <div class="cal-item-sub">
         ${showAdv ? (l.advisorId ? `<span class="lc-avatar" style="--av:${advisorTone(l.advisorId)}">${esc(initials(l.advisorName||'?'))}</span>${esc(l.advisorName||'')}` : `<span class="lc-avatar none">?</span>Unassigned`) : ''}
@@ -2921,7 +2951,7 @@ function renderCalendar(){
     const cls = ['cal-cell', d.getMonth()!==m?'out':'', iso===today?'today':'', iso===calSelected?'sel':'', (d.getDay()%6===0)?'wkend':'', list.length?'has':''].join(' ');
     const chips = list.slice(0,3).map(c=>{
       const t = dueInfo(iso).tone;
-      return `<span class="cal-chip ${t}" style="--av:${advisorTone(c.advisorId)}"><i></i>${esc(c.clientName)}</span>`;
+      return `<span class="cal-chip ${t}" style="--av:${advisorTone(c.advisorId)}"><i></i>${c.followUpTime ? `<b>${c.followUpTime}</b>` : ''}${esc(c.clientName)}</span>`;
     }).join('');
     const more = list.length>3 ? `<span class="cal-more">+${list.length-3} more</span>` : '';
     const dots = list.length ? `<span class="cal-dots ${dueInfo(iso).tone}">${list.length}</span>` : '';
@@ -3012,7 +3042,7 @@ function leadCardHtml(lead, potKey){
       </div>
       ${potKey==='signedup' && lead.commission!=null ? `<div class="lc-commission">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div>` : ''}
       <div class="lc-sub">${sub}</div>
-      ${potKey==='existing' && lead.followUpDate ? `<div class="lc-meta">${followUpBadge(lead.followUpDate)}</div>` : ''}
+      ${potKey==='existing' && lead.followUpDate ? `<div class="lc-meta">${followUpBadge(lead.followUpDate, lead.followUpTime)}</div>` : ''}
       ${last ? `<div class="lc-activity"><span class="txt">${esc(last.text)}</span><span class="when">${timeAgo(last.at)}</span></div>` : ''}
     </div>`;
 }
@@ -3248,7 +3278,7 @@ function renderLeadModal(){
       ${potOf(lead)==='existing' && lead.followUpDate ? `
       <div class="info-cell full" style="background:var(--amber-bg);">
         <div class="lbl" style="color:var(--amber);">Next call due</div>
-        <div class="val" style="color:var(--amber);">${followUpBadge(lead.followUpDate).replace(/<[^>]+>/g,'').trim()}</div>
+        <div class="val" style="color:var(--amber);">${followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim()}</div>
         ${calButtonsHtml(lead, true)}
       </div>` : ''}
       ${potKey==='signedup' && lead.commission!=null ? `
@@ -3519,26 +3549,62 @@ function renderDynamicArea(lead){
     const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
     area.innerHTML = `
       <div class="inline-form">
-        <div class="field">
-          <label for="fuDate">Follow-up date</label>
-          <input type="date" id="fuDate">
+        <div class="field-row">
+          <div class="field">
+            <label for="fuDate">Follow-up date</label>
+            <input type="date" id="fuDate" min="${isoDay(new Date())}">
+          </div>
+          <div class="field">
+            <label for="fuTime">Time</label>
+            <input type="time" id="fuTime" step="300">
+          </div>
         </div>
         <div class="field">
           <label for="fuComment">Comment</label>
           <textarea id="fuComment" placeholder="Notes for the follow-up call…"></textarea>
         </div>
-        <button class="btn btn-primary btn-sm" id="fuSave">Save follow-up</button>
+        <div class="fu-actions">
+          <button class="btn btn-primary btn-sm" id="fuSave">Save follow-up</button>
+          <button class="btn btn-ghost btn-sm hidden" id="fuSaveOnly">Save without adding to calendar</button>
+        </div>
+        <div class="fu-hint" id="fuHint">Add a date and time to put the call straight into Google Calendar.</div>
       </div>`;
-    document.getElementById('fuSave').addEventListener('click', function(){
-      const date = document.getElementById('fuDate').value;
+    const fuDate = document.getElementById('fuDate'), fuTime = document.getElementById('fuTime');
+    const fuSave = document.getElementById('fuSave'), fuSaveOnly = document.getElementById('fuSaveOnly');
+    const fuReady = ()=> !!(fuDate.value && fuTime.value);
+    const syncFuButtons = ()=>{
+      const ready = fuReady();
+      fuSave.innerHTML = ready ? `${ico('calendar')} Add to Google Calendar` : 'Save follow-up';
+      fuSaveOnly.classList.toggle('hidden', !ready);
+      document.getElementById('fuHint').textContent = ready
+        ? `Saves the follow-up and opens Google Calendar with a 1-hour call at ${fuTime.value} on ${fmtDate(fuDate.value)}. Just click Save there.`
+        : 'Add a date and time to put the call straight into Google Calendar.';
+    };
+    fuDate.addEventListener('input', syncFuButtons); fuTime.addEventListener('input', syncFuButtons);
+
+    const saveFollowUp = (btn, addToGoogle)=>{
+      const date = fuDate.value, time = fuTime.value;
       const comment = document.getElementById('fuComment').value.trim();
       if(!date){ toast('Please choose a follow-up date.','error'); return; }
-      this.disabled = true;
-      const text = `${label} - Follow Up - ${fmtDateSlash(date)}` + (comment? ` - ${comment}` : '');
-      logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date})
-        .then(()=>{ toast(`Follow-up booked for ${fmtDate(date)}. Moved to Contacted Clients.`,'success'); actionUIState=null; refreshLeadModal(); })
-        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
-    });
+      // Open the tab now, while we still have the click: browsers block
+      // pop-ups opened later, after the save finishes.
+      const gTab = addToGoogle ? window.open('about:blank', '_blank') : null;
+      fuSave.disabled = fuSaveOnly.disabled = true;
+      const when = fmtDateSlash(date) + (time ? ` at ${time}` : '');
+      const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '');
+      logAudit(lead.id, {type:'followup', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date, followUpTime:time||null})
+        .then(()=>{
+          if(gTab){
+            const url = googleCalUrl({...lead, followUpDate:date, followUpTime:time, followUpNote:comment});
+            try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
+          }
+          toast(`Follow-up booked for ${fmtDate(date)}${time?' at '+time:''}. ${addToGoogle ? 'Google Calendar opened: click Save there.' : 'Moved to Contacted Clients.'}`,'success');
+          actionUIState=null; refreshLeadModal();
+        })
+        .catch(err=>{ if(gTab) gTab.close(); toast('Could not save: '+err.message,'error'); fuSave.disabled = fuSaveOnly.disabled = false; });
+    };
+    fuSave.addEventListener('click', ()=> saveFollowUp(fuSave, fuReady()));
+    fuSaveOnly.addEventListener('click', ()=> saveFollowUp(fuSaveOnly, false));
     return;
   }
 

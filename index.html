@@ -710,6 +710,8 @@ main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
 #reassignOverlay{z-index:110;}
 #changeStatusOverlay{z-index:110;}
 #editSourceOverlay{z-index:110;}
+#emailComposeOverlay{z-index:110;}
+#viewEmailOverlay{z-index:110;}
 .modal{
   background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:100%; max-width:440px;
   max-height:90vh; overflow-y:auto; transform:translateY(14px) scale(.97); transition:transform .2s cubic-bezier(.2,.8,.2,1);
@@ -840,6 +842,14 @@ main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
 .audit-content{flex:1; padding-top:3px;}
 .audit-text{font-size:13px; color:var(--text); line-height:1.45; font-weight:500;}
 .audit-meta{font-size:11px; color:var(--text-faint); margin-top:3px;}
+.audit-view{margin-top:7px; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--brand); font-size:12px; font-weight:600;}
+.audit-view:hover{border-color:var(--brand-light); background:var(--brand-tint);}
+.audit-view .ico{width:13px; height:13px;}
+.em-head{background:var(--bg); border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:13px; line-height:1.7;}
+.em-head .k{display:inline-block; width:62px; color:var(--text-faint); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.3px;}
+.em-head .v{color:var(--text); font-weight:600; word-break:break-word;}
+.em-body{white-space:pre-wrap; font-size:13.5px; line-height:1.6; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:14px; max-height:50vh; overflow-y:auto;}
+.em-note{font-size:11.5px; color:var(--text-faint); margin-top:10px;}
 
 /* ==========================================================================
    INSIGHTS PAGE
@@ -1828,6 +1838,43 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 <!-- ============================================================
      MODAL: DELETE CONFIRMATION (Management only)
      ============================================================ -->
+<div class="modal-overlay" id="emailComposeOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head"><h2>Email client</h2><button class="modal-close" data-close="emailComposeOverlay">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="emTo">To</label>
+        <input type="email" id="emTo" placeholder="client@email.com (separate joint clients with a comma)">
+      </div>
+      <div class="field">
+        <label for="emSubject">Subject</label>
+        <input type="text" id="emSubject">
+      </div>
+      <div class="field" style="margin-bottom:6px;">
+        <label for="emBody">Message</label>
+        <textarea id="emBody" style="min-height:200px;"></textarea>
+      </div>
+      <div class="field-hint">Opens Gmail with this filled in, ready to send. A copy is saved to the audit trail so anyone can view what was sent.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="emailComposeOverlay">Cancel</button>
+      <button class="btn btn-primary" id="emSend">Open in Gmail</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="viewEmailOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head"><h2>Email to client</h2><button class="modal-close" data-close="viewEmailOverlay">✕</button></div>
+    <div class="modal-body">
+      <div class="em-head" id="veHead"></div>
+      <div class="em-body" id="veBody"></div>
+      <p class="em-note">This is the email as written in the tracker before opening Gmail. Any changes made in Gmail itself aren't captured here.</p>
+    </div>
+    <div class="modal-foot"><button class="btn btn-secondary" data-close="viewEmailOverlay">Close</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="deleteConfirmOverlay">
   <div class="modal" style="max-width:380px;">
     <div class="modal-head"><h2>Delete this case?</h2><button class="modal-close" data-close="deleteConfirmOverlay">✕</button></div>
@@ -3115,6 +3162,73 @@ function downloadIcs(leads, filename){
 }
 function safeFileName(s){ return String(s||'call').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'call'; }
 
+let emailLeadId = null;
+function openEmailCompose(leadId){
+  const l = LEADS[leadId]; if(!l) return;
+  emailLeadId = leadId;
+  const first = String(l.clientName||'').split(/\s*&\s*/).map(n=> n.split(' ')[0]).join(' & ');
+  const adv = (l.advisorName || currentUser.name || '').split(' ')[0];
+  document.getElementById('emTo').value = leadEmails(l).join(', ');
+  document.getElementById('emSubject').value = `Your protection follow-up call with ${COMPANY_NAME}`;
+  let when = '';
+  if(l.followUpDate){
+    const d = toDate(l.followUpDate).toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'});
+    when = ` on ${d}${l.followUpTime ? ' at '+l.followUpTime : ''}`;
+  }
+  document.getElementById('emBody').value =
+`Hi ${first || 'there'},
+
+Just a quick note to confirm our follow-up call${when} to talk through your protection options.
+
+If that time no longer suits, just reply to this email and we'll find another.
+
+Kind regards,
+${adv || ''}
+${COMPANY_NAME}`;
+  document.getElementById('emSend').disabled = false;
+  openModal('emailComposeOverlay');
+  setTimeout(()=> document.getElementById('emBody').focus(), 50);
+}
+
+document.getElementById('emSend').addEventListener('click', function(){
+  const l = LEADS[emailLeadId]; if(!l) return;
+  const to = parseEmails(document.getElementById('emTo').value);
+  const subject = document.getElementById('emSubject').value.trim();
+  const body = document.getElementById('emBody').value.replace(/\s+$/,'');
+  if(!to.length){ toast('Please add the client\'s email address.','error'); return; }
+  const bad = to.find(e=> !isEmail(e));
+  if(bad){ toast(`"${bad}" doesn't look like an email address.`,'error'); return; }
+  if(!subject){ toast('Please add a subject.','error'); return; }
+  if(!body){ toast('Please write a message.','error'); return; }
+  // Open Gmail straight from the click so the browser doesn't block it.
+  const p = new URLSearchParams({view:'cm', fs:'1', to:to.join(','), su:subject, body});
+  window.open('https://mail.google.com/mail/?' + p.toString(), '_blank');
+  this.disabled = true;
+  const patch = {};
+  const onFile = leadEmails(l);
+  if(to.join(',').toLowerCase() !== onFile.join(',').toLowerCase()) patch.clientEmails = to;
+  logAudit(emailLeadId, {
+    type:'email', text:`Email to client - ${subject}`,
+    emailTo: to.join(', '), emailSubject: subject, emailBody: body,
+    byId:currentUser.id, byName:currentUser.name, at:Date.now()
+  }, patch).then(()=>{
+    toast('Gmail opened. Click Send there. A copy is in the audit trail.','success');
+    closeModal('emailComposeOverlay');
+  }).catch(err=>{ toast('Could not save to the audit trail: '+err.message,'error'); this.disabled = false; });
+});
+
+function openViewEmail(auditId){
+  const l = LEADS[activeLeadId]; if(!l || !l.audit || !l.audit[auditId]) return;
+  const a = l.audit[auditId];
+  document.getElementById('veHead').innerHTML =
+    `<div><span class="k">To</span><span class="v">${esc(a.emailTo||'')}</span></div>` +
+    `<div><span class="k">Subject</span><span class="v">${esc(a.emailSubject||'')}</span></div>` +
+    `<div><span class="k">From</span><span class="v">${esc(a.byName||'')}</span></div>` +
+    `<div><span class="k">Date</span><span class="v">${fmtDateTime(a.at)}</span></div>`;
+  document.getElementById('veBody').textContent = a.emailBody || '';
+  openModal('viewEmailOverlay');
+}
+
 function clientMailtoUrl(lead){
   // Blank Gmail draft addressed to the client: subject and message are left
   // empty for the adviser to write. (The calendar invite covers the
@@ -3163,7 +3277,7 @@ function calButtonsHtml(lead, compact=false){
   return `<div class="cal-btns ${compact?'compact':''}">
     <a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Add to Google Calendar</span></a>
     <button type="button" class="cal-btn" data-cal-ics="${esc(lead.id)}">${ico('calendarCheck')}<span>Calendar file</span></button>
-    ${compact ? `<a class="cal-btn mail" href="${esc(clientMailtoUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}" title="Opens a blank Gmail draft to the client">${ico('mail')}<span>Email client</span></a>` : ''}
+    ${compact ? `<button type="button" class="cal-btn mail" data-email-client="${esc(lead.id)}" title="Write an email to the client and open it in Gmail">${ico('mail')}<span>Email client</span></button>` : ''}
   </div>`;
 }
 document.addEventListener('click', (e)=>{
@@ -3176,6 +3290,10 @@ document.addEventListener('click', (e)=>{
     toast(`Calendar file downloaded for ${lead.clientName}. Open it to add the call.`, 'success');
     return;
   }
+  const em = e.target.closest('[data-email-client]');
+  if(em){ e.preventDefault(); e.stopPropagation(); openEmailCompose(em.dataset.emailClient); return; }
+  const ve = e.target.closest('[data-view-email]');
+  if(ve){ e.preventDefault(); openViewEmail(ve.dataset.viewEmail); return; }
   if(e.target.closest('[data-cal-google]')) e.stopPropagation(); // don't also open the lead
 });
 
@@ -3715,7 +3833,7 @@ function renderLeadModal(){
 
   // audit trail
   const auditList = document.getElementById('auditList');
-  const entries = lead.audit ? Object.values(lead.audit).sort((a,b)=>b.at-a.at) : [];
+  const entries = lead.audit ? Object.entries(lead.audit).map(([k,v])=>({...v, _key:k})).sort((a,b)=>b.at-a.at) : [];
   if(entries.length===0){
     auditList.innerHTML = `<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>`;
   } else {
@@ -3726,6 +3844,7 @@ function renderLeadModal(){
         <div class="audit-content">
           <div class="audit-text">${esc(e.text)}</div>
           <div class="audit-meta">${esc(e.byName||'')} · ${fmtDateTime(e.at)}</div>
+          ${e.emailBody != null ? `<button type="button" class="audit-view" data-view-email="${esc(e._key)}">${ico('mail')}View email</button>` : ''}
         </div>
       </div>`).join('');
   }
@@ -3920,7 +4039,7 @@ function renderDynamicArea(lead){
       if(!ready){ inv.innerHTML = ''; return; }
       inv.innerHTML = em.length
         ? `<div class="fu-invite">${ico('mail')}<span>A calendar invite will go to <b>${esc(em.join(', '))}</b>. In Google, click <b>Save</b>, then <b>Send</b>. If a Google Meet link appears, click the <b>×</b> next to it first.</span></div>`
-        : `<div class="fu-invite none">${ico('info')}<span>No client email on file, so no invite will be sent. <button type="button" class="linkish" id="fuAddEmail">Add an email</button></span></div>`;
+        : `<div class="fu-invite none">${ico('info')}<span>No client email on this lead, so no invite will be sent. <button type="button" class="linkish" id="fuAddEmail">Add an email</button></span></div>`;
       const add = document.getElementById('fuAddEmail');
       if(add) add.addEventListener('click', ()=>{ const b = document.getElementById('ceEditBtn'); if(b){ b.click(); b.closest('.info-cell').scrollIntoView({behavior:'smooth', block:'center'}); } });
     };
@@ -3936,8 +4055,9 @@ function renderDynamicArea(lead){
       fuSave.disabled = fuSaveOnly.disabled = true;
       const when = fmtDateSlash(date) + (time ? ` at ${time}` : '');
       const inviteTo = addToGoogle ? leadEmails(LEADS[lead.id] || lead) : [];
+      const fuPatch = {status:'existing', followUpDate:date, followUpTime:time||null};
       const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '') + (inviteTo.length ? ` - Calendar invite prepared for ${inviteTo.join(', ')}` : '');
-      logAudit(lead.id, {type:'followup', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:'existing', followUpDate:date, followUpTime:time||null})
+      logAudit(lead.id, {type:'followup', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, fuPatch)
         .then(()=>{
           if(gTab){
             const url = googleCalUrl({...(LEADS[lead.id] || lead), id:lead.id, followUpDate:date, followUpTime:time, followUpNote:comment});

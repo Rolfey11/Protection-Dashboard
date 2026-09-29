@@ -526,18 +526,25 @@ main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
 .page-head .sub{font-size:13.5px; color:var(--text-muted); margin-top:4px;}
 
 .overdue-banner{
-  background:var(--red); color:#fff; border-radius:var(--radius); padding:14px 18px; margin-bottom:20px;
-  display:flex; align-items:flex-start; gap:13px; box-shadow:0 6px 18px rgba(211,50,90,.3);
+  display:flex; align-items:center; gap:10px; margin-bottom:20px;
+  background:var(--red-bg); color:var(--red); border:1px solid color-mix(in srgb, var(--red) 22%, transparent);
+  box-shadow:inset 3px 0 0 var(--red); border-radius:10px; padding:7px 12px 7px 14px; min-height:40px;
 }
-.overdue-banner .ob-icon{flex-shrink:0; line-height:0; padding-top:1px;}
-.overdue-banner .ob-body{flex:1;}
-.overdue-banner strong{display:block; font-size:14px; margin-bottom:9px; font-weight:700;}
-.overdue-banner .ob-list{display:flex; flex-wrap:wrap; gap:8px;}
+.overdue-banner .ob-icon{flex-shrink:0; line-height:0;}
+.overdue-banner .ob-body{flex:1; min-width:0; display:flex; align-items:center; gap:10px;}
+.overdue-banner strong{flex-shrink:0; font-size:13px; font-weight:700; white-space:nowrap;}
+.overdue-banner .ob-list{display:flex; gap:6px; min-width:0; overflow:hidden; flex-wrap:nowrap;}
 .overdue-banner .ob-chip{
-  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.4); color:#fff;
-  padding:6px 13px; border-radius:99px; font-size:12.5px; font-weight:700; cursor:pointer; transition:.15s;
+  flex-shrink:0; background:var(--surface); border:1px solid color-mix(in srgb, var(--red) 25%, transparent); color:var(--red);
+  padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:.15s;
 }
-.overdue-banner .ob-chip:hover{background:rgba(255,255,255,.3); transform:translateY(-1px);}
+.overdue-banner .ob-chip:hover{background:var(--red); color:#fff; border-color:var(--red);}
+.overdue-banner .ob-chip.more{background:transparent; border-style:dashed;}
+@media (max-width:700px){
+  .overdue-banner{align-items:flex-start;}
+  .overdue-banner .ob-body{flex-wrap:wrap; gap:6px;}
+  .overdue-banner .ob-list{flex-wrap:wrap;}
+}
 .btn{
   display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:10px; border:none;
   font-size:13.5px; font-weight:600; transition:.15s; white-space:nowrap;
@@ -1279,7 +1286,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <!-- ============= DASHBOARD PAGE ============= -->
     <div id="page-dashboard">
       <div class="overdue-banner hidden" id="overdueBanner">
-        <div class="ob-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+        <div class="ob-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
         <div class="ob-body">
           <strong id="overdueBannerTitle"></strong>
           <div class="ob-list" id="overdueBannerList"></div>
@@ -2838,18 +2845,19 @@ function renderOverdueBanner(){
   if(list.length===0){ banner.classList.add('hidden'); return; }
   banner.classList.remove('hidden');
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const title = currentUser.role==='mapa'
-    ? `You have ${list.length} overdue call${list.length>1?'s':''} — booked but not yet made:`
-    : `${list.length} overdue call${list.length>1?'s':''} across the team — booked but not yet made:`;
-  document.getElementById('overdueBannerTitle').textContent = title;
-
-  document.getElementById('overdueBannerList').innerHTML = list.map(l=>{
-    const who = currentUser.role==='management' ? ` · ${esc(l.advisorName)}` : '';
-    return `<span class="ob-chip" data-id="${l.id}">${esc(l.clientName)}${who} — ${overdueText(l.followUpDate, l.followUpTime)}</span>`;
-  }).join('');
+  // Most overdue first; show a handful and roll the rest into "+N more"
+  list.sort((a,b)=> callDueAt(a.followUpDate, a.followUpTime) - callDueAt(b.followUpDate, b.followUpTime));
+  document.getElementById('overdueBannerTitle').textContent = `${list.length} overdue call${list.length>1?'s':''}`;
+  const SHOW = 4;
+  const chips = list.slice(0, SHOW).map(l=>{
+    const who = currentUser.role==='management' && l.advisorName ? ` · ${esc(l.advisorName.split(' ')[0])}` : '';
+    const late = overdueText(l.followUpDate, l.followUpTime).replace(/^overdue /,'').replace(/ overdue$/,'');
+    return `<span class="ob-chip" data-id="${l.id}" title="Open ${esc(l.clientName)}">${esc(l.clientName)}${who} · ${late}</span>`;
+  });
+  if(list.length > SHOW) chips.push(`<span class="ob-chip more" data-more="1" title="See them all in the Calendar">+${list.length-SHOW} more</span>`);
+  document.getElementById('overdueBannerList').innerHTML = chips.join('');
   document.querySelectorAll('#overdueBannerList .ob-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=> openLead(chip.dataset.id));
+    chip.addEventListener('click', ()=> chip.dataset.more ? goPage('calendar') : openLead(chip.dataset.id));
   });
 }
 

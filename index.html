@@ -3166,28 +3166,12 @@ let emailLeadId = null;
 function openEmailCompose(leadId){
   const l = LEADS[leadId]; if(!l) return;
   emailLeadId = leadId;
-  const first = String(l.clientName||'').split(/\s*&\s*/).map(n=> n.split(' ')[0]).join(' & ');
-  const adv = (l.advisorName || currentUser.name || '').split(' ')[0];
   document.getElementById('emTo').value = leadEmails(l).join(', ');
-  document.getElementById('emSubject').value = `Your protection follow-up call with ${COMPANY_NAME}`;
-  let when = '';
-  if(l.followUpDate){
-    const d = toDate(l.followUpDate).toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'});
-    when = ` on ${d}${l.followUpTime ? ' at '+l.followUpTime : ''}`;
-  }
-  document.getElementById('emBody').value =
-`Hi ${first || 'there'},
-
-Just a quick note to confirm our follow-up call${when} to talk through your protection options.
-
-If that time no longer suits, just reply to this email and we'll find another.
-
-Kind regards,
-${adv || ''}
-${COMPANY_NAME}`;
+  document.getElementById('emSubject').value = '';
+  document.getElementById('emBody').value = '';
   document.getElementById('emSend').disabled = false;
   openModal('emailComposeOverlay');
-  setTimeout(()=> document.getElementById('emBody').focus(), 50);
+  setTimeout(()=> document.getElementById('emSubject').focus(), 50);
 }
 
 document.getElementById('emSend').addEventListener('click', function(){

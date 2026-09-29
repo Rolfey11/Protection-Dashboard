@@ -2764,6 +2764,27 @@ function renderDashboard(){
   if(!document.getElementById('page-calendar').classList.contains('hidden')) renderCalendar();
 }
 
+/* When a booked call is due. With a time, that exact minute; without one,
+   the end of that day (so an untimed call only goes overdue tomorrow). */
+function callDueAt(dateStr, timeStr){
+  const d = toDate(dateStr);
+  if(timeStr){ const [h,m] = String(timeStr).split(':').map(Number); d.setHours(h||0, m||0, 0, 0); }
+  else d.setHours(23,59,59,999);
+  return d;
+}
+function isCallOverdue(dateStr, timeStr){ return !!dateStr && callDueAt(dateStr, timeStr).getTime() < Date.now(); }
+function daysLate(dateStr){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = toDate(dateStr); due.setHours(0,0,0,0);
+  return Math.round((today - due) / 86400000);
+}
+/* e.g. "3 days overdue", or for today's calls "overdue since 10:44" */
+function overdueText(dateStr, timeStr){
+  const d = daysLate(dateStr);
+  if(d >= 1) return `${d} day${d>1?'s':''} overdue`;
+  return timeStr ? `overdue since ${timeStr}` : 'overdue';
+}
+
 /* Renders a small coloured "call due" badge for a follow-up date: red if
    overdue, amber if due today, blue if upcoming. Returns '' if no date set. */
 function followUpBadge(dateStr, timeStr){
@@ -2774,7 +2795,7 @@ function followUpBadge(dateStr, timeStr){
   const diffDays = Math.round((due - today) / 86400000);
 
   let label, colorVar, bgVar;
-  if(diffDays < 0){ label = `Overdue — ${fmtDate(dateStr)}${at}`; colorVar='var(--red)'; bgVar='var(--red-bg)'; }
+  if(isCallOverdue(dateStr, timeStr)){ label = diffDays===0 ? `Overdue — today${at}` : `Overdue — ${fmtDate(dateStr)}${at}`; colorVar='var(--red)'; bgVar='var(--red-bg)'; }
   else if(diffDays === 0){ label = `Call due today${at}`; colorVar='var(--amber)'; bgVar='var(--amber-bg)'; }
   else if(diffDays === 1){ label = `Call due tomorrow${at}`; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
   else{ label = `Call due ${fmtDate(dateStr)}${at}`; colorVar='var(--blue)'; bgVar='var(--blue-bg)'; }
@@ -2789,7 +2810,7 @@ function followUpInline(dateStr, timeStr){
   const diff = Math.round((due - today) / 86400000);
   const at = timeStr ? `, ${timeStr}` : '';
   const short = toDate(dateStr).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-  const [label, tone] = diff < 0 ? [`Overdue ${short}${at}`, 'bad']
+  const [label, tone] = isCallOverdue(dateStr, timeStr) ? [diff===0 ? `Overdue today${at}` : `Overdue ${short}${at}`, 'bad']
     : diff === 0 ? [`Call today${at}`, 'warn']
     : diff === 1 ? [`Call tomorrow${at}`, 'soon']
     : [`Call ${short}${at}`, 'soon'];
@@ -2805,9 +2826,7 @@ function overdueExistingLeads(){
   const all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted);
   const today = new Date(); today.setHours(0,0,0,0);
   const overdue = all.filter(l=>{
-    if(potOf(l)!=='existing' || !l.followUpDate) return false;
-    const due = toDate(l.followUpDate); due.setHours(0,0,0,0);
-    return due < today;
+    return potOf(l)==='existing' && isCallOverdue(l.followUpDate, l.followUpTime);
   });
   if(currentUser.role==='mapa') return overdue.filter(l=> l.advisorId===currentUser.id);
   return overdue; // management sees everyone's
@@ -2826,10 +2845,8 @@ function renderOverdueBanner(){
   document.getElementById('overdueBannerTitle').textContent = title;
 
   document.getElementById('overdueBannerList').innerHTML = list.map(l=>{
-    const due = toDate(l.followUpDate); due.setHours(0,0,0,0);
-    const days = Math.round((today - due) / 86400000);
     const who = currentUser.role==='management' ? ` · ${esc(l.advisorName)}` : '';
-    return `<span class="ob-chip" data-id="${l.id}">${esc(l.clientName)}${who} — ${days} day${days>1?'s':''} overdue</span>`;
+    return `<span class="ob-chip" data-id="${l.id}">${esc(l.clientName)}${who} — ${overdueText(l.followUpDate, l.followUpTime)}</span>`;
   }).join('');
   document.querySelectorAll('#overdueBannerList .ob-chip').forEach(chip=>{
     chip.addEventListener('click', ()=> openLead(chip.dataset.id));
@@ -2850,13 +2867,12 @@ function myDayItems(){
   mine.forEach(l=>{
     const pot = potOf(l);
     if(pot==='existing' && l.followUpDate){
-      const due = toDate(l.followUpDate); due.setHours(0,0,0,0);
-      if(due <= today){
-        const overdueDays = Math.round((today-due)/86400000);
+      const late = isCallOverdue(l.followUpDate, l.followUpTime);
+      if(late || daysLate(l.followUpDate)===0){
         items.push({
           lead:l, sortKey:0,
-          reason: overdueDays>0 ? `Overdue call — ${overdueDays}d` : 'Call due today',
-          tone: overdueDays>0 ? 'bad' : 'warn'
+          reason: late ? `Call ${overdueText(l.followUpDate, l.followUpTime)}` : `Call due today${l.followUpTime ? ' at '+l.followUpTime : ''}`,
+          tone: late ? 'bad' : 'warn'
         });
       }
     }
@@ -2923,10 +2939,10 @@ function renderDashKpis(){
   const newLastWeek = leads.filter(l=> (l.createdAt||0) >= Date.now()-14*DAY && (l.createdAt||0) < Date.now()-7*DAY).length;
 
   const withCall = leads.filter(l=> potOf(l)==='existing' && l.followUpDate);
-  const dueToday = withCall.filter(l=> dueDiff(l)===0).length;
+  const overdue = withCall.filter(l=> isCallOverdue(l.followUpDate, l.followUpTime));
+  const dueToday = withCall.filter(l=> dueDiff(l)===0 && !isCallOverdue(l.followUpDate, l.followUpTime)).length;
   const dueTomorrow = withCall.filter(l=> dueDiff(l)===1).length;
-  const overdue = withCall.filter(l=> dueDiff(l)<0);
-  const oldest = overdue.length ? Math.max(...overdue.map(l=> -dueDiff(l))) : 0;
+  const oldest = overdue.length ? Math.max(...overdue.map(l=> daysLate(l.followUpDate))) : 0;
 
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
   const lastMonthStart = new Date(today.getFullYear(), today.getMonth()-1, 1).getTime();
@@ -2951,10 +2967,10 @@ function renderDashKpis(){
   host.innerHTML =
     tile({label:'Open cases', icon:'briefcase', value:open.length, jump:'new',
           sub: `${delta(newThisWeek, newLastWeek, 'vs last week')}<span class="kpi-note">${newThisWeek} new in 7 days</span>`}) +
-    tile({label:'Calls due today', icon:'phone', value:dueToday, jump:'existing', tone: dueToday ? 'warn' : '',
+    tile({label:'Calls still due today', icon:'phone', value:dueToday, jump:'existing', tone: dueToday ? 'warn' : '',
           sub: `<span class="kpi-note">${dueTomorrow ? dueTomorrow+' due tomorrow' : 'None due tomorrow'}</span>`}) +
     tile({label:'Overdue calls', icon:'alert', value:overdue.length, jump:'existing', tone: overdue.length ? 'bad' : 'good',
-          sub: overdue.length ? `<span class="kpi-note">Oldest ${oldest} day${oldest>1?'s':''} overdue</span>` : `<span class="kpi-delta up">${ico('check')}All on track</span>`}) +
+          sub: overdue.length ? `<span class="kpi-note">${oldest>0 ? `Oldest ${oldest} day${oldest>1?'s':''} overdue` : 'All from earlier today'}</span>` : `<span class="kpi-delta up">${ico('check')}All on track</span>`}) +
     tile({label:'Sign-ups this month', icon:'pound', value:signedThisMonth.length, jump:'signedup', tone:'brand',
           sub: `<span class="kpi-note">£${commission.toLocaleString(undefined,{maximumFractionDigits:0})} commission</span>${delta(signedThisMonth.length, signedLastMonth, 'vs last month')}`});
 
@@ -3164,14 +3180,21 @@ function dueInfo(day){
   return {tone:'soon', label:`In ${diff} days`};
 }
 
+function callInfo(l){
+  if(isCallOverdue(l.followUpDate, l.followUpTime)){
+    const t = overdueText(l.followUpDate, l.followUpTime);
+    return {tone:'bad', label: t.charAt(0).toUpperCase()+t.slice(1)};
+  }
+  return dueInfo(l.day);
+}
 function calItemHtml(l){
-  const d = dueInfo(l.day);
+  const d = callInfo(l);
   const showAdv = currentUser.role!=='mapa';
   return `
     <div class="cal-item ${d.tone}" data-open="${esc(l.id)}">
       <div class="cal-item-top">
         <div class="cal-item-name">${esc(l.clientName)}</div>
-        <span class="cal-due ${d.tone}">${d.label}${l.followUpTime ? ' · '+l.followUpTime : ''}</span>
+        <span class="cal-due ${d.tone}">${d.label}${l.followUpTime && !(d.tone==='bad' && daysLate(l.followUpDate)===0) ? ' · '+l.followUpTime : ''}</span>
       </div>
       <div class="cal-item-sub">
         ${showAdv ? (l.advisorId ? `<span class="lc-avatar" style="--av:${advisorTone(l.advisorId)}">${esc(initials(l.advisorName||'?'))}</span>${esc(l.advisorName||'')}` : `<span class="lc-avatar none">?</span>Unassigned`) : ''}
@@ -3221,11 +3244,11 @@ function renderCalendar(){
     const list = byDay[iso] || [];
     const cls = ['cal-cell', d.getMonth()!==m?'out':'', iso===today?'today':'', iso===calSelected?'sel':'', (d.getDay()%6===0)?'wkend':'', list.length?'has':''].join(' ');
     const chips = list.slice(0,3).map(c=>{
-      const t = dueInfo(iso).tone;
+      const t = callInfo(c).tone;
       return `<span class="cal-chip ${t}" style="--av:${advisorTone(c.advisorId)}"><i></i>${c.followUpTime ? `<b>${c.followUpTime}</b>` : ''}${esc(c.clientName)}</span>`;
     }).join('');
     const more = list.length>3 ? `<span class="cal-more">+${list.length-3} more</span>` : '';
-    const dots = list.length ? `<span class="cal-dots ${dueInfo(iso).tone}">${list.length}</span>` : '';
+    const dots = list.length ? `<span class="cal-dots ${list.some(c=> isCallOverdue(c.followUpDate, c.followUpTime)) ? 'bad' : dueInfo(iso).tone}">${list.length}</span>` : '';
     cells.push(`<button type="button" class="${cls}" data-day="${iso}" aria-label="${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}, ${list.length} call${list.length===1?'':'s'}">
       <span class="cal-num">${d.getDate()}</span>${dots}
       <span class="cal-chips">${chips}${more}</span>
@@ -3241,7 +3264,7 @@ function renderCalendar(){
   }));
 
   // Overdue panel
-  const overdue = calls.filter(c=> c.day < today);
+  const overdue = calls.filter(c=> isCallOverdue(c.followUpDate, c.followUpTime));
   const oc = document.getElementById('calOverdueCard');
   if(overdue.length){
     oc.classList.remove('hidden');
@@ -3293,9 +3316,7 @@ function leadCardHtml(lead, potKey){
 
   let isOverdue = false;
   if(potKey==='existing' && lead.followUpDate){
-    const today = new Date(); today.setHours(0,0,0,0);
-    const due = toDate(lead.followUpDate); due.setHours(0,0,0,0);
-    isOverdue = due < today;
+    isOverdue = isCallOverdue(lead.followUpDate, lead.followUpTime);
   }
 
   const advisor = showAdvisor
@@ -4134,9 +4155,7 @@ function renderInsights(){
   const signedThisWeek = leads.filter(l=> potOf(l)==='signedup' && Object.values(l.audit||{}).some(a=>a.type==='signup' && a.at>=weekAgo)).length;
   const declinedThisWeek = leads.filter(l=> l.declineReason && Object.values(l.audit||{}).some(a=>a.type==='decline' && a.at>=weekAgo)).length;
   const overdueNow = leads.filter(l=>{
-    if(potOf(l)!=='existing' || !l.followUpDate) return false;
-    const today = new Date(); today.setHours(0,0,0,0);
-    return toDate(l.followUpDate).setHours(0,0,0,0) < today;
+    return potOf(l)==='existing' && isCallOverdue(l.followUpDate, l.followUpTime);
   }).length;
 
   document.getElementById('weekDigest').innerHTML =
@@ -4819,6 +4838,27 @@ function renderUsersTable(){
 /* ----------------------------------------------------------------------------
    12) FIRST PAINT
    ---------------------------------------------------------------------------- */
+/* Calls go overdue as the clock passes their booked time, even though no
+   data has changed. Check twice a minute and redraw only when something
+   has actually tipped over (or the day has rolled over). */
+let overdueSignature = '';
+function currentOverdueSignature(){
+  const ids = Object.entries(LEADS)
+    .filter(([id,l])=> !l.deleted && potOf(l)==='existing' && isCallOverdue(l.followUpDate, l.followUpTime))
+    .map(([id])=> id).sort().join(',');
+  return isoDay(new Date()) + '|' + ids;
+}
+setInterval(()=>{
+  if(!currentUser || !leadsLoaded) return;
+  const sig = currentOverdueSignature();
+  if(sig === overdueSignature) return;
+  overdueSignature = sig;
+  if(!document.getElementById('page-dashboard').classList.contains('hidden')) renderDashboard();
+  if(!document.getElementById('page-calendar').classList.contains('hidden')) renderCalendar();
+  refreshInsightsIfVisible();
+  if(activeLeadId) refreshLeadModal(true);
+}, 30000);
+
 renderPinDots();
 }); // end DOMContentLoaded
 </script>

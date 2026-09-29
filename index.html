@@ -659,6 +659,13 @@ main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
 .lc-avatar.none{background:var(--surface); color:var(--amber); border:1.5px dashed var(--amber); box-shadow:none;}
 .lead-card .lc-sub{font-size:11.5px; color:var(--text-muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .lc-sep{margin:0 6px; color:var(--text-faint);}
+.lc-due{display:inline-flex; align-items:center; gap:4px; font-weight:700; color:var(--blue);}
+.lc-due .ico{width:11px; height:11px;}
+.lc-due.warn{color:var(--amber);} .lc-due.bad{color:var(--red);}
+.lc-money{font-weight:700; color:var(--green); font-variant-numeric:tabular-nums;}
+.lead-card{flex-shrink:0;}
+.lead-card .lc-sub{line-height:17px; height:17px;}
+.lc-due{line-height:1;}
 .lead-card .lc-meta{display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;}
 .lead-card .lc-meta .tag{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; padding:3px 8px;}
 .lead-card .lc-meta .tag .ico{width:11px; height:11px;}
@@ -2633,6 +2640,20 @@ function followUpBadge(dateStr, timeStr){
   return `<span class="tag" style="background:${bgVar};color:${colorVar};font-weight:700;">${ico('phone')} ${label}</span>`;
 }
 
+/* Compact one-line version of the call-due badge, used on dashboard cards. */
+function followUpInline(dateStr, timeStr){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dateStr); due.setHours(0,0,0,0);
+  const diff = Math.round((due - today) / 86400000);
+  const at = timeStr ? `, ${timeStr}` : '';
+  const short = new Date(dateStr).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const [label, tone] = diff < 0 ? [`Overdue ${short}${at}`, 'bad']
+    : diff === 0 ? [`Call today${at}`, 'warn']
+    : diff === 1 ? [`Call tomorrow${at}`, 'soon']
+    : [`Call ${short}${at}`, 'soon'];
+  return `<span class="lc-due ${tone}">${ico('phone')}${label}</span>`;
+}
+
 /* Existing-workflow cases whose follow-up date has passed. Scoped to the
    current viewer: a MAPA sees only their own, Management sees the whole
    team's (each chip labelled with whose it is), Admin sees none (they
@@ -3140,7 +3161,14 @@ function leadCardHtml(lead, potKey){
         ? `<span class="lc-avatar" style="--av:${advisorTone(lead.advisorId)}" title="${esc(lead.advisorName||'')}">${esc(initials(lead.advisorName||'?'))}</span>`
         : `<span class="lc-avatar none" title="Unassigned">?</span>`)
     : '';
-  const sub = [lead.clientSource ? esc(lead.clientSource) : '', fmtDate(lead.appDate)].filter(Boolean).join('<span class="lc-sep">·</span>');
+  let sub = [lead.clientSource ? esc(lead.clientSource) : '', fmtDate(lead.appDate)].filter(Boolean).join('<span class="lc-sep">·</span>');
+  // Keep every card the same three-row shape: extra details for Contacted
+  // and Sign Ups replace the second line rather than adding new rows.
+  if(potKey==='existing' && lead.followUpDate){
+    sub = followUpInline(lead.followUpDate, lead.followUpTime) + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
+  } else if(potKey==='signedup' && lead.commission!=null){
+    sub = `<span class="lc-money">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</span>` + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
+  }
 
   return `
     <div class="lead-card ${isOverdue?'overdue':''}" data-id="${lead.id}">
@@ -3148,9 +3176,7 @@ function leadCardHtml(lead, potKey){
         <div class="lc-name">${esc(lead.clientName)}</div>
         ${advisor}
       </div>
-      ${potKey==='signedup' && lead.commission!=null ? `<div class="lc-commission">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div>` : ''}
       <div class="lc-sub">${sub}</div>
-      ${potKey==='existing' && lead.followUpDate ? `<div class="lc-meta">${followUpBadge(lead.followUpDate, lead.followUpTime)}</div>` : ''}
       ${last ? `<div class="lc-activity"><span class="txt">${esc(last.text)}</span><span class="when">${timeAgo(last.at)}</span></div>` : ''}
     </div>`;
 }

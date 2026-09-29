@@ -1554,6 +1554,27 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
       </div>
 
+      <div id="settingsBackupSection" style="margin-top:34px;">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1 style="font-size:19px;">Daily backup</h1>
+            <p class="sub">A full copy of every case, including audit trails, statuses and the Recycle Bin, saved as a CSV file that opens in Excel.</p>
+          </div>
+        </div>
+        <div class="insights-card" style="max-width:640px;">
+          <p style="font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:14px;">
+            The first time you sign in each day, a backup file downloads automatically to this computer's Downloads folder. To restore, use <b>Upload Data</b> and choose a backup file. Cases are put back with their advisor, status and audit trail exactly as they were. Don't edit and re-save the file in Excel, as that can damage the backup column.
+          </p>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <button class="btn btn-primary" id="backupNowBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              Download backup now
+            </button>
+            <span style="font-size:12.5px; color:var(--text-muted);" id="backupLastLbl"></span>
+          </div>
+        </div>
+      </div>
+
       <div id="settingsRecycleBinSection" style="margin-top:34px;">
         <div class="page-head" style="margin-bottom:16px;">
           <div>
@@ -1720,7 +1741,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
       <div id="udPickStage">
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px; line-height:1.5;">
-          Import historical leads from a CSV file. It needs three columns — <strong>Date created</strong>, <strong>Advisor</strong>, and <strong>Client</strong> (for joint clients, separate names with a comma in the same cell, e.g. "John Smith,Jane Smith"). Column order doesn't matter, and the header names are matched automatically.
+          Import historical leads from a CSV file. It needs three columns — <strong>Date created</strong>, <strong>Advisor</strong>, and <strong>Client</strong> (for joint clients, separate names with a comma in the same cell, e.g. "John Smith,Jane Smith"). Column order doesn't matter, and the header names are matched automatically.<br><br>
+          To <strong>restore from a daily backup</strong>, just choose the backup file here. It's recognised automatically.
         </p>
         <div class="field">
           <label for="udFileInput">CSV file</label>
@@ -1734,9 +1756,9 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
       <div id="udPreviewStage" class="hidden">
         <div class="stat-grid" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:18px;">
-          <div class="stat-card accent"><div class="sv" id="udCountReady">0</div><div class="sl">Ready to import</div></div>
-          <div class="stat-card warn"><div class="sv" id="udCountUnassigned">0</div><div class="sl">Unassigned advisor</div></div>
-          <div class="stat-card bad"><div class="sv" id="udCountSkipped">0</div><div class="sl">Skipped (bad row)</div></div>
+          <div class="stat-card accent"><div class="sv" id="udCountReady">0</div><div class="sl" id="udLblReady">Ready to import</div></div>
+          <div class="stat-card warn"><div class="sv" id="udCountUnassigned">0</div><div class="sl" id="udLblUnassigned">Unassigned advisor</div></div>
+          <div class="stat-card bad"><div class="sv" id="udCountSkipped">0</div><div class="sl" id="udLblSkipped">Skipped (bad row)</div></div>
         </div>
         <div class="section-lbl" style="margin-top:0;">Preview (first 5)</div>
         <div class="settings-card" style="margin-bottom:4px;">
@@ -2447,6 +2469,7 @@ function goPage(page){
     resetBulkDelete();
     renderRecycleBin();
     renderClientSources();
+    renderBackupLabel();
   }
   const shown = document.getElementById('page-'+page);
   if(shown){ shown.classList.remove('page-enter'); void shown.offsetWidth; shown.classList.add('page-enter'); }
@@ -2583,6 +2606,7 @@ function startAuthedListeners(){
   db.ref('leads').on('value', snap=>{
     LEADS = snap.val() || {};
     leadsLoaded = true;
+    setTimeout(maybeAutoBackup, 1500);
     if(currentUser){
       renderDashboard();
       if(activeLeadId){
@@ -4504,6 +4528,67 @@ function parseImportDate(raw){
 
 let udParsedRows = null; // holds the parsed+matched rows between preview and import
 
+/* ----------------------------------------------------------------------------
+   DAILY BACKUP — one row per case. The readable columns are for people;
+   the last column holds the complete case (audit trail and all) so it can
+   be restored exactly through Upload Data.
+   ---------------------------------------------------------------------------- */
+const BACKUP_COL = 'Backup data (do not edit)';
+function backupKey(){ return 'plt_lastBackup_' + (currentUser ? currentUser.id : ''); }
+function lastBackupDay(){ try{ return localStorage.getItem(backupKey()); }catch(e){ return null; } }
+
+function buildBackupCsv(){
+  const csvEscape = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const headers = ['Lead ID','Client','Client email','Advisor','Status','Task Created','Follow-up date','Follow-up time','Commission','Decline reason','Notes','In Recycle Bin','Audit entries', BACKUP_COL];
+  const rows = Object.entries(LEADS).map(([id,l])=>[
+    id, l.clientName, leadEmails(l).join(', '), l.advisorName||'', STATUS_LABELS[l.status]||potOf(l),
+    l.appDate||'', l.followUpDate||'', l.followUpTime||'', l.commission!=null ? l.commission : '',
+    l.declineReason||'', l.notes||'', l.deleted ? 'Yes' : 'No', l.audit ? Object.keys(l.audit).length : 0,
+    JSON.stringify({id, lead:l})
+  ].map(csvEscape).join(','));
+  // BOM so Excel reads names with accents correctly
+  return '﻿' + [headers.map(csvEscape).join(','), ...rows].join('\r\n');
+}
+
+function downloadBackup(auto){
+  const count = Object.keys(LEADS).length;
+  const day = isoDay(new Date());
+  const blob = new Blob([buildBackupCsv()], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `protection-lead-tracker-backup-${day}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 1500);
+  try{ localStorage.setItem(backupKey(), day); }catch(e){}
+  renderBackupLabel();
+  toast(`${auto ? 'Daily backup saved' : 'Backup downloaded'}: ${count} case${count===1?'':'s'} to your Downloads folder.`, 'success');
+}
+
+function maybeAutoBackup(){
+  if(!currentUser || !leadsLoaded) return;
+  if(currentUser.role!=='management' && currentUser.role!=='admin') return;
+  if(Object.keys(LEADS).length===0) return; // never overwrite a good backup with an empty one
+  if(lastBackupDay() === isoDay(new Date())) return;
+  downloadBackup(true);
+}
+
+function renderBackupLabel(){
+  const el = document.getElementById('backupLastLbl'); if(!el) return;
+  const d = lastBackupDay();
+  el.textContent = d ? `Last backup on this computer: ${fmtDate(d)}` : 'No backup taken on this computer yet.';
+}
+document.getElementById('backupNowBtn').addEventListener('click', ()=>{
+  if(Object.keys(LEADS).length===0){ toast('There are no cases to back up yet.','error'); return; }
+  downloadBackup(false);
+});
+
+function setUploadLabels(restore){
+  document.getElementById('udLblReady').textContent = restore ? 'Cases to restore' : 'Ready to import';
+  document.getElementById('udLblUnassigned').textContent = restore ? 'Advisor not found' : 'Unassigned advisor';
+  document.getElementById('udLblSkipped').textContent = restore ? 'Already in tracker' : 'Skipped (bad row)';
+  document.getElementById('udImportBtn').textContent = restore ? 'Restore cases' : 'Import leads';
+}
+
 document.getElementById('uploadDataBtn').addEventListener('click', ()=>{
   document.getElementById('udFileInput').value = '';
   document.getElementById('udParseError').classList.add('hidden');
@@ -4530,6 +4615,9 @@ document.getElementById('udFileInput').addEventListener('change', function(){
     if(table.length < 2){ errText.textContent = 'No data rows found in that file.'; errBox.classList.remove('hidden'); return; }
 
     const headers = table[0];
+    const backupCol = findCol(headers, BACKUP_COL.toLowerCase());
+    if(backupCol >= 0){ prepareRestore(table, backupCol); return; }
+    setUploadLabels(false);
     const dateCol = findCol(headers, 'date created', 'created', 'date');
     const advisorCol = findCol(headers, 'advisor');
     const clientCol = findCol(headers, 'client', 'clients', 'client name', 'client names');
@@ -4603,8 +4691,78 @@ document.getElementById('udFileInput').addEventListener('change', function(){
   reader.readAsText(file);
 });
 
+function matchAdvisorByName(name){
+  const norm = s=> String(s||'').replace(/\([^)]*\)/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+  const n = norm(name); if(!n) return null;
+  const hit = Object.entries(USERS).find(([id,u])=> norm(u.name)===n);
+  return hit ? {id:hit[0], name:hit[1].name} : null;
+}
+
+function prepareRestore(table, col){
+  const errBox = document.getElementById('udParseError');
+  const errText = document.getElementById('udParseErrorText');
+  const restore = [], existing = [], broken = [];
+  for(let i=1;i<table.length;i++){
+    const raw = (table[i][col]||'').trim();
+    if(!raw) continue;
+    let rec;
+    try{ rec = JSON.parse(raw); }catch(e){ broken.push(i+1); continue; }
+    if(!rec || !rec.id || !rec.lead || !rec.lead.clientName){ broken.push(i+1); continue; }
+    if(LEADS[rec.id]){ existing.push(rec); continue; }
+    const lead = rec.lead;
+    // If colleagues were set up again, their IDs will have changed: match by name.
+    let unmatched = false;
+    if(lead.advisorId && !USERS[lead.advisorId]){
+      const m = matchAdvisorByName(lead.advisorName);
+      if(m){ lead.advisorId = m.id; lead.advisorName = m.name; }
+      else unmatched = true;
+    }
+    restore.push({id:rec.id, lead, unmatched});
+  }
+  if(broken.length && !restore.length && !existing.length){
+    errText.textContent = 'This backup file looks damaged (it may have been edited and re-saved in Excel). Try an earlier backup.';
+    errBox.classList.remove('hidden'); return;
+  }
+  udParsedRows = {restore};
+  setUploadLabels(true);
+  document.getElementById('udCountReady').textContent = restore.length;
+  document.getElementById('udCountUnassigned').textContent = restore.filter(r=>r.unmatched).length;
+  document.getElementById('udCountSkipped').textContent = existing.length;
+  document.querySelector('#udPreviewTable tbody').innerHTML = restore.slice(0,5).map(r=> `
+      <tr>
+        <td style="font-weight:600;">${esc(r.lead.clientName)}${r.lead.deleted ? ' <span style="color:var(--text-faint);">(Recycle Bin)</span>' : ''}</td>
+        <td>${r.unmatched ? `<span style="color:var(--amber);">${esc(r.lead.advisorName||'')} (not found)</span>` : esc(r.lead.advisorName||'Unassigned')}</td>
+        <td>${fmtDate(r.lead.appDate)}</td>
+      </tr>`).join('') || `<tr><td class="insights-empty">Every case in this backup is already in the tracker, so there's nothing to restore.</td></tr>`;
+  if(broken.length) toast(`${broken.length} row${broken.length>1?'s':''} in the backup couldn't be read and will be skipped.`, 'error');
+  document.getElementById('udPickStage').classList.add('hidden');
+  document.getElementById('udPreviewStage').classList.remove('hidden');
+  document.getElementById('udImportBtn').classList.toggle('hidden', restore.length===0);
+}
+
 document.getElementById('udImportBtn').addEventListener('click', function(){
-  if(!udParsedRows || udParsedRows.ready.length===0) return;
+  if(udParsedRows && udParsedRows.restore){
+    const list = udParsedRows.restore;
+    if(!list.length) return;
+    const btn = this; btn.disabled = true;
+    const updates = {};
+    list.forEach(r=>{
+      if(r.unmatched){
+        const k = uidShort()+Date.now().toString(36);
+        r.lead.audit = r.lead.audit || {};
+        r.lead.audit[k] = {type:'assigned', text:`Restored from backup. Advisor "${r.lead.advisorName}" wasn't found, so this case needs reassigning.`, byId:currentUser.id, byName:currentUser.name, at:Date.now()};
+        r.lead.advisorId = null;
+      }
+      updates['leads/'+r.id] = r.lead;
+    });
+    db.ref().update(updates).then(()=>{
+      toast(`Restored ${list.length} case${list.length>1?'s':''} from backup`, 'success');
+      closeModal('uploadDataOverlay'); udParsedRows = null;
+    }).catch(err=> toast('Could not restore: '+err.message, 'error'))
+      .finally(()=>{ btn.disabled = false; });
+    return;
+  }
+  if(!udParsedRows || !udParsedRows.ready || udParsedRows.ready.length===0) return;
   const btn = this;
   btn.disabled = true;
 
@@ -4962,6 +5120,7 @@ function currentOverdueSignature(){
 }
 setInterval(()=>{
   if(!currentUser || !leadsLoaded) return;
+  maybeAutoBackup(); // catches the day rolling over while the tracker is left open
   const sig = currentOverdueSignature();
   if(sig === overdueSignature) return;
   overdueSignature = sig;

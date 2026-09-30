@@ -1883,7 +1883,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <div class="pin-input-row">
           <input type="text" id="uPin" maxlength="4" inputmode="numeric" placeholder="0000">
         </div>
-        <div class="field-hint">Used to log in on the sign-in screen. Numbers only.</div>
+        <div class="field-hint">Used to log in on the sign-in screen. Numbers only. An easy PIN like 0000 works as a temporary PIN: they'll be asked to choose their own when they sign in.</div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1941,6 +1941,30 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 <!-- ============================================================
      MODAL: DELETE CONFIRMATION (Management only)
      ============================================================ -->
+<div class="modal-overlay" id="forcePinOverlay">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head"><h2>Choose a new PIN</h2></div>
+    <div class="modal-body">
+      <p style="font-size:14px; color:var(--text); line-height:1.55; margin-bottom:16px;">
+        Hi <span id="fpName"></span>, your PIN is too easy to guess, so please choose a new 4-digit PIN before carrying on.
+        Avoid repeated digits (like 0000 or 1111) and runs (like 1234 or 9876).
+      </p>
+      <div class="field">
+        <label for="fpNew">New PIN</label>
+        <input type="password" id="fpNew" inputmode="numeric" maxlength="4" autocomplete="new-password">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label for="fpConfirm">Confirm new PIN</label>
+        <input type="password" id="fpConfirm" inputmode="numeric" maxlength="4" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" id="fpSignOut">Sign out</button>
+      <button class="btn btn-primary" id="fpSave">Save new PIN</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="emailComposeOverlay">
   <div class="modal" style="max-width:560px;">
     <div class="modal-head"><h2>Email client</h2><button class="modal-close" data-close="emailComposeOverlay">✕</button></div>
@@ -2089,6 +2113,18 @@ function authEmailFor(uid){
   return `${safe}@plt.internal`;
 }
 function authPasswordFor(pin){ return `PLT-${pin}`; }
+
+/* Easy-to-guess PINs: one digit repeated (0000, 7777) or a run up or down
+   (1234, 6789, 9876, 3210). Anyone signing in with one must choose a new
+   PIN first; Management can still hand out e.g. 0000 as a temporary PIN. */
+function isWeakPin(pin){
+  const p = String(pin||'');
+  if(!/^\d{4}$/.test(p)) return false;
+  const d = p.split('').map(Number);
+  const steps = [d[1]-d[0], d[2]-d[1], d[3]-d[2]];
+  return steps.every(x=> x===0) || steps.every(x=> x===1) || steps.every(x=> x===-1);
+}
+const WEAK_PIN_HELP = 'Avoid repeated digits (like 0000 or 1111) and runs (like 1234 or 9876).';
 
 /* ----------------------------------------------------------------------------
    2) STATE
@@ -2247,6 +2283,7 @@ function toast(msg, type=''){
 
 function openModal(id){ document.getElementById(id).classList.add('open'); document.body.classList.add('scroll-lock'); }
 function closeModal(id){
+  if(id==='forcePinOverlay' && forcePinActive) return; // must choose a new PIN or sign out
   document.getElementById(id).classList.remove('open');
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; }
   if(!document.querySelector('.modal-overlay.open')) document.body.classList.remove('scroll-lock');
@@ -2391,6 +2428,7 @@ function setLoginLoading(on){
 function hideLoginError(){ document.getElementById('loginErrorBox').classList.add('hidden'); }
 function showLoginError(msg){
   loginInFlight = false;
+  pinAtLogin = null;
   setLoginLoading(false);
   document.getElementById('loginErrorText').textContent = msg;
   document.getElementById('loginErrorBox').classList.remove('hidden');
@@ -2402,6 +2440,7 @@ function showLoginError(msg){
 }
 
 let loginInFlight = false;
+let pinAtLogin = null; // the PIN just typed, so its strength can be checked once signed in
 function attemptLogin(){
   if(loginInFlight || currentUser) return;
   const id = userSelect.value;
@@ -2413,6 +2452,7 @@ function attemptLogin(){
   loginInFlight = true;
   const email = authEmailFor(id);
   const password = authPasswordFor(pinBuffer);
+  pinAtLogin = pinBuffer;
 
   // Firebase now returns a single generic code for "wrong password" and
   // "no such account" alike (an anti-enumeration change on Google's end —
@@ -2475,23 +2515,37 @@ function tryResolveSession(){
   // reliably undone.
   const matchId = Object.keys(USERS).find(id => authEmailFor(id) === pendingAuthUser.email);
   if(matchId){
+    const signedInAs = pendingAuthUser;
+    const freshPin = pinAtLogin; pinAtLogin = null;
+    // Each tab's session must have passed the PIN-strength check at sign-in.
+    // Sessions from before the check (or restored without it) sign in again.
+    if(freshPin == null && !pinCheckedThisSession(signedInAs.uid)){
+      auth.signOut();
+      showLoginNotice('For security, please sign in again.');
+      return;
+    }
     const u = USERS[matchId];
     currentUser = {id:matchId, name:u.name, role:u.role};
     loginInFlight = false;
-    enterApp();
     // The database rules only let an Auth account in once it's linked to a
     // colleague, so link first. Older rules without /members refuse this
     // write; carry on regardless so logins keep working either way.
     // Once this browser has seen the link saved, it already exists, so load
     // the data straight away instead of waiting for the write to come back.
-    const signedInAs = pendingAuthUser;
     const linkKey = 'plt_linked_' + signedInAs.uid;
     let knownLinked = false;
     try{ knownLinked = localStorage.getItem(linkKey) === matchId; }catch(e){}
     const linking = db.ref('members/'+signedInAs.uid).set(matchId)
       .then(()=>{ try{ localStorage.setItem(linkKey, matchId); }catch(e){} })
       .catch(()=>{});
+    linkingPromise = linking;
     const startIfStillSignedIn = ()=>{ if(currentUser && currentUser.id===matchId && auth.currentUser===signedInAs) startAuthedListeners(); };
+    if(freshPin != null && isWeakPin(freshPin)){
+      showForcePinChange(freshPin, linking, signedInAs, ()=>{ enterApp(); linking.then(startIfStillSignedIn); });
+      return;
+    }
+    markPinChecked(signedInAs.uid);
+    enterApp();
     if(knownLinked) startIfStillSignedIn();
     else linking.then(startIfStillSignedIn);
   } else {
@@ -2502,6 +2556,9 @@ function tryResolveSession(){
 }
 
 function logout(){
+  forcePinActive = false;
+  if(auth.currentUser){ try{ sessionStorage.removeItem('plt_pin_checked_'+auth.currentUser.uid); }catch(e){} }
+  listenRetry = 'none';
   closeAllModals();
   db.ref('leads').off();
   notifsQuery().off();
@@ -2528,10 +2585,57 @@ function logout(){
 }
 document.getElementById('logoutBtn').addEventListener('click', logout);
 
+function pinCheckedThisSession(uid){ try{ return sessionStorage.getItem('plt_pin_checked_'+uid)==='1'; }catch(e){ return false; } }
+function markPinChecked(uid){ try{ sessionStorage.setItem('plt_pin_checked_'+uid, '1'); }catch(e){} }
+function showLoginNotice(msg){
+  document.getElementById('loginErrorText').textContent = msg;
+  document.getElementById('loginErrorBox').classList.remove('hidden');
+}
+
+/* Signed in with an easy PIN: nothing else is shown until a new one is set. */
+let forcePinActive = false;
+function showForcePinChange(currentPin, linking, signedInAs, done){
+  forcePinActive = true;
+  document.getElementById('fpName').textContent = currentUser.name.split(' ')[0];
+  ['fpNew','fpConfirm'].forEach(id=> document.getElementById(id).value = '');
+  const save = document.getElementById('fpSave'); save.disabled = false;
+  save.onclick = ()=>{
+    const pin = document.getElementById('fpNew').value.trim();
+    const confirmPin = document.getElementById('fpConfirm').value.trim();
+    if(!/^\d{4}$/.test(pin)){ toast('Your new PIN must be exactly 4 digits.','error'); return; }
+    if(pin !== confirmPin){ toast("The new PINs don't match.",'error'); return; }
+    if(pin === currentPin){ toast('Please choose a different PIN from your current one.','error'); return; }
+    if(isWeakPin(pin)){ toast('That PIN is too easy to guess. '+WEAK_PIN_HELP,'error'); return; }
+    if(auth.currentUser !== signedInAs){ toast('Please sign in again.','error'); return; }
+    save.disabled = true;
+    const id = currentUser.id;
+    const cred = firebase.auth.EmailAuthProvider.credential(authEmailFor(id), authPasswordFor(currentPin));
+    signedInAs.reauthenticateWithCredential(cred)
+      .then(()=> signedInAs.updatePassword(authPasswordFor(pin)))
+      .then(()=> linking.then(()=> db.ref('pins/'+id).set(pin)).catch(()=>
+        toast("PIN changed, but Management's copy couldn't be updated. Let Management know your PIN has changed.",'error')))
+      .then(()=>{
+        forcePinActive = false;
+        markPinChecked(signedInAs.uid);
+        closeModal('forcePinOverlay');
+        toast('New PIN saved. Use it next time you sign in.','success');
+        done();
+      })
+      .catch(err=>{
+        save.disabled = false;
+        toast(err.code==='auth/too-many-requests' ? 'Too many attempts. Please wait a few minutes and try again.' : 'Could not change PIN: '+err.message, 'error');
+      });
+  };
+  openModal('forcePinOverlay');
+  setTimeout(()=> document.getElementById('fpNew').focus(), 50);
+}
+document.getElementById('fpSignOut').addEventListener('click', ()=>{ forcePinActive = false; closeModal('forcePinOverlay'); logout(); });
+
 /* ----------------------------------------------------------------------------
    5) ENTER APP / NAV
    ---------------------------------------------------------------------------- */
 function enterApp(){
+  if(forcePinActive) return;
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appShell').classList.remove('hidden');
 
@@ -2687,7 +2791,7 @@ function startPinsListener(){
     if(currentUser && !document.getElementById('page-settings').classList.contains('hidden')) renderUsersTable();
   }, err=>{
     pinsListenerStarted = false;
-    toast('Could not load PINs. Add the "pins" rule in Firebase (see the setup notes in this file).', 'error');
+    onListenError(()=> toast('Could not load PINs. Add the "pins" rule in Firebase (see the setup notes in this file).', 'error'));
   });
 }
 /* Moves any PIN still sitting on a public /users record into /pins and
@@ -2713,6 +2817,23 @@ function migratePinsOutOfUsers(){
 }
 
 let realtimeListenersStarted = false;
+let linkingPromise = null;
+let listenRetry = 'none'; // 'none' → 'scheduled' → 'done'
+/* A listener refused before this sign-in's account link was saved (e.g. the
+   links were cleared in the console to sign everyone out): wait for the link,
+   then attach everything again, once. Only after that are errors shown. */
+function onListenError(showError){
+  if(listenRetry === 'done' || !linkingPromise || !currentUser){ showError(); return; }
+  if(listenRetry === 'scheduled') return;
+  listenRetry = 'scheduled';
+  linkingPromise.then(()=> setTimeout(()=>{
+    if(!currentUser) return;
+    listenRetry = 'done';
+    db.ref('leads').off(); notifsQuery().off(); db.ref('clientSources').off(); db.ref('pins').off();
+    realtimeListenersStarted = false; pinsListenerStarted = false;
+    startAuthedListeners();
+  }, 300));
+}
 // Push keys are time-ordered, so this is the newest notifications only.
 function notifsQuery(){ return db.ref('notifications').limitToLast(300); }
 function startAuthedListeners(){
@@ -2741,7 +2862,7 @@ function startAuthedListeners(){
     }
     refreshInsightsIfVisible();
   }, err=>{
-    toast('Could not load cases. Your sign-in may not be linked to your colleague record: sign out and back in, or ask Management to re-save your PIN in Settings.', 'error');
+    onListenError(()=> toast('Could not load cases. Your sign-in may not be linked to your colleague record: sign out and back in, or ask Management to re-save your PIN in Settings.', 'error'));
   });
 
   notifsQuery().on('value', snap=>{
@@ -2749,7 +2870,7 @@ function startAuthedListeners(){
     if(currentUser) renderNotifs();
     refreshInsightsIfVisible();
   }, err=>{
-    toast('Could not load notifications — check Firebase rules.', 'error');
+    onListenError(()=> toast('Could not load notifications — check Firebase rules.', 'error'));
   });
 
   const DEFAULT_CLIENT_SOURCES = ['Resi Purchase','Resi Remo','Resi FA','Resi PT','BTL Purchase','BTL Remo','BTL FA','BTL PT','Equity Release','Bridge'];
@@ -2772,7 +2893,7 @@ function startAuthedListeners(){
     if(currentUser && !document.getElementById('page-settings').classList.contains('hidden')) renderClientSources();
     refreshInsightsIfVisible();
   }, err=>{
-    toast('Could not load client sources — check Firebase rules allow /clientSources.', 'error');
+    onListenError(()=> toast('Could not load client sources — check Firebase rules allow /clientSources.', 'error'));
   });
 }
 
@@ -5202,6 +5323,7 @@ document.getElementById('maSavePin').addEventListener('click', function(){
   if(!/^\d{4}$/.test(pin)){ toast('Your new PIN must be exactly 4 digits.','error'); return; }
   if(pin !== confirmPin){ toast("The new PINs don't match.",'error'); return; }
   if(pin === cur){ toast('Your new PIN is the same as your current one.','error'); return; }
+  if(isWeakPin(pin)){ toast('That PIN is too easy to guess. '+WEAK_PIN_HELP,'error'); return; }
   const user = auth.currentUser;
   if(!user){ toast('Please sign in again.','error'); return; }
   const btn = this; btn.disabled = true;
@@ -5435,7 +5557,7 @@ document.getElementById('uSubmit').addEventListener('click', function(){
     // sign-in does the same, so a refusal here is not a problem.
     .then(()=> linkedUid ? db.ref('members/'+linkedUid).set(userId).catch(()=>{}) : null)
     .then(()=>{
-      toast('Colleague saved','success');
+      toast(isWeakPin(pin) ? `Colleague saved. ${name.split(' ')[0]} will be asked to choose a new PIN when they sign in.` : 'Colleague saved','success');
       closeModal('userOverlay');
     }).catch(err=> toast('Could not save: '+err.message,'error'))
     .finally(()=>{ btn.disabled = false; });

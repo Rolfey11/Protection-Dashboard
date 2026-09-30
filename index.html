@@ -751,7 +751,7 @@ main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
 .ce-edit input{flex:1; min-width:200px; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); font-size:13.5px;}
 .ce-edit input:focus{border-color:var(--brand-light); outline:none;}
 .cal-btn.mail{flex:0 0 auto;}
-.field input[type=text],.field input[type=email],.field input[type=date],.field input[type=time],.field input[type=number],.field textarea{
+.field input[type=text],.field input[type=email],.field input[type=password],.field input[type=date],.field input[type=time],.field input[type=number],.field textarea{
   width:100%; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm);
   background:var(--surface); color:var(--text); font-size:14px; transition:border-color .15s;
 }
@@ -1487,6 +1487,41 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
     <!-- ============= SETTINGS PAGE ============= -->
     <div id="page-settings" class="hidden">
+      <div id="settingsMyAccountSection" class="hidden" style="margin-bottom:34px;">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1>My account</h1>
+            <p class="sub">Change the name colleagues see and the PIN you sign in with.</p>
+          </div>
+        </div>
+        <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start;">
+          <div class="insights-card" style="flex:1; min-width:260px; max-width:420px;">
+            <div class="section-lbl" style="margin-top:0;">Your name</div>
+            <div class="field">
+              <label for="maName">Name</label>
+              <input type="text" id="maName" maxlength="60" autocomplete="name">
+            </div>
+            <button class="btn btn-primary btn-sm" id="maSaveName">Save name</button>
+          </div>
+          <div class="insights-card" style="flex:1; min-width:260px; max-width:420px;">
+            <div class="section-lbl" style="margin-top:0;">Change PIN</div>
+            <div class="field">
+              <label for="maPinCurrent">Current PIN</label>
+              <input type="password" id="maPinCurrent" inputmode="numeric" maxlength="4" autocomplete="current-password">
+            </div>
+            <div class="field">
+              <label for="maPinNew">New PIN</label>
+              <input type="password" id="maPinNew" inputmode="numeric" maxlength="4" autocomplete="new-password">
+            </div>
+            <div class="field">
+              <label for="maPinConfirm">Confirm new PIN</label>
+              <input type="password" id="maPinConfirm" inputmode="numeric" maxlength="4" autocomplete="new-password">
+            </div>
+            <button class="btn btn-primary btn-sm" id="maSavePin">Change PIN</button>
+          </div>
+        </div>
+      </div>
+
       <div id="settingsColleagueSection">
         <div class="page-head">
           <div>
@@ -2465,7 +2500,7 @@ function enterApp(){
   document.getElementById('userRoleLbl').textContent = ROLE_LABEL[currentUser.role]||currentUser.role;
 
   document.getElementById('newTaskBtn').classList.remove('hidden');
-  document.getElementById('settingsTab').classList.toggle('hidden', currentUser.role!=='management' && currentUser.role!=='admin');
+  document.getElementById('settingsTab').classList.remove('hidden');
   document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role==='admin');
 
   const first = currentUser.name.split(' ')[0];
@@ -2492,12 +2527,19 @@ function goPage(page){
   document.getElementById('daterangeWrap').style.visibility = page==='calendar' ? 'hidden' : '';
   document.getElementById('page-settings').classList.toggle('hidden', page!=='settings');
   if(page==='settings'){
+    const isMapa = currentUser.role==='mapa';
+    document.getElementById('settingsMyAccountSection').classList.toggle('hidden', currentUser.role==='management');
     document.getElementById('settingsColleagueSection').classList.toggle('hidden', currentUser.role!=='management');
-    renderUsersTable();
-    resetBulkDelete();
-    renderRecycleBin();
-    renderClientSources();
-    renderBackupLabel();
+    ['settingsBulkDeleteSection','settingsBackupSection','settingsRecycleBinSection'].forEach(id=>
+      document.getElementById(id).classList.toggle('hidden', isMapa));
+    renderMyAccount();
+    if(!isMapa){
+      renderUsersTable();
+      resetBulkDelete();
+      renderRecycleBin();
+      renderClientSources();
+      renderBackupLabel();
+    }
   }
   const shown = document.getElementById('page-'+page);
   if(shown){ shown.classList.remove('page-enter'); void shown.offsetWidth; shown.classList.add('page-enter'); }
@@ -2569,10 +2611,15 @@ db.ref('users').on('value', snap=>{
     const me = USERS[currentUser.id];
     if(!me){ logout(); toast('Your account has been removed. Please speak to Management.', 'error'); return; }
     // Pick up name/role changes made in Settings without needing to log out
-    if(me.role !== currentUser.role || me.name !== currentUser.name){
+    if(me.role !== currentUser.role){
       Object.assign(currentUser, {name:me.name, role:me.role});
       startPinsListener();
       enterApp();
+    } else if(me.name !== currentUser.name){
+      currentUser.name = me.name;
+      document.getElementById('userAvatar').textContent = initials(me.name);
+      document.getElementById('userNameLbl').textContent = me.name;
+      document.getElementById('dashGreeting').textContent = `Welcome back, ${me.name.split(' ')[0]}`;
     }
     renderDashboard(); renderUsersTable();
   }
@@ -2642,7 +2689,7 @@ function startAuthedListeners(){
         if(!raw || raw.deleted){ closeModal('leadOverlay'); toast('That case was removed by another colleague.', 'error'); }
         else if(JSON.stringify(raw) !== lastRenderedLead) refreshLeadModal(true);
       }
-      if(!document.getElementById('page-settings').classList.contains('hidden')) renderRecycleBin();
+      if(currentUser.role!=='mapa' && !document.getElementById('page-settings').classList.contains('hidden')) renderRecycleBin();
     }
     refreshInsightsIfVisible();
   }, err=>{
@@ -5040,6 +5087,58 @@ function renderRecycleBin(){
     });
   });
 }
+
+/* ----------------------------------------------------------------------------
+   MY ACCOUNT — any colleague can change their own name and PIN. The rules
+   allow writing only your own /users/{id}/name and /pins/{id}, never your role.
+   ---------------------------------------------------------------------------- */
+function renderMyAccount(){
+  document.getElementById('maName').value = currentUser.name;
+  ['maPinCurrent','maPinNew','maPinConfirm'].forEach(id=> document.getElementById(id).value = '');
+}
+
+document.getElementById('maSaveName').addEventListener('click', function(){
+  const name = document.getElementById('maName').value.trim().replace(/\s+/g,' ');
+  if(!name){ toast('Please enter your name.','error'); return; }
+  if(name === currentUser.name){ toast("That's already your name.",'error'); return; }
+  const dupe = Object.entries(USERS).find(([id,u])=> id!==currentUser.id && u.name && u.name.toLowerCase()===name.toLowerCase());
+  if(dupe){ toast('A colleague with that name already exists.','error'); return; }
+  const btn = this; btn.disabled = true;
+  // Cases show the advisor's name, so keep their cases in step.
+  const updates = {['users/'+currentUser.id+'/name']: name};
+  Object.entries(LEADS).forEach(([id,l])=>{ if(l && l.advisorId===currentUser.id) updates['leads/'+id+'/advisorName'] = name; });
+  db.ref().update(updates)
+    .then(()=> toast('Name updated','success'))
+    .catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
+});
+
+document.getElementById('maSavePin').addEventListener('click', function(){
+  const cur = document.getElementById('maPinCurrent').value.trim();
+  const pin = document.getElementById('maPinNew').value.trim();
+  const confirmPin = document.getElementById('maPinConfirm').value.trim();
+  if(!/^\d{4}$/.test(cur)){ toast('Enter your current 4-digit PIN.','error'); return; }
+  if(!/^\d{4}$/.test(pin)){ toast('Your new PIN must be exactly 4 digits.','error'); return; }
+  if(pin !== confirmPin){ toast("The new PINs don't match.",'error'); return; }
+  if(pin === cur){ toast('Your new PIN is the same as your current one.','error'); return; }
+  const user = auth.currentUser;
+  if(!user){ toast('Please sign in again.','error'); return; }
+  const btn = this; btn.disabled = true;
+  const id = currentUser.id;
+  // Re-check the current PIN with Firebase (it also allows the password change).
+  const cred = firebase.auth.EmailAuthProvider.credential(authEmailFor(id), authPasswordFor(cur));
+  user.reauthenticateWithCredential(cred)
+    .then(()=> user.updatePassword(authPasswordFor(pin)))
+    .then(()=> db.ref('pins/'+id).set(pin)
+      .then(()=> toast('PIN changed. Use your new PIN next time you sign in.','success'))
+      .catch(()=> toast("PIN changed, but Management's copy couldn't be updated. Let Management know your PIN has changed.",'error')))
+    .then(()=> renderMyAccount())
+    .catch(err=>{
+      const wrong = ['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials','auth/user-mismatch'].includes(err.code);
+      toast(wrong ? 'Your current PIN is incorrect.' : err.code==='auth/too-many-requests' ? 'Too many attempts. Please wait a few minutes and try again.' : 'Could not change PIN: '+err.message, 'error');
+    })
+    .finally(()=>{ btn.disabled = false; });
+});
 
 /* ----------------------------------------------------------------------------
    11) SETTINGS — manage colleagues

@@ -707,6 +707,7 @@ main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
 /* Sign-up modal can open on top of the lead detail modal, so it needs a higher stacking context */
 #signupOverlay{z-index:110;}
 #deleteConfirmOverlay{z-index:110;}
+#deleteNoteOverlay{z-index:110;}
 #reassignOverlay{z-index:110;}
 #changeStatusOverlay{z-index:110;}
 #editSourceOverlay{z-index:110;}
@@ -843,6 +844,12 @@ main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
 .audit-text{font-size:13px; color:var(--text); line-height:1.45; font-weight:500;}
 .audit-meta{font-size:11px; color:var(--text-faint); margin-top:3px;}
 .audit-view{margin-top:7px; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:8px; border:1px solid var(--border-2); background:var(--surface); color:var(--brand); font-size:12px; font-weight:600;}
+.audit-text-row{display:flex; align-items:flex-start; gap:8px;}
+.audit-text-row .audit-text{flex:1; min-width:0;}
+.audit-del{flex:none; width:26px; height:26px; border-radius:7px; border:1px solid transparent; background:transparent; color:var(--text-faint); display:grid; place-items:center; transition:.15s;}
+.audit-del svg{width:14px; height:14px;}
+.audit-del:hover{color:var(--red); background:var(--red-bg); border-color:color-mix(in srgb, var(--red) 25%, transparent);}
+.note-quote{margin-top:10px; padding:10px 12px; border-radius:9px; background:var(--bg); font-size:13px; color:var(--text-muted); white-space:pre-wrap; word-break:break-word; max-height:160px; overflow-y:auto;}
 .audit-view:hover{border-color:var(--brand-light); background:var(--brand-tint);}
 .audit-view .ico{width:13px; height:13px;}
 .em-head{background:var(--bg); border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:13px; line-height:1.7;}
@@ -1894,6 +1901,20 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <p class="em-note">This is the email as written in the tracker before opening Gmail. Any changes made in Gmail itself aren't captured here.</p>
     </div>
     <div class="modal-foot"><button class="btn btn-secondary" data-close="viewEmailOverlay">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteNoteOverlay">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head"><h2>Delete this note?</h2><button class="modal-close" data-close="deleteNoteOverlay">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px; color:var(--text); line-height:1.5;">Are you sure you want to delete this note? It will be removed from the audit trail and can't be undone.</p>
+      <div class="note-quote" id="deleteNoteText"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="deleteNoteOverlay">Cancel</button>
+      <button class="btn btn-danger" id="deleteNoteConfirmBtn" style="background:var(--red); color:#fff;">Yes, delete it</button>
+    </div>
   </div>
 </div>
 
@@ -3225,6 +3246,33 @@ document.getElementById('emSend').addEventListener('click', function(){
   }).catch(err=>{ toast('Could not save to the audit trail: '+err.message,'error'); this.disabled = false; });
 });
 
+/* Notes typed into the Notes box, or the "Save note" box under an action
+   (older ones are recognised by their wording, e.g. "Call note: ..."). */
+function isNoteEntry(a){
+  if(!a) return false;
+  if(a.type==='note' || a.isNote) return true;
+  return /^(Call|Text|Email|Appointment|Other contact|Contact) note: /.test(a.text||'');
+}
+
+let deleteNoteKey = null;
+function openDeleteNote(auditId){
+  const l = LEADS[activeLeadId]; if(!l || !l.audit || !l.audit[auditId]) return;
+  deleteNoteKey = auditId;
+  document.getElementById('deleteNoteText').textContent = l.audit[auditId].text || '';
+  document.getElementById('deleteNoteConfirmBtn').disabled = false;
+  openModal('deleteNoteOverlay');
+}
+document.getElementById('deleteNoteConfirmBtn').addEventListener('click', function(){
+  if(!activeLeadId || !deleteNoteKey) return;
+  const l = LEADS[activeLeadId];
+  const entry = l && l.audit && l.audit[deleteNoteKey];
+  if(!entry || !isNoteEntry(entry)){ closeModal('deleteNoteOverlay'); return; }
+  this.disabled = true;
+  db.ref(`leads/${activeLeadId}/audit/${deleteNoteKey}`).remove()
+    .then(()=>{ toast('Note deleted','success'); closeModal('deleteNoteOverlay'); deleteNoteKey = null; refreshLeadModal(true); })
+    .catch(err=>{ toast('Could not delete: '+err.message,'error'); this.disabled = false; });
+});
+
 function openViewEmail(auditId){
   const l = LEADS[activeLeadId]; if(!l || !l.audit || !l.audit[auditId]) return;
   const a = l.audit[auditId];
@@ -3301,6 +3349,8 @@ document.addEventListener('click', (e)=>{
   const em = e.target.closest('[data-email-client]');
   if(em){ e.preventDefault(); e.stopPropagation(); openEmailCompose(em.dataset.emailClient); return; }
   const ve = e.target.closest('[data-view-email]');
+  const dn = e.target.closest('[data-del-note]');
+  if(dn){ e.preventDefault(); openDeleteNote(dn.dataset.delNote); return; }
   if(ve){ e.preventDefault(); openViewEmail(ve.dataset.viewEmail); return; }
   if(e.target.closest('[data-cal-google]')) e.stopPropagation(); // don't also open the lead
 });
@@ -3754,10 +3804,10 @@ function renderLeadModal(){
   const notesHtml = `
     <div class="section-lbl" style="margin-top:18px;">Notes</div>
     ${canManageLead(lead) ? `
-      <textarea id="leadNotesInput" placeholder="General notes about this case. Each save is recorded in the audit trail." style="width:100%; min-height:70px; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px; font-family:inherit; resize:vertical;">${esc(lead.notes||'')}</textarea>
-      <button class="btn btn-secondary btn-sm" id="leadNotesSave" style="margin-top:8px;">Save notes</button>
+      <textarea id="leadNotesInput" placeholder="Add a note about this case. It's saved to the audit trail." style="width:100%; min-height:70px; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px; font-family:inherit; resize:vertical;"></textarea>
+      <button class="btn btn-secondary btn-sm" id="leadNotesSave" style="margin-top:8px;">Add note</button>
     ` : `
-      <div class="info-cell full"><div class="val" style="font-weight:500; white-space:pre-wrap;">${lead.notes ? esc(lead.notes) : 'No notes yet.'}</div></div>
+      <div class="info-cell full"><div class="val" style="font-weight:500;">Notes are shown in the audit trail.</div></div>
     `}
   `;
 
@@ -3794,16 +3844,16 @@ function renderLeadModal(){
   const notesSaveBtn = document.getElementById('leadNotesSave');
   if(notesSaveBtn){
     notesSaveBtn.addEventListener('click', function(){
-      const val = document.getElementById('leadNotesInput').value.trim();
-      const before = ((LEADS[lead.id] && LEADS[lead.id].notes) || '').trim();
-      if(val === before){ toast('No changes to save.','error'); return; }
+      const input = document.getElementById('leadNotesInput');
+      const val = input.value.trim();
+      if(!val){ toast('Type a note first.','error'); return; }
       this.disabled = true;
-      // Saved on the lead AND recorded in the audit trail, so every change
-      // to the notes is timestamped with who made it.
-      const text = val ? `Notes updated: ${val}` : 'Notes cleared';
-      logAudit(lead.id, {type:'note', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {notes: val})
-        .then(()=>{ toast('Notes saved and added to the audit trail','success'); refreshLeadModal(); })
-        .catch(err=> toast('Could not save: '+err.message,'error'))
+      // Clear the box straight away, so the live refresh that follows the
+      // save doesn't carry the old text back into it.
+      input.value = '';
+      logAudit(lead.id, {type:'note', text:`Note: ${val}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+        .then(()=>{ toast('Note added to the audit trail','success'); refreshLeadModal(); })
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); const i = document.getElementById('leadNotesInput'); if(i) i.value = val; })
         .finally(()=>{ this.disabled = false; });
     });
   }
@@ -3845,12 +3895,16 @@ function renderLeadModal(){
   if(entries.length===0){
     auditList.innerHTML = `<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>`;
   } else {
+    const canDelNotes = canManageLead(lead);
     auditList.innerHTML = entries.map(e=> `
       <div class="audit-item">
         <div class="audit-icon t-${e.type}">${auditIcon(e.type)}</div>
         <div class="audit-line"></div>
         <div class="audit-content">
-          <div class="audit-text">${esc(e.text)}</div>
+          <div class="audit-text-row">
+            <div class="audit-text">${esc(e.text)}</div>
+            ${canDelNotes && isNoteEntry(e) ? `<button type="button" class="audit-del" data-del-note="${esc(e._key)}" title="Delete this note" aria-label="Delete this note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>` : ''}
+          </div>
           <div class="audit-meta">${esc(e.byName||'')} · ${fmtDateTime(e.at)}</div>
           ${e.emailBody != null ? `<button type="button" class="audit-view" data-view-email="${esc(e._key)}">${ico('mail')}View email</button>` : ''}
         </div>
@@ -4000,7 +4054,8 @@ function renderDynamicArea(lead){
       const note = document.getElementById('quickNote').value.trim();
       if(!note){ toast('Add some detail first.','error'); return; }
       this.disabled = true;
-      logAudit(lead.id, {type:actionUIState.kind, text:`${label} note: ${note}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+      document.getElementById('quickNote').value = '';
+      logAudit(lead.id, {type:actionUIState.kind, isNote:true, text:`${label} note: ${note}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
         .then(()=>{ toast('Note saved','success'); refreshLeadModal(); })
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
     });

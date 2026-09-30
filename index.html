@@ -2110,6 +2110,7 @@ let searchTerm = ''; // global search across name/source/etc.
 let dateRangeFrom = null; // yyyy-mm-dd, filters by Task Created date
 let dateRangeTo = null;
 let activeLeadId = null;
+let selfDeletingLeadId = null; // case this user is deleting right now
 let lastRenderedLead = null; // JSON of the lead last drawn in the modal, to skip needless redraws
 let leadsLoaded = false; // false until the first leads download after sign-in arrives
 // Drives the transient area under the action buttons. One of:
@@ -2726,7 +2727,13 @@ function startAuthedListeners(){
       renderDashboard();
       if(activeLeadId){
         const raw = LEADS[activeLeadId];
-        if(!raw || raw.deleted){ closeModal('leadOverlay'); toast('That case was removed by another colleague.', 'error'); }
+        if(!raw || raw.deleted){
+          // Our own delete arrives here before its save completes; only warn
+          // when someone else removed the case we're looking at.
+          const ownDelete = activeLeadId === selfDeletingLeadId;
+          closeModal('leadOverlay');
+          if(!ownDelete) toast('That case was removed by another colleague.', 'error');
+        }
         else if(JSON.stringify(raw) !== lastRenderedLead) refreshLeadModal(true);
       }
       if(currentUser.role!=='mapa' && !document.getElementById('page-settings').classList.contains('hidden')) renderRecycleBin();
@@ -3814,6 +3821,7 @@ document.getElementById('deleteConfirmBtn').addEventListener('click', function()
   if(!activeLeadId) return;
   const leadId = activeLeadId;
   this.disabled = true;
+  selfDeletingLeadId = leadId;
   db.ref().update({
     ['leads/'+leadId+'/deleted']: true,
     ['leads/'+leadId+'/deletedAt']: Date.now(),
@@ -3823,7 +3831,8 @@ document.getElementById('deleteConfirmBtn').addEventListener('click', function()
     closeModal('deleteConfirmOverlay');
     closeModal('leadOverlay');
     activeLeadId = null;
-  }).catch(err=>{ toast('Could not delete: '+err.message,'error'); this.disabled=false; });
+  }).catch(err=>{ toast('Could not delete: '+err.message,'error'); this.disabled=false; })
+    .finally(()=>{ selfDeletingLeadId = null; });
 });
 
 function canAction(lead){

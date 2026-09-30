@@ -1,0 +1,48 @@
+{
+  "rules": {
+    "users": {
+      ".read": true,
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'"
+    },
+
+    "members": {
+      ".indexOn": ".value",
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && newData.isString() && (!data.exists() || data.val() === newData.val()) && root.child('users').child(newData.val()).exists() && auth.token.email === newData.val().toLowerCase().replace(' ', '-').replace('\\'', '-').replace('--', '-').replace('--', '-') + '@plt.internal'"
+      }
+    },
+
+    "pins": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'"
+    },
+
+    "leads": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
+      "$leadId": {
+        ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists() && (!data.exists() || (!newData.exists() && (root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management' || root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'admin')))",
+        "audit": {
+          "$auditId": {
+            ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists() && (!data.exists() || (!newData.exists() && (data.child('type').val() === 'note' || data.child('isNote').val() === true || (data.child('text').isString() && data.child('text').val().matches(/^(Call|Text|Email|Appointment|Other contact|Contact) note: /))) && (root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management' || data.parent().parent().child('advisorId').val() === root.child('members').child(auth.uid).val())))"
+          }
+        },
+        "$field": {
+          ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()"
+        }
+      }
+    },
+
+    "notifications": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()"
+    },
+
+    "clientSources": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists() && (root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management' || root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'admin')"
+    }
+  }
+}

@@ -3082,8 +3082,8 @@ function myDayItems(){
       items.push({lead:l, sortKey:1, reason:'New — no contact yet', tone:'accent'});
     }
     if(pot==='decline'){
-      const reason = (!l.declineSent && !l.hlpAdded) ? 'Decline — reasoning & HLP pending'
-        : !l.declineSent ? 'Decline — reasoning pending' : 'Decline — HLP pending';
+      const left = DECLINE_STEPS.filter(st=> !declineStepDone(l, st)).map(st=> st.short);
+      const reason = 'Decline — ' + (left.length > 1 ? left.slice(0,-1).join(', ') + ' & ' + left[left.length-1] : left[0] || 'steps') + ' pending';
       items.push({lead:l, sortKey:0, reason, tone:'bad'});
     }
   });
@@ -3911,12 +3911,10 @@ function renderLeadModal(){
       <div class="info-cell decline-box full">
         <div class="lbl">Decline reason: ${esc(lead.declineReason)}</div>
         <div class="val" style="font-weight:500;font-size:13px;margin-top:4px;">${esc(lead.declineDetail||'')}</div>
-        <div class="val" style="font-weight:600;font-size:12px;margin-top:6px;color:${lead.declineSent?'var(--green)':'var(--red)'}">
-          ${lead.declineSent? ico('check')+' Decline reasoning sent to client' : ico('alert')+' Decline reasoning NOT yet sent to client'}
-        </div>
-        <div class="val" style="font-weight:600;font-size:12px;margin-top:3px;color:${lead.hlpAdded?'var(--green)':'var(--red)'}">
-          ${lead.hlpAdded? ico('check')+' Added to HLP Portal' : ico('alert')+' NOT yet added to HLP Portal'}
-        </div>
+        ${DECLINE_STEPS.filter(st=> !isLegacyClosedStep(lead, st)).map((st,i)=> `
+        <div class="val" style="font-weight:600;font-size:12px;margin-top:${i?3:6}px;color:${lead[st.field]?'var(--green)':'var(--red)'}">
+          ${lead[st.field] ? ico('check')+' '+st.done : ico('alert')+' '+st.todo}
+        </div>`).join('')}
       </div>` : ''}
     </div>
   `;
@@ -3945,10 +3943,9 @@ function renderLeadModal(){
       <div id="dynamicActionArea"></div>
       ${lead.status==='decline' ? `
       <div class="outcome-panel" style="border-color:var(--red); background:var(--red-bg);">
-        <div class="op-title" style="color:var(--red);">${ico('alert')} This case is sitting in Decline Workflow because the decline reasoning hasn't been sent to the client and/or it hasn't been added to the HLP portal yet.</div>
+        <div class="op-title" style="color:var(--red);">${ico('alert')} This case stays in Decline Workflow until all of these are done: the decline reasoning is sent to the client, the decline email is added to the HLP Portal, and the lead is NPW'd in the HLP Swim lane.</div>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          <button id="declineSentBtn" ${lead.declineSent?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead.declineSent?'var(--border-2)':'var(--green)'}; color:${lead.declineSent?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead.declineSent?ico('check')+' Decline reasoning sent':'Mark: Decline Reasoning Sent'}</button>
-          <button id="hlpAddedBtn" ${lead.hlpAdded?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead.hlpAdded?'var(--border-2)':'var(--green)'}; color:${lead.hlpAdded?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead.hlpAdded?ico('check')+' Added to HLP Portal':'Mark: Added to HLP Portal'}</button>
+          ${DECLINE_STEPS.map(st=> `<button data-decline-step="${st.field}" ${lead[st.field]?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead[st.field]?'var(--border-2)':'var(--green)'}; color:${lead[st.field]?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead[st.field] ? ico('check')+' '+st.btnDone : st.btn}</button>`).join('')}
         </div>
       </div>` : ''}
     `;
@@ -3998,14 +3995,9 @@ function renderLeadModal(){
     });
     renderDynamicArea(lead);
     if(lead.status==='decline'){
-      const sentBtn = document.getElementById('declineSentBtn');
-      const hlpBtn = document.getElementById('hlpAddedBtn');
-      if(sentBtn && !lead.declineSent){
-        sentBtn.addEventListener('click', ()=> markDeclineFlag(lead, 'declineSent', 'Decline reasoning confirmed sent to client', 'declineSentBtn'));
-      }
-      if(hlpBtn && !lead.hlpAdded){
-        hlpBtn.addEventListener('click', ()=> markDeclineFlag(lead, 'hlpAdded', 'Confirmed added to HLP Portal', 'hlpAddedBtn'));
-      }
+      document.querySelectorAll('[data-decline-step]').forEach(btn=>{
+        if(!lead[btn.dataset.declineStep]) btn.addEventListener('click', ()=> markDeclineFlag(lead, btn.dataset.declineStep, btn));
+      });
     }
   }
 
@@ -4035,21 +4027,41 @@ function renderLeadModal(){
 function auditIcon(type){
   const map = {
     assigned:'pin', call:'phone', text:'message', email:'mail', appointment:'calendar', other:'note',
-    signup:'checkCircle', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', status:'shuffle', note:'note', detail:'mail'
+    signup:'checkCircle', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
   };
   return map[type] ? ico(map[type]) : '•';
 }
 
-function markDeclineFlag(lead, field, auditText, btnId){
-  const btn = btnId ? document.getElementById(btnId) : null;
+/* The steps a decline needs before it's closed out ("Declined · email sent").
+   Cases completed before the NPW step existed have no npwDone field; they
+   were closed out under the old two-step list, so they count as done. */
+const DECLINE_STEPS = [
+  {field:'declineSent', type:'sent', ask:'Have you sent decline reasoning to client?',
+   done:'Decline reasoning sent to client', todo:'Decline reasoning NOT yet sent to client',
+   btn:'Mark: Decline Reasoning Sent', btnDone:'Decline reasoning sent',
+   audit:'Decline reasoning confirmed sent to client', toast:'Decline reasoning marked as sent', short:'reasoning'},
+  {field:'hlpAdded', type:'hlp', ask:'Have you added decline email to HLP Portal?',
+   done:'Decline email added to HLP Portal', todo:'Decline email NOT yet added to HLP Portal',
+   btn:'Mark: Decline Email Added to HLP Portal', btnDone:'Decline email added to HLP Portal',
+   audit:'Confirmed decline email added to HLP Portal', toast:'Marked as added to HLP Portal', short:'HLP email'},
+  {field:'npwDone', type:'npw', ask:"Have you NPW'd the lead in HLP Swim lane?",
+   done:"Lead NPW'd in HLP Swim lane", todo:"Lead NOT yet NPW'd in HLP Swim lane",
+   btn:"Mark: NPW'd in HLP Swim Lane", btnDone:"NPW'd in HLP Swim lane",
+   audit:"Confirmed lead NPW'd in HLP Swim lane", toast:"Marked as NPW'd in HLP Swim lane", short:'NPW'},
+];
+function isLegacyClosedStep(lead, step){ return step.field==='npwDone' && lead.npwDone==null && lead.status==='completed'; }
+function declineStepDone(lead, step){ return lead[step.field]===true || isLegacyClosedStep(lead, step); }
+function declineAllDone(lead){ return DECLINE_STEPS.every(st=> declineStepDone(lead, st)); }
+
+function markDeclineFlag(lead, field, btn){
+  const step = DECLINE_STEPS.find(st=> st.field===field);
   if(btn) btn.disabled = true;
-  const willBeSent = field==='declineSent' ? true : !!lead.declineSent;
-  const willBeHlp = field==='hlpAdded' ? true : !!lead.hlpAdded;
+  const allDone = declineAllDone({...lead, [field]: true});
   const patch = {[field]: true};
-  if(willBeSent && willBeHlp) patch.status = 'completed';
-  logAudit(lead.id, {type: field==='declineSent'?'sent':'hlp', text:auditText, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, patch)
+  if(allDone) patch.status = 'completed';
+  logAudit(lead.id, {type:step.type, text:step.audit, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, patch)
     .then(()=>{
-      toast(willBeSent && willBeHlp ? 'Both confirmed. Moved to Declined · email sent.' : (field==='declineSent' ? 'Decline reasoning marked as sent' : 'Marked as added to HLP Portal'), 'success');
+      toast(allDone ? 'All steps confirmed. Moved to Declined · email sent.' : step.toast, 'success');
       refreshLeadModal();
     }).catch(err=>{ toast('Could not save: '+err.message,'error'); if(btn) btn.disabled=false; });
 }
@@ -4281,14 +4293,11 @@ function renderDynamicArea(lead){
           <label for="dcDetail">Please give detail of why this client has declined</label>
           <textarea id="dcDetail" placeholder="Add detail…"></textarea>
         </div>
-        <div class="checkbox-row">
-          <div class="check-tick" id="dcTick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
-          <label id="dcTickLabel">Have you sent decline reasoning to client?</label>
-        </div>
-        <div class="checkbox-row">
-          <div class="check-tick" id="dcTick2"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
-          <label id="dcTickLabel2">Have you added to HLP Portal?</label>
-        </div>
+        ${DECLINE_STEPS.map(st=> `
+        <div class="checkbox-row" data-dc-step="${st.field}">
+          <div class="check-tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <label>${st.ask}</label>
+        </div>`).join('')}
         <button class="btn btn-primary btn-sm" id="dcSave">Submit decline</button>
       </div>`;
 
@@ -4296,15 +4305,14 @@ function renderDynamicArea(lead){
       document.getElementById('dcContactWarning').classList.toggle('hidden', this.value !== 'Unable to Contact');
     });
 
-    let sent = false, hlp = false;
-    const tick = document.getElementById('dcTick');
-    const tick2 = document.getElementById('dcTick2');
-    const toggleTick = ()=>{ sent=!sent; tick.classList.toggle('checked', sent); };
-    const toggleTick2 = ()=>{ hlp=!hlp; tick2.classList.toggle('checked', hlp); };
-    tick.addEventListener('click', toggleTick);
-    document.getElementById('dcTickLabel').addEventListener('click', toggleTick);
-    tick2.addEventListener('click', toggleTick2);
-    document.getElementById('dcTickLabel2').addEventListener('click', toggleTick2);
+    const ticked = {}; // field -> true/false
+    area.querySelectorAll('[data-dc-step]').forEach(row=>{
+      const field = row.dataset.dcStep, tick = row.querySelector('.check-tick');
+      ticked[field] = false;
+      const toggle = ()=>{ ticked[field] = !ticked[field]; tick.classList.toggle('checked', ticked[field]); };
+      tick.addEventListener('click', toggle);
+      row.querySelector('label').addEventListener('click', toggle);
+    });
 
     document.getElementById('dcSave').addEventListener('click', function(){
       const reason = document.getElementById('dcReason').value;
@@ -4313,16 +4321,13 @@ function renderDynamicArea(lead){
       if(!detail){ toast('Please add detail for the decline.','error'); return; }
       this.disabled = true;
       const text = `${label} - Decline - ${fmtDateSlash(Date.now())} - ${reason}: ${detail}`;
-      const newStatus = (sent && hlp) ? 'completed' : 'decline';
+      const newStatus = DECLINE_STEPS.every(st=> ticked[st.field]) ? 'completed' : 'decline';
       logAudit(lead.id, {type:'decline', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {
-        status:newStatus, declineReason:reason, declineDetail:detail, declineSent:sent, hlpAdded:hlp
+        status:newStatus, declineReason:reason, declineDetail:detail, ...ticked
       }).then(()=>{
-        if(sent){
-          logAudit(lead.id, {type:'sent', text:'Decline reasoning confirmed sent to client', byId:currentUser.id, byName:currentUser.name, at:Date.now()+1});
-        }
-        if(hlp){
-          logAudit(lead.id, {type:'hlp', text:'Confirmed added to HLP Portal', byId:currentUser.id, byName:currentUser.name, at:Date.now()+2});
-        }
+        DECLINE_STEPS.forEach((st,i)=>{
+          if(ticked[st.field]) logAudit(lead.id, {type:st.type, text:st.audit, byId:currentUser.id, byName:currentUser.name, at:Date.now()+1+i});
+        });
         toast(`Decline recorded. Moved to ${STATUS_LABELS[newStatus]}.`,'success'); actionUIState=null; refreshLeadModal();
       }).catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
     });
@@ -4591,13 +4596,13 @@ function renderInsights(){
   const avgCloseDays = closeTimes.length ? (closeTimes.reduce((s,v)=>s+v,0)/closeTimes.length)/86400000 : null;
 
   const withDeclineReason = declineLeads.length;
-  const bothSent = declineLeads.filter(l=> l.declineSent && l.hlpAdded).length;
+  const bothSent = declineLeads.filter(declineAllDone).length;
   const compliancePct = withDeclineReason ? Math.round(bothSent/withDeclineReason*100) : null;
 
   document.getElementById('speedStats').innerHTML =
     statCard(avgContactHrs==null ? '—' : avgContactHrs<1 ? '<1 hr' : Math.round(avgContactHrs)+' hrs', 'Avg. time to first call') +
     statCard(avgCloseDays==null ? '—' : avgCloseDays<1 ? '<1 day' : Math.round(avgCloseDays)+' days', 'Avg. time to close') +
-    statCard(compliancePct==null ? '—' : compliancePct+'%', 'Declines fully closed out (email + HLP)', compliancePct==null?'':compliancePct>=80?'good':compliancePct>=50?'warn':'bad');
+    statCard(compliancePct==null ? '—' : compliancePct+'%', 'Declines fully closed out (reasoning, HLP email, NPW)', compliancePct==null?'':compliancePct>=80?'good':compliancePct>=50?'warn':'bad');
 
   /* ---- Stale cases ---- */
   const staleThresholdMs = 5*24*60*60*1000;
@@ -4624,14 +4629,14 @@ function renderInsights(){
 /* ---- CSV export (respects the same advisor + date-range scope) ---- */
 document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
   const leads = insightsLeads();
-  const headers = ['Client Name','Client Source','Advisor','Task Created','Pot','Commission','Decline Reason','Decline Detail','Decline Sent','HLP Added','Assigned Date','Last Activity'];
+  const headers = ['Client Name','Client Source','Advisor','Task Created','Pot','Commission','Decline Reason','Decline Detail','Decline Sent','Decline Email on HLP','NPW in HLP Swim Lane','Assigned Date','Last Activity'];
   const csvEscape = csvCell;
   const rows = leads.map(l=>{
     const last = leadLastActivity(l);
     return [
       l.clientName, l.clientSource||'', l.advisorName||'', l.appDate||'',
       STATUS_LABELS[l.status]||potOf(l), l.commission!=null? l.commission : '',
-      l.declineReason||'', l.declineDetail||'', l.declineSent?'Yes':'No', l.hlpAdded?'Yes':'No',
+      l.declineReason||'', l.declineDetail||'', l.declineSent?'Yes':'No', l.hlpAdded?'Yes':'No', l.npwDone?'Yes':(isLegacyClosedStep(l, DECLINE_STEPS[2])?'n/a':'No'),
       l.createdAt ? fmtDate(l.createdAt) : '', last ? fmtDateTime(last.at) : ''
     ].map(csvEscape).join(',');
   });

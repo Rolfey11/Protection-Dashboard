@@ -1951,42 +1951,26 @@ document.addEventListener('DOMContentLoaded', function(){
    Project settings → General → Your apps → SDK setup and configuration.
 
    You need a "Realtime Database" enabled on the project (not Firestore).
-   Suggested starter security rules (Realtime Database → Rules):
 
-   {
-     "rules": {
-       ".read": true,
-       ".write": true
-     }
-   }
+   SECURITY RULES: publish the rules in database.rules.json (next to this
+   file) under Realtime Database → Rules. Never use rules that only check
+   "auth != null": anyone can create a Firebase Auth account using the
+   public config below, so that check alone lets strangers in.
 
-   NOTE ON SECURITY: this app uses real Firebase Authentication behind the
-   scenes — every colleague gets an actual Auth account created the first
-   time they log in (their PIN becomes their password, padded to satisfy
-   Firebase's 6-character minimum), and the app signs them in for real, not
-   just a client-side PIN check. Your Firebase Rules MUST match this
-   structure for the app to work at all — the login screen needs to read
-   the colleague list BEFORE anyone is authenticated, so /users stays
-   publicly readable while everything else requires sign-in:
-
-   {
-     "rules": {
-       "users": { ".read": true, ".write": "auth != null" },
-       "pins": { ".read": "auth != null", ".write": "auth != null" },
-       "leads": { ".read": "auth != null", ".write": "auth != null" },
-       "notifications": { ".read": "auth != null", ".write": "auth != null" },
-       "clientSources": { ".read": "auth != null", ".write": "auth != null" }
-     }
-   }
-
-   This blocks anyone without valid app credentials from reading or writing
-   your database at all. One honest limit: any signed-in colleague can
-   still technically read/write any other colleague's data at the database
-   level (the app's own UI is what keeps a MAPA from seeing management's
-   view) — properly enforcing that per-role at the database itself needs
-   Firebase Admin SDK / Cloud Functions, a genuine backend this static file
-   doesn't have. This still moves you from "open to the whole internet" to
-   "only your team," which is the big lever.
+   How access works: every colleague gets a real Firebase Auth account
+   (email "<their id>@plt.internal", password derived from their PIN). On
+   each sign-in the app records /members/{authUid} = colleagueId, which the
+   rules only accept when the account's email matches that colleague. The
+   rules then look up the colleague's role in /users, so:
+     - only accounts linked to a current colleague can read or write data;
+     - removing a colleague in Settings cuts off their access at once;
+     - only Management can change colleagues, roles and PINs;
+     - the audit trail is append-only (notes can still be deleted by
+       Management or the case's advisor);
+     - only Management/Admin can permanently delete cases.
+   /users stays publicly readable because the login dropdown needs names
+   before anyone signs in. Every signed-in colleague can still read every
+   lead: the app filters per role in the browser.
    ---------------------------------------------------------------------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyDzskBKkvqr_tlAmS3rI_DYgfJloXOWkN4",
@@ -2038,14 +2022,14 @@ function authPasswordFor(pin){ return `PLT-${pin}`; }
 let USERS = {};        // uid -> {name, role, pin}
 let LEADS = {};        // leadId -> lead object (incl. audit)
 let NOTIFS = {};        // notifId -> notif object
-let CLIENTSOURCES = {};
+let CLIENTSOURCES = {}; // sourceId -> name string, managed from Settings
 /* PINs live at /pins/{colleagueId}, readable only by signed-in colleagues.
    Before the move they were stored on each /users record, which is public
    (the login dropdown needs it before anyone signs in). Only Management's
    Settings screen needs them; login itself is checked by Firebase Auth. */
 let PINS = {};
 let pinsLoaded = false;
-function pinFor(id){ return PINS[id] != null ? String(PINS[id]) : (USERS[id] && USERS[id].pin != null ? String(USERS[id].pin) : null); } // sourceId -> name string, managed from Settings
+function pinFor(id){ return PINS[id] != null ? String(PINS[id]) : (USERS[id] && USERS[id].pin != null ? String(USERS[id].pin) : null); }
 let currentUser = null; // {id, name, role, pin}
 let pinBuffer = "";
 let selectedAdvisorFilter = null; // management/admin advisor filter
@@ -2087,7 +2071,7 @@ function toDate(d){
 function fmtDate(d){
   if(!d) return '—';
   const dt = toDate(d);
-  if(isNaN(dt)) return d;
+  if(isNaN(dt)) return esc(d);
   return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 }
 
@@ -2095,7 +2079,7 @@ function fmtDate(d){
 function fmtDateSlash(d){
   if(!d) return '—';
   const dt = toDate(d);
-  if(isNaN(dt)) return d;
+  if(isNaN(dt)) return esc(d);
   return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 
@@ -2114,6 +2098,15 @@ function timeAgo(ts){
   const h = Math.floor(m/60); if(h<24) return h+'h ago';
   const d = Math.floor(h/24); if(d<7) return d+'d ago';
   return fmtDate(ts);
+}
+
+/* One CSV cell. Text starting with = + - @ (or a tab/CR) is prefixed with
+   an apostrophe so Excel shows it as text instead of running it as a
+   formula, e.g. a client name like =HYPERLINK(...). */
+function csvCell(v){
+  let t = v==null ? '' : String(v);
+  if(typeof v !== 'number' && /^[=+\-@\t\r]/.test(t)) t = "'" + t;
+  return `"${t.replace(/"/g,'""')}"`;
 }
 
 function esc(str){
@@ -2410,8 +2403,14 @@ function tryResolveSession(){
     const u = USERS[matchId];
     currentUser = {id:matchId, name:u.name, role:u.role};
     loginInFlight = false;
-    startAuthedListeners();
     enterApp();
+    // The database rules only let an Auth account in once it's linked to a
+    // colleague, so link first. Older rules without /members refuse this
+    // write; carry on regardless so logins keep working either way.
+    const signedInAs = pendingAuthUser;
+    db.ref('members/'+signedInAs.uid).set(matchId)
+      .catch(()=>{})
+      .then(()=>{ if(currentUser && currentUser.id===matchId && auth.currentUser===signedInAs) startAuthedListeners(); });
   } else {
     // Signed in at the Auth layer but no matching colleague record — most
     // likely they were removed in Settings. Don't let a stale credential in.
@@ -2639,7 +2638,7 @@ function startAuthedListeners(){
     }
     refreshInsightsIfVisible();
   }, err=>{
-    toast('Could not load leads — check Firebase rules allow reading /leads for signed-in users.', 'error');
+    toast('Could not load cases. Your sign-in may not be linked to your colleague record: sign out and back in, or ask Management to re-save your PIN in Settings.', 'error');
   });
 
   notifsQuery().on('value', snap=>{
@@ -2727,7 +2726,7 @@ function renderAdvisorFilter(){
   row.innerHTML = `<span style="font-size:12px;font-weight:600;color:var(--text-muted);margin-right:2px;">Filter by advisor:</span>` +
     `<button class="filter-chip ${!selectedAdvisorFilter?'active':''}" data-adv="">All advisors</button>` +
     `<button class="filter-chip ${selectedAdvisorFilter==='__unassigned__'?'active':''}" data-adv="__unassigned__" style="${selectedAdvisorFilter==='__unassigned__'?'':'border-color:var(--amber);color:var(--amber);'}">Unassigned${unassignedCount?' ('+unassignedCount+')':''}</button>` +
-    mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${id}">${esc(u.name)}</button>`).join('');
+    mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${esc(id)}">${esc(u.name)}</button>`).join('');
   row.querySelectorAll('.filter-chip').forEach(chip=>{
     chip.addEventListener('click', ()=>{ selectedAdvisorFilter = chip.dataset.adv || null; renderDashboard(); });
   });
@@ -2881,14 +2880,14 @@ function daysLate(dateStr){
 function overdueText(dateStr, timeStr){
   const d = daysLate(dateStr);
   if(d >= 1) return `${d} day${d>1?'s':''} overdue`;
-  return timeStr ? `overdue since ${timeStr}` : 'overdue';
+  return timeStr ? `overdue since ${esc(timeStr)}` : 'overdue';
 }
 
 /* Renders a small coloured "call due" badge for a follow-up date: red if
    overdue, amber if due today, blue if upcoming. Returns '' if no date set. */
 function followUpBadge(dateStr, timeStr){
   if(!dateStr) return '';
-  const at = timeStr ? ` at ${timeStr}` : '';
+  const at = timeStr ? ` at ${esc(timeStr)}` : '';
   const today = new Date(); today.setHours(0,0,0,0);
   const due = toDate(dateStr); due.setHours(0,0,0,0);
   const diffDays = Math.round((due - today) / 86400000);
@@ -2907,7 +2906,7 @@ function followUpInline(dateStr, timeStr){
   const today = new Date(); today.setHours(0,0,0,0);
   const due = toDate(dateStr); due.setHours(0,0,0,0);
   const diff = Math.round((due - today) / 86400000);
-  const at = timeStr ? `, ${timeStr}` : '';
+  const at = timeStr ? `, ${esc(timeStr)}` : '';
   const short = toDate(dateStr).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
   const [label, tone] = isCallOverdue(dateStr, timeStr) ? [diff===0 ? `Overdue today${at}` : `Overdue ${short}${at}`, 'bad']
     : diff === 0 ? [`Call today${at}`, 'warn']
@@ -2944,7 +2943,7 @@ function renderOverdueBanner(){
   const chips = list.slice(0, SHOW).map(l=>{
     const who = currentUser.role==='management' && l.advisorName ? ` · ${esc(l.advisorName.split(' ')[0])}` : '';
     const late = overdueText(l.followUpDate, l.followUpTime).replace(/^overdue /,'').replace(/ overdue$/,'');
-    return `<span class="ob-chip" data-id="${l.id}" title="Open ${esc(l.clientName)}">${esc(l.clientName)}${who} · ${late}</span>`;
+    return `<span class="ob-chip" data-id="${esc(l.id)}" title="Open ${esc(l.clientName)}">${esc(l.clientName)}${who} · ${late}</span>`;
   });
   if(list.length > SHOW) chips.push(`<span class="ob-chip more" data-more="1" title="See them all in the Calendar">+${list.length-SHOW} more</span>`);
   document.getElementById('overdueBannerList').innerHTML = chips.join('');
@@ -3006,7 +3005,7 @@ function renderMyDay(){
   card.innerHTML = items.map(it=>{
     const [bg,fg] = toneMap[it.tone];
     return `
-      <div class="myday-row" data-id="${it.lead.id}">
+      <div class="myday-row" data-id="${esc(it.lead.id)}">
         <div>
           <div class="myday-name">${esc(it.lead.clientName)}</div>
           <div class="myday-sub">${it.lead.clientSource ? esc(it.lead.clientSource)+' · ' : ''}Task Created ${fmtDate(it.lead.appDate)}</div>
@@ -3122,7 +3121,6 @@ function calEventTimes(lead){
   const utc = d => d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
   return {start: utc(start), end: utc(end)};
 }
-function fmtCallTime(lead){ return lead.followUpTime ? lead.followUpTime : ''; }
 
 function calEventText(lead){
   const lines = [
@@ -3172,10 +3170,11 @@ function googleCalUrl(lead){
 }
 
 function icsEscape(t){ return String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+const icsEncoder = new TextEncoder();
 function icsFold(line){ // RFC 5545: lines over 75 octets are folded
   const out = []; let cur = '';
   for(const ch of line){
-    if(new TextEncoder().encode(cur+ch).length > 73){ out.push(cur); cur = ' ' + ch; } else cur += ch;
+    if(icsEncoder.encode(cur+ch).length > 73){ out.push(cur); cur = ' ' + ch; } else cur += ch;
   }
   out.push(cur); return out.join('\r\n');
 }
@@ -3285,14 +3284,6 @@ function openViewEmail(auditId){
   openModal('viewEmailOverlay');
 }
 
-function clientMailtoUrl(lead){
-  // Blank Gmail draft addressed to the client: subject and message are left
-  // empty for the adviser to write. (The calendar invite covers the
-  // booking confirmation itself.)
-  const p = new URLSearchParams({view:'cm', fs:'1', to:leadEmails(lead).join(',')});
-  return 'https://mail.google.com/mail/?' + p.toString();
-}
-
 function clientEmailCellHtml(lead){
   const emails = leadEmails(lead);
   const canEdit = canManageLead(lead) || canAction(lead);
@@ -3378,7 +3369,7 @@ function calItemHtml(l){
     <div class="cal-item ${d.tone}" data-open="${esc(l.id)}">
       <div class="cal-item-top">
         <div class="cal-item-name">${esc(l.clientName)}</div>
-        <span class="cal-due ${d.tone}">${d.label}${l.followUpTime && !(d.tone==='bad' && daysLate(l.followUpDate)===0) ? ' · '+l.followUpTime : ''}</span>
+        <span class="cal-due ${d.tone}">${d.label}${l.followUpTime && !(d.tone==='bad' && daysLate(l.followUpDate)===0) ? ' · '+esc(l.followUpTime) : ''}</span>
       </div>
       <div class="cal-item-sub">
         ${showAdv ? (l.advisorId ? `<span class="lc-avatar" style="--av:${advisorTone(l.advisorId)}">${esc(initials(l.advisorName||'?'))}</span>${esc(l.advisorName||'')}` : `<span class="lc-avatar none">?</span>Unassigned`) : ''}
@@ -3396,7 +3387,7 @@ function renderCalAdvisorRow(){
   row.classList.remove('hidden');
   row.innerHTML = `<span style="font-size:12px;font-weight:600;color:var(--text-muted);margin-right:2px;">Show calls for:</span>` +
     `<button class="filter-chip ${!selectedAdvisorFilter?'active':''}" data-adv="">Everyone</button>` +
-    mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${id}">${esc(u.name)}</button>`).join('');
+    mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${esc(id)}">${esc(u.name)}</button>`).join('');
   row.querySelectorAll('.filter-chip').forEach(chip=> chip.addEventListener('click', ()=>{
     selectedAdvisorFilter = chip.dataset.adv || null; renderCalendar();
   }));
@@ -3429,7 +3420,7 @@ function renderCalendar(){
     const cls = ['cal-cell', d.getMonth()!==m?'out':'', iso===today?'today':'', iso===calSelected?'sel':'', (d.getDay()%6===0)?'wkend':'', list.length?'has':''].join(' ');
     const chips = list.slice(0,3).map(c=>{
       const t = callInfo(c).tone;
-      return `<span class="cal-chip ${t}" style="--av:${advisorTone(c.advisorId)}"><i></i>${c.followUpTime ? `<b>${c.followUpTime}</b>` : ''}${esc(c.clientName)}</span>`;
+      return `<span class="cal-chip ${t}" style="--av:${advisorTone(c.advisorId)}"><i></i>${c.followUpTime ? `<b>${esc(c.followUpTime)}</b>` : ''}${esc(c.clientName)}</span>`;
     }).join('');
     const more = list.length>3 ? `<span class="cal-more">+${list.length-3} more</span>` : '';
     const dots = list.length ? `<span class="cal-dots ${list.some(c=> isCallOverdue(c.followUpDate, c.followUpTime)) ? 'bad' : dueInfo(iso).tone}">${list.length}</span>` : '';
@@ -3518,7 +3509,7 @@ function leadCardHtml(lead, potKey){
   }
 
   return `
-    <div class="lead-card ${isOverdue?'overdue':''}" data-id="${lead.id}">
+    <div class="lead-card ${isOverdue?'overdue':''}" data-id="${esc(lead.id)}">
       <div class="lc-top">
         <div class="lc-name">${esc(lead.clientName)}</div>
         ${advisor}
@@ -3573,7 +3564,7 @@ document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   ntResetExtraClients();
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   const sel = document.getElementById('ntAdvisor');
-  sel.innerHTML = '<option value="">Select an advisor…</option>' + mapas.map(([id,u])=>`<option value="${id}">${esc(u.name)}</option>`).join('');
+  sel.innerHTML = '<option value="">Select an advisor…</option>' + mapas.map(([id,u])=>`<option value="${esc(id)}">${esc(u.name)}</option>`).join('');
   if(mapas.length===0) toast('No MAPAs set up yet — add one under Settings first.', 'error');
   const sourceSel = document.getElementById('ntSource');
   const sources = Object.values(CLIENTSOURCES).sort();
@@ -3650,7 +3641,7 @@ function openReassign(lead){
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   const sel = document.getElementById('raAdvisor');
   sel.innerHTML = '<option value="">Select an advisor…</option>' +
-    mapas.map(([id,u])=> `<option value="${id}" ${id===lead.advisorId?'selected':''}>${esc(u.name)}</option>`).join('');
+    mapas.map(([id,u])=> `<option value="${esc(id)}" ${id===lead.advisorId?'selected':''}>${esc(u.name)}</option>`).join('');
   document.getElementById('raSubmit').dataset.leadId = lead.id;
   document.getElementById('raSubmit').disabled = false;
   openModal('reassignOverlay');
@@ -3898,7 +3889,7 @@ function renderLeadModal(){
     const canDelNotes = canManageLead(lead);
     auditList.innerHTML = entries.map(e=> `
       <div class="audit-item">
-        <div class="audit-icon t-${e.type}">${auditIcon(e.type)}</div>
+        <div class="audit-icon t-${esc(e.type)}">${auditIcon(e.type)}</div>
         <div class="audit-line"></div>
         <div class="audit-content">
           <div class="audit-text-row">
@@ -4239,7 +4230,7 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
 function myNotifs(){
   return Object.entries(NOTIFS).map(([id,n])=>({id,...n})).filter(n=>{
     if(n.toUserId) return n.toUserId===currentUser.id;
-    if(n.toRole) return n.toRole===currentUser.role || (n.toRole==='management' && currentUser.role==='management');
+    if(n.toRole) return n.toRole===currentUser.role;
     return false;
   }).sort((a,b)=> b.at-a.at);
 }
@@ -4263,7 +4254,7 @@ function renderNotifs(){
     return;
   }
   list.innerHTML = notifs.map(n=> `
-    <div class="notif-item ${isUnread(n)?'unread':''}" data-id="${n.id}" data-lead="${n.leadId}">
+    <div class="notif-item ${isUnread(n)?'unread':''}" data-id="${esc(n.id)}" data-lead="${esc(n.leadId)}">
       <div class="notif-dot"></div>
       <div>
         <div class="notif-text">${esc(n.message)}</div>
@@ -4488,7 +4479,7 @@ function renderInsights(){
   const agingBody = document.querySelector('#agingTable tbody');
   document.getElementById('agingEmpty').classList.toggle('hidden', stale.length>0);
   agingBody.innerHTML = stale.map(l=> `
-    <tr style="cursor:pointer;" data-id="${l.id}">
+    <tr style="cursor:pointer;" data-id="${esc(l.id)}">
       <td style="font-weight:600;">${esc(l.clientName)}</td>
       <td>${esc(l.advisorName||'—')}</td>
       <td><span class="role-badge ${potOf(l)==='new'?'mapa':potOf(l)==='existing'?'management':'admin'}">${STATUS_LABELS[l.status]||potOf(l)}</span></td>
@@ -4503,7 +4494,7 @@ function renderInsights(){
 document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
   const leads = insightsLeads();
   const headers = ['Client Name','Client Source','Advisor','Task Created','Pot','Commission','Decline Reason','Decline Detail','Decline Sent','HLP Added','Assigned Date','Last Activity'];
-  const csvEscape = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const csvEscape = csvCell;
   const rows = leads.map(l=>{
     const last = leadLastActivity(l);
     return [
@@ -4522,7 +4513,7 @@ document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(()=> URL.revokeObjectURL(url), 1500);
   toast('CSV exported', 'success');
 });
 
@@ -4590,10 +4581,12 @@ let udParsedRows = null; // holds the parsed+matched rows between preview and im
    ---------------------------------------------------------------------------- */
 const BACKUP_COL = 'Backup data (do not edit)';
 function backupKey(){ return 'plt_lastBackup_' + (currentUser ? currentUser.id : ''); }
-function lastBackupDay(){ try{ return localStorage.getItem(backupKey()); }catch(e){ return null; } }
+// Also kept in memory, for browsers where localStorage is blocked.
+const backupDaysThisTab = {};
+function lastBackupDay(){ try{ const d = localStorage.getItem(backupKey()); if(d) return d; }catch(e){} return backupDaysThisTab[backupKey()] || null; }
 
 function buildBackupCsv(){
-  const csvEscape = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const csvEscape = v => (typeof v === 'string' && v.startsWith('{"id"')) ? `"${v.replace(/"/g,'""')}"` : csvCell(v);
   const headers = ['Lead ID','Client','Client email','Advisor','Status','Task Created','Follow-up date','Follow-up time','Commission','Decline reason','Notes','In Recycle Bin','Audit entries', BACKUP_COL];
   const rows = Object.entries(LEADS).map(([id,l])=>[
     id, l.clientName, leadEmails(l).join(', '), l.advisorName||'', STATUS_LABELS[l.status]||potOf(l),
@@ -4614,6 +4607,7 @@ function downloadBackup(auto){
   a.href = url; a.download = `protection-lead-tracker-backup-${day}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=> URL.revokeObjectURL(url), 1500);
+  backupDaysThisTab[backupKey()] = day;
   try{ localStorage.setItem(backupKey(), day); }catch(e){}
   renderBackupLabel();
   toast(`${auto ? 'Daily backup saved' : 'Backup downloaded'}: ${count} case${count===1?'':'s'} to your Downloads folder.`, 'success');
@@ -4693,10 +4687,12 @@ document.getElementById('udFileInput').addEventListener('change', function(){
       // "Mitch Atkins".
       let match = userList.find(([id,u])=> normalizeAdvisorName(u.name)===norm);
       if(!match){
-        match = userList.find(([id,u])=>{
+        const words = s => ' '+s+' ';
+        const hits = userList.filter(([id,u])=>{
           const un = normalizeAdvisorName(u.name);
-          return un.length>0 && (norm.includes(un) || un.includes(norm));
+          return un.length>0 && (words(norm).includes(words(un)) || words(un).includes(words(norm)));
         });
+        if(hits.length===1) match = hits[0]; // ambiguous → leave unassigned
       }
       return match ? {id:match[0], name:match[1].name} : null;
     };
@@ -4940,7 +4936,7 @@ function renderClientSources(){
     : list.map(([id,name])=> `
       <div class="source-row">
         <span>${esc(name)}</span>
-        <button class="icon-btn del" data-src-del="${id}" title="Delete">
+        <button class="icon-btn del" data-src-del="${esc(id)}" title="Delete">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
       </div>`).join('');
@@ -5003,8 +4999,8 @@ function renderRecycleBin(){
         <td style="color:${urgent?'var(--red)':'var(--text-muted)'}; font-weight:${urgent?700:400};">${daysLeft} day${daysLeft!==1?'s':''}</td>
         <td>
           <div class="row-actions">
-            <button class="btn btn-secondary btn-sm" data-restore="${l.id}">Restore</button>
-            <button class="icon-btn del" data-purge="${l.id}" title="Delete permanently now">
+            <button class="btn btn-secondary btn-sm" data-restore="${esc(l.id)}">Restore</button>
+            <button class="icon-btn del" data-purge="${esc(l.id)}" title="Delete permanently now">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
             </button>
           </div>
@@ -5078,6 +5074,8 @@ document.getElementById('uSubmit').addEventListener('click', function(){
   const oldPin = isNew ? null : pinFor(editingUserId);
   const pinChanged = !isNew && String(oldPin) !== String(pin);
   const email = authEmailFor(userId);
+  let linkedUid = null; // their Auth uid, when we get to see it below
+  const rememberUid = ()=>{ if(secondaryAuth.currentUser) linkedUid = secondaryAuth.currentUser.uid; return secondaryAuth.signOut(); };
 
   /* Keep their real Auth account in step with what Management just set,
      using the isolated secondary app so this never touches Management's
@@ -5089,14 +5087,14 @@ document.getElementById('uSubmit').addEventListener('click', function(){
   function syncAuthAccount(){
     if(isNew){
       return secondaryAuth.createUserWithEmailAndPassword(email, authPasswordFor(pin))
-        .then(()=> secondaryAuth.signOut())
+        .then(rememberUid)
         .catch(err=>{ if(err.code!=='auth/email-already-in-use') throw err; });
     }
     if(pinChanged){
       if(oldPin == null){
         // No record of their old PIN: set up a fresh account if they never had one.
         return secondaryAuth.createUserWithEmailAndPassword(email, authPasswordFor(pin))
-          .then(()=> secondaryAuth.signOut())
+          .then(rememberUid)
           .catch(err=>{
             if(err.code==='auth/email-already-in-use') throw new Error("their current PIN isn't on record, so it can't be changed from here. Remove and re-add them instead");
             throw err;
@@ -5104,10 +5102,10 @@ document.getElementById('uSubmit').addEventListener('click', function(){
       }
       return secondaryAuth.signInWithEmailAndPassword(email, authPasswordFor(oldPin))
         .then(()=> secondaryAuth.currentUser.updatePassword(authPasswordFor(pin)))
-        .then(()=> secondaryAuth.signOut())
+        .then(rememberUid)
         .catch(err=>{
           if(['auth/user-not-found','auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].includes(err.code)){
-            return secondaryAuth.createUserWithEmailAndPassword(email, authPasswordFor(pin)).then(()=> secondaryAuth.signOut());
+            return secondaryAuth.createUserWithEmailAndPassword(email, authPasswordFor(pin)).then(rememberUid);
           }
           throw err;
         });
@@ -5115,12 +5113,15 @@ document.getElementById('uSubmit').addEventListener('click', function(){
     // PIN unchanged: make sure they have an account (covers colleagues who
     // have never signed in). If they already have one this does nothing.
     return secondaryAuth.createUserWithEmailAndPassword(email, authPasswordFor(pin))
-      .then(()=> secondaryAuth.signOut())
+      .then(rememberUid)
       .catch(err=>{ if(err.code!=='auth/email-already-in-use') throw err; });
   }
 
   syncAuthAccount()
     .then(()=> db.ref().update({['users/'+userId]: payload, ['pins/'+userId]: pin}))
+    // Link the account now so it works straight away; the colleague's own
+    // sign-in does the same, so a refusal here is not a problem.
+    .then(()=> linkedUid ? db.ref('members/'+linkedUid).set(userId).catch(()=>{}) : null)
     .then(()=>{
       toast('Colleague saved','success');
       closeModal('userOverlay');
@@ -5135,12 +5136,12 @@ function renderUsersTable(){
   body.innerHTML = list.map(([id,u])=> `
     <tr>
       <td style="font-weight:600;">${esc(u.name)}</td>
-      <td><span class="role-badge ${u.role}">${ROLE_LABEL[u.role]||u.role}</span></td>
+      <td><span class="role-badge ${esc(u.role)}">${esc(ROLE_LABEL[u.role]||u.role)}</span></td>
       <td>${pinsLoaded && pinFor(id)==null ? `<span style="color:var(--amber); font-weight:600; font-size:12.5px;">Not set, edit to add</span>` : `<span class="pin-mono">••••</span>`}</td>
       <td>
         <div class="row-actions">
-          <button class="icon-btn" data-edit="${id}" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
-          <button class="icon-btn del" data-del="${id}" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          <button class="icon-btn" data-edit="${esc(id)}" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+          <button class="icon-btn del" data-del="${esc(id)}" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
         </div>
       </td>
     </tr>`).join('');
@@ -5154,7 +5155,13 @@ function renderUsersTable(){
         .then(()=> secondaryAuth.currentUser.delete())
         .catch(()=>{ /* they may never have logged in yet — nothing to clean up */ })
         .finally(()=>{
-          db.ref().update({['users/'+userId]: null, ['pins/'+userId]: null}).then(()=> toast('Colleague removed','success'));
+          db.ref().update({['users/'+userId]: null, ['pins/'+userId]: null})
+            .then(()=>{
+              toast('Colleague removed','success');
+              return db.ref('members').orderByValue().equalTo(userId).once('value')
+                .then(snap=>{ const gone = {}; snap.forEach(c=>{ gone[c.key] = null; }); return Object.keys(gone).length ? db.ref('members').update(gone) : null; });
+            })
+            .catch(err=> toast('Could not remove: '+err.message,'error'));
         });
     }
   }));

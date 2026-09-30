@@ -2,7 +2,12 @@
   "rules": {
     "users": {
       ".read": true,
-      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'"
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      "$userId": {
+        "name": {
+          ".write": "auth != null && root.child('members').child(auth.uid).val() === $userId && newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+        }
+      }
     },
 
     "members": {
@@ -17,7 +22,10 @@
 
     "pins": {
       ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
-      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'"
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      "$userId": {
+        ".write": "auth != null && root.child('members').child(auth.uid).val() === $userId && newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+      }
     },
 
     "leads": {

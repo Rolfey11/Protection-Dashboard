@@ -2407,10 +2407,18 @@ function tryResolveSession(){
     // The database rules only let an Auth account in once it's linked to a
     // colleague, so link first. Older rules without /members refuse this
     // write; carry on regardless so logins keep working either way.
+    // Once this browser has seen the link saved, it already exists, so load
+    // the data straight away instead of waiting for the write to come back.
     const signedInAs = pendingAuthUser;
-    db.ref('members/'+signedInAs.uid).set(matchId)
-      .catch(()=>{})
-      .then(()=>{ if(currentUser && currentUser.id===matchId && auth.currentUser===signedInAs) startAuthedListeners(); });
+    const linkKey = 'plt_linked_' + signedInAs.uid;
+    let knownLinked = false;
+    try{ knownLinked = localStorage.getItem(linkKey) === matchId; }catch(e){}
+    const linking = db.ref('members/'+signedInAs.uid).set(matchId)
+      .then(()=>{ try{ localStorage.setItem(linkKey, matchId); }catch(e){} })
+      .catch(()=>{});
+    const startIfStillSignedIn = ()=>{ if(currentUser && currentUser.id===matchId && auth.currentUser===signedInAs) startAuthedListeners(); };
+    if(knownLinked) startIfStillSignedIn();
+    else linking.then(startIfStillSignedIn);
   } else {
     // Signed in at the Auth layer but no matching colleague record — most
     // likely they were removed in Settings. Don't let a stale credential in.

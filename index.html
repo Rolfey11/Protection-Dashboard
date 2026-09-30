@@ -593,7 +593,8 @@ main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
   overflow:hidden; box-shadow:var(--shadow-sm); transition:box-shadow .25s, border-color .25s;
 }
 .pot::before{content:""; position:absolute; top:0; left:0; right:0; height:3px; background:var(--pot);}
-.pot.flash{animation:potFlash 1.1s ease;}
+.pot.flash,.outcome-panel.flash{animation:potFlash 1.1s ease;}
+.outcome-panel.flash{--pot:var(--brand);}
 @keyframes potFlash{0%,100%{box-shadow:var(--shadow-sm);}30%{box-shadow:0 0 0 3px color-mix(in srgb, var(--pot) 35%, transparent), var(--shadow);}}
 .pot-head{padding:14px 14px 10px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
 .pot-head-title{display:flex; align-items:center; gap:8px; min-width:0;}
@@ -1097,7 +1098,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 @keyframes tickPop{from{transform:scale(.3);}to{transform:scale(1);}}
 @media (max-width:560px){#toastHost{left:16px; right:16px; bottom:16px; align-items:stretch;} .toast{width:auto;}}
 @media (prefers-reduced-motion: reduce){
-  .toast,.toast-ic,.toast-bar,.page-enter,.pot.flash{animation:none !important;}
+  .toast,.toast-ic,.toast-bar,.page-enter,.pot.flash,.outcome-panel.flash{animation:none !important;}
   .lead-card,.kpi{transition:none !important;}
 }
 
@@ -1956,11 +1957,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <label for="emBody">Message</label>
         <textarea id="emBody" style="min-height:200px;"></textarea>
       </div>
-      <div class="field-hint">Opens Gmail with this filled in, ready to send. A copy is saved to the audit trail so anyone can view what was sent.</div>
+      <div class="field-hint">Opens Gmail in a new window with this filled in. Click Send there, then close that window to come back here. A copy is saved to the audit trail so anyone can view what was sent.</div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="emailComposeOverlay">Cancel</button>
-      <button class="btn btn-primary" id="emSend">Open in Gmail</button>
+      <button class="btn btn-primary" id="emSend">Send in Gmail</button>
     </div>
   </div>
 </div>
@@ -3309,9 +3310,11 @@ function downloadIcs(leads, filename){
 function safeFileName(s){ return String(s||'call').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'call'; }
 
 let emailLeadId = null;
-function openEmailCompose(leadId){
+let emailFromAction = false; // opened from the case's Email action button
+function openEmailCompose(leadId, fromAction=false){
   const l = LEADS[leadId]; if(!l) return;
   emailLeadId = leadId;
+  emailFromAction = fromAction;
   document.getElementById('emTo').value = leadEmails(l).join(', ');
   document.getElementById('emSubject').value = '';
   document.getElementById('emBody').value = '';
@@ -3330,10 +3333,17 @@ document.getElementById('emSend').addEventListener('click', function(){
   if(bad){ toast(`"${bad}" doesn't look like an email address.`,'error'); return; }
   if(!subject){ toast('Please add a subject.','error'); return; }
   if(!body){ toast('Please write a message.','error'); return; }
-  // Open Gmail straight from the click so the browser doesn't block it.
+  // Open Gmail straight from the click so the browser doesn't block it,
+  // in its own window so closing it after sending lands back on the case.
   const p = new URLSearchParams({view:'cm', fs:'1', to:to.join(','), su:subject, body});
-  window.open('https://mail.google.com/mail/?' + p.toString(), '_blank');
+  const gmail = window.open('https://mail.google.com/mail/?' + p.toString(), 'pltGmail', 'popup,width=980,height=760');
+  if(!gmail){ toast('Your browser blocked the Gmail window. Allow pop-ups for this site, then try again.','error'); return; }
   this.disabled = true;
+  const leadId = emailLeadId;
+  // From the Email action: once it's sent, show the outcome buttons (Sign Up,
+  // Follow Up, Decline) on the case, as the other actions do.
+  const showOutcome = emailFromAction && activeLeadId === leadId;
+  if(showOutcome) actionUIState = {kind:'email'};
   const patch = {};
   const onFile = leadEmails(l);
   if(to.join(',').toLowerCase() !== onFile.join(',').toLowerCase()) patch.clientEmails = to;
@@ -3342,10 +3352,25 @@ document.getElementById('emSend').addEventListener('click', function(){
     emailTo: to.join(', '), emailSubject: subject, emailBody: body,
     byId:currentUser.id, byName:currentUser.name, at:Date.now()
   }, patch).then(()=>{
-    toast('Gmail opened. Click Send there. A copy is in the audit trail.','success');
     closeModal('emailComposeOverlay');
-  }).catch(err=>{ toast('Could not save to the audit trail: '+err.message,'error'); this.disabled = false; });
+    if(showOutcome){
+      refreshLeadModal();
+      toast('Gmail opened. Click Send there and close that window, then choose the outcome below. A copy is in the audit trail.','success');
+      whenWindowCloses(gmail, ()=>{
+        window.focus();
+        if(activeLeadId !== leadId) return;
+        const panel = document.querySelector('#dynamicActionArea .outcome-panel');
+        if(panel){ panel.scrollIntoView({behavior:'smooth', block:'center'}); panel.classList.remove('flash'); void panel.offsetWidth; panel.classList.add('flash'); }
+      });
+    } else {
+      toast('Gmail opened. Click Send there. A copy is in the audit trail.','success');
+    }
+  }).catch(err=>{ if(showOutcome) actionUIState = null; toast('Could not save to the audit trail: '+err.message,'error'); this.disabled = false; });
 });
+
+function whenWindowCloses(win, cb){
+  const timer = setInterval(()=>{ if(win.closed){ clearInterval(timer); cb(); } }, 500);
+}
 
 /* Notes typed into the Notes box, or the "Save note" box under an action
    (older ones are recognised by their wording, e.g. "Call note: ..."). */
@@ -4116,6 +4141,8 @@ function logAudit(leadId, entry, patch={}){
 const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'Appointment', other:'Other contact'};
 
 function handleActionClick(lead, type){
+  // Email: write it first; the outcome buttons appear once it's sent.
+  if(type==='email'){ openEmailCompose(lead.id, true); return; }
   actionUIState = {kind:type};
   renderDynamicArea(lead);
 }

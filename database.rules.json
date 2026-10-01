@@ -48,6 +48,11 @@
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()"
     },
 
+    "config": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'"
+    },
+
     "clientSources": {
       ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists() && (root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management' || root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'admin')"

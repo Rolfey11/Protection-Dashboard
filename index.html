@@ -3075,7 +3075,7 @@ function renderCi(){
   out.innerHTML = '<div class="nml-empty">Loading…</div>';
   loadRefData('ciComparison').then(d=>{
     document.getElementById('ciSub').textContent = `Conditions covered, partial payments and children's cover by insurer.${d.checked ? ' Last checked '+fmtDate(d.checked)+'.' : ''}`;
-    document.getElementById('ciStatus').textContent = (d.status ? d.status+' ' : '') + 'Guidance only: always check the insurer’s current policy conditions before advising.';
+    document.getElementById('ciStatus').textContent = d.status || 'Guidance only: always check the insurer’s current policy conditions before advising.';
     const sort = document.getElementById('ciSort').value;
     const list = Object.values(d.insurers||{}).filter(i=> i && i.name).sort((a,b)=>
       sort==='name' ? a.name.localeCompare(b.name) : (ciBest(b, sort) - ciBest(a, sort)) || a.name.localeCompare(b.name));

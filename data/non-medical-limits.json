@@ -1,0 +1,1077 @@
+{
+  "description": "UK protection insurers: highest cover accepted with no automatic medical evidence (non-medical limits), by age band.",
+  "checked": "2026-10-01",
+  "conventions": {
+    "age_basis": "nb = age next birthday; current = current age / age attained",
+    "age_from_null": "lowest age accepted",
+    "age_to_null": "and over",
+    "max_no_evidence": "GBP. life/critical_illness = lump sum; income_protection = monthly benefit. null = band not published; \"unlimited\" = no routine evidence at any amount",
+    "product_null": "no published limits for that cover",
+    "lookup": "Convert the client to the insurer age basis (nb = current age + 1), find the band containing that age, and compare the requested cover with max_no_evidence. Existing cover with the same insurer usually counts towards the limit."
+  },
+  "insurers": [
+    {
+      "name": "Legal & General",
+      "age_basis": "nb",
+      "source": "Q41806, Oct 2025",
+      "url": "https://www.legalandgeneral.com/asset/4a1613/globalassets/adviser/files/protection/underwriting/q41806.pdf/",
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 35,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 900000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 600000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 550000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 66,
+          "age_to": 70,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 71,
+          "age_to": 74,
+          "max_no_evidence": 75000
+        },
+        {
+          "age_from": 75,
+          "age_to": null,
+          "max_no_evidence": 25000
+        }
+      ],
+      "critical_illness": [
+        {
+          "age_from": null,
+          "age_to": 30,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 31,
+          "age_to": 35,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 75000
+        },
+        {
+          "age_from": 66,
+          "age_to": null,
+          "max_no_evidence": 50000
+        }
+      ],
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 40,
+          "max_no_evidence": 6250
+        },
+        {
+          "age_from": 41,
+          "age_to": 50,
+          "max_no_evidence": 4000
+        },
+        {
+          "age_from": 51,
+          "age_to": null,
+          "max_no_evidence": 2000
+        }
+      ]
+    },
+    {
+      "name": "Aviva",
+      "age_basis": "nb",
+      "source": "AL98002, Aug 2026",
+      "url": "https://www.aviva.co.uk/adviser/documents/view/al98002c.pdf",
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 30,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 31,
+          "age_to": 35,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 750000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 550000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 450000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 325000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 250000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 66,
+          "age_to": 70,
+          "max_no_evidence": 75000
+        },
+        {
+          "age_from": 71,
+          "age_to": 75,
+          "max_no_evidence": 50000
+        },
+        {
+          "age_from": 76,
+          "age_to": 80,
+          "max_no_evidence": 25000
+        },
+        {
+          "age_from": 81,
+          "age_to": null,
+          "max_no_evidence": 0
+        }
+      ],
+      "critical_illness": [
+        {
+          "age_from": null,
+          "age_to": 30,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 31,
+          "age_to": 35,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 61,
+          "age_to": null,
+          "max_no_evidence": 75000
+        }
+      ],
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 40,
+          "max_no_evidence": 6250
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 3000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 2500
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 1200
+        },
+        {
+          "age_from": 56,
+          "age_to": null,
+          "max_no_evidence": 850
+        }
+      ]
+    },
+    {
+      "name": "Royal London",
+      "age_basis": "cur",
+      "source": "Adviser site (2023 limits)",
+      "url": "https://adviser.royallondon.com/product-support/protection/underwriting/medical-underwriting-limits/",
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 29,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 30,
+          "age_to": 34,
+          "max_no_evidence": 900000
+        },
+        {
+          "age_from": 35,
+          "age_to": 39,
+          "max_no_evidence": 800000
+        },
+        {
+          "age_from": 40,
+          "age_to": 44,
+          "max_no_evidence": 600000
+        },
+        {
+          "age_from": 45,
+          "age_to": 49,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 50,
+          "age_to": 54,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 55,
+          "age_to": 59,
+          "max_no_evidence": 250000
+        },
+        {
+          "age_from": 60,
+          "age_to": 64,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 65,
+          "age_to": 69,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 70,
+          "age_to": 74,
+          "max_no_evidence": 50000
+        },
+        {
+          "age_from": 75,
+          "age_to": null,
+          "max_no_evidence": 25000
+        }
+      ],
+      "critical_illness": [
+        {
+          "age_from": null,
+          "age_to": 29,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 30,
+          "age_to": 34,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 35,
+          "age_to": 39,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 40,
+          "age_to": 44,
+          "max_no_evidence": 350000
+        },
+        {
+          "age_from": 45,
+          "age_to": 49,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 50,
+          "age_to": 54,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 55,
+          "age_to": 59,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 60,
+          "age_to": 64,
+          "max_no_evidence": 50000
+        },
+        {
+          "age_from": 65,
+          "age_to": null,
+          "max_no_evidence": 50000
+        }
+      ],
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 39,
+          "max_no_evidence": 6250
+        },
+        {
+          "age_from": 40,
+          "age_to": 44,
+          "max_no_evidence": 4166
+        },
+        {
+          "age_from": 45,
+          "age_to": 49,
+          "max_no_evidence": null
+        },
+        {
+          "age_from": 50,
+          "age_to": 54,
+          "max_no_evidence": 2916
+        },
+        {
+          "age_from": 55,
+          "age_to": null,
+          "max_no_evidence": null
+        }
+      ],
+      "notes": "Income protection limits are from a 2022 announcement; 45-49 and 55+ bands not published."
+    },
+    {
+      "name": "LV=",
+      "age_basis": "nb",
+      "source": "44929, Nov 2024",
+      "url": "https://www.lvadviser.com/service/documentlibrary/get/610d50ced687470a8656f373cb9baef7/medical-uw-limits",
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 35,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 800000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 600000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 200000
+        },
+        {
+          "age_from": 66,
+          "age_to": 70,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 71,
+          "age_to": 75,
+          "max_no_evidence": 75000
+        },
+        {
+          "age_from": 76,
+          "age_to": null,
+          "max_no_evidence": 50000
+        }
+      ],
+      "critical_illness": [
+        {
+          "age_from": null,
+          "age_to": 35,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 61,
+          "age_to": null,
+          "max_no_evidence": 75000
+        }
+      ],
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 41,
+          "max_no_evidence": 6250
+        },
+        {
+          "age_from": 42,
+          "age_to": 46,
+          "max_no_evidence": 3578
+        },
+        {
+          "age_from": 47,
+          "age_to": 51,
+          "max_no_evidence": 2500
+        },
+        {
+          "age_from": 52,
+          "age_to": 56,
+          "max_no_evidence": 1672
+        },
+        {
+          "age_from": 57,
+          "age_to": 60,
+          "max_no_evidence": 1196
+        }
+      ]
+    },
+    {
+      "name": "The Exeter",
+      "age_basis": "cur",
+      "source": "MKTG807, Aug 2026",
+      "url": "https://dyn.the-exeter.com/download/brochure?code=ML-UWG",
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 40,
+          "max_no_evidence": 750000
+        },
+        {
+          "age_from": 41,
+          "age_to": 50,
+          "max_no_evidence": 750000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 66,
+          "age_to": 70,
+          "max_no_evidence": 200000
+        },
+        {
+          "age_from": 71,
+          "age_to": 75,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 76,
+          "age_to": null,
+          "max_no_evidence": 100000
+        }
+      ],
+      "critical_illness": null,
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 41,
+          "max_no_evidence": "unlimited"
+        },
+        {
+          "age_from": 42,
+          "age_to": 45,
+          "max_no_evidence": 3000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 2500
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 2000
+        },
+        {
+          "age_from": 56,
+          "age_to": 59,
+          "max_no_evidence": 1250
+        }
+      ],
+      "notes": "Life = Real Life, IP = Income First. No critical illness limits published. Under 42: no routine IP evidence at any benefit."
+    },
+    {
+      "name": "Vitality",
+      "age_basis": "nb",
+      "source": "Current tables (supplied)",
+      "url": "https://adviser.vitality.co.uk/life-insurance/underwriting/non-medical-limits",
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 30,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 31,
+          "age_to": 35,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 900000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 600000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 550000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 200000
+        },
+        {
+          "age_from": 66,
+          "age_to": 70,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 71,
+          "age_to": 75,
+          "max_no_evidence": 50000
+        },
+        {
+          "age_from": 76,
+          "age_to": null,
+          "max_no_evidence": 25000
+        }
+      ],
+      "critical_illness": [
+        {
+          "age_from": null,
+          "age_to": 30,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 31,
+          "age_to": 35,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 75000
+        },
+        {
+          "age_from": 66,
+          "age_to": null,
+          "max_no_evidence": 75000
+        }
+      ],
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 40,
+          "max_no_evidence": 6250
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 3333
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 2500
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 1500
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 1500
+        }
+      ],
+      "notes": "IP limits are for deferred periods of 1 month or longer. 1-week deferred: 3000 (to 40 nb), 2000 (41-50), 1000 (51-60)."
+    },
+    {
+      "name": "Guardian",
+      "age_basis": "cur",
+      "source": "Current tables (supplied)",
+      "url": null,
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 30,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 31,
+          "age_to": 40,
+          "max_no_evidence": 770000
+        },
+        {
+          "age_from": 41,
+          "age_to": 50,
+          "max_no_evidence": 550000
+        },
+        {
+          "age_from": 51,
+          "age_to": 60,
+          "max_no_evidence": 330000
+        },
+        {
+          "age_from": 61,
+          "age_to": 64,
+          "max_no_evidence": 100000
+        }
+      ],
+      "critical_illness": [
+        {
+          "age_from": null,
+          "age_to": 40,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 41,
+          "age_to": 50,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 51,
+          "age_to": 60,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 61,
+          "age_to": 64,
+          "max_no_evidence": 75000
+        },
+        {
+          "age_from": 65,
+          "age_to": 69,
+          "max_no_evidence": 50000
+        }
+      ],
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 40,
+          "max_no_evidence": 4166
+        },
+        {
+          "age_from": 41,
+          "age_to": 50,
+          "max_no_evidence": 3333
+        },
+        {
+          "age_from": 51,
+          "age_to": 60,
+          "max_no_evidence": 1250
+        }
+      ],
+      "notes": "Tables do not state age basis; treated as current age. Combined life & CI uses the CI limits to age 64. IP set on annual benefit (50k/40k/15k)."
+    },
+    {
+      "name": "Zurich",
+      "age_basis": "cur",
+      "source": "LIFKN423, Feb 2026",
+      "url": "https://www.zurichintermediary.co.uk/-/media/zurich-intermediary/documents/sales-aids/721015.pdf",
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 29,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 30,
+          "age_to": 34,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 35,
+          "age_to": 39,
+          "max_no_evidence": 750000
+        },
+        {
+          "age_from": 40,
+          "age_to": 44,
+          "max_no_evidence": 550000
+        },
+        {
+          "age_from": 45,
+          "age_to": 49,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 50,
+          "age_to": 54,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 55,
+          "age_to": 59,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 60,
+          "age_to": 64,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 65,
+          "age_to": 69,
+          "max_no_evidence": 50000
+        },
+        {
+          "age_from": 70,
+          "age_to": null,
+          "max_no_evidence": 25000
+        }
+      ],
+      "critical_illness": [
+        {
+          "age_from": null,
+          "age_to": 29,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 30,
+          "age_to": 34,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 35,
+          "age_to": 39,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 40,
+          "age_to": 44,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 45,
+          "age_to": 49,
+          "max_no_evidence": 250000
+        },
+        {
+          "age_from": 50,
+          "age_to": 54,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 55,
+          "age_to": 59,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 60,
+          "age_to": 64,
+          "max_no_evidence": 50000
+        },
+        {
+          "age_from": 65,
+          "age_to": null,
+          "max_no_evidence": 50000
+        }
+      ],
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 39,
+          "max_no_evidence": 6250
+        },
+        {
+          "age_from": 40,
+          "age_to": 44,
+          "max_no_evidence": 3000
+        },
+        {
+          "age_from": 45,
+          "age_to": 49,
+          "max_no_evidence": 2500
+        },
+        {
+          "age_from": 50,
+          "age_to": 54,
+          "max_no_evidence": 1250
+        },
+        {
+          "age_from": 55,
+          "age_to": 59,
+          "max_no_evidence": 850
+        }
+      ],
+      "notes": "Family income cover assessed as monthly benefit x months x 0.67 against the life table."
+    },
+    {
+      "name": "Scottish Widows",
+      "age_basis": "nb",
+      "source": "54788, Aug 2026",
+      "url": "https://adviser.scottishwidows.co.uk/products/protection/underwriting.html",
+      "life": [
+        {
+          "age_from": null,
+          "age_to": 30,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 31,
+          "age_to": 35,
+          "max_no_evidence": 1000000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 750000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 550000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 450000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 350000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 250000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 66,
+          "age_to": null,
+          "max_no_evidence": 100000
+        }
+      ],
+      "critical_illness": [
+        {
+          "age_from": null,
+          "age_to": 30,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 31,
+          "age_to": 35,
+          "max_no_evidence": 500000
+        },
+        {
+          "age_from": 36,
+          "age_to": 40,
+          "max_no_evidence": 450000
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 400000
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 300000
+        },
+        {
+          "age_from": 51,
+          "age_to": 55,
+          "max_no_evidence": 150000
+        },
+        {
+          "age_from": 56,
+          "age_to": 60,
+          "max_no_evidence": 100000
+        },
+        {
+          "age_from": 61,
+          "age_to": 65,
+          "max_no_evidence": 75000
+        }
+      ],
+      "income_protection": [
+        {
+          "age_from": null,
+          "age_to": 40,
+          "max_no_evidence": 6250
+        },
+        {
+          "age_from": 41,
+          "age_to": 45,
+          "max_no_evidence": 3333
+        },
+        {
+          "age_from": 46,
+          "age_to": 50,
+          "max_no_evidence": 2500
+        },
+        {
+          "age_from": 51,
+          "age_to": null,
+          "max_no_evidence": 1250
+        }
+      ],
+      "notes": "Bands worked out from pasted tables that lost column alignment; check 36-40 life (750k) and CI (450k) against the PDF. IP set on annual benefit (75k/40k/30k/15k)."
+    }
+  ]
+}

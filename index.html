@@ -3389,9 +3389,11 @@ function leadEmails(lead){
 }
 function parseEmails(text){ return String(text||'').split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean); }
 
-function googleCalUrl(lead){
+function googleCalUrl(lead, {invite} = {}){
   const {start, end} = calEventTimes(lead);
-  const emails = leadEmails(lead);
+  // invite: put the client in Guests so Google sends them an invite. Left
+  // unset, a client with an email on file is invited (the calendar buttons).
+  const emails = invite === false ? [] : leadEmails(lead);
   const title = calTitle(lead);
   const details = emails.length ? clientEventText(lead) : calEventText(lead).details;
   const p = new URLSearchParams({action:'TEMPLATE', text:title, dates:`${start}/${end}`, details});
@@ -3666,7 +3668,7 @@ function bindClientEmailCell(lead){
     const btn = document.getElementById('ceSave'); btn.disabled = true;
     const text = emails.length ? `Client email updated to ${emails.join(', ')}` : 'Client email removed';
     logAudit(lead.id, {type:'detail', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {clientEmails: emails.length ? emails : null})
-      .then(()=>{ toast(emails.length ? 'Client email saved' : 'Client email removed', 'success'); refreshLeadModal(); })
+      .then(()=>{ toast(emails.length ? 'Client email saved' : 'Client email removed', 'success'); refreshLeadModal(true); })
       .catch(err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; });
   };
   document.getElementById('ceSave').addEventListener('click', save);
@@ -4441,58 +4443,67 @@ function renderDynamicArea(lead){
           <textarea id="fuComment" placeholder="Notes for the follow-up call…"></textarea>
         </div>
         <div class="fu-actions">
-          <button class="btn btn-primary btn-sm" id="fuSave">Save follow-up</button>
-          <button class="btn btn-ghost btn-sm hidden" id="fuSaveOnly">Save without adding to calendar</button>
+          <button class="btn btn-primary btn-sm" id="fuInviteBtn" disabled>${ico('calendar')} Add to Calendar – Client invite</button>
+          <button class="btn btn-secondary btn-sm" id="fuCalBtn" disabled>${ico('calendar')} Add to Calendar – No invite</button>
+          <button class="btn btn-ghost btn-sm" id="fuSaveOnly">Save without adding to Calendar</button>
         </div>
-        <div class="fu-hint" id="fuHint">Add a date and time to put the call straight into Google Calendar.</div>
+        <div class="fu-hint" id="fuHint"></div>
         <div id="fuInvite"></div>
       </div>`;
     const fuDate = document.getElementById('fuDate'), fuTime = document.getElementById('fuTime');
-    const fuSave = document.getElementById('fuSave'), fuSaveOnly = document.getElementById('fuSaveOnly');
-    const fuReady = ()=> !!(fuDate.value && fuTime.value);
+    const fuInviteBtn = document.getElementById('fuInviteBtn'), fuCalBtn = document.getElementById('fuCalBtn'), fuSaveOnly = document.getElementById('fuSaveOnly');
+    const allBtns = [fuInviteBtn, fuCalBtn, fuSaveOnly];
+    const clientEmails = ()=> leadEmails(LEADS[lead.id] || lead);
     const syncFuButtons = ()=>{
-      const ready = fuReady();
-      fuSave.innerHTML = ready ? `${ico('calendar')} Add to Google Calendar` : 'Save follow-up';
-      fuSaveOnly.classList.toggle('hidden', !ready);
+      const ready = !!(fuDate.value && fuTime.value);
+      const em = clientEmails();
+      fuCalBtn.disabled = !ready;
+      fuInviteBtn.disabled = !ready || !em.length;
       document.getElementById('fuHint').textContent = ready
-        ? `Saves the follow-up and opens Google Calendar with a 1-hour call at ${fuTime.value} on ${fmtDate(fuDate.value)}. Just click Save there.`
-        : 'Add a date and time to put the call straight into Google Calendar.';
-      const em = leadEmails(LEADS[lead.id] || lead);
+        ? `The calendar options open Google Calendar with a 1-hour call at ${fuTime.value} on ${fmtDate(fuDate.value)}. Just click Save there.`
+        : 'Choose a date and time to add the call to Google Calendar.';
       const inv = document.getElementById('fuInvite');
-      if(!ready){ inv.innerHTML = ''; return; }
       inv.innerHTML = em.length
-        ? `<div class="fu-invite">${ico('mail')}<span>A calendar invite will go to <b>${esc(em.join(', '))}</b>. In Google, click <b>Save</b>, then <b>Send</b>. If a Google Meet link appears, click the <b>×</b> next to it first.</span></div>`
-        : `<div class="fu-invite none">${ico('info')}<span>No client email on this lead, so no invite will be sent. <button type="button" class="linkish" id="fuAddEmail">Add an email</button></span></div>`;
+        ? (ready ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(em.join(', '))}</b> (already in Guests). In Google, click <b>Save</b>, then <b>Send</b>. If a Google Meet link appears, click the <b>×</b> next to it first.</span></div>` : '')
+        : `<div class="fu-invite none">${ico('info')}<span>No client email on this case, so a client invite isn't available. <button type="button" class="linkish" id="fuAddEmail">Add an email</button></span></div>`;
       const add = document.getElementById('fuAddEmail');
       if(add) add.addEventListener('click', ()=>{ const b = document.getElementById('ceEditBtn'); if(b){ b.click(); b.closest('.info-cell').scrollIntoView({behavior:'smooth', block:'center'}); } });
     };
     fuDate.addEventListener('input', syncFuButtons); fuTime.addEventListener('input', syncFuButtons);
+    syncFuButtons();
 
-    const saveFollowUp = (btn, addToGoogle)=>{
+    // mode: 'invite' (calendar + client guest), 'calendar' (just the adviser's event) or 'save'
+    const saveFollowUp = (mode)=>{
       const date = fuDate.value, time = fuTime.value;
       const comment = document.getElementById('fuComment').value.trim();
       if(!date){ toast('Please choose a follow-up date.','error'); return; }
+      if(mode !== 'save' && !time){ toast('Please choose a time to add the call to Google Calendar.','error'); return; }
+      const inviteTo = mode==='invite' ? clientEmails() : [];
+      if(mode==='invite' && !inviteTo.length){ toast('Add the client\'s email to the case first.','error'); return; }
       // Open the tab now, while we still have the click: browsers block
       // pop-ups opened later, after the save finishes.
-      const gTab = addToGoogle ? window.open('about:blank', '_blank') : null;
-      fuSave.disabled = fuSaveOnly.disabled = true;
+      const gTab = mode !== 'save' ? window.open('about:blank', '_blank') : null;
+      allBtns.forEach(b=> b.disabled = true);
       const when = fmtDateSlash(date) + (time ? ` at ${time}` : '');
-      const inviteTo = addToGoogle ? leadEmails(LEADS[lead.id] || lead) : [];
       const fuPatch = {status:'existing', followUpDate:date, followUpTime:time||null};
-      const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '') + (inviteTo.length ? ` - Calendar invite prepared for ${inviteTo.join(', ')}` : '');
+      const calNote = mode==='invite' ? ` - Calendar invite prepared for ${inviteTo.join(', ')}` : mode==='calendar' ? ' - Added to calendar (no client invite)' : '';
+      const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '') + calNote;
       logAudit(lead.id, {type:'followup', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, fuPatch)
         .then(()=>{
           if(gTab){
-            const url = googleCalUrl({...(LEADS[lead.id] || lead), id:lead.id, followUpDate:date, followUpTime:time, followUpNote:comment});
+            const url = googleCalUrl({...(LEADS[lead.id] || lead), id:lead.id, followUpDate:date, followUpTime:time, followUpNote:comment}, {invite: mode==='invite'});
             try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
           }
-          toast(`Follow-up booked for ${fmtDate(date)}${time?' at '+time:''}. ${addToGoogle ? (inviteTo.length ? 'In Google, click Save, then Send to invite the client.' : 'Google Calendar opened: click Save there.') : 'Moved to Contacted Clients.'}`,'success');
+          const next = mode==='invite' ? 'In Google, click Save, then Send to invite the client.'
+            : mode==='calendar' ? 'Google Calendar opened: click Save there.' : 'Moved to Contacted Clients.';
+          toast(`Follow-up booked for ${fmtDate(date)}${time?' at '+time:''}. ${next}`,'success');
           actionUIState=null; refreshLeadModal();
         })
-        .catch(err=>{ if(gTab) gTab.close(); toast('Could not save: '+err.message,'error'); fuSave.disabled = fuSaveOnly.disabled = false; });
+        .catch(err=>{ if(gTab) gTab.close(); toast('Could not save: '+err.message,'error'); fuSaveOnly.disabled = false; syncFuButtons(); });
     };
-    fuSave.addEventListener('click', ()=> saveFollowUp(fuSave, fuReady()));
-    fuSaveOnly.addEventListener('click', ()=> saveFollowUp(fuSaveOnly, false));
+    fuInviteBtn.addEventListener('click', ()=> saveFollowUp('invite'));
+    fuCalBtn.addEventListener('click', ()=> saveFollowUp('calendar'));
+    fuSaveOnly.addEventListener('click', ()=> saveFollowUp('save'));
     return;
   }
 

@@ -557,6 +557,21 @@ main{max-width:1680px; margin:0 auto; padding:20px 24px 20px;}
 .nml-band-list{display:flex; flex-wrap:wrap; gap:6px 14px;}
 .nml-band-list span.cur{font-weight:700; color:var(--brand);}
 .nml-empty{padding:22px; text-align:center; color:var(--text-muted); font-size:13px;}
+.ci-status{background:var(--amber-bg); color:var(--amber); border-radius:10px; padding:10px 13px; font-size:12.5px; font-weight:600; margin-bottom:14px; line-height:1.45;}
+.ci-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(420px, 1fr)); gap:14px;}
+@media (max-width:520px){.ci-grid{grid-template-columns:1fr;}}
+.ci-card h3{font-size:15px; font-weight:700; color:var(--text);}
+.ci-card .ci-product{font-size:12px; color:var(--text-muted); margin:2px 0 10px;}
+.ci-card .mini-table td.num{font-weight:700; font-variant-numeric:tabular-nums;}
+.ci-card .ci-row{font-size:12.5px; color:var(--text); margin-top:10px; line-height:1.45;}
+.ci-card .ci-row b{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-faint); margin-bottom:2px;}
+.ci-card .ci-warn{color:var(--amber); font-weight:600;}
+.ci-card .ci-optnote{font-size:11px; color:var(--text-muted); margin-top:2px;}
+.cfg-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 2px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
+.cfg-row:last-child{border-bottom:none;}
+.cfg-row .cfg-name{font-weight:700; font-size:13.5px; color:var(--text);}
+.cfg-row .cfg-sub, .cfg-sub{font-size:12px; color:var(--text-muted); margin-top:2px;}
+.cfg-actions{display:flex; gap:6px; flex-wrap:wrap;}
 .page-head .sub{font-size:13.5px; color:var(--text-muted); margin-top:4px;}
 
 .overdue-banner{
@@ -1431,6 +1446,13 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="section-lbl">Commission</div>
       <div class="stat-grid" id="commissionStats"></div>
 
+      <div class="section-lbl">Underwriting</div>
+      <div class="stat-grid" id="uwStats"></div>
+      <div class="insights-card" id="uwAdvisorCard" style="margin-bottom:20px;">
+        <h4>Underwriting by advisor</h4>
+        <table class="mini-table" id="uwAdvisorTable"></table>
+      </div>
+
       <div class="insights-cols" id="advisorSourceRow">
         <div class="insights-card" id="byAdvisorCard">
           <h4>By advisor</h4>
@@ -1534,6 +1556,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <span class="useful-card-title">NON Medical ASA Limits</span>
             <span class="useful-card-sub">Highest cover each insurer accepts without automatic medical evidence, by age.</span>
           </button>
+          <button type="button" class="useful-card" data-useful="ci">
+            <span class="useful-card-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+            <span class="useful-card-title">Critical Illness Comparison</span>
+            <span class="useful-card-sub">Conditions covered, partial payments and children's cover by insurer.</span>
+          </button>
         </div>
       </div>
 
@@ -1565,6 +1592,26 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
         <p class="nml-note">Guidance only: always confirm with the insurer before advising. Existing cover with the same insurer usually counts towards the limit.</p>
         <div id="nmlResults"></div>
+      </div>
+
+      <div id="ciSection" class="hidden">
+        <button type="button" class="linkish useful-back" data-useful-back>&larr; Useful Info</button>
+        <div class="page-head">
+          <div>
+            <h1>Critical Illness Comparison</h1>
+            <p class="sub" id="ciSub">Conditions covered, partial payments and children's cover by insurer.</p>
+          </div>
+          <div class="field" style="margin:0; min-width:220px;">
+            <label for="ciSort">Sort by</label>
+            <select id="ciSort">
+              <option value="full">Most full-payment conditions</option>
+              <option value="additional">Most additional-payment conditions</option>
+              <option value="name">Insurer A–Z</option>
+            </select>
+          </div>
+        </div>
+        <div class="ci-status" id="ciStatus"></div>
+        <div id="ciResults" class="ci-grid"></div>
       </div>
     </div>
 
@@ -1685,6 +1732,31 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <div style="display:flex; gap:8px;">
             <input type="text" id="csNewSourceInput" placeholder="e.g. Resi Purchase" style="flex:1; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px;">
             <button class="btn btn-primary btn-sm" id="csAddSourceBtn">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="settingsContentSection" class="hidden" style="margin-bottom:34px;">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1 style="font-size:19px;">Email templates &amp; reference data</h1>
+            <p class="sub">Update what colleagues see without a code change. Changes apply to everyone straight away.</p>
+          </div>
+        </div>
+        <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start;">
+          <div class="insights-card" style="flex:1; min-width:300px;">
+            <div class="section-lbl" style="margin-top:0;">Email templates</div>
+            <div id="tplList"></div>
+            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" id="tplAddBtn">Add template</button>
+              <button class="btn btn-ghost btn-sm" id="tplResetBtn">Restore standard templates</button>
+            </div>
+          </div>
+          <div class="insights-card" style="flex:1; min-width:300px;">
+            <div class="section-lbl" style="margin-top:0;">Reference data (Useful Info)</div>
+            <div id="refList"></div>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:10px; line-height:1.5;">To update a table: Download it, edit the file (or ask Claude to), then Upload it. The tracker checks the file before using it.</p>
+            <input type="file" id="refFileInput" accept=".json,application/json" class="hidden">
           </div>
         </div>
       </div>
@@ -2049,6 +2121,31 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <div class="modal-foot">
       <button class="btn btn-secondary" id="fpSignOut">Sign out</button>
       <button class="btn btn-primary" id="fpSave">Save new PIN</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tplOverlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head"><h2 id="tplTitle">Email template</h2><button class="modal-close" data-close="tplOverlay">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="tplName">Template name (shown in the list)</label>
+        <input type="text" id="tplName" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="tplSubject">Subject</label>
+        <input type="text" id="tplSubject" maxlength="200">
+      </div>
+      <div class="field" style="margin-bottom:6px;">
+        <label for="tplBody">Message</label>
+        <textarea id="tplBody" style="min-height:300px;"></textarea>
+      </div>
+      <div class="field-hint">Use <b>{names}</b> for the clients' first names and <b>{adviser}</b> for the colleague's name. Anything left in [square brackets] must be filled in before the email can be sent.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="tplOverlay">Cancel</button>
+      <button class="btn btn-primary" id="tplSave">Save template</button>
     </div>
   </div>
 </div>
@@ -2657,6 +2754,7 @@ function logout(){
   db.ref('leads').off();
   notifsQuery().off();
   db.ref('clientSources').off();
+  db.ref('config').off(); CONFIG = {};
   db.ref('pins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {};
   selectedAdvisorFilter = null; searchTerm = ''; dateRangeFrom = null; dateRangeTo = null;
   document.getElementById('globalSearch').value = '';
@@ -2776,6 +2874,8 @@ function goPage(page){
       document.getElementById(id).classList.toggle('hidden', isMapa));
     renderMyAccount();
     renderAppSettings();
+    document.getElementById('settingsContentSection').classList.toggle('hidden', currentUser.role!=='management');
+    if(currentUser.role==='management') renderContentSettings();
     if(!isMapa){
       renderUsersTable();
       resetBulkDelete();
@@ -2847,6 +2947,7 @@ let NML = null, nmlLoading = null;
 function showUsefulHome(){
   document.getElementById('usefulHome').classList.remove('hidden');
   document.getElementById('nmlSection').classList.add('hidden');
+  document.getElementById('ciSection').classList.add('hidden');
 }
 document.querySelectorAll('[data-useful]').forEach(b=> b.addEventListener('click', ()=>{
   if(b.dataset.useful==='nml'){
@@ -2855,16 +2956,40 @@ document.querySelectorAll('[data-useful]').forEach(b=> b.addEventListener('click
     loadNml().then(renderNml);
     setTimeout(()=> document.getElementById('nmlAge').focus(), 50);
   }
+  if(b.dataset.useful==='ci'){
+    document.getElementById('usefulHome').classList.add('hidden');
+    document.getElementById('ciSection').classList.remove('hidden');
+    renderCi();
+  }
 }));
 document.querySelectorAll('[data-useful-back]').forEach(b=> b.addEventListener('click', showUsefulHome));
 
+/* Reference tables: Management's uploaded version (in /config) wins over
+   the standard file shipped with the tracker. */
+const REF_DATA = {
+  nonMedicalLimits: {label:'NON Medical ASA Limits', file:'data/non-medical-limits.json'},
+  ciComparison:     {label:'Critical Illness Comparison', file:'data/ci-comparison.json'},
+};
+const refCache = {};
+function resetReferenceData(){
+  Object.keys(REF_DATA).forEach(k=> delete refCache[k]);
+  NML = null; nmlLoading = null;
+  if(!document.getElementById('nmlSection').classList.contains('hidden')) loadNml().then(renderNml);
+  if(!document.getElementById('ciSection').classList.contains('hidden')) renderCi();
+}
+function loadRefData(key){
+  if(CONFIG[key]) return Promise.resolve(CONFIG[key]);
+  if(!refCache[key]){
+    refCache[key] = fetch(REF_DATA[key].file, {cache:'no-cache'})
+      .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .catch(err=>{ delete refCache[key]; throw err; });
+  }
+  return refCache[key];
+}
 function loadNml(){
   if(NML) return Promise.resolve(NML);
   if(!nmlLoading){
-    nmlLoading = fetch('data/non-medical-limits.json', {cache:'no-cache'})
-      .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-      .then(d=>{ NML = d; return d; })
-      .catch(err=>{ nmlLoading = null; throw err; });
+    nmlLoading = loadRefData('nonMedicalLimits').then(d=>{ NML = d; return d; }).catch(err=>{ nmlLoading = null; throw err; });
   }
   return nmlLoading.catch(()=>{
     document.getElementById('nmlResults').innerHTML = '<div class="nml-empty">Could not load the limits. Check your connection and try again.</div>';
@@ -2940,6 +3065,170 @@ function renderNml(){
   }));
 }
 ['nmlAge','nmlAmount'].forEach(id=> document.getElementById(id).addEventListener('input', ()=>{ if(NML) renderNml(); }));
+/* ---- Critical Illness Comparison (data/ci-comparison.json or Management's upload) ---- */
+function ciCount(v){ return v==null ? '—' : esc(String(v)); }
+function ciNum(v){ const n = parseInt(String(v==null?'':v), 10); return isNaN(n) ? -1 : n; }
+// Severity-based totals (Vitality) aren't full-payment counts, so they sort last.
+function ciBest(ins, key){ return Math.max(-1, ...Object.values(ins.options||{}).map(o=> ciNum(o[key]))); }
+function renderCi(){
+  const out = document.getElementById('ciResults');
+  out.innerHTML = '<div class="nml-empty">Loading…</div>';
+  loadRefData('ciComparison').then(d=>{
+    document.getElementById('ciSub').textContent = `Conditions covered, partial payments and children's cover by insurer.${d.checked ? ' Last checked '+fmtDate(d.checked)+'.' : ''}`;
+    document.getElementById('ciStatus').textContent = (d.status ? d.status+' ' : '') + 'Guidance only: always check the insurer’s current policy conditions before advising.';
+    const sort = document.getElementById('ciSort').value;
+    const list = Object.values(d.insurers||{}).filter(i=> i && i.name).sort((a,b)=>
+      sort==='name' ? a.name.localeCompare(b.name) : (ciBest(b, sort) - ciBest(a, sort)) || a.name.localeCompare(b.name));
+    out.innerHTML = list.map(ins=>{
+      const opts = Object.values(ins.options||{});
+      const link = ins.url && /^https:\/\//.test(ins.url) ? `<a href="${esc(ins.url)}" target="_blank" rel="noopener">${esc(ins.source||'Source')}</a>` : esc(ins.source||'—');
+      return `<div class="insights-card ci-card">
+        <h3>${esc(ins.name)}</h3>
+        <div class="ci-product">${esc(ins.product||'')}</div>
+        <table class="mini-table">
+          <thead><tr><th>Option</th><th>Full payment</th><th>Additional payment</th><th>Additional payment pays</th></tr></thead>
+          <tbody>${opts.map(o=> `<tr>
+            <td style="font-weight:600;">${esc(o.name||'')}${o.notes ? `<div class="ci-optnote">${esc(o.notes)}</div>` : ''}</td>
+            <td class="num">${o.full==null && o.total!=null ? ciCount(o.total)+' <span class="ci-optnote" style="display:inline;">total</span>' : ciCount(o.full)}</td>
+            <td class="num">${ciCount(o.additional)}</td>
+            <td>${o.additional_payment ? esc(o.additional_payment) : '—'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        <div class="ci-row"><b>Children's cover</b>${ins.children ? esc(ins.children) : 'Not recorded'}</div>
+        ${ins.notes ? `<div class="ci-row ci-warn">${esc(ins.notes)}</div>` : ''}
+        <div class="ci-row"><b>Source</b>${link}</div>
+      </div>`;
+    }).join('') || '<div class="nml-empty">No insurers in the comparison yet.</div>';
+  }).catch(()=>{ out.innerHTML = '<div class="nml-empty">Could not load the comparison. Check your connection and try again.</div>'; });
+}
+document.getElementById('ciSort').addEventListener('change', renderCi);
+
+/* ---- Settings: Management edits templates and reference data ---- */
+function savedTemplates(){ return CONFIG.emailTemplates ? Object.values(CONFIG.emailTemplates).filter(t=> t && t.name) : null; }
+function renderContentSettings(){
+  const custom = savedTemplates();
+  const list = getEmailTemplates();
+  document.getElementById('tplList').innerHTML = `<div class="cfg-sub" style="margin-bottom:6px;">${custom ? 'Using your edited templates.' : 'Using the standard templates.'}</div>` +
+    list.map((t,i)=> `<div class="cfg-row">
+      <div style="min-width:0;"><div class="cfg-name">${esc(t.name)}</div><div class="cfg-sub">${esc(t.subject)}</div></div>
+      <div class="cfg-actions"><button class="btn btn-secondary btn-sm" data-tpl-edit="${i}">Edit</button><button class="btn btn-ghost btn-sm" data-tpl-del="${i}">Delete</button></div>
+    </div>`).join('');
+  document.getElementById('tplResetBtn').classList.toggle('hidden', !custom);
+  document.querySelectorAll('[data-tpl-edit]').forEach(b=> b.addEventListener('click', ()=> openTemplateEditor(Number(b.dataset.tplEdit))));
+  document.querySelectorAll('[data-tpl-del]').forEach(b=> b.addEventListener('click', ()=>{
+    const all = getEmailTemplates(); const t = all[Number(b.dataset.tplDel)];
+    if(!t || !confirm(`Delete the "${t.name}" template for everyone?`)) return;
+    all.splice(Number(b.dataset.tplDel), 1);
+    if(!all.length){ toast('Keep at least one template. To go back to the standard set, use Restore standard templates.','error'); return; }
+    saveTemplates(all, 'Template deleted');
+  }));
+
+  document.getElementById('refList').innerHTML = Object.entries(REF_DATA).map(([key, r])=>{
+    const c = CONFIG[key];
+    const sub = c ? `Uploaded version${c.checked ? ', checked '+fmtDate(c.checked) : ''}${c._uploadedBy ? ' · uploaded by '+esc(c._uploadedBy)+(c._uploadedAt ? ' on '+fmtDate(c._uploadedAt) : '') : ''}` : 'Standard file shipped with the tracker';
+    return `<div class="cfg-row">
+      <div><div class="cfg-name">${esc(r.label)}</div><div class="cfg-sub">${sub}</div></div>
+      <div class="cfg-actions">
+        <button class="btn btn-secondary btn-sm" data-ref-dl="${key}">Download</button>
+        <button class="btn btn-primary btn-sm" data-ref-up="${key}">Upload new</button>
+        ${c ? `<button class="btn btn-ghost btn-sm" data-ref-reset="${key}">Use standard file</button>` : ''}
+      </div></div>`;
+  }).join('');
+  document.querySelectorAll('[data-ref-dl]').forEach(b=> b.addEventListener('click', ()=> downloadRefData(b.dataset.refDl)));
+  document.querySelectorAll('[data-ref-up]').forEach(b=> b.addEventListener('click', ()=>{
+    const input = document.getElementById('refFileInput'); input.value = ''; input.dataset.key = b.dataset.refUp; input.click();
+  }));
+  document.querySelectorAll('[data-ref-reset]').forEach(b=> b.addEventListener('click', ()=>{
+    const key = b.dataset.refReset;
+    if(!confirm(`Go back to the standard ${REF_DATA[key].label} file? Your uploaded version will be removed.`)) return;
+    db.ref('config/'+key).remove().then(()=> toast('Using the standard file again','success')).catch(err=> toast('Could not save: '+err.message,'error'));
+  }));
+}
+
+let tplEditing = null; // index being edited, or null for a new template
+function openTemplateEditor(index){
+  tplEditing = index;
+  const t = index==null ? {name:'', subject:'', body:'Dear {names},\n\n\n\nKind regards,\n{adviser}'} : getEmailTemplates()[index];
+  document.getElementById('tplTitle').textContent = index==null ? 'New email template' : 'Edit email template';
+  document.getElementById('tplName').value = t.name;
+  document.getElementById('tplSubject').value = t.subject;
+  document.getElementById('tplBody').value = t.body;
+  document.getElementById('tplSave').disabled = false;
+  openModal('tplOverlay');
+}
+document.getElementById('tplAddBtn').addEventListener('click', ()=> openTemplateEditor(null));
+document.getElementById('tplSave').addEventListener('click', function(){
+  const t = {name: document.getElementById('tplName').value.trim(), subject: document.getElementById('tplSubject').value.trim(), body: document.getElementById('tplBody').value.replace(/\s+$/,'')};
+  if(!t.name || !t.subject || !t.body){ toast('Please fill in the name, subject and message.','error'); return; }
+  const all = getEmailTemplates();
+  if(all.some((x,i)=> i!==tplEditing && x.name.toLowerCase()===t.name.toLowerCase())){ toast('A template with that name already exists.','error'); return; }
+  if(tplEditing==null) all.push(t); else all[tplEditing] = t;
+  this.disabled = true;
+  saveTemplates(all, 'Template saved').then(ok=>{ this.disabled = false; if(ok) closeModal('tplOverlay'); });
+});
+document.getElementById('tplResetBtn').addEventListener('click', ()=>{
+  if(!confirm('Go back to the standard email templates? Your edits will be removed for everyone.')) return;
+  db.ref('config/emailTemplates').remove().then(()=> toast('Standard templates restored','success')).catch(err=> toast('Could not save: '+err.message,'error'));
+});
+function saveTemplates(all, msg){
+  return db.ref('config/emailTemplates').set(all.map(t=> ({name:t.name, subject:t.subject, body:t.body})))
+    .then(()=>{ toast(msg,'success'); return true; })
+    .catch(err=>{ toast('Could not save: '+err.message+(String(err.code||err.message).toUpperCase().includes('PERMISSION') ? ' Publish the updated Firebase rules first.' : ''),'error'); return false; });
+}
+
+function downloadRefData(key){
+  loadRefData(key).then(d=>{
+    const clean = JSON.parse(JSON.stringify(d)); delete clean._uploadedBy; delete clean._uploadedAt;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(clean, null, 2)], {type:'application/json'}));
+    const a = document.createElement('a'); a.href = url; a.download = REF_DATA[key].file.split('/').pop();
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(url), 1500);
+  }).catch(()=> toast('Could not load that table to download.','error'));
+}
+
+/* Checks an uploaded table has the shape the pages expect; returns a problem or null. */
+function checkRefData(key, d){
+  if(!d || typeof d!=='object' || !Array.isArray(d.insurers) || !d.insurers.length) return 'it needs an "insurers" list with at least one insurer';
+  const num = v=> v==null || (typeof v==='number' && isFinite(v));
+  for(const [i, ins] of d.insurers.entries()){
+    const where = `insurer ${i+1}${ins && ins.name ? ' ('+ins.name+')' : ''}`;
+    if(!ins || typeof ins.name!=='string' || !ins.name.trim()) return `${where} has no name`;
+    if(key==='nonMedicalLimits'){
+      if(ins.age_basis!=='nb' && ins.age_basis!=='cur') return `${where}: age_basis must be "nb" or "cur"`;
+      for(const cover of ['life','critical_illness','income_protection']){
+        const bands = ins[cover];
+        if(bands==null) continue;
+        if(!Array.isArray(bands)) return `${where}: ${cover} must be a list of age bands or null`;
+        for(const b of bands){
+          if(!b || !num(b.age_from) || !num(b.age_to)) return `${where}: ${cover} has an age band with a bad age_from/age_to`;
+          const v = b.max_no_evidence;
+          if(!(v==null || v==='unlimited' || (typeof v==='number' && v>=0))) return `${where}: ${cover} has a bad max_no_evidence (${JSON.stringify(v)})`;
+        }
+      }
+    } else {
+      if(!Array.isArray(ins.options) || !ins.options.length) return `${where} needs an "options" list`;
+      for(const o of ins.options){ if(!o || typeof o.name!=='string') return `${where} has an option with no name`; }
+    }
+  }
+  return null;
+}
+document.getElementById('refFileInput').addEventListener('change', function(){
+  const key = this.dataset.key, file = this.files[0];
+  if(!file || !REF_DATA[key]) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    let d;
+    try{ d = JSON.parse(String(reader.result)); }catch(e){ toast("That file isn't valid JSON, so it wasn't used.",'error'); return; }
+    const problem = checkRefData(key, d);
+    if(problem){ toast(`That file wasn't used: ${problem}.`,'error'); return; }
+    if(!confirm(`Use this ${REF_DATA[key].label} table for everyone?\n\n${d.insurers.length} insurers${d.checked ? ', checked '+fmtDate(d.checked) : ''}.`)) return;
+    d._uploadedBy = currentUser.name; d._uploadedAt = Date.now();
+    db.ref('config/'+key).set(d)
+      .then(()=> toast(`${REF_DATA[key].label} updated for everyone`,'success'))
+      .catch(err=> toast('Could not save: '+err.message+(String(err.code||err.message).toUpperCase().includes('PERMISSION') ? ' Publish the updated Firebase rules first.' : ''),'error'));
+  };
+  reader.readAsText(file);
+});
+
 document.getElementById('nmlCover').addEventListener('change', ()=>{ if(NML) renderNml(); });
 
 /* ----------------------------------------------------------------------------
@@ -3020,6 +3309,9 @@ function migratePinsOutOfUsers(){
 }
 
 let realtimeListenersStarted = false;
+/* /config holds what Management edits in Settings: emailTemplates,
+   nonMedicalLimits, ciComparison. Missing = use the standard versions. */
+let CONFIG = {};
 let linkingPromise = null;
 let listenRetry = 'none'; // 'none' → 'scheduled' → 'done'
 /* A listener refused before this sign-in's account link was saved (e.g. the
@@ -3032,7 +3324,7 @@ function onListenError(showError){
   linkingPromise.then(()=> setTimeout(()=>{
     if(!currentUser) return;
     listenRetry = 'done';
-    db.ref('leads').off(); notifsQuery().off(); db.ref('clientSources').off(); db.ref('pins').off();
+    db.ref('leads').off(); notifsQuery().off(); db.ref('clientSources').off(); db.ref('pins').off(); db.ref('config').off();
     realtimeListenersStarted = false; pinsListenerStarted = false;
     startAuthedListeners();
   }, 300));
@@ -3078,6 +3370,12 @@ function startAuthedListeners(){
 
   const DEFAULT_CLIENT_SOURCES = ['Resi Purchase','Resi Remo','Resi FA','Resi PT','BTL Purchase','BTL Remo','BTL FA','BTL PT','Equity Release','Bridge'];
   startPinsListener();
+
+  db.ref('config').on('value', snap=>{
+    CONFIG = snap.val() || {};
+    resetReferenceData();
+    if(currentUser && currentUser.role==='management' && !document.getElementById('page-settings').classList.contains('hidden')) renderContentSettings();
+  }, ()=>{ CONFIG = {}; }); // older rules without /config: the standard versions are used
 
   let clientSourcesSeeded = false;
   db.ref('clientSources').on('value', snap=>{
@@ -3666,7 +3964,7 @@ const RISKS_LIST = [
 const RESPONSIBILITY = 'Please be aware that by not taking action, you are accepting full responsibility for any financial implications that may arise in the future.';
 const CONSUMER_DUTY = "As your adviser, I have a duty to ensure you receive the right guidance and avoid foreseeable harm. Under the Consumer Duty regulations, we must ensure you have the right level of protection and value from your policy.";
 const SIGN_OFF = 'Kind regards,\n{adviser}';
-const EMAIL_TEMPLATES = [
+const DEFAULT_EMAIL_TEMPLATES = [
   {name:'Unable to Contact', subject:'Your life insurance: checking in', body:[
     'Hi {names},',
     "I've tried to get in touch a few times about your life insurance, but haven't managed to reach you. I know how busy things can get, so I just wanted to check in.",
@@ -3721,6 +4019,13 @@ const EMAIL_TEMPLATES = [
   ]},
 ];
 
+/* Templates Management has saved in Settings, else the standard set above. */
+function getEmailTemplates(){
+  const saved = CONFIG.emailTemplates ? Object.values(CONFIG.emailTemplates).filter(t=> t && t.name) : [];
+  return saved.length ? saved.map(t=> ({name:t.name, subject:t.subject||'', body:t.body||''}))
+    : DEFAULT_EMAIL_TEMPLATES.map(t=> ({name:t.name, subject:t.subject, body:t.body.join('\n\n')}));
+}
+
 /* "Jane" / "John and Jane" / "Ann, Bob and Cat" from the case's client names */
 function clientFirstNames(lead){
   const names = (Array.isArray(lead.clientNames) && lead.clientNames.length ? lead.clientNames : String(lead.clientName||'').split(/\s*&\s*/))
@@ -3733,17 +4038,17 @@ function fillTemplate(text, lead){
 }
 function renderTemplateOptions(){
   document.getElementById('emTemplate').innerHTML = '<option value="">Choose a template (optional)…</option>' +
-    EMAIL_TEMPLATES.map((t,i)=> `<option value="${i}">${esc(t.name)}</option>`).join('');
+    getEmailTemplates().map((t,i)=> `<option value="${i}">${esc(t.name)}</option>`).join('');
 }
 let emLastTemplate = null; // what the chosen template filled in, to spot edits
 document.getElementById('emTemplate').addEventListener('change', function(){
-  const t = EMAIL_TEMPLATES[this.value];
+  const t = getEmailTemplates()[this.value];
   const lead = LEADS[emailLeadId];
   if(!t || !lead) return;
   const subj = document.getElementById('emSubject'), body = document.getElementById('emBody');
   const typed = body.value.trim() && (!emLastTemplate || body.value !== emLastTemplate.body);
   if(typed && !confirm('Replace what you\'ve written with the "'+t.name+'" template?')){ this.value = emLastTemplate ? emLastTemplate.index : ''; return; }
-  const filled = {index:this.value, name:t.name, subject:fillTemplate(t.subject, lead), body:fillTemplate(t.body.join('\n\n'), lead)};
+  const filled = {index:this.value, name:t.name, subject:fillTemplate(t.subject, lead), body:fillTemplate(t.body, lead)};
   subj.value = filled.subject; body.value = filled.body; emLastTemplate = filled;
   body.scrollTop = 0;
 });
@@ -4997,6 +5302,45 @@ function renderInsights(){
     statCard('£'+totalCommission.toLocaleString(undefined,{maximumFractionDigits:0}), 'Total commission', 'accent') +
     statCard('£'+avgCommission.toLocaleString(undefined,{maximumFractionDigits:0}), 'Average per sign-up') +
     statCard(signedLeads.length, 'Sign-ups counted');
+
+  /* ---- Underwriting ----
+     Sent = cases with a 'Sent to underwriting' entry; on risk = a sign-up
+     logged after it. Pending = cases sitting In Underwriting now. */
+  const uwInfo = l=>{
+    const audit = Object.values(l.audit||{}).sort((a,b)=> a.at-b.at);
+    const sent = audit.find(a=> a.type==='underwriting');
+    if(!sent) return null;
+    const onRisk = audit.find(a=> a.type==='signup' && a.at > sent.at);
+    return {sentAt: sent.at, onRiskAt: onRisk ? onRisk.at : null};
+  };
+  const uwSummary = list=>{
+    const infos = list.map(uwInfo).filter(Boolean);
+    const done = infos.filter(i=> i.onRiskAt);
+    const now = list.filter(l=> potOf(l)==='underwriting');
+    return {
+      sent: infos.length, onRisk: done.length,
+      rate: infos.length ? Math.round(done.length/infos.length*100) : null,
+      avgDays: done.length ? done.reduce((s,i)=> s + (i.onRiskAt-i.sentAt), 0)/done.length/86400000 : null,
+      nowCount: now.length, pending: now.reduce((s,l)=> s + Number(l.commission||0), 0)
+    };
+  };
+  const uw = uwSummary(leads);
+  const daysTxt = d=> d==null ? '—' : d<1 ? '<1 day' : Math.round(d)+' day'+(Math.round(d)===1?'':'s');
+  document.getElementById('uwStats').innerHTML =
+    statCard(uw.nowCount, 'In underwriting now') +
+    statCard('£'+uw.pending.toLocaleString(undefined,{maximumFractionDigits:0}), 'Commission pending underwriting', 'accent') +
+    statCard(uw.sent, 'Sent to underwriting') +
+    statCard(uw.rate==null ? '—' : `${uw.onRisk} · ${uw.rate}%`, 'Now on risk (of those sent)', uw.rate==null?'':uw.rate>=70?'good':uw.rate>=40?'warn':'bad') +
+    statCard(daysTxt(uw.avgDays), 'Avg. time in underwriting');
+  document.getElementById('uwAdvisorCard').classList.toggle('hidden', isMapa);
+  if(!isMapa){
+    const rows = mapas.map(([id,u])=> ({name:u.name, ...uwSummary(leads.filter(l=> l.advisorId===id))}))
+      .filter(r=> r.sent || r.nowCount).sort((a,b)=> b.pending - a.pending);
+    document.getElementById('uwAdvisorTable').innerHTML = rows.length===0
+      ? `<tr><td class="insights-empty">No cases sent to underwriting in this filter/date range yet.</td></tr>`
+      : `<thead><tr><th>Advisor</th><th>In UW now</th><th>Pending</th><th>Sent</th><th>On risk</th><th>Avg. time</th></tr></thead>
+         <tbody>${rows.map(r=> `<tr><td style="font-weight:600;">${esc(r.name)}</td><td>${r.nowCount}</td><td>£${r.pending.toLocaleString(undefined,{maximumFractionDigits:0})}</td><td>${r.sent}</td><td>${r.onRisk}${r.rate==null?'':' ('+r.rate+'%)'}</td><td>${daysTxt(r.avgDays)}</td></tr>`).join('')}</tbody>`;
+  }
 
   /* ---- By advisor ---- */
   const advisorRows = mapas.map(([id,u])=>{

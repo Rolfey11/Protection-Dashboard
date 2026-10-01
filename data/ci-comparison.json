@@ -1,0 +1,102 @@
+{
+  "description": "UK critical illness cover: conditions covered, partial payments and children's cover by insurer and product option.",
+  "checked": "2026-10-01",
+  "status": "Draft from published summaries and comparison sites. Guidance only: check each figure against the insurer's current policy conditions before advising.",
+  "insurers": [
+    {
+      "name": "Aviva",
+      "product": "Critical Illness+",
+      "options": [
+        {"name": "Standard", "full": 33, "additional": 2, "additional_payment": "Up to £25,000 (doesn't reduce the main cover)", "notes": "Full-payment count includes terminal illness."},
+        {"name": "Upgraded", "full": "47+", "additional": "26+", "additional_payment": "Up to £25,000 (doesn't reduce the main cover)", "notes": "Upgraded cover adds brain abscess (full) and less severe third degree burns (partial)."}
+      ],
+      "children": "£25,000 fixed payment. Children covered from birth to their 22nd birthday, in education or not.",
+      "source": "Aviva Critical Illness+ adviser guide",
+      "url": "https://static.aviva.io/content/dam/document-library/adviser/individualprotection/pt07280c.pdf",
+      "notes": null
+    },
+    {
+      "name": "Legal & General",
+      "product": "Life Insurance with Critical Illness Cover",
+      "options": [
+        {"name": "Critical Illness Cover", "full": 31, "additional": 2, "additional_payment": "Lower of £25,000 or 25% of cover", "notes": "Additional payments are for low grade in situ breast and prostate cancer."},
+        {"name": "Critical Illness Extra", "full": 48, "additional": 28, "additional_payment": "Lower of £30,000 or 50% of cover", "notes": null}
+      ],
+      "children": "Lower of £25,000 or 50% of cover, from 30 days to 18 (21 if in full-time education). Plus £5,000 hospitalisation benefit (28+ days) and £5,000 funeral benefit.",
+      "source": "L&G critical illness conditions sales aid",
+      "url": "https://cms.legalandgeneral.com/globalassets/adviser/files/protection/sales-aid/critical-illness-conditions.pdf",
+      "notes": null
+    },
+    {
+      "name": "Royal London",
+      "product": "Critical Illness Cover",
+      "options": [
+        {"name": "Critical Illness Cover", "full": 46, "additional": 32, "additional_payment": "50% of cover, up to £35,000", "notes": "Includes 17 early-stage cancer definitions."}
+      ],
+      "children": "Optional enhanced children's cover from pregnancy to 22 (23 in full-time education): 50% of cover up to £50,000, including total permanent disability.",
+      "source": "Royal London Critical Illness Cover at a glance",
+      "url": "https://adviser.royallondon.com/globalassets/docs/protection/SAP8P10029-critical-illness-cover-at-a-glance.pdf",
+      "notes": "Sources disagree: other summaries quote 52 full and 29 additional conditions. Check the at a glance guide."
+    },
+    {
+      "name": "LV=",
+      "product": "Life and Critical Illness",
+      "options": [
+        {"name": "Combined Life & Critical Illness", "full": 39, "additional": 2, "additional_payment": null, "notes": null},
+        {"name": "Combined Life & Enhanced Critical Illness", "full": 49, "additional": 39, "additional_payment": "Enhanced payments up to £200,000 for some life-altering conditions; £1,000 cost of cancer payment", "notes": "LV= quotes 87 conditions in total, which suggests 38 additional, not 39. Check."}
+      ],
+      "children": "Standard: birth to 23, 50% of cover up to £25,000 (85 conditions), plus enhanced accident/organ payments up to £50,000. Optional Enhanced Children's Cover adds 10 child-specific illnesses and pregnancy cover.",
+      "source": "LV= adviser site: Life and Critical Illness",
+      "url": "https://www.lvadviser.com/personal-protection/life-and-critical-illness/types-of-cover",
+      "notes": null
+    },
+    {
+      "name": "Vitality",
+      "product": "Serious Illness Cover (severity based)",
+      "options": [
+        {"name": "1X", "full": null, "additional": null, "total": 114, "additional_payment": "Severity levels A–D: 25%–100% of cover", "notes": null},
+        {"name": "2X", "full": null, "additional": null, "total": 143, "additional_payment": "Severity levels A–E: 15%–100% of cover", "notes": null},
+        {"name": "3X", "full": null, "additional": null, "total": 174, "additional_payment": "Severity levels A–G: 5%–100% of cover", "notes": null}
+      ],
+      "children": null,
+      "source": "Vitality Serious Illness Cover",
+      "url": "https://www.vitality.co.uk/life-insurance/serious-illness-cover/",
+      "notes": "Pays a percentage of cover by severity instead of full/partial lists, and allows multiple claims. Counts are total conditions, so they don't compare directly with full-payment counts."
+    },
+    {
+      "name": "Zurich",
+      "product": "Critical Illness Cover",
+      "options": [
+        {"name": "Standard", "full": 40, "additional": null, "additional_payment": null, "notes": null},
+        {"name": "Select", "full": 51, "additional": 48, "additional_payment": "Up to £50,000; doesn't affect a later full claim", "notes": null}
+      ],
+      "children": "Lower of £25,000 or 50% of cover, from birth to 22, for the conditions covered. £5,000 funeral benefit.",
+      "source": "Zurich Intermediary: Critical Illness cover",
+      "url": "https://www.zurichintermediary.co.uk/critical-illness-cover",
+      "notes": null
+    },
+    {
+      "name": "Scottish Widows",
+      "product": "Personal Protection: Critical Illness",
+      "options": [
+        {"name": "Critical Illness", "full": 30, "additional": 10, "additional_payment": "Lower of £30,000 or 25% of cover", "notes": null}
+      ],
+      "children": "Included automatically up to age 22: up to £30,000 on diagnosis, £10,000 if a covered child dies.",
+      "source": "Scottish Widows adviser: Critical Illness Protection",
+      "url": "https://adviser.scottishwidows.co.uk/products/protection/personal-protection-critical-illness-cover.html",
+      "notes": "Some figures come from an older guide (2020). Check the current definitions page."
+    },
+    {
+      "name": "Guardian",
+      "product": "Critical Illness",
+      "options": [
+        {"name": "Comprehensive", "full": 53, "additional": 22, "additional_payment": "£50,000, or 10%–25% of cover", "notes": "Total permanent disability included as standard."},
+        {"name": "Essentials", "full": null, "additional": 4, "additional_payment": null, "notes": "Simpler, lower-cost range launched June 2026; additional payments are for early-stage cancer. Full-payment count not confirmed."}
+      ],
+      "children": "Built-in children's cover, with optional extra children's critical illness cover. Includes the policyholder's partner's children.",
+      "source": "Guardian announcements (2026)",
+      "url": "https://www.mortgagesolutions.co.uk/mortgage-news/2026/06/15/guardian-launches-critical-illness-covers-with-four-additional-payout-conditions/",
+      "notes": null
+    }
+  ]
+}

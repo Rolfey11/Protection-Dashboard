@@ -1974,6 +1974,10 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <input type="email" id="emTo" placeholder="client@email.com (separate joint clients with a comma)">
       </div>
       <div class="field">
+        <label for="emTemplate">Email Templates</label>
+        <select id="emTemplate"></select>
+      </div>
+      <div class="field">
         <label for="emSubject">Subject</label>
         <input type="text" id="emSubject">
       </div>
@@ -3433,6 +3437,100 @@ function downloadIcs(leads, filename){
 }
 function safeFileName(s){ return String(s||'call').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'call'; }
 
+/* ----------------------------------------------------------------------------
+   EMAIL TEMPLATES — offered in the email box. {names} becomes the clients'
+   first names ("Jane", "John and Jane"); {adviser} the colleague's name.
+   Gmail pre-fills plain text, so there's no bold.
+   ---------------------------------------------------------------------------- */
+const RISKS_LIST = [
+  '• Your family could find it difficult to keep up with the mortgage, household bills or other debts if you were to pass away or become seriously ill. In the worst case, this could put your home at risk.',
+  '• The people who rely on you could be left facing financial hardship at an already difficult time.',
+];
+const RESPONSIBILITY = 'Please be aware that by not taking action, you are accepting full responsibility for any financial implications that may arise in the future.';
+const CONSUMER_DUTY = "As your adviser, I have a duty to ensure you receive the right guidance and avoid foreseeable harm. Under the Consumer Duty regulations, we must ensure you have the right level of protection and value from your policy.";
+const SIGN_OFF = 'Kind regards,\n{adviser}';
+const EMAIL_TEMPLATES = [
+  {name:'Unable to Contact', subject:'Your life insurance: checking in', body:[
+    'Hi {names},',
+    "I've tried to get in touch a few times about your life insurance, but haven't managed to reach you. I know how busy things can get, so I just wanted to check in.",
+    "I'm keen to have a quick chat because, with a mortgage in place, having the right protection can make a big difference to you and your family. Without it:",
+    ...RISKS_LIST,
+    "• Cover can become more expensive, or harder to arrange, as we get older or if our health changes, so it's often better to look at it sooner rather than later.",
+    CONSUMER_DUTY,
+    RESPONSIBILITY,
+    "There's no obligation, and if you already have cover in place, I'm happy to check it still fits your mortgage. If your circumstances have changed or you're unsure about your options, a short call is often the easiest way to talk things through.",
+    'Just reply with a time that suits you or call me on 01256637000.',
+    SIGN_OFF,
+  ]},
+  {name:'Spoken to but no contact', subject:'Following up on your protection recommendation', body:[
+    'Dear {names},',
+    "I hope you're well. Following our conversation about your protection needs I've tried to reach you a few times to see how you'd like to move forward with my recommendation, but haven't managed to catch you.",
+    "I completely understand that life gets busy, and there's no pressure to make a decision. The choice is entirely yours. If anything in the recommendation doesn't feel quite right, whether that's the level of cover, the cost, or one particular part of it, I'd really welcome the chance to talk it through. We can adjust things to suit you, and even a smaller amount of cover can make a real difference.",
+    "The reason I'm keen to speak with you is that, without cover in place:",
+    ...RISKS_LIST,
+    '• Cover can become more expensive, or harder to arrange, as we get older or if our health changes, so the terms available to you today may not always be there.',
+    "As your adviser, part of my role is to make sure you have everything you need to make an informed decision, and that you understand the risks of going without cover. If you've decided not to go ahead, that's absolutely fine. I'd just appreciate a quick reply so I can note your decision and close things off properly.",
+    RESPONSIBILITY,
+    "If your circumstances have changed, or you'd simply like to go over your options again, I'd be happy to arrange a short call at a time that suits you. Just reply to this email or call me on 01256637000.",
+    SIGN_OFF,
+  ]},
+  {name:'Gone Online', subject:'Before you arrange life insurance online', body:[
+    'Dear {names},',
+    "I hope you're well. I wanted to get in touch about your life insurance, particularly if you've been thinking about arranging a policy online.",
+    'Buying online can seem quick and convenient, and for some people it works well. But life insurance is a long-term commitment, and there are a few things that are easy to miss without advice, which could matter a great deal to your family if you ever needed to claim.',
+    "Here's how I can help:",
+    "• Cover that fits you. Online quotes usually start from a standard amount and term. I'll look at your mortgage, your income, your family and your health to work out the right level of cover, so you're not left with too little or paying for more than you need.",
+    "• Getting the application right. Most claims that aren't paid in full come down to information missed or answered incorrectly on the application. I'll take you through the questions properly, so you can be confident your policy will pay out when it matters.",
+    "• Understanding what you're covered for. Policies can look similar on the surface but differ in what they include, particularly with critical illness cover. I'll explain the differences in plain English and compare policies from [a range of / the whole market of] insurers, so you get good value and not just the lowest price.",
+    "• Setting up a trust. Many people don't realise it's worth putting their policy into trust, and it's easily missed when buying online. A trust can help the money reach the right people more quickly, and can help keep it outside your estate for inheritance tax. I'll help you set this up correctly.",
+    "• Ongoing support. If your circumstances change, or your family ever needs to make a claim, you'll have someone to speak to rather than a website or call centre.",
+    "My aim is simply to make sure you have the information you need to choose the right cover for you and your family. I'd be happy to arrange a short call to go through your options, with no obligation.",
+    'Just reply to this email with a time that suits you, or call me on 01256637000.',
+    SIGN_OFF,
+  ]},
+  {name:'Declined', subject:'Your life insurance decision', body:[
+    'Dear {names},',
+    'Thank you for your time, and for considering your life insurance options with us.',
+    "I understand you've decided not to go ahead with cover at the moment, and I completely respect that. The decision is yours to make. As you didn't mention a reason, I wanted to follow up to make sure you have everything you need, and to set out the risks of not having cover so that your decision is a fully informed one.",
+    'Without protection in place:',
+    '• You or your family could find it difficult to keep up with the mortgage, household bills or other debts if you were to pass away or become seriously ill. In the worst case, this could put your home at risk.',
+    RISKS_LIST[1],
+    '• Cover can become more expensive, or harder to arrange, as we get older or if our health changes, so the terms available to you today may not always be there.',
+    CONSUMER_DUTY,
+    RESPONSIBILITY,
+    "If something in particular held you back, whether that's the cost, the level of cover, or simply the timing, I'd really welcome the chance to talk it through. We can often adjust the cover to suit you, and even a smaller amount can make a real difference.",
+    'If not, no problem at all. The door is always open, so please get in touch whenever you feel ready, or if your circumstances change. You can reply to this email or call me on 01256637000.',
+    SIGN_OFF,
+  ]},
+];
+
+/* "Jane" / "John and Jane" / "Ann, Bob and Cat" from the case's client names */
+function clientFirstNames(lead){
+  const names = (Array.isArray(lead.clientNames) && lead.clientNames.length ? lead.clientNames : String(lead.clientName||'').split(/\s*&\s*/))
+    .map(n=> String(n).trim().split(/\s+/)[0]).filter(Boolean);
+  if(!names.length) return 'there';
+  return names.length===1 ? names[0] : names.slice(0,-1).join(', ') + ' and ' + names[names.length-1];
+}
+function fillTemplate(text, lead){
+  return text.replace(/\{names\}/g, clientFirstNames(lead)).replace(/\{adviser\}/g, currentUser ? currentUser.name : '');
+}
+function renderTemplateOptions(){
+  document.getElementById('emTemplate').innerHTML = '<option value="">Choose a template (optional)…</option>' +
+    EMAIL_TEMPLATES.map((t,i)=> `<option value="${i}">${esc(t.name)}</option>`).join('');
+}
+let emLastTemplate = null; // what the chosen template filled in, to spot edits
+document.getElementById('emTemplate').addEventListener('change', function(){
+  const t = EMAIL_TEMPLATES[this.value];
+  const lead = LEADS[emailLeadId];
+  if(!t || !lead) return;
+  const subj = document.getElementById('emSubject'), body = document.getElementById('emBody');
+  const typed = body.value.trim() && (!emLastTemplate || body.value !== emLastTemplate.body);
+  if(typed && !confirm('Replace what you\'ve written with the "'+t.name+'" template?')){ this.value = emLastTemplate ? emLastTemplate.index : ''; return; }
+  const filled = {index:this.value, name:t.name, subject:fillTemplate(t.subject, lead), body:fillTemplate(t.body.join('\n\n'), lead)};
+  subj.value = filled.subject; body.value = filled.body; emLastTemplate = filled;
+  body.scrollTop = 0;
+});
+
 let emailLeadId = null;
 let emailFromAction = false; // opened from the case's Email action button
 function openEmailCompose(leadId, fromAction=false){
@@ -3442,6 +3540,7 @@ function openEmailCompose(leadId, fromAction=false){
   document.getElementById('emTo').value = leadEmails(l).join(', ');
   document.getElementById('emSubject').value = '';
   document.getElementById('emBody').value = '';
+  renderTemplateOptions(); emLastTemplate = null;
   document.getElementById('emSend').disabled = false;
   openModal('emailComposeOverlay');
   setTimeout(()=> document.getElementById('emSubject').focus(), 50);
@@ -3457,6 +3556,8 @@ document.getElementById('emSend').addEventListener('click', function(){
   if(bad){ toast(`"${bad}" doesn't look like an email address.`,'error'); return; }
   if(!subject){ toast('Please add a subject.','error'); return; }
   if(!body){ toast('Please write a message.','error'); return; }
+  const leftover = (subject+'\n'+body).match(/\[[^\]\n]{1,80}\]/);
+  if(leftover){ toast(`Please fill in or remove "${leftover[0]}" before sending.`,'error'); return; }
   // Open Gmail straight from the click so the browser doesn't block it,
   // in its own window so closing it after sending lands back on the case.
   const p = new URLSearchParams({view:'cm', fs:'1', to:to.join(','), su:subject, body});
@@ -3474,6 +3575,7 @@ document.getElementById('emSend').addEventListener('click', function(){
   logAudit(emailLeadId, {
     type:'email', text:`Email to client - ${subject}`,
     emailTo: to.join(', '), emailSubject: subject, emailBody: body,
+    ...(emLastTemplate ? {emailTemplate: emLastTemplate.name} : {}),
     byId:currentUser.id, byName:currentUser.name, at:Date.now()
   }, patch).then(()=>{
     closeModal('emailComposeOverlay');

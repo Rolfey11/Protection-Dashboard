@@ -2386,6 +2386,8 @@ document.addEventListener('keydown', (e)=>{
   if(document.getElementById('loginScreen').classList.contains('hidden')) return;
   const a = document.activeElement;
   if(a === userSelect || a === pinInput) return;
+  // Leave typing alone in any box on top of the login screen (e.g. Choose a new PIN)
+  if(forcePinActive || (a && a.closest && a.closest('.modal-overlay.open'))) return;
   if(e.ctrlKey || e.metaKey || e.altKey) return;
 
   if(e.key >= '0' && e.key <= '9'){
@@ -2596,6 +2598,7 @@ function showLoginNotice(msg){
 let forcePinActive = false;
 function showForcePinChange(currentPin, linking, signedInAs, done){
   forcePinActive = true;
+  pinBuffer = ''; renderPinDots(); // don't leave the old PIN sitting in the login form
   document.getElementById('fpName').textContent = currentUser.name.split(' ')[0];
   ['fpNew','fpConfirm'].forEach(id=> document.getElementById(id).value = '');
   const save = document.getElementById('fpSave'); save.disabled = false;

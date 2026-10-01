@@ -527,6 +527,34 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 main{max-width:1360px; margin:0 auto; padding:24px 24px 56px;}
 .page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap;}
 .page-head h1{font-size:23px; font-weight:700; color:var(--text);}
+.useful-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px;}
+.useful-card{display:flex; flex-direction:column; align-items:flex-start; gap:6px; text-align:left; padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--surface); box-shadow:var(--shadow-sm); cursor:pointer; font:inherit; color:var(--text); transition:border-color .15s, transform .15s;}
+.useful-card:hover{border-color:var(--brand-light); transform:translateY(-1px);}
+.useful-card-ic{display:grid; place-items:center; width:38px; height:38px; border-radius:10px; background:var(--brand-tint); color:var(--brand);}
+.useful-card-ic svg{width:20px; height:20px;}
+.useful-card-title{font-size:15px; font-weight:700;}
+.useful-card-sub{font-size:12.5px; color:var(--text-muted); line-height:1.45;}
+.useful-back{border:0; background:none; padding:0; font:inherit; font-size:13px; font-weight:600; color:var(--brand); cursor:pointer; margin-bottom:10px;}
+.nml-form{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px 16px; max-width:760px;}
+.nml-form .field{margin-bottom:6px;}
+.nml-note{font-size:12px; color:var(--text-muted); margin:10px 0 16px; max-width:760px;}
+.nml-table-wrap{overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm);}
+.nml-table{width:100%; border-collapse:collapse; font-size:13px; min-width:640px;}
+.nml-table th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-faint); padding:10px 12px; border-bottom:1px solid var(--border); font-weight:700;}
+.nml-table td{padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top; color:var(--text);}
+.nml-table tr.nml-bands td{background:var(--bg); font-size:12.5px;}
+.nml-ins{font-weight:700;}
+.nml-notes{font-size:11.5px; color:var(--text-muted); margin-top:3px; line-height:1.4;}
+.nml-limit{font-weight:700; white-space:nowrap;}
+.nml-limit.none{font-weight:500; color:var(--text-faint);}
+.nml-status{display:inline-block; padding:3px 8px; border-radius:999px; font-size:11.5px; font-weight:700; white-space:nowrap;}
+.nml-status.ok{background:var(--green-bg); color:var(--green);}
+.nml-status.over{background:var(--amber-bg); color:var(--amber);}
+.nml-status.unknown{background:var(--bg); color:var(--text-muted);}
+.nml-toggle{border:0; background:none; padding:0; font:inherit; font-size:12px; font-weight:600; color:var(--brand); cursor:pointer; text-decoration:underline;}
+.nml-band-list{display:flex; flex-wrap:wrap; gap:6px 14px;}
+.nml-band-list span.cur{font-weight:700; color:var(--brand);}
+.nml-empty{padding:22px; text-align:center; color:var(--text-muted); font-size:13px;}
 .page-head .sub{font-size:13.5px; color:var(--text-muted); margin-top:4px;}
 
 .overdue-banner{
@@ -1248,6 +1276,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <button class="nav-tab active" data-page="dashboard">Dashboard</button>
         <button class="nav-tab" data-page="calendar" id="calendarTab">Calendar</button>
         <button class="nav-tab hidden" data-page="insights" id="insightsTab">Insights</button>
+        <button class="nav-tab hidden" data-page="useful" id="usefulTab">Useful Info</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
       </div>
@@ -1480,6 +1509,54 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     </div>
 
     <!-- ============= THEMES PAGE ============= -->
+    <div id="page-useful" class="hidden">
+      <div id="usefulHome">
+        <div class="page-head">
+          <div>
+            <h1>Useful Info</h1>
+            <p class="sub">Quick reference tools for the team.</p>
+          </div>
+        </div>
+        <div class="useful-grid">
+          <button type="button" class="useful-card" data-useful="nml">
+            <span class="useful-card-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+            <span class="useful-card-title">NON Medical ASA Limits</span>
+            <span class="useful-card-sub">Highest cover each insurer accepts without automatic medical evidence, by age.</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="nmlSection" class="hidden">
+        <button type="button" class="linkish useful-back" data-useful-back>&larr; Useful Info</button>
+        <div class="page-head">
+          <div>
+            <h1>NON Medical ASA Limits</h1>
+            <p class="sub" id="nmlSub">Highest cover each insurer accepts with no automatic medical evidence.</p>
+          </div>
+        </div>
+        <div class="insights-card nml-form">
+          <div class="field">
+            <label for="nmlAge">Client's current age</label>
+            <input type="number" id="nmlAge" min="16" max="90" inputmode="numeric" placeholder="e.g. 42">
+          </div>
+          <div class="field">
+            <label for="nmlCover">Cover</label>
+            <select id="nmlCover">
+              <option value="life">Life</option>
+              <option value="critical_illness">Critical Illness</option>
+              <option value="income_protection">Income Protection</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nmlAmount" id="nmlAmountLbl">Cover amount (£, optional)</label>
+            <input type="number" id="nmlAmount" min="0" step="1000" inputmode="numeric" placeholder="e.g. 350000">
+          </div>
+        </div>
+        <p class="nml-note">Guidance only: always confirm with the insurer before advising. Existing cover with the same insurer usually counts towards the limit.</p>
+        <div id="nmlResults"></div>
+      </div>
+    </div>
+
     <div id="page-themes" class="hidden">
       <div class="page-head">
         <div>
@@ -2653,6 +2730,7 @@ function enterApp(){
   document.getElementById('newTaskBtn').classList.remove('hidden');
   document.getElementById('settingsTab').classList.remove('hidden');
   document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role==='admin');
+  document.getElementById('usefulTab').classList.toggle('hidden', currentUser.role!=='mapa' && currentUser.role!=='management');
 
   const first = currentUser.name.split(' ')[0];
   document.getElementById('dashGreeting').textContent = `Welcome back, ${first}`;
@@ -2674,8 +2752,10 @@ function goPage(page){
   document.getElementById('page-dashboard').classList.toggle('hidden', page!=='dashboard');
   document.getElementById('page-insights').classList.toggle('hidden', page!=='insights');
   document.getElementById('page-themes').classList.toggle('hidden', page!=='themes');
+  document.getElementById('page-useful').classList.toggle('hidden', page!=='useful');
+  if(page==='useful') showUsefulHome();
   document.getElementById('page-calendar').classList.toggle('hidden', page!=='calendar');
-  document.getElementById('daterangeWrap').style.visibility = page==='calendar' ? 'hidden' : '';
+  document.getElementById('daterangeWrap').style.visibility = (page==='calendar' || page==='useful') ? 'hidden' : '';
   document.getElementById('page-settings').classList.toggle('hidden', page!=='settings');
   if(page==='settings'){
     const isMapa = currentUser.role==='mapa';
@@ -2745,6 +2825,111 @@ function renderThemes(){
     });
   });
 }
+
+/* ----------------------------------------------------------------------------
+   USEFUL INFO — reference tools for MAPAs and Management.
+   NON Medical ASA Limits reads data/non-medical-limits.json (kept as its own
+   file so the limits can be updated on GitHub without touching this code).
+   ---------------------------------------------------------------------------- */
+const NML_COVER_LABEL = {life:'Life', critical_illness:'Critical Illness', income_protection:'Income Protection'};
+let NML = null, nmlLoading = null;
+function showUsefulHome(){
+  document.getElementById('usefulHome').classList.remove('hidden');
+  document.getElementById('nmlSection').classList.add('hidden');
+}
+document.querySelectorAll('[data-useful]').forEach(b=> b.addEventListener('click', ()=>{
+  if(b.dataset.useful==='nml'){
+    document.getElementById('usefulHome').classList.add('hidden');
+    document.getElementById('nmlSection').classList.remove('hidden');
+    loadNml().then(renderNml);
+    setTimeout(()=> document.getElementById('nmlAge').focus(), 50);
+  }
+}));
+document.querySelectorAll('[data-useful-back]').forEach(b=> b.addEventListener('click', showUsefulHome));
+
+function loadNml(){
+  if(NML) return Promise.resolve(NML);
+  if(!nmlLoading){
+    nmlLoading = fetch('data/non-medical-limits.json', {cache:'no-cache'})
+      .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(d=>{ NML = d; return d; })
+      .catch(err=>{ nmlLoading = null; throw err; });
+  }
+  return nmlLoading.catch(()=>{
+    document.getElementById('nmlResults').innerHTML = '<div class="nml-empty">Could not load the limits. Check your connection and try again.</div>';
+    return null;
+  });
+}
+
+function nmlBandLabel(b){
+  if(b.age_from==null && b.age_to==null) return 'All ages';
+  if(b.age_from==null) return `Up to ${b.age_to}`;
+  if(b.age_to==null) return `${b.age_from}+`;
+  return `${b.age_from}–${b.age_to}`;
+}
+function nmlFindBand(bands, age){
+  return (bands||[]).find(b=> (b.age_from==null || age>=b.age_from) && (b.age_to==null || age<=b.age_to)) || null;
+}
+function nmlLimitText(v, cover){
+  if(v==null) return 'Not published';
+  if(v==='unlimited') return 'No routine evidence';
+  if(v===0) return '£0 (evidence at any amount)';
+  return '£' + Number(v).toLocaleString('en-GB') + (cover==='income_protection' ? ' /month' : '');
+}
+function nmlSortValue(v){ return v==='unlimited' ? Infinity : (typeof v==='number' ? v : -1); }
+
+function renderNml(){
+  const out = document.getElementById('nmlResults');
+  if(!NML){ return; }
+  const cover = document.getElementById('nmlCover').value;
+  document.getElementById('nmlAmountLbl').textContent = cover==='income_protection' ? 'Monthly benefit (£, optional)' : 'Cover amount (£, optional)';
+  if(NML.checked) document.getElementById('nmlSub').textContent = `Highest cover each insurer accepts with no automatic medical evidence. Limits last checked ${fmtDate(NML.checked)}.`;
+  const age = parseInt(document.getElementById('nmlAge').value, 10);
+  const amountRaw = document.getElementById('nmlAmount').value;
+  const amount = amountRaw==='' ? null : Number(amountRaw);
+  if(!age || age < 16 || age > 90){
+    out.innerHTML = '<div class="nml-table-wrap"><div class="nml-empty">Enter the client\'s current age to see each insurer\'s limit.</div></div>';
+    return;
+  }
+  const rows = NML.insurers.map(ins=>{
+    const nb = ins.age_basis === 'nb';
+    const ageUsed = nb ? age + 1 : age;
+    const bands = ins[cover];
+    const band = bands ? nmlFindBand(bands, ageUsed) : null;
+    const value = band ? band.max_no_evidence : null;
+    let status = null;
+    if(amount != null){
+      if(value==='unlimited' || (typeof value==='number' && amount <= value)) status = ['ok', '✓ Within limit'];
+      else if(typeof value==='number') status = ['over', '⚠ Evidence likely'];
+      else status = ['unknown', 'Check with insurer'];
+    }
+    const limit = !bands ? 'No published limits' : !band ? 'Not available at this age' : nmlLimitText(value, cover);
+    return {ins, ageUsed, nb, bands, band, value, limit, status};
+  }).sort((a,b)=> nmlSortValue(b.band ? b.value : null) - nmlSortValue(a.band ? a.value : null) || a.ins.name.localeCompare(b.ins.name));
+
+  out.innerHTML = `<div class="nml-table-wrap"><table class="nml-table">
+    <thead><tr><th>Insurer</th><th>Age used</th><th>Band</th><th>${esc(NML_COVER_LABEL[cover])}: max without evidence</th>${amount!=null?'<th>Your amount</th>':''}<th>Source</th></tr></thead>
+    <tbody>${rows.map((r,i)=>`
+      <tr>
+        <td><div class="nml-ins">${esc(r.ins.name)}</div>${r.ins.notes ? `<div class="nml-notes">${esc(r.ins.notes)}</div>` : ''}</td>
+        <td>${r.ageUsed} <span class="nml-notes" style="display:inline;">${r.nb ? '(next birthday)' : '(current)'}</span></td>
+        <td>${r.band ? esc(nmlBandLabel(r.band)) : '—'}</td>
+        <td><span class="nml-limit ${typeof r.value==='number' || r.value==='unlimited' ? '' : 'none'}">${esc(r.limit)}</span>
+          ${r.bands ? `<div><button type="button" class="nml-toggle" data-nml-bands="${i}">All age bands</button></div>` : ''}</td>
+        ${amount!=null ? `<td><span class="nml-status ${r.status[0]}">${r.status[1]}</span></td>` : ''}
+        <td>${r.ins.url && /^https:\/\//.test(r.ins.url) ? `<a href="${esc(r.ins.url)}" target="_blank" rel="noopener">${esc(r.ins.source||'Source')}</a>` : esc(r.ins.source||'—')}</td>
+      </tr>
+      ${r.bands ? `<tr class="nml-bands hidden" data-nml-band-row="${i}"><td colspan="${amount!=null?6:5}"><div class="nml-band-list">${r.bands.map(b=> `<span class="${b===r.band?'cur':''}">${esc(nmlBandLabel(b))}: ${esc(nmlLimitText(b.max_no_evidence, cover))}</span>`).join('')}</div></td></tr>` : ''}`).join('')}
+    </tbody></table></div>`;
+  out.querySelectorAll('[data-nml-bands]').forEach(btn=> btn.addEventListener('click', ()=>{
+    const row = out.querySelector(`[data-nml-band-row="${btn.dataset.nmlBands}"]`);
+    const show = row.classList.contains('hidden');
+    row.classList.toggle('hidden', !show);
+    btn.textContent = show ? 'Hide age bands' : 'All age bands';
+  }));
+}
+['nmlAge','nmlAmount'].forEach(id=> document.getElementById(id).addEventListener('input', ()=>{ if(NML) renderNml(); }));
+document.getElementById('nmlCover').addEventListener('change', ()=>{ if(NML) renderNml(); });
 
 /* ----------------------------------------------------------------------------
    6) FIREBASE LISTENERS

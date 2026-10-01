@@ -1,0 +1,147 @@
+{
+  "title": "Claims Statistics",
+  "description": "Percentage of claims paid and total paid by insurer, from each insurer's published 2025 claims figures.",
+  "checked": "2026-10-01",
+  "status": "2025 figures from insurers' announcements (published 2026). Insurers count claims differently (individual vs group, new vs continuing), so compare with care.",
+  "columns": [
+    {
+      "key": "overall",
+      "label": "All claims paid"
+    },
+    {
+      "key": "life",
+      "label": "Life"
+    },
+    {
+      "key": "ci",
+      "label": "Critical illness"
+    },
+    {
+      "key": "ip",
+      "label": "Income protection"
+    },
+    {
+      "key": "total",
+      "label": "Total paid (2025)"
+    }
+  ],
+  "insurers": [
+    {
+      "name": "Aviva",
+      "values": {
+        "overall": "96.9%",
+        "life": "98.7% (life & terminal illness)",
+        "ci": "90.7% (incl. children's & TPD)",
+        "ip": "90%",
+        "total": "£1.99bn (individual + group)"
+      },
+      "source": "Aviva press release, Mar 2026",
+      "url": "https://www.aviva.com/newsroom/news-releases/2026/03/aviva-paid-nearly-two-billion-pounds-in-protection-claims-in-2025/",
+      "notes": null
+    },
+    {
+      "name": "Legal & General",
+      "values": {
+        "overall": null,
+        "life": "97.5% (terminal illness 94.8%)",
+        "ci": "92.9% (children's 95.3%)",
+        "ip": "85%",
+        "total": "£1.39bn (retail + £396m group)"
+      },
+      "source": "L&G 2025 claims statistics",
+      "url": "https://www.legalandgeneral.com/asset/4a115f/globalassets/adviser/files/protection/claims/2025-claims-statistics-infographic.pdf/",
+      "notes": null
+    },
+    {
+      "name": "Royal London",
+      "values": {
+        "overall": "98.4%",
+        "life": null,
+        "ci": "89.3%",
+        "ip": "85.2%",
+        "total": "£821m"
+      },
+      "source": "Royal London press release, Jun 2026",
+      "url": "https://www.royallondon.com/about-us/media/Media-Centre/press-releases/press-releases-2026/june/Royal-London-pays-record-821m-in-protection-claims-with-98.4-payout-rate/",
+      "notes": null
+    },
+    {
+      "name": "LV=",
+      "values": {
+        "overall": "95%",
+        "life": "98%",
+        "ci": "90%",
+        "ip": "88% (incl. claims in payment)",
+        "total": "£152m"
+      },
+      "source": "LV= press release",
+      "url": "https://www.lv.com/about-us/press/lv-pays-out-nearly-152-million-in-protection-claims-in-2025-its-highest-on-record",
+      "notes": null
+    },
+    {
+      "name": "Zurich",
+      "values": {
+        "overall": "97.4% (individual)",
+        "life": "99.8%",
+        "ci": "93.8%",
+        "ip": "95.4%",
+        "total": "£392m"
+      },
+      "source": "Zurich press release",
+      "url": "https://www.zurich.co.uk/media-centre/zurich-retail-protection-claims-payments-up-2025",
+      "notes": null
+    },
+    {
+      "name": "Scottish Widows",
+      "values": {
+        "overall": null,
+        "life": "99%",
+        "ci": "91.9%",
+        "ip": null,
+        "total": "£219m (life & CI)"
+      },
+      "source": "Scottish Widows claims statistics",
+      "url": "https://adviser.scottishwidows.co.uk/products/protection/claims/claimsstats.html",
+      "notes": null
+    },
+    {
+      "name": "Vitality",
+      "values": {
+        "overall": null,
+        "life": "99.4%",
+        "ci": "87.3% (Serious Illness Cover)",
+        "ip": null,
+        "total": "£149m"
+      },
+      "source": "VitalityLife press release",
+      "url": "https://www.vitality.co.uk/media/vitalitylife-pays-a-total-of-149m-in-protection-claims-in-2025/",
+      "notes": null
+    },
+    {
+      "name": "Guardian",
+      "values": {
+        "overall": "91%",
+        "life": "87% or 100%",
+        "ci": "90% or 92%",
+        "ip": null,
+        "total": "£31.7m"
+      },
+      "source": "Health & Protection report",
+      "url": "https://healthcareandprotection.com/guardian-paid-record-31-7m-in-claims-during-2025/amp/",
+      "notes": "Sources quote two different sets of figures (terminal illness 92% or 94%). Check Guardian's claims report."
+    },
+    {
+      "name": "The Exeter",
+      "values": {
+        "overall": null,
+        "life": null,
+        "ci": null,
+        "ip": "93% of new claims",
+        "total": "£71m (includes health insurance)"
+      },
+      "source": "The Exeter news, 2026",
+      "url": "https://the-exeter.com/news/the-exeter-pays-out-over-71-million-in-claims-in-2025/",
+      "notes": null
+    }
+  ]
+}

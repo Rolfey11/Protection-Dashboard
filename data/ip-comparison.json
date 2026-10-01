@@ -1,0 +1,147 @@
+{
+  "title": "Income Protection Comparison",
+  "description": "Incapacity definition, deferred periods, maximum benefit and notable features by insurer.",
+  "checked": "2026-10-01",
+  "status": "Draft from insurer guides and comparison sites. Guidance only: check each figure against the insurer's current policy conditions before advising.",
+  "columns": [
+    {
+      "key": "definition",
+      "label": "Incapacity definition"
+    },
+    {
+      "key": "deferred",
+      "label": "Deferred periods"
+    },
+    {
+      "key": "max_benefit",
+      "label": "Maximum benefit"
+    },
+    {
+      "key": "payment_term",
+      "label": "Payment term options"
+    },
+    {
+      "key": "features",
+      "label": "Notable features"
+    }
+  ],
+  "insurers": [
+    {
+      "name": "Legal & General",
+      "values": {
+        "definition": "Own occupation if working 16+ paid hours a week",
+        "deferred": "4, 8, 13, 26, 52 weeks",
+        "max_benefit": "60% of gross earnings, up to £240,000 a year (£20,000 a month)",
+        "payment_term": null,
+        "features": null
+      },
+      "source": "L&G IP adviser guide",
+      "url": "https://cms.legalandgeneral.com/globalassets/adviser/protection/document-library/sales-aid/ip-adviser-guide.pdf",
+      "notes": null
+    },
+    {
+      "name": "Aviva",
+      "values": {
+        "definition": "Own occupation for most roles",
+        "deferred": "4, 8, 13, 26, 52 weeks (104 weeks on Income Protection+)",
+        "max_benefit": "65% of the first £60,000 of gross earnings + 45% above, up to £240,000 a year",
+        "payment_term": "Living Costs Protection: up to 12 months per claim",
+        "features": "Living Costs Protection: up to 90% of take-home pay, max £1,500 a month"
+      },
+      "source": "Comparison site summary (WeCovr)",
+      "url": "https://wecovr.com/income-protection/providers/aviva",
+      "notes": null
+    },
+    {
+      "name": "Royal London",
+      "values": {
+        "definition": "Own occupation, with a 3-month grace period if between jobs",
+        "deferred": "4, 8, 13, 26, 52 weeks",
+        "max_benefit": "65% of the first £60,000 + 50% above, up to £250,000 a year",
+        "payment_term": null,
+        "features": "Minimum income guarantee £1,750 a month (£3,500 doctors/surgeons); back-to-work payment on 13/26/52-week deferred"
+      },
+      "source": "Comparison site summary (Drewberry)",
+      "url": "https://www.drewberryinsurance.co.uk/income-protection-insurance/insurers/royal-london-income-protection",
+      "notes": null
+    },
+    {
+      "name": "LV=",
+      "values": {
+        "definition": "Own occupation for about 80% of occupations (suited definition removed)",
+        "deferred": "1, 2, 3, 6, 12 months; split deferral available",
+        "max_benefit": "Up to £12,500 a month",
+        "payment_term": null,
+        "features": "£1,000 benefit guarantee; cover can run to age 70"
+      },
+      "source": "LV= IP product range comparison",
+      "url": "https://www.lvadviser.com/service/documentlibrary/get/9A7CD41037594F4EA6EB6F3D9589AC4D/income-protection-product-range-comparison",
+      "notes": "Sources disagree on the % of income covered (55% or 60%). Check."
+    },
+    {
+      "name": "The Exeter",
+      "values": {
+        "definition": "Own occupation for every occupation, for the whole claim",
+        "deferred": "Day 1, 1, 4, 8, 13, 26, 52 weeks",
+        "max_benefit": "60% of taxable income up to £100,000, 40% above; £500–£10,000 a month",
+        "payment_term": null,
+        "features": null
+      },
+      "source": "The Exeter Income First product guide",
+      "url": "https://dyn.the-exeter.com/download/brochure?code=IP-PS",
+      "notes": null
+    },
+    {
+      "name": "Vitality",
+      "values": {
+        "definition": "Own occupation for most occupations (349 manual/trade roles moved to own occupation)",
+        "deferred": "7 days (self-employed only), 1, 3, 6, 12 months; 1–2 months for more occupations",
+        "max_benefit": "£10,000 a month (Income Protection Plus: £16,666)",
+        "payment_term": null,
+        "features": null
+      },
+      "source": "Comparison site summary (Drewberry)",
+      "url": "https://www.drewberryinsurance.co.uk/income-protection-insurance/insurers/vitality-income-protection-insurance",
+      "notes": null
+    },
+    {
+      "name": "Zurich",
+      "values": {
+        "definition": "Own Occupation Guarantee as standard",
+        "deferred": "4, 8, 13, 26, 52, 104 weeks; single or dual deferred",
+        "max_benefit": "65% of the first £60,000 + 45% above, up to £20,000 a month",
+        "payment_term": null,
+        "features": null
+      },
+      "source": "Zurich Intermediary: Income Protection",
+      "url": "https://www.zurichintermediary.co.uk/income-protection",
+      "notes": null
+    },
+    {
+      "name": "Guardian",
+      "values": {
+        "definition": "Own job",
+        "deferred": "4, 8, 13, 26, 52 weeks",
+        "max_benefit": "65% of earnings up to £60,000, 50% from £60,000 to £100,000, then lower above",
+        "payment_term": "Full term, or 24 months per claim",
+        "features": "Premium waiver after 28 days, whatever the deferred period"
+      },
+      "source": "Comparison site summary (Drewberry)",
+      "url": "https://www.drewberryinsurance.co.uk/income-protection-insurance/insurers/guardian-income-protection",
+      "notes": "The rate above £100,000 is unclear in the sources. Check."
+    },
+    {
+      "name": "Scottish Widows",
+      "values": {
+        "definition": "Own occupation",
+        "deferred": "4, 8, 13, 26, 52 weeks",
+        "max_benefit": "Typically up to 60% of gross income",
+        "payment_term": null,
+        "features": null
+      },
+      "source": "Comparison site summary (WeCovr)",
+      "url": "https://wecovr.com/income-protection/providers/scottish-widows",
+      "notes": "Maximum monthly benefit not confirmed."
+    }
+  ]
+}

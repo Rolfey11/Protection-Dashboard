@@ -540,6 +540,13 @@ main{max-width:1680px; margin:0 auto; padding:20px 24px 20px;}
 .nml-form{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px 16px; max-width:760px;}
 .nml-form .field{margin-bottom:6px;}
 .nml-note{font-size:12px; color:var(--text-muted); margin:10px 0 16px; max-width:760px;}
+.ref-table td{vertical-align:top; line-height:1.45;}
+.ref-table td:not(:first-child){min-width:170px;}
+.ref-table th[data-ref-sort]{cursor:pointer; user-select:none; white-space:nowrap;}
+.ref-table th[data-ref-sort]:hover{color:var(--brand);}
+.ref-table th.sorted{color:var(--brand);}
+.ref-table td:first-child, .ref-table th:first-child{position:sticky; left:0; background:var(--surface); z-index:1; min-width:150px;}
+.ref-table td.empty{color:var(--text-faint);}
 .nml-table-wrap{overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm);}
 .nml-table{width:100%; border-collapse:collapse; font-size:13px; min-width:640px;}
 .nml-table th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-faint); padding:10px 12px; border-bottom:1px solid var(--border); font-weight:700;}
@@ -1612,6 +1619,18 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
         <div class="ci-status" id="ciStatus"></div>
         <div id="ciResults" class="ci-grid"></div>
+      </div>
+
+      <div id="refSection" class="hidden">
+        <button type="button" class="linkish useful-back" data-useful-back>&larr; Useful Info</button>
+        <div class="page-head">
+          <div>
+            <h1 id="refTitle"></h1>
+            <p class="sub" id="refSub"></p>
+          </div>
+        </div>
+        <div class="ci-status" id="refStatus"></div>
+        <div id="refResults"></div>
       </div>
     </div>
 
@@ -2944,11 +2963,34 @@ function renderThemes(){
    ---------------------------------------------------------------------------- */
 const NML_COVER_LABEL = {life:'Life', critical_illness:'Critical Illness', income_protection:'Income Protection'};
 let NML = null, nmlLoading = null;
+/* Reference tables: Management's uploaded version (in /config) wins over
+   the standard file shipped with the tracker. "generic" tables all use the
+   same columns-and-insurers layout (see renderRefTable). */
+const REF_DATA = {
+  nonMedicalLimits:  {label:'NON Medical ASA Limits', file:'data/non-medical-limits.json'},
+  ciComparison:      {label:'Critical Illness Comparison', file:'data/ci-comparison.json'},
+  ipComparison:      {label:'Income Protection Comparison', file:'data/ip-comparison.json', generic:true,
+                      sub:'Incapacity definitions, deferred periods, maximum benefit and features by insurer.'},
+  underwritingNotes: {label:'Underwriting Notes', file:'data/underwriting-notes.json', generic:true,
+                      sub:'How each insurer tends to treat common medical conditions, plus our own experience.'},
+  claimsStats:       {label:'Claims Statistics', file:'data/claims-stats.json', generic:true,
+                      sub:'Percentage of claims paid and total paid out by insurer.'},
+};
+let refShown = null;
 function showUsefulHome(){
   document.getElementById('usefulHome').classList.remove('hidden');
   document.getElementById('nmlSection').classList.add('hidden');
   document.getElementById('ciSection').classList.add('hidden');
+  document.getElementById('refSection').classList.add('hidden');
 }
+/* Comparison tables that share one layout get a card each on Useful Info. */
+const REF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>';
+document.querySelector('#usefulHome .useful-grid').insertAdjacentHTML('beforeend',
+  Object.entries(REF_DATA).filter(([, r])=> r.generic).map(([key, r])=> `<button type="button" class="useful-card" data-useful="${key}">
+    <span class="useful-card-ic">${REF_ICON}</span>
+    <span class="useful-card-title">${esc(r.label)}</span>
+    <span class="useful-card-sub">${esc(r.sub)}</span>
+  </button>`).join(''));
 document.querySelectorAll('[data-useful]').forEach(b=> b.addEventListener('click', ()=>{
   if(b.dataset.useful==='nml'){
     document.getElementById('usefulHome').classList.add('hidden');
@@ -2961,21 +3003,22 @@ document.querySelectorAll('[data-useful]').forEach(b=> b.addEventListener('click
     document.getElementById('ciSection').classList.remove('hidden');
     renderCi();
   }
+  if(REF_DATA[b.dataset.useful] && REF_DATA[b.dataset.useful].generic){
+    document.getElementById('usefulHome').classList.add('hidden');
+    document.getElementById('refSection').classList.remove('hidden');
+    refShown = {key:b.dataset.useful, sort:null, dir:1};
+    renderRefTable();
+  }
 }));
 document.querySelectorAll('[data-useful-back]').forEach(b=> b.addEventListener('click', showUsefulHome));
 
-/* Reference tables: Management's uploaded version (in /config) wins over
-   the standard file shipped with the tracker. */
-const REF_DATA = {
-  nonMedicalLimits: {label:'NON Medical ASA Limits', file:'data/non-medical-limits.json'},
-  ciComparison:     {label:'Critical Illness Comparison', file:'data/ci-comparison.json'},
-};
 const refCache = {};
 function resetReferenceData(){
   Object.keys(REF_DATA).forEach(k=> delete refCache[k]);
   NML = null; nmlLoading = null;
   if(!document.getElementById('nmlSection').classList.contains('hidden')) loadNml().then(renderNml);
   if(!document.getElementById('ciSection').classList.contains('hidden')) renderCi();
+  if(!document.getElementById('refSection').classList.contains('hidden')) renderRefTable();
 }
 function loadRefData(key){
   if(CONFIG[key]) return Promise.resolve(CONFIG[key]);
@@ -3103,6 +3146,58 @@ function renderCi(){
 }
 document.getElementById('ciSort').addEventListener('change', renderCi);
 
+/* ---- Shared comparison table: {title, description, checked, status, columns:[{key,label}], insurers:[{name, values, source, url, notes}]} ---- */
+function refCell(v){ return v==null || v==='' ? null : String(v); }
+// First number in a cell, with £m/£bn scaled ("98.3%" → 98.3, "£1.2bn" → 1.2e9), or NaN.
+function refNum(v){
+  const m = /(-?\d[\d,]*(?:\.\d+)?)\s*(bn|m|k)?\b/i.exec(v);
+  if(!m) return NaN;
+  return parseFloat(m[1].replace(/,/g,'')) * ({bn:1e9, m:1e6, k:1e3}[(m[2]||'').toLowerCase()] || 1);
+}
+// Sorts by that number when both cells have one, else A–Z; blanks go last.
+function refCompare(a, b){
+  if(a==null || b==null) return (a==null) - (b==null);
+  const na = refNum(a), nb = refNum(b);
+  if(!isNaN(na) && !isNaN(nb) && na!==nb) return nb - na;
+  return a.localeCompare(b);
+}
+function renderRefTable(){
+  if(!refShown) return;
+  const {key} = refShown, r = REF_DATA[key];
+  const out = document.getElementById('refResults');
+  document.getElementById('refTitle').textContent = r.label;
+  out.innerHTML = '<div class="nml-empty">Loading…</div>';
+  loadRefData(key).then(d=>{
+    if(!refShown || refShown.key!==key) return;
+    document.getElementById('refTitle').textContent = d.title || r.label;
+    document.getElementById('refSub').textContent = `${d.description || r.sub}${d.checked ? ' Last checked '+fmtDate(d.checked)+'.' : ''}`;
+    document.getElementById('refStatus').textContent = d.status || 'Guidance only: always check with the insurer before advising.';
+    const cols = Object.values(d.columns||{}).filter(c=> c && c.key);
+    const rows = Object.values(d.insurers||{}).filter(i=> i && i.name);
+    const {sort, dir} = refShown;
+    rows.sort((a,b)=>{
+      if(sort==null) return 0;
+      const c = sort==='name' ? a.name.localeCompare(b.name) : refCompare(refCell((a.values||{})[sort]), refCell((b.values||{})[sort]));
+      return c * dir || a.name.localeCompare(b.name);
+    });
+    const arrow = k=> sort===k ? (dir>0 ? ' ▼' : ' ▲') : '';
+    out.innerHTML = rows.length ? `<div class="nml-table-wrap"><table class="nml-table ref-table">
+      <thead><tr><th data-ref-sort="name" class="${sort==='name'?'sorted':''}">Insurer${arrow('name')}</th>${cols.map(c=> `<th data-ref-sort="${esc(c.key)}" class="${sort===c.key?'sorted':''}">${esc(c.label||c.key)}${arrow(c.key)}</th>`).join('')}<th>Source</th></tr></thead>
+      <tbody>${rows.map(ins=> `<tr>
+        <td><div class="nml-ins">${esc(ins.name)}</div>${ins.notes ? `<div class="nml-notes">${esc(ins.notes)}</div>` : ''}</td>
+        ${cols.map(c=>{ const v = refCell((ins.values||{})[c.key]); return v==null ? '<td class="empty">—</td>' : `<td>${esc(v)}</td>`; }).join('')}
+        <td>${ins.url && /^https:\/\//.test(ins.url) ? `<a href="${esc(ins.url)}" target="_blank" rel="noopener">${esc(ins.source||'Source')}</a>` : esc(ins.source||'—')}</td>
+      </tr>`).join('')}</tbody></table></div>
+      <p class="nml-note">Click a column heading to sort by it; click again to reverse.</p>` : '<div class="nml-empty">No insurers in this table yet.</div>';
+    out.querySelectorAll('[data-ref-sort]').forEach(th=> th.addEventListener('click', ()=>{
+      const k = th.dataset.refSort;
+      refShown.dir = refShown.sort===k ? -refShown.dir : 1;
+      refShown.sort = k;
+      renderRefTable();
+    }));
+  }).catch(()=>{ out.innerHTML = '<div class="nml-empty">Could not load this table. Check your connection and try again.</div>'; });
+}
+
 /* ---- Settings: Management edits templates and reference data ---- */
 function savedTemplates(){ return CONFIG.emailTemplates ? Object.values(CONFIG.emailTemplates).filter(t=> t && t.name) : null; }
 function renderContentSettings(){
@@ -3189,6 +3284,13 @@ function downloadRefData(key){
 function checkRefData(key, d){
   if(!d || typeof d!=='object' || !Array.isArray(d.insurers) || !d.insurers.length) return 'it needs an "insurers" list with at least one insurer';
   const num = v=> v==null || (typeof v==='number' && isFinite(v));
+  if(REF_DATA[key].generic){
+    if(!Array.isArray(d.columns) || !d.columns.length) return 'it needs a "columns" list';
+    for(const c of d.columns){
+      if(!c || typeof c.key!=='string' || !c.key.trim()) return 'every column needs a "key"';
+      if(/[.$#[\]/]/.test(c.key)) return `column key "${c.key}" can't contain . $ # [ ] or /`;
+    }
+  }
   for(const [i, ins] of d.insurers.entries()){
     const where = `insurer ${i+1}${ins && ins.name ? ' ('+ins.name+')' : ''}`;
     if(!ins || typeof ins.name!=='string' || !ins.name.trim()) return `${where} has no name`;
@@ -3204,6 +3306,8 @@ function checkRefData(key, d){
           if(!(v==null || v==='unlimited' || (typeof v==='number' && v>=0))) return `${where}: ${cover} has a bad max_no_evidence (${JSON.stringify(v)})`;
         }
       }
+    } else if(REF_DATA[key].generic){
+      if(ins.values!=null && (typeof ins.values!=='object' || Array.isArray(ins.values))) return `${where}: "values" must be a set of column values`;
     } else {
       if(!Array.isArray(ins.options) || !ins.options.length) return `${where} needs an "options" list`;
       for(const o of ins.options){ if(!o || typeof o.name!=='string') return `${where} has an option with no name`; }

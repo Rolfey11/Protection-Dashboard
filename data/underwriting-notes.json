@@ -1,0 +1,134 @@
+{
+  "title": "Underwriting Notes",
+  "description": "Pre-sale underwriting tools and published notes on harder cases, with room for the team's own experience.",
+  "checked": "2026-10-01",
+  "status": "Insurers don't publish who is best for each condition. These notes come from insurer tools and broker comparison sites; always get an indicative decision first. Add your team's experience by downloading this table in Settings.",
+  "columns": [
+    {
+      "key": "tool",
+      "label": "Pre-sale underwriting tool"
+    },
+    {
+      "key": "diabetes",
+      "label": "Diabetes"
+    },
+    {
+      "key": "approach",
+      "label": "Published approach / notes"
+    },
+    {
+      "key": "team",
+      "label": "Our team's experience"
+    }
+  ],
+  "insurers": [
+    {
+      "name": "Royal London",
+      "values": {
+        "tool": "Pre-sale underwriting tool covering 3,600+ conditions",
+        "diabetes": "Often cited as competitive for Type 1 (specialist underwriting team)",
+        "approach": "Principles-based underwriting; underwriters can talk to advisers and clients to understand a case",
+        "team": null
+      },
+      "source": "Royal London: Underwriting",
+      "url": "https://adviser.royallondon.com/product-support/protection/underwriting/",
+      "notes": null
+    },
+    {
+      "name": "Aviva",
+      "values": {
+        "tool": "Protection Underwriting Centre",
+        "diabetes": "Cited as flexible for diabetic applicants",
+        "approach": null,
+        "team": null
+      },
+      "source": "Aviva Adviser: Protection Underwriting Centre",
+      "url": "https://connect.avivab2b.co.uk/adviser/resources/product-support/protection-support/protection-underwriting-centre/",
+      "notes": null
+    },
+    {
+      "name": "Vitality",
+      "values": {
+        "tool": null,
+        "diabetes": "Often cited as most competitive for Type 2 (Vitality Programme)",
+        "approach": null,
+        "team": null
+      },
+      "source": "Comparison site summary (lifecoverfor)",
+      "url": "https://lifecoverfor.com/blog/best-life-insurance-diabetics-uk/",
+      "notes": null
+    },
+    {
+      "name": "Legal & General",
+      "values": {
+        "tool": "PSU tool in OLPC: indicative decisions for single or multiple conditions, BMI and family history",
+        "diabetes": null,
+        "approach": null,
+        "team": null
+      },
+      "source": "L&G adviser: Underwriting",
+      "url": "https://www.legalandgeneral.com/adviser/protection/underwriting/",
+      "notes": null
+    },
+    {
+      "name": "LV=",
+      "values": {
+        "tool": "Pre-Underwriting Tool: instant indicative decision",
+        "diabetes": null,
+        "approach": null,
+        "team": null
+      },
+      "source": "LV= Pre-underwriting tool",
+      "url": "https://www.lvadviser.com/online-services/fastway/pre-uw-tool",
+      "notes": null
+    },
+    {
+      "name": "Zurich",
+      "values": {
+        "tool": "Pre-app underwriting tool, designed to answer about 90% of pre-app enquiries",
+        "diabetes": null,
+        "approach": "Tool runs on Zurich's live underwriting rules",
+        "team": null
+      },
+      "source": "Protection Guru",
+      "url": "https://protectionguru.co.uk/a-great-underwriting-move-by-zurich-and-some-excellent-studies-for-advisers/",
+      "notes": null
+    },
+    {
+      "name": "Guardian",
+      "values": {
+        "tool": "Pre-sale indications available",
+        "diabetes": null,
+        "approach": "CI wording with payout markers, cited as having lenient claim definitions",
+        "team": null
+      },
+      "source": "Comparison site summary (lifecoverfor)",
+      "url": "https://lifecoverfor.com/blog/best-critical-illness-cover-diabetes-uk/",
+      "notes": null
+    },
+    {
+      "name": "Scottish Widows",
+      "values": {
+        "tool": "Pre-sale indications available",
+        "diabetes": null,
+        "approach": null,
+        "team": null
+      },
+      "source": "Investment Guide",
+      "url": "https://www.investmentguide.co.uk/closing-the-protection-gap-pre-sale-underwriting-at-the-front-door/",
+      "notes": null
+    },
+    {
+      "name": "The Exeter",
+      "values": {
+        "tool": null,
+        "diabetes": "Offers income protection to people with diabetes",
+        "approach": null,
+        "team": null
+      },
+      "source": "Drewberry news",
+      "url": "https://www.drewberryinsurance.co.uk/news/income-protection-insurance/the-exeter-ip-diabetes",
+      "notes": null
+    }
+  ]
+}

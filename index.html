@@ -1308,7 +1308,6 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <button class="btn btn-ghost btn-sm" id="dateRangeReset">Reset to all</button>
             <button class="btn btn-primary btn-sm" id="dateRangeApply">Apply</button>
           </div>
-          <span id="dateRangeLabel" class="hidden"></span>
         </div>
       </div>
 
@@ -1955,7 +1954,6 @@ table.users-table tr:hover td{background:var(--brand-tint);}
   <div class="modal">
     <div class="modal-head"><h2 id="userModalTitle">Add Colleague</h2><button class="modal-close" data-close="userOverlay">✕</button></div>
     <div class="modal-body">
-      <input type="hidden" id="uEditId">
       <div class="field">
         <label for="uName">Full name</label>
         <input type="text" id="uName" placeholder="e.g. Joe Bloggs">
@@ -3133,6 +3131,10 @@ function visibleLeads(){
   return all;
 }
 
+/* Booked follow-up calls live on Contacted Clients cases and on cases being
+   chased while In Underwriting. */
+function hasBookedCall(l){ const pot = potOf(l); return (pot==='existing' || pot==='underwriting') && !!l.followUpDate; }
+
 function potOf(lead){
   if(lead.status==='signedup') return 'signedup';
   if(lead.status==='underwriting') return 'underwriting';
@@ -3369,7 +3371,7 @@ function overdueExistingLeads(){
   const all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted);
   const today = new Date(); today.setHours(0,0,0,0);
   const overdue = all.filter(l=>{
-    return potOf(l)==='existing' && isCallOverdue(l.followUpDate, l.followUpTime);
+    return hasBookedCall(l) && isCallOverdue(l.followUpDate, l.followUpTime);
   });
   if(currentUser.role==='mapa') return overdue.filter(l=> l.advisorId===currentUser.id);
   return overdue; // management sees everyone's
@@ -3410,7 +3412,7 @@ function myDayItems(){
 
   mine.forEach(l=>{
     const pot = potOf(l);
-    if(pot==='existing' && l.followUpDate){
+    if(hasBookedCall(l)){
       const late = isCallOverdue(l.followUpDate, l.followUpTime);
       if(late || daysLate(l.followUpDate)===0){
         items.push({
@@ -3475,14 +3477,13 @@ function renderDashKpis(){
 
   const DAY = 86400000;
   const today = new Date(); today.setHours(0,0,0,0);
-  const t0 = today.getTime();
   const dueDiff = l => { const d = toDate(l.followUpDate); d.setHours(0,0,0,0); return Math.round((d - today)/DAY); };
 
   const open = leads.filter(l=> ['new','existing'].includes(potOf(l)));
   const newThisWeek = leads.filter(l=> (l.createdAt||0) >= Date.now()-7*DAY).length;
   const newLastWeek = leads.filter(l=> (l.createdAt||0) >= Date.now()-14*DAY && (l.createdAt||0) < Date.now()-7*DAY).length;
 
-  const withCall = leads.filter(l=> potOf(l)==='existing' && l.followUpDate);
+  const withCall = leads.filter(hasBookedCall);
   const overdue = withCall.filter(l=> isCallOverdue(l.followUpDate, l.followUpTime));
   const dueToday = withCall.filter(l=> dueDiff(l)===0 && !isCallOverdue(l.followUpDate, l.followUpTime)).length;
   const dueTomorrow = withCall.filter(l=> dueDiff(l)===1).length;
@@ -3546,7 +3547,7 @@ function trackerUrl(){ return /^https?:/.test(location.protocol) ? location.orig
    filter, but not the search box or the "task created" date range, which
    would otherwise hide calls booked for leads created outside that range. */
 function calendarCalls(){
-  let all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted && potOf(l)==='existing' && l.followUpDate);
+  let all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted && hasBookedCall(l));
   if(currentUser.role==='mapa') all = all.filter(l=> l.advisorId===currentUser.id);
   else if(selectedAdvisorFilter){
     all = selectedAdvisorFilter==='__unassigned__' ? all.filter(l=> !l.advisorId) : all.filter(l=> l.advisorId===selectedAdvisorFilter);
@@ -4151,7 +4152,7 @@ document.getElementById('ntName').addEventListener('input', function(){
   const q = normalizeName(this.value);
   const warnBox = document.getElementById('ntDupeWarning');
   if(q.length < 3){ warnBox.classList.add('hidden'); return; }
-  const match = Object.values(LEADS).filter(l=> !l.deleted).find(l=> normalizeName(l.clientName).includes(q) || q.includes(normalizeName(l.clientName)));
+  const match = Object.values(LEADS).filter(l=> !l.deleted && normalizeName(l.clientName)).find(l=> normalizeName(l.clientName).includes(q) || q.includes(normalizeName(l.clientName)));
   if(match){
     document.getElementById('ntDupeWarningText').textContent =
       `A similar client already exists: "${match.clientName}" (${match.advisorName||'unassigned'}, ${STATUS_LABELS[match.status]||potOf(match)}). Double check this isn't a duplicate.`;
@@ -4343,7 +4344,7 @@ function renderLeadModal(){
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
       ${clientEmailCellHtml(lead)}
-      ${potOf(lead)==='existing' && lead.followUpDate ? `
+      ${hasBookedCall(lead) ? `
       <div class="info-cell full" style="background:var(--amber-bg);">
         <div class="lbl" style="color:var(--amber);">Next call due</div>
         <div class="val" style="color:var(--amber);">${followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim()}</div>
@@ -4718,7 +4719,9 @@ function renderDynamicArea(lead){
       const gTab = mode !== 'save' ? window.open('about:blank', '_blank') : null;
       allBtns.forEach(b=> b.disabled = true);
       const when = fmtDateSlash(date) + (time ? ` at ${time}` : '');
-      const fuPatch = {status:'existing', followUpDate:date, followUpTime:time||null};
+      // A chase call on a case in underwriting keeps it In Underwriting.
+      const stayInUw = (LEADS[lead.id] || lead).status === 'underwriting';
+      const fuPatch = {status: stayInUw ? 'underwriting' : 'existing', followUpDate:date, followUpTime:time||null};
       const calNote = mode==='invite' ? ` - Calendar invite prepared for ${inviteTo.join(', ')}` : mode==='calendar' ? ' - Added to calendar (no client invite)' : '';
       const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '') + calNote;
       logAudit(lead.id, {type:'followup', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, fuPatch)
@@ -4728,7 +4731,7 @@ function renderDynamicArea(lead){
             try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
           }
           const next = mode==='invite' ? 'In Google, click Save, then Send to invite the client.'
-            : mode==='calendar' ? 'Google Calendar opened: click Save there.' : 'Moved to Contacted Clients.';
+            : mode==='calendar' ? 'Google Calendar opened: click Save there.' : (stayInUw ? 'Still In Underwriting.' : 'Moved to Contacted Clients.');
           toast(`Follow-up booked for ${fmtDate(date)}${time?' at '+time:''}. ${next}`,'success');
           actionUIState=null; refreshLeadModal();
         })
@@ -4954,7 +4957,7 @@ function renderInsights(){
   const signedThisWeek = leads.filter(l=> potOf(l)==='signedup' && Object.values(l.audit||{}).some(a=>a.type==='signup' && a.at>=weekAgo)).length;
   const declinedThisWeek = leads.filter(l=> l.declineReason && Object.values(l.audit||{}).some(a=>a.type==='decline' && a.at>=weekAgo)).length;
   const overdueNow = leads.filter(l=>{
-    return potOf(l)==='existing' && isCallOverdue(l.followUpDate, l.followUpTime);
+    return hasBookedCall(l) && isCallOverdue(l.followUpDate, l.followUpTime);
   }).length;
 
   document.getElementById('weekDigest').innerHTML =
@@ -5806,7 +5809,7 @@ function checkCallReminders(){
   const now = Date.now(), before = remindMinutes()*60000;
   const done = loadReminded(); let changed = false;
   Object.entries(LEADS).forEach(([id,l])=>{
-    if(!l || l.deleted || potOf(l)!=='existing' || !l.followUpDate || l.advisorId!==currentUser.id) return;
+    if(!l || l.deleted || !hasBookedCall(l) || l.advisorId!==currentUser.id) return;
     let remindAt, lastChance, title;
     if(l.followUpTime){
       const due = callDueAt(l.followUpDate, l.followUpTime).getTime();
@@ -5971,7 +5974,7 @@ function renderUsersTable(){
 let overdueSignature = '';
 function currentOverdueSignature(){
   const ids = Object.entries(LEADS)
-    .filter(([id,l])=> !l.deleted && potOf(l)==='existing' && isCallOverdue(l.followUpDate, l.followUpTime))
+    .filter(([id,l])=> !l.deleted && hasBookedCall(l) && isCallOverdue(l.followUpDate, l.followUpTime))
     .map(([id])=> id).sort().join(',');
   return isoDay(new Date()) + '|' + ids;
 }

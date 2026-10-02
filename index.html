@@ -3284,6 +3284,27 @@ function openTemplateEditor(index){
   openModal('tplOverlay');
 }
 document.getElementById('tplAddBtn').addEventListener('click', ()=> openTemplateEditor(null));
+/* Word puts each paragraph on its own line with no gap between them when
+   pasted as plain text. Put a blank line back between paragraphs (as in the
+   standard templates) and tidy Word's bullet characters to "• ". */
+function tidyPastedText(text){
+  const lines = String(text).replace(/\r\n?/g,'\n').split('\n')
+    .map(l=> l.replace(/[ \t ]+$/,'').replace(/^[ \t]*[•·▪§o\-•][ \t ]+/, '• '))
+    .filter(l=> l.trim()!=='');
+  return lines.reduce((out, l, i)=>{
+    if(i===0) return l;
+    return out + (/^Kind regards,?$/i.test(lines[i-1].trim()) ? '\n' : '\n\n') + l;
+  }, '');
+}
+document.getElementById('tplBody').addEventListener('paste', function(e){
+  const text = e.clipboardData && e.clipboardData.getData('text/plain');
+  if(!text || !/\n/.test(text) || /\n[ \t]*\n/.test(text)) return; // single line, or already spaced
+  e.preventDefault();
+  const tidy = tidyPastedText(text);
+  const {selectionStart:a, selectionEnd:b, value} = this;
+  this.value = value.slice(0, a) + tidy + value.slice(b);
+  this.selectionStart = this.selectionEnd = a + tidy.length;
+});
 document.getElementById('tplSave').addEventListener('click', function(){
   const t = {name: document.getElementById('tplName').value.trim(), subject: document.getElementById('tplSubject').value.trim(), body: document.getElementById('tplBody').value.replace(/\s+$/,'')};
   if(!t.name || !t.subject || !t.body){ toast('Please fill in the name, subject and message.','error'); return; }
@@ -4178,32 +4199,33 @@ const RISKS_LIST = [
   '• Your family could find it difficult to keep up with the mortgage, household bills or other debts if you were to pass away or become seriously ill. In the worst case, this could put your home at risk.',
   '• The people who rely on you could be left facing financial hardship at an already difficult time.',
 ];
-const RESPONSIBILITY = 'Please be aware that by not taking action, you are accepting full responsibility for any financial implications that may arise in the future.';
-const CONSUMER_DUTY = "As your adviser, I have a duty to ensure you receive the right guidance and avoid foreseeable harm. Under the Consumer Duty regulations, we must ensure you have the right level of protection and value from your policy.";
+const RESPONSIBILITY = 'Please be aware that by not taking action, you are accepting full responsibility for any financial implications that may arise in the future and that we have attempted to provide you with a protection solution.';
+const TAILOR = 'If there are certain parts of the recommendation that you value more than others, I’d really welcome the opportunity to talk these through with you. We can tailor the options that matter most to you, while taking into consideration your budget.';
 const SIGN_OFF = 'Kind regards,\n{adviser}';
 const DEFAULT_EMAIL_TEMPLATES = [
   {name:'Unable to Contact', subject:'Your life insurance: checking in', body:[
     'Hi {names},',
     "I've tried to get in touch a few times about your life insurance, but haven't managed to reach you. I know how busy things can get, so I just wanted to check in.",
-    "I'm keen to have a quick chat because, with a mortgage in place, having the right protection can make a big difference to you and your family. Without it:",
+    "I'm keen to have a conversation with you because, with a mortgage in place, having the right protection can make a big difference to you and your family. Without it:",
     ...RISKS_LIST,
     "• Cover can become more expensive, or harder to arrange, as we get older or if our health changes, so it's often better to look at it sooner rather than later.",
-    CONSUMER_DUTY,
+    'As your adviser, I have a duty to ensure you receive the right guidance and avoid foreseeable harm. Under the Consumer Duty regulations, we are required to put you in an informed position with regards to you and your family’s protection needs.',
     RESPONSIBILITY,
-    "There's no obligation, and if you already have cover in place, I'm happy to check it still fits your mortgage. If your circumstances have changed or you're unsure about your options, a short call is often the easiest way to talk things through.",
-    'Just reply with a time that suits you or call me on 01256637000.',
+    "There's no obligation, and if you already have cover in place, I'm happy to check it still fits your needs. If your circumstances have changed or you're unsure about your options, a short call is often the easiest way to talk things through.",
+    'Just reply with a time that suits you or call me.',
     SIGN_OFF,
   ]},
   {name:'Spoken to but no contact', subject:'Following up on your protection recommendation', body:[
     'Dear {names},',
-    "I hope you're well. Following our conversation about your protection needs I've tried to reach you a few times to see how you'd like to move forward with my recommendation, but haven't managed to catch you.",
-    "I completely understand that life gets busy, and there's no pressure to make a decision. The choice is entirely yours. If anything in the recommendation doesn't feel quite right, whether that's the level of cover, the cost, or one particular part of it, I'd really welcome the chance to talk it through. We can adjust things to suit you, and even a smaller amount of cover can make a real difference.",
+    "I hope you're well. Following our conversation about your protection needs, I've tried to reach you a few times to see how you'd like to move forward with my recommendation, but I haven’t been successful.",
+    'I completely understand that life gets busy, and there’s absolutely no pressure to make a decision straight away. It is, however, an important decision to make, so I want to make sure you feel comfortable with the options available and that the recommendation is right for you.',
+    TAILOR,
     "The reason I'm keen to speak with you is that, without cover in place:",
     ...RISKS_LIST,
     '• Cover can become more expensive, or harder to arrange, as we get older or if our health changes, so the terms available to you today may not always be there.',
-    "As your adviser, part of my role is to make sure you have everything you need to make an informed decision, and that you understand the risks of going without cover. If you've decided not to go ahead, that's absolutely fine. I'd just appreciate a quick reply so I can note your decision and close things off properly.",
+    "As your adviser, part of my role is to make sure you have everything you need to make an informed decision, and that you understand the risks of going without cover. If you've decided not to go ahead, that's absolutely fine. I'd just appreciate a quick reply so I can note your decision as to why you do not wish to take cover and close things off properly.",
     RESPONSIBILITY,
-    "If your circumstances have changed, or you'd simply like to go over your options again, I'd be happy to arrange a short call at a time that suits you. Just reply to this email or call me on 01256637000.",
+    "If your circumstances have changed, or you'd simply like to go over your options again, I'd be happy to arrange a short call at a time that suits you. Just reply to this email or call me.",
     SIGN_OFF,
   ]},
   {name:'Gone Online', subject:'Before you arrange life insurance online', body:[
@@ -4211,27 +4233,26 @@ const DEFAULT_EMAIL_TEMPLATES = [
     "I hope you're well. I wanted to get in touch about your life insurance, particularly if you've been thinking about arranging a policy online.",
     'Buying online can seem quick and convenient, and for some people it works well. But life insurance is a long-term commitment, and there are a few things that are easy to miss without advice, which could matter a great deal to your family if you ever needed to claim.',
     "Here's how I can help:",
-    "• Cover that fits you. Online quotes usually start from a standard amount and term. I'll look at your mortgage, your income, your family and your health to work out the right level of cover, so you're not left with too little or paying for more than you need.",
+    "• Cover that fits you. Online quotes usually start from a standard amount and term, often leaving clients with a policy that doesn’t meet their needs. I'll look at your mortgage, your income, your family and your health to work out what is most important to you and your family.",
     "• Getting the application right. Most claims that aren't paid in full come down to information missed or answered incorrectly on the application. I'll take you through the questions properly, so you can be confident your policy will pay out when it matters.",
     "• Understanding what you're covered for. Policies can look similar on the surface but differ in what they include, particularly with critical illness cover. I'll explain the differences in plain English and compare policies from a range of insurers, so you get good value and not just the lowest price.",
     "• Setting up a trust. Many people don't realise it's worth putting their policy into trust, and it's easily missed when buying online. A trust can help the money reach the right people more quickly, and can help keep it outside your estate for inheritance tax. I'll help you set this up correctly.",
     "• Ongoing support. If your circumstances change, or your family ever needs to make a claim, you'll have someone to speak to rather than a website or call centre.",
     "My aim is simply to make sure you have the information you need to choose the right cover for you and your family. I'd be happy to arrange a short call to go through your options, with no obligation.",
-    'Just reply to this email with a time that suits you, or call me on 01256637000.',
+    'Just reply to this email with a time that suits you, or call me.',
     SIGN_OFF,
   ]},
   {name:'Declined', subject:'Your life insurance decision', body:[
     'Dear {names},',
     'Thank you for your time, and for considering your life insurance options with us.',
-    "I understand you've decided not to go ahead with cover at the moment, and I completely respect that. The decision is yours to make. As you didn't mention a reason, I wanted to follow up to make sure you have everything you need, and to set out the risks of not having cover so that your decision is a fully informed one.",
+    "I understand you've decided not to go ahead with cover at the moment. [As you didn't mention a reason / You specified that you did not wish to take X cover because of X.]",
     'Without protection in place:',
     '• You or your family could find it difficult to keep up with the mortgage, household bills or other debts if you were to pass away or become seriously ill. In the worst case, this could put your home at risk.',
     RISKS_LIST[1],
     '• Cover can become more expensive, or harder to arrange, as we get older or if our health changes, so the terms available to you today may not always be there.',
-    CONSUMER_DUTY,
     RESPONSIBILITY,
-    "If something in particular held you back, whether that's the cost, the level of cover, or simply the timing, I'd really welcome the chance to talk it through. We can often adjust the cover to suit you, and even a smaller amount can make a real difference.",
-    'If not, no problem at all. The door is always open, so please get in touch whenever you feel ready, or if your circumstances change. You can reply to this email or call me on 01256637000.',
+    TAILOR,
+    'If not, no problem at all. The door is always open, so please get in touch whenever you feel ready, or if your circumstances change. You can reply to this email or call me.',
     SIGN_OFF,
   ]},
 ];

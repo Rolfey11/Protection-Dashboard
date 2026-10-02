@@ -547,6 +547,14 @@ main{max-width:1680px; margin:0 auto; padding:20px 24px 20px;}
 .ref-table th.sorted{color:var(--brand);}
 .ref-table td:first-child, .ref-table th:first-child{position:sticky; left:0; background:var(--surface); z-index:1; min-width:150px;}
 .ref-table td.empty{color:var(--text-faint);}
+/* Laptop and desktop: squeeze every column onto the screen (no sideways scroll). Phones keep scrolling. */
+@media (min-width: 900px){
+  .ref-table{table-layout:fixed; min-width:0; font-size:12px;}
+  .ref-table th, .ref-table td{padding:9px 8px; overflow-wrap:anywhere;}
+  .ref-table th[data-ref-sort]{white-space:normal;}
+  .ref-table td:not(:first-child){min-width:0;}
+  .ref-table td:first-child, .ref-table th:first-child{position:static; min-width:0; width:120px;}
+}
 .nml-table-wrap{overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm);}
 .nml-table{width:100%; border-collapse:collapse; font-size:13px; min-width:640px;}
 .nml-table th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-faint); padding:10px 12px; border-bottom:1px solid var(--border); font-weight:700;}

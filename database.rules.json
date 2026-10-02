@@ -48,6 +48,17 @@
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()"
     },
 
+    "logins": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      "$userId": {
+        ".write": "auth != null && root.child('members').child(auth.uid).val() === $userId",
+        ".validate": "newData.hasChildren(['lastSeen'])",
+        "lastLogin": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "lastSeen": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "$other": { ".validate": false }
+      }
+    },
+
     "config": {
       ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'"

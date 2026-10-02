@@ -555,6 +555,11 @@ main{max-width:1680px; margin:0 auto; padding:20px 24px 20px;}
   .ref-table td:not(:first-child){min-width:0;}
   .ref-table td:first-child, .ref-table th:first-child{position:static; min-width:0; width:120px;}
 }
+.login-chip{display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; background:var(--brand-tint); color:var(--brand);}
+.login-chip.ok{background:#E6F4EA; color:#1E7B3A;}
+.login-chip.warn{background:#FFF4E0; color:#A15C00;}
+.login-chip.bad{background:#FDE8E8; color:#B42318;}
+.login-sub{font-size:11.5px; color:var(--text-muted); margin-top:2px;}
 .nml-table-wrap{overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm);}
 .nml-table{width:100%; border-collapse:collapse; font-size:13px; min-width:640px;}
 .nml-table th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-faint); padding:10px 12px; border-bottom:1px solid var(--border); font-weight:700;}
@@ -1315,6 +1320,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <button class="nav-tab" data-page="calendar" id="calendarTab">Calendar</button>
         <button class="nav-tab hidden" data-page="insights" id="insightsTab">Insights</button>
         <button class="nav-tab hidden" data-page="useful" id="usefulTab">Useful Info</button>
+        <button class="nav-tab hidden" data-page="logins" id="loginsTab">Log in Data</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
       </div>
@@ -1640,6 +1646,17 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <div class="ci-status" id="refStatus"></div>
         <div id="refResults"></div>
       </div>
+    </div>
+
+    <div id="page-logins" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Log in Data</h1>
+          <p class="sub">When each MAPA and Admin last signed in, last used the tracker, and last worked on a lead.</p>
+        </div>
+      </div>
+      <div id="loginsResults"></div>
+      <p class="nml-note">Sign-ins are recorded from the day this page was added, so anyone who hasn't signed in since shows "Not recorded yet". Lead activity comes from each lead's history, so it doesn't include leads that have been deleted.</p>
     </div>
 
     <div id="page-themes" class="hidden">
@@ -2759,10 +2776,11 @@ function tryResolveSession(){
     linkingPromise = linking;
     const startIfStillSignedIn = ()=>{ if(currentUser && currentUser.id===matchId && auth.currentUser===signedInAs) startAuthedListeners(); };
     if(freshPin != null && isWeakPin(freshPin)){
-      showForcePinChange(freshPin, linking, signedInAs, ()=>{ enterApp(); linking.then(startIfStillSignedIn); });
+      showForcePinChange(freshPin, linking, signedInAs, ()=>{ enterApp(); linking.then(startIfStillSignedIn); linking.then(()=> recordSignIn(matchId, true)); });
       return;
     }
     markPinChecked(signedInAs.uid);
+    linking.then(()=> recordSignIn(matchId, freshPin != null));
     enterApp();
     if(knownLinked) startIfStillSignedIn();
     else linking.then(startIfStillSignedIn);
@@ -2783,6 +2801,7 @@ function logout(){
   db.ref('clientSources').off();
   db.ref('config').off(); CONFIG = {};
   db.ref('pins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {};
+  db.ref('logins').off(); loginsListening = false; LOGINS = {};
   selectedAdvisorFilter = null; searchTerm = ''; dateRangeFrom = null; dateRangeTo = null;
   document.getElementById('globalSearch').value = '';
   document.getElementById('dateFrom').value = ''; document.getElementById('dateTo').value = '';
@@ -2867,6 +2886,7 @@ function enterApp(){
   document.getElementById('settingsTab').classList.remove('hidden');
   document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role==='admin');
   document.getElementById('usefulTab').classList.toggle('hidden', currentUser.role!=='mapa' && currentUser.role!=='management');
+  document.getElementById('loginsTab').classList.toggle('hidden', currentUser.role!=='management');
 
   const first = currentUser.name.split(' ')[0];
   document.getElementById('dashGreeting').textContent = `Welcome back, ${first}`;
@@ -2888,10 +2908,11 @@ function goPage(page){
   document.getElementById('page-dashboard').classList.toggle('hidden', page!=='dashboard');
   document.getElementById('page-insights').classList.toggle('hidden', page!=='insights');
   document.getElementById('page-themes').classList.toggle('hidden', page!=='themes');
+  document.getElementById('page-logins').classList.toggle('hidden', page!=='logins');
   document.getElementById('page-useful').classList.toggle('hidden', page!=='useful');
   if(page==='useful') showUsefulHome();
   document.getElementById('page-calendar').classList.toggle('hidden', page!=='calendar');
-  document.getElementById('daterangeWrap').style.visibility = (page==='calendar' || page==='useful') ? 'hidden' : '';
+  document.getElementById('daterangeWrap').style.visibility = (page==='calendar' || page==='useful' || page==='logins') ? 'hidden' : '';
   document.getElementById('page-settings').classList.toggle('hidden', page!=='settings');
   if(page==='settings'){
     const isMapa = currentUser.role==='mapa';
@@ -2916,6 +2937,7 @@ function goPage(page){
   if(page==='dashboard') renderDashboard();
   if(page==='insights') renderInsights();
   if(page==='themes') renderThemes();
+  if(page==='logins') startLoginsListener();
   if(page==='calendar') renderCalendar();
 }
 
@@ -3346,6 +3368,85 @@ document.getElementById('refFileInput').addEventListener('change', function(){
 document.getElementById('nmlCover').addEventListener('change', ()=>{ if(NML) renderNml(); });
 
 /* ----------------------------------------------------------------------------
+   LOG IN DATA — /logins/{colleagueId} = {lastLogin, lastSeen}. Each colleague
+   writes their own; only Management can read them.
+   lastLogin: signed in with their PIN. lastSeen: had the tracker open and in
+   use (refreshed at most every 5 minutes, so it costs very few writes).
+   ---------------------------------------------------------------------------- */
+let LOGINS = {}, loginsListening = false, lastSeenWritten = 0;
+function recordSignIn(id, withPin){
+  if(!currentUser || currentUser.id!==id) return;
+  const now = firebase.database.ServerValue.TIMESTAMP;
+  const patch = {lastSeen: now};
+  if(withPin) patch.lastLogin = now;
+  lastSeenWritten = Date.now();
+  db.ref('logins/'+id).update(patch).catch(()=>{}); // older rules refuse this; logins still work
+}
+function touchLastSeen(){
+  if(!currentUser || document.hidden || Date.now() - lastSeenWritten < 5*60*1000) return;
+  lastSeenWritten = Date.now();
+  db.ref('logins/'+currentUser.id+'/lastSeen').set(firebase.database.ServerValue.TIMESTAMP).catch(()=>{});
+}
+['click','keydown'].forEach(ev=> document.addEventListener(ev, touchLastSeen, {passive:true}));
+document.addEventListener('visibilitychange', touchLastSeen);
+
+function startLoginsListener(){
+  renderLogins();
+  if(loginsListening || !currentUser || currentUser.role!=='management') return;
+  loginsListening = true;
+  db.ref('logins').on('value', snap=>{ LOGINS = snap.val() || {}; renderLogins(); },
+    ()=>{ loginsListening = false; document.getElementById('loginsResults').innerHTML = '<div class="nml-empty">Could not load sign-in data. Publish the updated Firebase rules, then refresh.</div>'; });
+}
+function loginChip(ts){
+  if(!ts) return '<span class="login-chip bad">Not recorded yet</span>';
+  const days = (Date.now()-ts)/86400000;
+  const cls = days < 1 ? 'ok' : days < 7 ? '' : days < 14 ? 'warn' : 'bad';
+  const dayDiff = Math.round((new Date().setHours(0,0,0,0) - new Date(ts).setHours(0,0,0,0)) / 86400000);
+  const lbl = dayDiff<=0 ? 'Today' : dayDiff===1 ? 'Yesterday' : dayDiff+' days ago';
+  return `<span class="login-chip ${cls}">${esc(lbl)}</span><div class="login-sub">${esc(fmtDateTime(ts))}</div>`;
+}
+// Latest audit entry each colleague made on any lead, plus how many in the last 7 days.
+function leadActivityByUser(){
+  const out = {}, weekAgo = Date.now() - 7*86400000;
+  Object.entries(LEADS||{}).forEach(([leadId, l])=>{
+    Object.values((l && l.audit)||{}).forEach(a=>{
+      if(!a || !a.byId || !a.at) return;
+      const o = out[a.byId] || (out[a.byId] = {last:null, week:0});
+      if(a.at >= weekAgo) o.week++;
+      if(!o.last || a.at > o.last.at) o.last = {at:a.at, text:a.text||'', client:l.clientName||'', leadId};
+    });
+  });
+  return out;
+}
+function renderLogins(){
+  const out = document.getElementById('loginsResults');
+  if(!out || document.getElementById('page-logins').classList.contains('hidden')) return;
+  const act = leadActivityByUser();
+  const order = {mapa:0, admin:1};
+  const people = Object.entries(USERS).filter(([, u])=> u && (u.role==='mapa' || u.role==='admin'))
+    .sort((a,b)=> order[a[1].role]-order[b[1].role] || String(a[1].name).localeCompare(String(b[1].name)));
+  if(!people.length){ out.innerHTML = '<div class="nml-empty">No MAPAs or Admins set up yet.</div>'; return; }
+  out.innerHTML = `<div class="nml-table-wrap"><table class="nml-table">
+    <thead><tr><th>Colleague</th><th>Role</th><th>Last signed in</th><th>Last used the tracker</th><th>Last lead activity</th><th>Lead actions (7 days)</th></tr></thead>
+    <tbody>${people.map(([id, u])=>{
+      const lg = LOGINS[id] || {}, a = act[id];
+      const last = a && a.last;
+      return `<tr>
+        <td><div class="nml-ins">${esc(u.name)}</div></td>
+        <td>${esc(ROLE_LABEL[u.role]||u.role)}</td>
+        <td>${loginChip(lg.lastLogin)}</td>
+        <td>${loginChip(lg.lastSeen)}</td>
+        <td>${last ? `${loginChip(last.at)}<div class="login-sub"><a href="#" data-login-lead="${esc(last.leadId)}">${esc(last.client||'Lead')}</a>: ${esc(last.text.length>90 ? last.text.slice(0,90)+'…' : last.text)}</div>` : '<span class="login-chip bad">No lead activity</span>'}</td>
+        <td class="num">${a ? a.week : 0}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+  out.querySelectorAll('[data-login-lead]').forEach(el=> el.addEventListener('click', e=>{
+    e.preventDefault();
+    if(LEADS[el.dataset.loginLead]) openLead(el.dataset.loginLead);
+  }));
+}
+
+/* ----------------------------------------------------------------------------
    6) FIREBASE LISTENERS
    ---------------------------------------------------------------------------- */
 function refreshInsightsIfVisible(){
@@ -3375,6 +3476,7 @@ db.ref('users').on('value', snap=>{
     renderDashboard(); renderUsersTable();
   }
   refreshInsightsIfVisible();
+  if(currentUser) renderLogins();
 }, err=>{
   userSelect.innerHTML = '<option value="">Could not load — check Firebase rules</option>';
   showLoginError('Could not load colleagues. If this persists, your Firebase database rules likely need adjusting — see the setup notes in this file.');
@@ -3456,6 +3558,7 @@ function startAuthedListeners(){
     setTimeout(maybeAutoBackup, 1500);
     if(currentUser){
       renderDashboard();
+      renderLogins();
       if(activeLeadId){
         const raw = LEADS[activeLeadId];
         if(!raw || raw.deleted){

@@ -1,0 +1,162 @@
+{
+  "title": "Free Add-ons (Added Value Services)",
+  "description": "Free extras each insurer includes with its individual life, critical illness and income protection policies, such as a remote GP, second medical opinions and nurse support.",
+  "checked": "2026-10-02",
+  "status": "Draft from insurer announcements and comparison sites. These services are non-contractual, so insurers can change or withdraw them at any time. Check the insurer's current added value page before telling a client about them.",
+  "columns": [
+    {"key": "service", "label": "Service name"},
+    {"key": "gp", "label": "Remote GP"},
+    {"key": "mental", "label": "Mental health / counselling"},
+    {"key": "physio", "label": "Physiotherapy"},
+    {"key": "second_opinion", "label": "Second medical opinion"},
+    {"key": "nurse", "label": "Nurse / practical support"},
+    {"key": "other", "label": "Other extras"},
+    {"key": "family", "label": "Who can use it"}
+  ],
+  "insurers": [
+    {
+      "name": "Aviva",
+      "values": {
+        "service": "Aviva DigiCare+ (app)",
+        "gp": "Unlimited digital GP, 24/7, 365 days a year (from 29 Jan 2026)",
+        "mental": "Up to 8 mental health sessions a year",
+        "physio": null,
+        "second_opinion": "Second medical opinion",
+        "nurse": "Up to 8 bereavement support sessions a year",
+        "other": "Up to 8 nutrition sessions and up to 8 online personal training sessions a year. Finger-prick health check now costs £39.95 (was free).",
+        "family": "Policyholder, partner and children up to 18 (21 in full-time education) for the digital GP"
+      },
+      "source": "Aviva news release, Jan 2026",
+      "url": "https://www.aviva.com/newsroom/news-releases/2026/01/aviva-digicare-plus-offers-unlimited-gp-access-to-individual-protection-customers-and-their-families/",
+      "notes": "Services are non-contractual and Aviva can change them."
+    },
+    {
+      "name": "Guardian",
+      "values": {
+        "service": "Guardian Anytime",
+        "gp": "Unlimited GP by phone or video, 24/7, from anywhere in the world",
+        "mental": "Phone consultations for emotional wellbeing",
+        "physio": "Phone consultations for aches and pains",
+        "second_opinion": "Face-to-face second opinion from a UK consultant if diagnosed with a life-changing or life-threatening condition",
+        "nurse": "Personal nurse adviser alongside the second opinion",
+        "other": null,
+        "family": "Policyholder and immediate family (children covered too where Children's Critical Illness Protection is held)"
+      },
+      "source": "Guardian: ANYTIME",
+      "url": "https://guardian1821.co.uk/additional-benefits/anytime/",
+      "notes": null
+    },
+    {
+      "name": "Legal & General",
+      "values": {
+        "service": "Umbrella Benefits",
+        "gp": null,
+        "mental": "Covered by Wellbeing Support (nurse-led)",
+        "physio": null,
+        "second_opinion": null,
+        "nurse": "Wellbeing Support from RedArc registered nurses: illness, injury, bereavement, mental health, treatment options and understanding a diagnosis",
+        "other": "Care Concierge: help finding and arranging later-life care (policies from 20 July 2023). Rehabilitation Support Services on income protection.",
+        "family": "Policyholder and close family"
+      },
+      "source": "L&G: Umbrella Benefits",
+      "url": "https://prod-epi.legalandgeneral.com/landg-assets/adviser/files/protection/umbrella-benefits/umbrella-benefits-one-pager.pdf",
+      "notes": "Comparison sites say L&G has no remote GP on individual policies (its virtual GP is for group customers only). Paid-for Fracture Cover and Private Diagnostics were withdrawn in 2024–25."
+    },
+    {
+      "name": "LV=",
+      "values": {
+        "service": "LV= Doctor Services (app or phone)",
+        "gp": "Unlimited remote GP, 24/7, by video or phone",
+        "mental": "Up to 5 mental health sessions",
+        "physio": "Up to 5 remote physiotherapy sessions with a treatment plan",
+        "second_opinion": "UK specialist, by video or face to face",
+        "nurse": null,
+        "other": "Private prescriptions; Health MOT",
+        "family": "Policyholder and partner"
+      },
+      "source": "LV= Doctor Services",
+      "url": "https://www.lv.com/members/doctor-services",
+      "notes": "Only for certain policies bought after 2017. Check whether the session limits are per year."
+    },
+    {
+      "name": "Royal London",
+      "values": {
+        "service": "Helping Hand",
+        "gp": "Virtual GP, 24/7, by phone or video (HealthHero)",
+        "mental": "Mental health support, e.g. CBT; sessions set by the nurse based on clinical need",
+        "physio": "Physiotherapy; sessions set by the nurse based on clinical need",
+        "second_opinion": "Face-to-face second opinion in the UK, without needing to claim",
+        "nurse": "Dedicated RedArc nurse for practical and emotional support, for as long as needed",
+        "other": "Speech therapy and other therapies where the nurse arranges them",
+        "family": "Plan owner, partner and children (virtual GP covers dependent children up to 16)"
+      },
+      "source": "Royal London: Helping Hand",
+      "url": "https://www.royallondon.com/insurance/life-insurance/advised-life-cover/helping-hand/",
+      "notes": null
+    },
+    {
+      "name": "Scottish Widows",
+      "values": {
+        "service": "Scottish Widows Care",
+        "gp": "Remote GP 24/7 with prescription delivery (Clinic in a Pocket app, Square Health)",
+        "mental": "Counselling and CBT",
+        "physio": "Physiotherapy (musculoskeletal therapists across the UK)",
+        "second_opinion": "Face-to-face second opinion from UK specialists, arranged by the personal nurse",
+        "nurse": "Dedicated RedArc personal nurse by phone, for as long as needed",
+        "other": "Nutrition support; complementary and occupational therapy via the nurse",
+        "family": "Policyholder, partner and children"
+      },
+      "source": "Scottish Widows Care",
+      "url": "https://www.scottishwidows.co.uk/life-insurance/care.html",
+      "notes": "Session limits not published in the sources found. Check the adviser added value page."
+    },
+    {
+      "name": "The Exeter",
+      "values": {
+        "service": "HealthWise (app)",
+        "gp": "GP on demand by phone or video, with prescriptions",
+        "mental": "Mental health consultations (income protection members)",
+        "physio": "Physiotherapy consultations (income protection members)",
+        "second_opinion": "Second medical opinion service",
+        "nurse": null,
+        "other": "Income protection: up to 6 dietitian and 6 nutritionist consultations a year. Life plans: nutrition advice and lifestyle coaching.",
+        "family": null
+      },
+      "source": "The Exeter: HealthWise",
+      "url": "https://the-exeter.com/news/the-exeter-sees-healthwise-appointments-soar-by-175-in-2024/",
+      "notes": "Using HealthWise isn't a claim, so it doesn't affect no-claims discounts."
+    },
+    {
+      "name": "Vitality",
+      "values": {
+        "service": "Vitality Programme",
+        "gp": null,
+        "mental": "Headspace membership (Vitality Select)",
+        "physio": null,
+        "second_opinion": null,
+        "nurse": null,
+        "other": "Rewards and discounts for staying active: Apple Watch deal, gym discounts, Caffè Nero and other partner rewards (better rewards with Optimiser / Vitality Plus). Healthy habits can lower premiums.",
+        "family": "Policyholder (joint plans: both lives)"
+      },
+      "source": "Vitality: Optimiser",
+      "url": "https://adviser.vitality.co.uk/life-insurance/optimiser/",
+      "notes": "Vitality GP comes with Vitality health insurance, not life cover. Some rewards need a minimum premium and Optimiser (an extra monthly cost)."
+    },
+    {
+      "name": "Zurich",
+      "values": {
+        "service": "Zurich Support Services",
+        "gp": null,
+        "mental": "24/7 access to counsellors",
+        "physio": null,
+        "second_opinion": null,
+        "nurse": "24/7 access to counsellors and advisers throughout the policy, not only at claim",
+        "other": "Optional paid add-on Zurich Accelerate (£9.50 a month): virtual consultations, private diagnostics, second opinions and cancer treatment support. It isn't free.",
+        "family": null
+      },
+      "source": "Money Marketing: Zurich protection services",
+      "url": "https://www.moneymarketing.co.uk/news/zurich-launches-new-range-of-protection-services/",
+      "notes": "Zurich's ZGP24 virtual GP is confirmed for group protection only. Sources are unclear whether individual policyholders get a free GP. Check with Zurich."
+    }
+  ]
+}

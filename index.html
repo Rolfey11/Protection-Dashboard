@@ -591,6 +591,22 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-filters input{flex:1 1 260px; min-width:0;}
 .sib-filters select{flex:0 1 210px; min-width:0;}
 .sib-table tbody tr{cursor:pointer;}
+/* Send in Blue Insights */
+.sib-ins-bar{display:flex; gap:2px; height:10px; min-width:120px; border-radius:4px; overflow:hidden; background:var(--bg);}
+.sib-ins-bar i{display:block; height:100%;}
+.sib-ins-bar .r{background:var(--green);} .sib-ins-bar .x{background:var(--red);} .sib-ins-bar .o{background:var(--text-faint);} .sib-ins-bar .c{background:var(--blue-bg); box-shadow:inset 0 0 0 1px var(--blue);}
+.sib-legend{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11.5px; color:var(--text-muted); margin:-6px 0 12px;}
+.sib-legend span{display:inline-flex; align-items:center; gap:5px;}
+.sib-legend i{display:inline-block; width:10px; height:10px; border-radius:3px;}
+.sib-hbar{display:grid; grid-template-columns:minmax(110px, 38%) 1fr auto; align-items:center; gap:10px; padding:5px 0; font-size:12.5px;}
+.sib-hbar .t{height:10px; border-radius:0 4px 4px 0; background:var(--bg);}
+.sib-hbar .t i{display:block; height:100%; border-radius:0 4px 4px 0; background:var(--brand); min-width:2px;}
+.sib-hbar b{font-weight:700; min-width:28px; text-align:right;}
+.sib-weeks{display:flex; align-items:flex-end; gap:6px; height:120px; padding-top:8px;}
+.sib-weeks div{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px; height:100%; font-size:10.5px; color:var(--text-muted);}
+.sib-weeks i{display:block; width:100%; max-width:38px; background:var(--brand); border-radius:4px 4px 0 0; min-height:2px;}
+.sib-ins-table td.num,.sib-ins-table th.num{text-align:right;}
+.sib-ins-wrap{overflow-x:auto;}
 .sib-note-preview{margin-top:4px; font-size:12px; color:var(--text-muted); font-style:italic; max-width:460px; white-space:pre-wrap; word-break:break-word;}
 .sib-table tbody tr:hover td{background:var(--brand-tint);}
 .sib-table tr.dnc td{opacity:.6;}
@@ -1371,6 +1387,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <button class="nav-tab hidden prot-only" data-page="insights" id="insightsTab">Insights</button>
         <button class="nav-tab hidden prot-only" data-page="useful" id="usefulTab">Useful Info</button>
         <button class="nav-tab sib-only" data-page="sib" id="sibTab">Cases</button>
+        <button class="nav-tab sib-only hidden" data-page="sibInsights" id="sibInsightsTab">Insights</button>
         <button class="nav-tab hidden" data-page="logins" id="loginsTab">Log in Data</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
@@ -1729,6 +1746,21 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </select>
       </div>
       <div id="sibResults"></div>
+    </div>
+
+    <div id="page-sibInsights" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Send in Blue Insights</h1>
+          <p class="sub">How the retention book is performing: outcomes, follow-up, advisers and team activity.</p>
+        </div>
+      </div>
+      <div class="sib-filters">
+        <select id="sibInsFrom" aria-label="From month"></select>
+        <select id="sibInsTo" aria-label="To month"></select>
+        <select id="sibInsAdviser" aria-label="Servicing adviser"><option value="">All servicing advisers</option></select>
+      </div>
+      <div id="sibInsBody"></div>
     </div>
 
     <div id="page-logins" class="hidden">
@@ -3077,6 +3109,7 @@ function enterApp(){
   document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role==='admin');
   document.getElementById('usefulTab').classList.toggle('hidden', currentUser.role!=='mapa' && currentUser.role!=='management');
   document.getElementById('loginsTab').classList.toggle('hidden', currentUser.role!=='management');
+  document.getElementById('sibInsightsTab').classList.toggle('hidden', currentUser.role!=='management');
 
   const first = currentUser.name.split(' ')[0];
   document.getElementById('dashGreeting').textContent = `Welcome back, ${first}`;
@@ -3101,6 +3134,7 @@ function goPage(page){
   document.getElementById('page-themes').classList.toggle('hidden', page!=='themes');
   document.getElementById('page-logins').classList.toggle('hidden', page!=='logins');
   document.getElementById('page-sib').classList.toggle('hidden', page!=='sib');
+  document.getElementById('page-sibInsights').classList.toggle('hidden', page!=='sibInsights');
   document.getElementById('page-useful').classList.toggle('hidden', page!=='useful');
   if(page==='useful') showUsefulHome();
   document.getElementById('page-calendar').classList.toggle('hidden', page!=='calendar');
@@ -3133,6 +3167,7 @@ function goPage(page){
   if(page==='themes') renderThemes();
   if(page==='logins') startLoginsListener();
   if(page==='sib'){ startSibListener(); renderSib(); }
+  if(page==='sibInsights'){ startSibListener(); renderSibInsights(); }
   if(page==='calendar') renderCalendar();
 }
 
@@ -3618,6 +3653,7 @@ function startSibListener(){
   db.ref('sib/cases').on('value', snap=>{
     SIB = snap.val() || {}; sibLoaded = true;
     if(!document.getElementById('page-sib').classList.contains('hidden')) renderSib();
+    renderSibInsights();
     if(sibOpenKey && document.getElementById('sibOverlay').classList.contains('open')) renderSibCase();
     if(!document.getElementById('page-settings').classList.contains('hidden')) renderSibSettings();
   }, ()=>{
@@ -4041,6 +4077,138 @@ document.getElementById('sibDownloadBtn').addEventListener('click', ()=>{
   ensureSibLoaded().then(go).catch(err=> toast('Could not load Send in Blue cases: '+err.message,'error'));
 });
 
+
+
+/* ---- Send in Blue Insights (Management) ---- */
+const sibIns = {from:'', to:'', adviser:'', days:30};
+function pct(a, b){ return b ? Math.round(a/b*100) : null; }
+function pctTxt(a, b){ const p = pct(a, b); return p==null ? '—' : p+'%'; }
+function sibContacted(c){ return !!(c.lastContact || c.retentionKey || Object.values(c.audit||{}).some(a=> a && (a.type==='call' || a.type==='email'))); }
+function sibOutcomeCounts(list){
+  const o = {cases:list.length, retained:0, notConverted:0, noOpp:0, open:0, contacted:0};
+  list.forEach(c=>{
+    if(c.retentionKey==='Retained') o.retained++; else if(c.retentionKey==='Not Converted') o.notConverted++; else if(c.retentionKey==='No Opportunity') o.noOpp++; else o.open++;
+    if(sibContacted(c)) o.contacted++;
+  });
+  o.closed = o.retained + o.notConverted + o.noOpp;
+  return o;
+}
+function sibOutcomeBar(o){
+  const seg = (n, cls, lbl)=> n ? `<i class="${cls}" style="flex:${n}" title="${lbl}: ${n}"></i>` : '';
+  const openContacted = Math.min(o.open, Math.max(0, o.contacted - o.closed));
+  return `<div class="sib-ins-bar" role="img" aria-label="${o.retained} retained, ${o.notConverted} not converted, ${o.noOpp} no opportunity, ${o.open} open">${seg(o.retained,'r','Retained')}${seg(o.notConverted,'x','Not converted')}${seg(o.noOpp,'o','No opportunity')}${seg(openContacted,'c','Open, contacted')}${seg(o.open-openContacted,'','Open, not contacted yet')}</div>`;
+}
+function sibHBars(entries, total){
+  if(!entries.length) return '<div class="insights-empty">Nothing recorded yet.</div>';
+  const max = Math.max(...entries.map(e=> e[1]));
+  return entries.map(([lbl, n])=> `<div class="sib-hbar" title="${esc(lbl)}: ${n}${total ? ' ('+pctTxt(n,total)+')' : ''}"><span>${esc(lbl)}</span><span class="t"><i style="width:${max ? n/max*100 : 0}%"></i></span><b>${n}</b></div>`).join('');
+}
+function renderSibInsights(){
+  const page = document.getElementById('page-sibInsights');
+  if(!page || page.classList.contains('hidden') || !currentUser || currentUser.role!=='management') return;
+  const body = document.getElementById('sibInsBody');
+  if(!sibLoaded){ body.innerHTML = '<div class="nml-empty">Loading…</div>'; return; }
+  const all = sibCases();
+  if(!all.length){ body.innerHTML = '<div class="nml-empty">No Send in Blue cases yet. Upload the spreadsheet in Settings.</div>'; return; }
+  // filters
+  const months = [...new Set(all.map(c=> c.month).filter(Boolean))].sort();
+  if(!months.includes(sibIns.from)) sibIns.from = months[0];
+  if(!months.includes(sibIns.to)) sibIns.to = months[months.length-1];
+  const fromSel = document.getElementById('sibInsFrom'), toSel = document.getElementById('sibInsTo'), advSel = document.getElementById('sibInsAdviser');
+  fromSel.innerHTML = months.map(m=> `<option value="${esc(m)}">From ${esc(sibMonthLabel(m))}</option>`).join(''); fromSel.value = sibIns.from;
+  toSel.innerHTML = months.map(m=> `<option value="${esc(m)}">To ${esc(sibMonthLabel(m))}</option>`).join(''); toSel.value = sibIns.to;
+  const advs = [...new Set(all.map(c=> c.servicingAdviser).filter(Boolean))].sort();
+  advSel.innerHTML = '<option value="">All servicing advisers</option>' + advs.map(a=> `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  advSel.value = advs.includes(sibIns.adviser) ? sibIns.adviser : '';
+  const [lo, hi] = sibIns.from <= sibIns.to ? [sibIns.from, sibIns.to] : [sibIns.to, sibIns.from];
+  const list = all.filter(c=> c.month >= lo && c.month <= hi && (!advSel.value || c.servicingAdviser===advSel.value));
+  const o = sibOutcomeCounts(list);
+  const atRisk = list.filter(c=> !c.retentionKey && !c.doNotContact && sibMonthsAway(c.month) <= 3 && !sibContacted(c)).length;
+  const overdue = list.reduce((t, c)=> t + [6,3,0].filter(n=> sibEmailState(c, n).due).length, 0);
+  const unsub = list.filter(c=> sibUnsubscribed(c)).length, dnc = list.filter(c=> c.doNotContact).length;
+  const conv = pct(o.retained, o.retained + o.notConverted);
+  const tiles =
+    statCard(o.cases, 'Cases in range') +
+    statCard(`${o.retained} · ${pctTxt(o.retained, o.closed)}`, 'Retained (of closed cases)', 'good') +
+    statCard(conv==null ? '—' : conv+'%', 'Conversion where there was an opportunity', conv==null ? '' : conv>=70 ? 'good' : conv>=40 ? 'warn' : 'bad') +
+    statCard(`${o.notConverted}`, 'Not converted (lost)', o.notConverted ? 'bad' : '') +
+    statCard(pctTxt(o.contacted, o.cases), 'Contacted so far', 'accent') +
+    statCard(atRisk, 'Ending ≤3 months, not contacted', atRisk ? 'bad' : 'good') +
+    statCard(overdue, 'Send in Blue emails due, not ticked', overdue ? 'warn' : 'good') +
+    statCard(unsub + dnc, `Unsubscribed (${unsub}) / do not contact (${dnc})`);
+  // by month
+  const legend = `<div class="sib-legend"><span><i style="background:var(--green)"></i>Retained</span><span><i style="background:var(--red)"></i>Not converted</span><span><i style="background:var(--text-faint)"></i>No opportunity</span><span><i style="background:var(--blue-bg); box-shadow:inset 0 0 0 1px var(--blue)"></i>Open, contacted</span><span><i style="background:var(--bg); box-shadow:inset 0 0 0 1px var(--border-2)"></i>Open, not contacted</span></div>`;
+  const monthRows = [...new Set(list.map(c=> c.month))].sort().map(m=>{
+    const mc = list.filter(c=> c.month===m), mo = sibOutcomeCounts(mc), tag = sibMonthTag(m);
+    return `<tr><td style="font-weight:600;">${esc(sibMonthLabel(m))}${tag ? ` <span class="sib-tag ${tag[0]}">${tag[1]}</span>` : ''}</td><td class="num">${mo.cases}</td><td class="num">${pctTxt(mo.contacted, mo.cases)}</td><td class="num">${mo.retained}</td><td class="num">${mo.notConverted}</td><td class="num">${mo.noOpp}</td><td class="num">${mo.open}</td><td class="num">${pctTxt(mo.retained, mo.closed)}</td><td>${sibOutcomeBar(mo)}</td></tr>`;
+  }).join('');
+  // by adviser
+  const advRows = [...new Set(list.map(c=> c.servicingAdviser || 'Not set'))].map(a=> [a, sibOutcomeCounts(list.filter(c=> (c.servicingAdviser || 'Not set')===a))])
+    .sort((x,y)=> y[1].cases - x[1].cases || x[0].localeCompare(y[0]))
+    .map(([a, ao])=> `<tr><td style="font-weight:600;">${esc(a)}</td><td class="num">${ao.cases}</td><td class="num">${ao.open}</td><td class="num">${pctTxt(ao.contacted, ao.cases)}</td><td class="num">${ao.retained}</td><td class="num">${ao.notConverted}</td><td class="num">${ao.noOpp}</td><td class="num">${pctTxt(ao.retained, ao.closed)}</td></tr>`).join('');
+  // reasons
+  const reasonCounts = filterFn=> Object.entries(list.filter(filterFn).reduce((m, c)=>{ const r = c.outcomeReason || 'No reason recorded'; m[r] = (m[r]||0)+1; return m; }, {})).sort((a,b)=> b[1]-a[1]);
+  const lost = list.filter(c=> c.retentionKey==='Not Converted' || c.retentionKey==='No Opportunity').length;
+  // engagement
+  const ec = ['YES','NO','UNSUBSCRIBED','See Notes'].map(v=> [v, list.filter(c=> c.emailClient===v).length]).concat([['Not set', list.filter(c=> !c.emailClient).length]]).filter(e=> e[1]);
+  const sibCover = [6,3,0].map(n=>{
+    const reached = list.filter(c=> !c.doNotContact && !sibUnsubscribed(c) && sibMonthsAway(c.month) <= n);
+    const sent = reached.filter(c=> sibEmailState(c, n).sent).length;
+    return `<tr><td style="font-weight:600;">${n} month email</td><td class="num">${reached.length}</td><td class="num">${sent}</td><td class="num">${reached.length - sent}</td><td class="num">${pctTxt(sent, reached.length)}</td></tr>`;
+  }).join('');
+  // team activity
+  const since = Date.now() - sibIns.days*86400000, people = {};
+  const weeks = Array.from({length:8}, (_, i)=> ({start: startOfWeek(Date.now()) - (7-i)*7*86400000, n:0}));
+  list.forEach(c=> Object.values(c.audit||{}).forEach(a=>{
+    if(!a || !a.at || a.type==='assigned') return;
+    const w = weeks.find(w=> a.at >= w.start && a.at < w.start + 7*86400000); if(w) w.n++;
+    if(a.at < since) return;
+    const p = people[a.byName||'Unknown'] = people[a.byName||'Unknown'] || {calls:0, emails:0, notes:0, outcomes:0, ticks:0, total:0, last:0};
+    if(a.type==='call') p.calls++; else if(a.type==='email') p.emails++; else if(a.type==='note') p.notes++; else if(a.type==='sent') p.ticks++;
+    if(/^Outcome:/.test(a.text||'')) p.outcomes++;
+    p.total++; p.last = Math.max(p.last, a.at);
+  }));
+  const actRows = Object.entries(people).sort((a,b)=> b[1].total - a[1].total).map(([n, p])=>
+    `<tr><td style="font-weight:600;">${esc(n)}</td><td class="num">${p.calls}</td><td class="num">${p.emails}</td><td class="num">${p.notes}</td><td class="num">${p.outcomes}</td><td class="num">${p.ticks}</td><td class="num"><b>${p.total}</b></td><td>${esc(timeAgo(p.last))}</td></tr>`).join('');
+  const wMax = Math.max(1, ...weeks.map(w=> w.n));
+  // inherited book
+  const exRows = [...new Set(list.filter(c=> c.exAdviser).map(c=> c.exAdviser.replace(/^X\s+/,'')))].map(a=> [a, sibOutcomeCounts(list.filter(c=> c.exAdviser && c.exAdviser.replace(/^X\s+/,'')===a))])
+    .sort((x,y)=> y[1].cases - x[1].cases).map(([a, ao])=> `<tr><td style="font-weight:600;">${esc(a)}</td><td class="num">${ao.cases}</td><td class="num">${ao.open}</td><td class="num">${ao.retained}</td><td class="num">${ao.notConverted + ao.noOpp}</td><td class="num">${pctTxt(ao.retained, ao.closed)}</td></tr>`).join('');
+  const table = (head, rows, empty)=> rows ? `<div class="sib-ins-wrap"><table class="mini-table sib-ins-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="insights-empty">${empty}</div>`;
+  body.innerHTML = `
+    <div class="stat-grid">${tiles}</div>
+    <div class="insights-card" style="margin-bottom:20px;"><h4>Retention by month (when the product ends)</h4>${legend}
+      ${table('<th>Month</th><th class="num">Cases</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Open</th><th class="num">Retention</th><th>Outcomes</th>', monthRows, 'No cases.')}</div>
+    <div class="insights-card" style="margin-bottom:20px;"><h4>By servicing adviser</h4>
+      ${table('<th>Servicing adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Retention</th>', advRows, 'No cases.')}</div>
+    <div class="insights-cols">
+      <div class="insights-card"><h4>Why business is lost (${lost} not converted / no opportunity)</h4>${sibHBars(reasonCounts(c=> c.retentionKey==='Not Converted' || c.retentionKey==='No Opportunity'), lost)}</div>
+      <div class="insights-card"><h4>How cases were retained (${o.retained})</h4>${sibHBars(reasonCounts(c=> c.retentionKey==='Retained'), o.retained)}</div>
+    </div>
+    <div class="insights-cols">
+      <div class="insights-card"><h4>Client email engagement ("Email client?")</h4>${sibHBars(ec, o.cases)}</div>
+      <div class="insights-card"><h4>Send in Blue emails sent on time</h4>
+        ${table('<th>Email</th><th class="num">Now due</th><th class="num">Ticked</th><th class="num">Not ticked</th><th class="num">Done</th>', sibCover, '')}
+        <p class="nml-note" style="margin-bottom:0;">"Now due" counts cases within 6, 3 or 0 months of the product ending, excluding unsubscribed and do-not-contact clients.</p></div>
+    </div>
+    <div class="insights-card" style="margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+        <h4 style="margin:0;">Team activity on these cases</h4>
+        <select id="sibInsDays" class="sib-inline-select" style="width:auto;"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select>
+      </div>
+      ${table('<th>Colleague</th><th class="num">Calls</th><th class="num">Emails</th><th class="num">Notes</th><th class="num">Outcomes</th><th class="num">SIB ticks</th><th class="num">Total</th><th>Last action</th>', actRows, 'No activity in this period.')}
+      <div class="section-lbl">Actions per week (last 8 weeks)</div>
+      <div class="sib-weeks" role="img" aria-label="Actions per week">${weeks.map(w=> `<div title="Week of ${esc(fmtDate(w.start))}: ${w.n} action${w.n===1?'':'s'}"><span>${w.n}</span><i style="height:${w.n/wMax*80}%"></i><span>${esc(new Date(w.start).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))}</span></div>`).join('')}</div>
+    </div>
+    <div class="insights-card" style="margin-bottom:20px;"><h4>Inherited book (clients of ex advisers)</h4>
+      ${table('<th>Ex adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Retained</th><th class="num">Lost</th><th class="num">Retention</th>', exRows, 'No ex-adviser cases in this range.')}</div>`;
+  const daysSel = document.getElementById('sibInsDays');
+  daysSel.value = String(sibIns.days);
+  daysSel.addEventListener('change', ()=>{ sibIns.days = Number(daysSel.value); renderSibInsights(); });
+}
+function startOfWeek(ts){ const d = new Date(ts); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((d.getDay()+6)%7)); return d.getTime(); }
+[['sibInsFrom','from'],['sibInsTo','to'],['sibInsAdviser','adviser']].forEach(([id, k])=>
+  document.getElementById(id).addEventListener('change', function(){ sibIns[k] = this.value; renderSibInsights(); }));
 
 /* ---- Bulk delete Send in Blue cases + their Recycle Bin (Management) ----
    Deleting sets deleted/deletedAt/deletedBy, so cases can be restored for

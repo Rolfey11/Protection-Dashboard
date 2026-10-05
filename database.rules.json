@@ -48,6 +48,24 @@
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()"
     },
 
+    "sib": {
+      "cases": {
+        ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
+        ".indexOn": ["month"],
+        "$caseId": {
+          ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists() && (!data.exists() || (!newData.exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'))",
+          "audit": {
+            "$auditId": {
+              ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists() && !data.exists()"
+            }
+          },
+          "$field": {
+            ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()"
+          }
+        }
+      }
+    },
+
     "logins": {
       ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
       "$userId": {

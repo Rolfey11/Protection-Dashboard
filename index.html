@@ -562,6 +562,43 @@ main{max-width:1680px; margin:0 auto; padding:20px 24px 20px;}
 .em-dec-given{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;}
 @media (max-width:560px){ .em-dec-given{grid-template-columns:1fr;} }
 .em-decline.missing{border-color:#B42318; box-shadow:0 0 0 3px rgba(180,35,24,.12);}
+/* Protection / Send in Blue switch */
+.mode-switch{display:flex; gap:2px; padding:4px; border-radius:999px; background:var(--bg); border:1px solid var(--border); flex-shrink:0;}
+.mode-switch button{border:none; background:none; padding:7px 13px; border-radius:999px; font:inherit; font-size:12.5px; font-weight:700; color:var(--text-muted); cursor:pointer; white-space:nowrap;}
+.mode-switch button.on{background:var(--brand); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.18);}
+body.mode-sib .mode-switch button.on{background:#1D6FA5;}
+body.mode-sib .prot-only{display:none !important;}
+body:not(.mode-sib) .sib-only{display:none !important;}
+@media (max-width:700px){ .mode-switch button{padding:6px 9px; font-size:11.5px;} }
+.sib-months{display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; margin-bottom:12px;}
+@media (min-width:1200px){ .sib-months{grid-template-columns:repeat(12, minmax(0, 1fr));} }
+.sib-month{display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; padding:10px 11px; border:1px solid var(--border); border-radius:12px; background:var(--surface); font:inherit; color:var(--text); cursor:pointer;}
+.sib-month:hover{border-color:var(--brand-light);}
+.sib-month{min-width:0;} .sib-month .sib-tag{white-space:normal; max-width:100%;}
+.sib-month.on{border:2px solid #1D6FA5; padding:9px 10px; background:color-mix(in srgb, #1D6FA5 8%, var(--surface));}
+.sib-month b{font-size:13px;} .sib-month .n{font-size:20px; font-weight:800; line-height:1.2;} .sib-month small{font-size:11px; color:var(--text-muted);}
+.sib-bar{display:block; width:100%; height:5px; border-radius:5px; background:var(--border); overflow:hidden; margin:4px 0 2px;}
+.sib-bar i{display:block; height:100%; background:var(--green);}
+.sib-tag{display:inline-block; padding:2px 7px; border-radius:999px; font-size:10.5px; font-weight:700; white-space:nowrap; background:var(--bg); color:var(--text-muted);}
+.sib-tag.ok,.sib-tag.ret{background:var(--green-bg); color:var(--green);}
+.sib-tag.nop,.sib-tag.now{background:var(--red-bg); color:var(--red);}
+.sib-tag.due{background:var(--amber-bg); color:var(--amber);}
+.sib-tag.open{background:var(--blue-bg); color:var(--blue);}
+.sib-summary{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:12px; font-size:13px;}
+.sib-filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
+.sib-filters input,.sib-filters select{padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; background:var(--surface); color:var(--text); font:inherit; font-size:13px;}
+.sib-filters input:focus,.sib-filters select:focus{outline:none; border-color:var(--brand-light);}
+.sib-filters input{flex:1 1 260px; min-width:0;}
+.sib-filters select{flex:0 1 210px; min-width:0;}
+.sib-table tbody tr{cursor:pointer;}
+.sib-table tbody tr:hover td{background:var(--brand-tint);}
+.sib-table tr.dnc td{opacity:.6;}
+.sib-email-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+.sib-email-btn{padding:10px 8px; border-radius:10px; border:1.5px solid var(--border-2); background:var(--surface); font:inherit; font-size:12px; font-weight:700; color:var(--text-muted); cursor:pointer;}
+.sib-email-btn.sent{background:var(--green-bg); border-color:transparent; color:var(--green);}
+.sib-email-btn.due{background:var(--amber-bg); border-color:transparent; color:var(--amber);}
+.sib-inline-select{width:100%; padding:4px 6px; font-size:13px;}
+.sib-email-copy summary{cursor:pointer; color:var(--brand); font-size:12px; font-weight:600; margin-top:6px;}
 .login-chip{display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; background:var(--brand-tint); color:var(--brand);}
 .login-chip.ok{background:#E6F4EA; color:#1E7B3A;}
 .login-chip.warn{background:#FFF4E0; color:#A15C00;}
@@ -1322,17 +1359,23 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
       </div>
 
+      <div class="mode-switch" id="modeSwitch" role="group" aria-label="Section">
+        <button type="button" data-mode="protection" class="on">Protection</button>
+        <button type="button" data-mode="sib">Send in Blue</button>
+      </div>
+
       <div class="nav-tabs" id="navTabs">
-        <button class="nav-tab active" data-page="dashboard">Dashboard</button>
-        <button class="nav-tab" data-page="calendar" id="calendarTab">Calendar</button>
-        <button class="nav-tab hidden" data-page="insights" id="insightsTab">Insights</button>
-        <button class="nav-tab hidden" data-page="useful" id="usefulTab">Useful Info</button>
+        <button class="nav-tab active prot-only" data-page="dashboard">Dashboard</button>
+        <button class="nav-tab prot-only" data-page="calendar" id="calendarTab">Calendar</button>
+        <button class="nav-tab hidden prot-only" data-page="insights" id="insightsTab">Insights</button>
+        <button class="nav-tab hidden prot-only" data-page="useful" id="usefulTab">Useful Info</button>
+        <button class="nav-tab sib-only" data-page="sib" id="sibTab">Cases</button>
         <button class="nav-tab hidden" data-page="logins" id="loginsTab">Log in Data</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
       </div>
 
-      <div class="daterange-wrap" id="daterangeWrap">
+      <div class="daterange-wrap prot-only" id="daterangeWrap">
         <button class="daterange-btn" id="daterangeBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           <span id="daterangeBtnLabel">All dates</span>
@@ -1655,6 +1698,38 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       </div>
     </div>
 
+    <div id="page-sib" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Send in Blue</h1>
+          <p class="sub">Mortgage retentions. Each month is when the client's fixed rate ends.</p>
+        </div>
+        <button class="btn btn-secondary hidden" id="sibImportShortcut">Upload / download spreadsheet</button>
+      </div>
+      <div class="sib-months" id="sibMonths"></div>
+      <div class="sib-summary" id="sibSummary"></div>
+      <div class="sib-filters">
+        <input type="search" id="sibSearch" placeholder="Search name, address, email, case ID or notes (all months)…">
+        <select id="sibAdviser"><option value="">All servicing advisers</option></select>
+        <select id="sibOutcomeFilter">
+          <option value="open">Open cases</option>
+          <option value="all">All outcomes</option>
+          <option value="Retained">Retained</option>
+          <option value="No Opportunity">No Opportunity</option>
+          <option value="Not Converted">Not Converted</option>
+        </select>
+        <select id="sibEmailFilter">
+          <option value="">Email client? any</option>
+          <option value="YES">YES</option>
+          <option value="NO">NO</option>
+          <option value="UNSUBSCRIBED">UNSUBSCRIBED</option>
+          <option value="See Notes">See Notes</option>
+          <option value="none">Not set</option>
+        </select>
+      </div>
+      <div id="sibResults"></div>
+    </div>
+
     <div id="page-logins" class="hidden">
       <div class="page-head">
         <div>
@@ -1784,6 +1859,23 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <input type="text" id="csNewSourceInput" placeholder="e.g. Resi Purchase" style="flex:1; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px;">
             <button class="btn btn-primary btn-sm" id="csAddSourceBtn">Add</button>
           </div>
+        </div>
+      </div>
+
+      <div id="settingsSibSection" class="hidden" style="margin-bottom:34px;">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1 style="font-size:19px;">Send in Blue spreadsheet</h1>
+            <p class="sub">Upload the Send in Blue Excel file to add cases. Every month tab is read. Uploading again adds new cases and only fills in empty fields on existing ones, so work done in the dashboard is never overwritten.</p>
+          </div>
+        </div>
+        <div class="insights-card" style="max-width:620px;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="sibUploadBtn">Upload Excel file</button>
+            <button class="btn btn-secondary btn-sm" id="sibDownloadBtn">Download as Excel</button>
+          </div>
+          <input type="file" id="sibFileInput" accept=".xlsx,.xls" class="hidden">
+          <p class="nml-note" id="sibImportStatus" style="margin-bottom:0;"></p>
         </div>
       </div>
 
@@ -2126,6 +2218,22 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 <!-- ============================================================
      MODAL: LEAD DETAIL
      ============================================================ -->
+<div class="modal-overlay" id="sibOverlay">
+  <div class="modal lead-modal">
+    <div class="modal-head">
+      <div><h2 id="sibCaseName">Client</h2></div>
+      <button class="modal-close" data-close="sibOverlay">✕</button>
+    </div>
+    <div class="lead-detail-grid">
+      <div class="lead-left" id="sibLeft"></div>
+      <div class="lead-right">
+        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> History</div>
+        <div class="audit-list" id="sibAudit"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="leadOverlay">
   <div class="modal lead-modal">
     <div class="modal-head">
@@ -2538,6 +2646,7 @@ function closeModal(id){
   if(id==='forcePinOverlay' && forcePinActive) return; // must choose a new PIN or sign out
   document.getElementById(id).classList.remove('open');
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; }
+  if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; }
   if(!document.querySelector('.modal-overlay.open')) document.body.classList.remove('scroll-lock');
 }
 function closeAllModals(){ document.querySelectorAll('.modal-overlay.open').forEach(m=> closeModal(m.id)); }
@@ -2821,6 +2930,7 @@ function logout(){
   db.ref('config').off(); CONFIG = {};
   db.ref('pins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {};
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
+  db.ref('sib/cases').off(); sibListening = false; sibLoaded = false; SIB = {}; sibOpenKey = null;
   selectedAdvisorFilter = null; searchTerm = ''; dateRangeFrom = null; dateRangeTo = null;
   document.getElementById('globalSearch').value = '';
   document.getElementById('dateFrom').value = ''; document.getElementById('dateTo').value = '';
@@ -2914,7 +3024,8 @@ function enterApp(){
     currentUser.role==='admin' ? "Here's everything logged across the team." :
     "Here's everything happening across the whole team's workflow.";
 
-  goPage('dashboard');
+  setAppMode(APP_MODE, false);
+  goPage(APP_MODE==='sib' ? 'sib' : 'dashboard');
   renderDashboard();
   renderNotifs();
 }
@@ -2928,6 +3039,7 @@ function goPage(page){
   document.getElementById('page-insights').classList.toggle('hidden', page!=='insights');
   document.getElementById('page-themes').classList.toggle('hidden', page!=='themes');
   document.getElementById('page-logins').classList.toggle('hidden', page!=='logins');
+  document.getElementById('page-sib').classList.toggle('hidden', page!=='sib');
   document.getElementById('page-useful').classList.toggle('hidden', page!=='useful');
   if(page==='useful') showUsefulHome();
   document.getElementById('page-calendar').classList.toggle('hidden', page!=='calendar');
@@ -2943,6 +3055,7 @@ function goPage(page){
     renderAppSettings();
     document.getElementById('settingsContentSection').classList.toggle('hidden', currentUser.role!=='management');
     if(currentUser.role==='management') renderContentSettings();
+    document.getElementById('settingsSibSection').classList.toggle('hidden', currentUser.role!=='management');
     if(!isMapa){
       renderUsersTable();
       resetBulkDelete();
@@ -2957,6 +3070,7 @@ function goPage(page){
   if(page==='insights') renderInsights();
   if(page==='themes') renderThemes();
   if(page==='logins') startLoginsListener();
+  if(page==='sib'){ startSibListener(); renderSib(); }
   if(page==='calendar') renderCalendar();
 }
 
@@ -3406,6 +3520,454 @@ document.getElementById('refFileInput').addEventListener('change', function(){
 });
 
 document.getElementById('nmlCover').addEventListener('change', ()=>{ if(NML) renderNml(); });
+
+/* ----------------------------------------------------------------------------
+   SEND IN BLUE — mortgage retentions, a separate section from protection.
+   /sib/cases/{key}: one row per product ending (key = c{CaseId}_{yyyymm}).
+   The top-left switch flips between Protection and Send in Blue; the choice
+   is remembered on this device.
+   ---------------------------------------------------------------------------- */
+const SIB_RETENTION = ['Retained','No Opportunity','Not Converted'];
+const SIB_EMAIL_CLIENT = ['YES','NO','UNSUBSCRIBED','See Notes'];
+const SIB_REASONS = ['Resi Product Transfer','Resi Remortgage','Mortgage NTU','BTL Remortgage','BTL Product Transfer','Discussing Options','Client/s went direct','Client/s have moved','Client/s have cleared mortgage','Not Due yet','Clients separated','Unsubscribed from SIB'];
+let APP_MODE = 'protection';
+try{ if(localStorage.getItem('plt_mode')==='sib') APP_MODE = 'sib'; }catch(e){}
+let SIB = {}, sibListening = false, sibLoaded = false, sibOpenKey = null, sibAction = null;
+document.body.classList.toggle('mode-sib', APP_MODE==='sib');
+const sibState = {month:null, search:'', adviser:'', outcome:'open', emailClient:''};
+
+function setAppMode(mode, go=true){
+  APP_MODE = mode==='sib' ? 'sib' : 'protection';
+  try{ localStorage.setItem('plt_mode', APP_MODE); }catch(e){}
+  document.body.classList.toggle('mode-sib', APP_MODE==='sib');
+  document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.classList.toggle('on', b.dataset.mode===APP_MODE));
+  document.querySelector('.brand-text .t1').textContent = APP_MODE==='sib' ? 'Send in Blue' : 'Protection Lead Tracker';
+  if(go && currentUser) goPage(APP_MODE==='sib' ? 'sib' : 'dashboard');
+}
+document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.addEventListener('click', ()=> setAppMode(b.dataset.mode)));
+
+function ensureSibLoaded(){
+  if(sibLoaded) return Promise.resolve();
+  return db.ref('sib/cases').once('value').then(snap=>{ if(!sibLoaded){ SIB = snap.val() || {}; sibLoaded = true; } });
+}
+function startSibListener(){
+  if(sibListening || !currentUser) return;
+  sibListening = true;
+  db.ref('sib/cases').on('value', snap=>{
+    SIB = snap.val() || {}; sibLoaded = true;
+    if(!document.getElementById('page-sib').classList.contains('hidden')) renderSib();
+    if(sibOpenKey && document.getElementById('sibOverlay').classList.contains('open')) renderSibCase();
+  }, ()=>{
+    sibListening = false;
+    document.getElementById('sibResults').innerHTML = '<div class="nml-empty">Could not load Send in Blue cases. Publish the updated Firebase rules, then refresh.</div>';
+  });
+}
+
+/* ---- months ---- */
+const SIB_MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function sibMonthLabel(key){
+  const [y, m] = String(key||'').split('-').map(Number);
+  if(!y || !m) return 'No month';
+  return SIB_MONTH_NAMES[m-1] + ' ' + String(y).slice(-2);
+}
+function sibMonthLong(key){
+  const [y, m] = String(key||'').split('-').map(Number);
+  return y && m ? new Date(y, m-1, 1).toLocaleDateString('en-GB', {month:'long', year:'numeric'}) : '';
+}
+function sibMonthsAway(key){
+  const [y, m] = String(key||'').split('-').map(Number);
+  const now = new Date();
+  return (y*12 + m) - (now.getFullYear()*12 + now.getMonth()+1);
+}
+function sibMonthTag(key){
+  const d = sibMonthsAway(key);
+  if(d <= 0) return ['now', 'Ending now'];
+  if(d <= 3) return ['now', 'Call now'];
+  if(d <= 6) return ['due', '6-month email due'];
+  return null;
+}
+function sibUnsubscribed(c){ return c.emailClient==='UNSUBSCRIBED' || c.sib6==='UNSUBSCRIBED' || c.sib3==='UNSUBSCRIBED' || c.sib0==='UNSUBSCRIBED'; }
+// 6/3/0-month Send in Blue email: sent (date), due now, or not yet.
+function sibEmailState(c, n){
+  const v = c['sib'+n];
+  if(v && v!=='UNSUBSCRIBED') return {sent:v};
+  return {due: !c.doNotContact && !sibUnsubscribed(c) && sibMonthsAway(c.month) <= n};
+}
+function sibDay(v){
+  if(!v) return '';
+  const d = typeof v==='number' ? new Date(v) : toDate(v);
+  return isNaN(d) ? String(v) : d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+}
+function sibOutcome(c){ return c.retentionKey || 'Open'; }
+function sibOutcomeClass(o){ return o==='Retained' ? 'ret' : o==='Open' ? 'open' : 'nop'; }
+function sibCases(){ return Object.entries(SIB).filter(([, c])=> c && typeof c==='object').map(([key, c])=> ({...c, key})); }
+
+function sibFilter(list, ignoreMonth){
+  const q = sibState.search.trim().toLowerCase();
+  return list.filter(c=>{
+    if(!ignoreMonth && !q && c.month !== sibState.month) return false;
+    if(sibState.adviser && (c.servicingAdviser||'') !== sibState.adviser) return false;
+    if(sibState.outcome==='open' && c.retentionKey) return false;
+    if(sibState.outcome && sibState.outcome!=='open' && sibState.outcome!=='all' && c.retentionKey !== sibState.outcome) return false;
+    if(sibState.emailClient==='none' && c.emailClient) return false;
+    if(sibState.emailClient && sibState.emailClient!=='none' && c.emailClient !== sibState.emailClient) return false;
+    if(q && ![c.mailingName, c.salutation, c.address, c.email, c.caseId, c.notes].some(v=> String(v||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function renderSib(){
+  const page = document.getElementById('page-sib');
+  if(page.classList.contains('hidden')) return;
+  const isMg = currentUser && currentUser.role==='management';
+  document.getElementById('sibImportShortcut').classList.toggle('hidden', !isMg);
+  const all = sibCases();
+  const out = document.getElementById('sibResults');
+  if(!sibLoaded){ out.innerHTML = '<div class="nml-empty">Loading…</div>'; return; }
+  if(!all.length){
+    document.getElementById('sibMonths').innerHTML = ''; document.getElementById('sibSummary').innerHTML = '';
+    out.innerHTML = `<div class="nml-empty">No Send in Blue cases yet.${isMg ? ' Upload your Send in Blue spreadsheet in Settings to get started.' : ' Management will upload them soon.'}</div>`;
+    return;
+  }
+  // months
+  const byMonth = {};
+  all.forEach(c=>{ (byMonth[c.month||''] = byMonth[c.month||''] || []).push(c); });
+  const months = Object.keys(byMonth).sort();
+  if(!sibState.month || !byMonth[sibState.month]){
+    sibState.month = months.find(m=> sibMonthsAway(m) >= 0) || months[months.length-1];
+  }
+  document.getElementById('sibMonths').innerHTML = months.map(m=>{
+    const cs = byMonth[m], contacted = cs.filter(c=> c.lastContact || c.retentionKey).length;
+    const closed = cs.filter(c=> c.retentionKey || c.doNotContact).length;
+    const tag = sibMonthTag(m);
+    return `<button type="button" class="sib-month ${m===sibState.month?'on':''}" data-sib-month="${esc(m)}">
+      <b>${esc(sibMonthLabel(m))}</b><span class="n">${cs.length}</span>
+      <small>${contacted} contacted</small><small>${closed} closed</small>
+      <span class="sib-bar"><i style="width:${cs.length ? Math.round(closed/cs.length*100) : 0}%"></i></span>
+      ${tag ? `<span class="sib-tag ${tag[0]}">${tag[1]}</span>` : ''}
+    </button>`;
+  }).join('');
+  document.querySelectorAll('[data-sib-month]').forEach(b=> b.addEventListener('click', ()=>{ sibState.month = b.dataset.sibMonth; sibState.search = ''; document.getElementById('sibSearch').value = ''; renderSib(); }));
+  // summary for the chosen month
+  const mc = byMonth[sibState.month] || [];
+  const count = k=> mc.filter(c=> sibOutcome(c)===k).length;
+  document.getElementById('sibSummary').innerHTML = `<b>${esc(sibMonthLabel(sibState.month))}:</b>
+    <span class="sib-tag open">${count('Open')} open</span><span class="sib-tag ret">${count('Retained')} retained</span>
+    <span class="sib-tag nop">${count('No Opportunity')} no opportunity</span><span class="sib-tag nop">${count('Not Converted')} not converted</span>
+    <span class="sib-tag due">${mc.filter(c=> [6,3,0].some(n=> sibEmailState(c,n).due)).length} SIB email${mc.length===1?'':'s'} due</span>`;
+  // adviser options
+  const advs = [...new Set(all.map(c=> c.servicingAdviser).filter(Boolean))].sort();
+  const advSel = document.getElementById('sibAdviser');
+  advSel.innerHTML = '<option value="">All servicing advisers</option>' + advs.map(a=> `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  advSel.value = advs.includes(sibState.adviser) ? sibState.adviser : '';
+  // rows
+  const rows = sibFilter(all).sort((a,b)=> (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
+  const searching = !!sibState.search.trim();
+  const emailTags = c=> sibUnsubscribed(c) ? '<span class="sib-tag no">Unsubscribed</span>' : [6,3,0].map(n=>{
+    const s = sibEmailState(c, n);
+    return s.sent ? `<span class="sib-tag ok" title="${n}-month email sent">${n}m ✓ ${esc(sibDay(s.sent))}</span>` : s.due ? `<span class="sib-tag due">${n}m due</span>` : `<span class="sib-tag no">${n}m</span>`;
+  }).join(' ');
+  out.innerHTML = (searching ? `<p class="nml-note" style="margin-top:0;">Searching every month for "${esc(sibState.search.trim())}".</p>` : '') +
+    (rows.length ? `<div class="nml-table-wrap"><table class="nml-table sib-table">
+    <thead><tr><th>Client</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th>Outcome</th></tr></thead>
+    <tbody>${rows.map(c=>{
+      const o = sibOutcome(c);
+      return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''}">
+        <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div></td>
+        ${searching ? `<td>${esc(sibMonthLabel(c.month))}</td>` : ''}
+        <td>${esc(c.servicingAdviser||'—')}${c.exAdviser ? `<div class="nml-notes">ex ${esc(c.exAdviser.replace(/^X\s+/,''))}</div>` : ''}</td>
+        <td>${c.doNotContact ? '<span class="sib-tag nop">Do not contact</span>' : emailTags(c)}</td>
+        <td>${c.emailClient ? `<span class="sib-tag ${c.emailClient==='YES'?'ok':'no'}">${esc(c.emailClient)}</span>` : '<span class="sib-tag no">Not set</span>'}</td>
+        <td>${c.lastContact ? esc(fmtDate(c.lastContact)) : '—'}</td>
+        <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>');
+  out.querySelectorAll('[data-sib-case]').forEach(tr=> tr.addEventListener('click', ()=> openSibCase(tr.dataset.sibCase)));
+}
+document.getElementById('sibSearch').addEventListener('input', function(){ sibState.search = this.value; renderSib(); });
+[['sibAdviser','adviser'],['sibOutcomeFilter','outcome'],['sibEmailFilter','emailClient']].forEach(([id, k])=>
+  document.getElementById(id).addEventListener('change', function(){ sibState[k] = this.value; renderSib(); }));
+document.getElementById('sibImportShortcut').addEventListener('click', ()=> goPage('settings'));
+
+/* ---- case window ---- */
+function openSibCase(key){
+  if(!SIB[key]) return;
+  sibOpenKey = key; sibAction = null;
+  renderSibCase();
+  openModal('sibOverlay');
+}
+function sibWrite(fields, entry){
+  const key = sibOpenKey, updates = {};
+  Object.entries(fields||{}).forEach(([k, v])=> updates[`sib/cases/${key}/${k}`] = (v===undefined || v==='') ? null : v);
+  updates[`sib/cases/${key}/updatedAt`] = Date.now();
+  if(entry) updates[`sib/cases/${key}/audit/${db.ref().push().key}`] = {...entry, byId:currentUser.id, byName:currentUser.name, at:Date.now()};
+  return db.ref().update(updates).then(()=> true).catch(err=>{ toast('Could not save: '+err.message,'error'); return false; });
+}
+function renderSibCase(){
+  const c = SIB[sibOpenKey]; if(!c) { closeModal('sibOverlay'); return; }
+  document.getElementById('sibCaseName').textContent = c.mailingName || '(no name)';
+  const o = sibOutcome(c);
+  const cell = (lbl, val, full)=> `<div class="info-cell${full?' full':''}"><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;
+  const emailBtns = [6,3,0].map(n=>{
+    const s = sibEmailState(c, n);
+    return s.sent ? `<button type="button" class="sib-email-btn sent" data-sib-email="${n}">${n} month ✓ ${esc(fmtDate(s.sent))}</button>`
+      : `<button type="button" class="sib-email-btn ${s.due?'due':''}" data-sib-email="${n}">${s.due ? n+' month due: mark sent' : 'Mark '+n+' month sent'}</button>`;
+  }).join('');
+  const act = sibAction;
+  document.getElementById('sibLeft').innerHTML = `
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <span class="sib-tag ${sibOutcomeClass(o)}" style="font-size:12px;">${esc(o)}${c.outcomeReason ? ' · '+esc(c.outcomeReason) : ''}</span>
+      ${c.doNotContact ? '<span class="sib-tag nop" style="font-size:12px;">Do not contact</span>' : ''}
+      ${(()=>{ const t = sibMonthTag(c.month); return t ? `<span class="sib-tag ${t[0]}" style="font-size:12px;">${t[1]}</span>` : ''; })()}
+    </div>
+    <div class="info-grid">
+      ${cell('Product ends', esc(sibMonthLabel(c.month)))}
+      ${cell('Case ID', esc(c.caseId||'—'))}
+      ${cell('Salutation', esc(c.salutation||'—'))}
+      ${cell('Email', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '—')}
+      ${cell('Address', esc(c.address||'—'), true)}
+      ${cell('Servicing adviser', esc(c.servicingAdviser||'—'))}
+      ${cell('Ex adviser', esc(c.exAdviser||'—'))}
+      ${cell('Last contact', c.lastContact ? esc(fmtDate(c.lastContact)) : '—')}
+      <div class="info-cell"><div class="lbl">Email client?</div>
+        <select id="sibEmailClient" class="sib-inline-select"><option value="">Not set</option>${SIB_EMAIL_CLIENT.map(v=> `<option ${c.emailClient===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
+    </div>
+    <div class="section-lbl">Send in Blue emails</div>
+    <div class="sib-email-row">${emailBtns}</div>
+    <div class="section-lbl">Action</div>
+    <div class="action-bar">
+      <button class="action-btn" data-sib-act="call">${ico('phone')}Call</button>
+      <button class="action-btn" data-sib-act="email" ${c.email?'':'disabled title="No email address on file"'}>${ico('mail')}Email</button>
+      <button class="action-btn" data-sib-act="note">${ico('note')}Note</button>
+      <button class="action-btn" data-sib-act="outcome">${ico('checkCircle')}Outcome</button>
+      <button class="action-btn" data-sib-act="edit">${ico('pin')}Edit details</button>
+    </div>
+    <div id="sibActForm"></div>
+    <div class="section-lbl">Case notes</div>
+    <div class="note-quote" style="max-height:none;">${c.notes ? esc(c.notes) : '<span style="color:var(--text-faint)">No case notes. Use Edit details to add some.</span>'}</div>`;
+  const f = document.getElementById('sibActForm');
+  if(act==='call') f.innerHTML = `<div class="inline-form">
+      <div class="field"><label>How did the call go?</label>
+        <div class="em-dec-opts"><label><input type="radio" name="sibCallRes" value="Spoke to client" checked> Spoke to client</label><label><input type="radio" name="sibCallRes" value="No answer, left message"> No answer, left message</label><label><input type="radio" name="sibCallRes" value="No answer"> No answer</label></div></div>
+      <div class="field"><label for="sibCallNote">Note (optional)</label><textarea id="sibCallNote" placeholder="e.g. Halifax 4.78% ends 31/01/27. Sending options."></textarea></div>
+      <button class="btn btn-primary btn-sm" id="sibCallSave">Save call</button></div>`;
+  if(act==='email') f.innerHTML = `<div class="inline-form">
+      <div class="field"><label for="sibEmSubject">Subject</label><input type="text" id="sibEmSubject" value="Your mortgage rate is coming to an end"></div>
+      <div class="field"><label for="sibEmBody">Message</label><textarea id="sibEmBody" style="min-height:200px;">${esc(`Dear ${c.salutation || c.mailingName || ''},\n\nI hope you're well. Your current mortgage product is due to end in ${sibMonthLong(c.month)}, so now is a good time to look at your options.\n\n[Add your message]\n\nKind regards,\n${currentUser.name}`)}</textarea></div>
+      <div class="field-hint">Opens Gmail with this filled in. Anything left in [square brackets] must be filled in first. A copy is saved to the history.</div>
+      <button class="btn btn-primary btn-sm" id="sibEmSend" style="margin-top:10px;">Open in Gmail</button></div>`;
+  if(act==='note') f.innerHTML = `<div class="inline-form"><div class="field"><label for="sibNoteText">Note</label><textarea id="sibNoteText"></textarea></div><button class="btn btn-primary btn-sm" id="sibNoteSave">Add note</button></div>`;
+  if(act==='outcome') f.innerHTML = `<div class="inline-form">
+      <div class="field"><label for="sibOutKey">Outcome</label><select id="sibOutKey"><option value="">Open (still working on it)</option>${SIB_RETENTION.map(v=> `<option ${c.retentionKey===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
+      <div class="field"><label for="sibOutReason">Reason</label><select id="sibOutReason"><option value="">None</option>${[...new Set([...SIB_REASONS, ...(c.outcomeReason?[c.outcomeReason]:[])])].map(v=> `<option ${c.outcomeReason===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
+      <button class="btn btn-primary btn-sm" id="sibOutSave">Save outcome</button></div>`;
+  if(act==='edit') f.innerHTML = `<div class="inline-form">
+      <div class="field"><label for="sibEdName">Client name(s)</label><input type="text" id="sibEdName" maxlength="200" value="${esc(c.mailingName||'')}"></div>
+      <div class="field"><label for="sibEdSal">Salutation (used in emails)</label><input type="text" id="sibEdSal" maxlength="120" value="${esc(c.salutation||'')}"></div>
+      <div class="field"><label for="sibEdEmail">Email</label><input type="email" id="sibEdEmail" maxlength="200" value="${esc(c.email||'')}"></div>
+      <div class="field"><label for="sibEdAddr">Address</label><input type="text" id="sibEdAddr" maxlength="200" value="${esc(c.address||'')}"></div>
+      <div class="field"><label for="sibEdAdv">Servicing adviser</label><input type="text" id="sibEdAdv" maxlength="80" value="${esc(c.servicingAdviser||'')}"></div>
+      <div class="field"><label for="sibEdNotes">Case notes</label><textarea id="sibEdNotes" maxlength="4000">${esc(c.notes||'')}</textarea></div>
+      <label class="checkbox-row" style="margin-top:0;"><input type="checkbox" id="sibEdDnc" ${c.doNotContact?'checked':''}> Do not contact this client</label>
+      <button class="btn btn-primary btn-sm" id="sibEdSave">Save details</button></div>`;
+  document.querySelectorAll('[data-sib-act]').forEach(b=> b.addEventListener('click', ()=>{ sibAction = sibAction===b.dataset.sibAct ? null : b.dataset.sibAct; renderSibCase(); }));
+  document.getElementById('sibEmailClient').addEventListener('change', function(){
+    sibWrite({emailClient:this.value}, {type:'status', text:`Email client? set to ${this.value||'Not set'}`});
+  });
+  document.querySelectorAll('[data-sib-email]').forEach(b=> b.addEventListener('click', ()=>{
+    const n = b.dataset.sibEmail, sent = sibEmailState(c, Number(n)).sent;
+    if(sent){
+      if(!confirm(`Untick the ${n} month Send in Blue email?`)) return;
+      sibWrite({['sib'+n]: null}, {type:'status', text:`${n} month Send in Blue email unticked`});
+    } else {
+      sibWrite({['sib'+n]: todayISO()}, {type:'sent', text:`${n} month Send in Blue email sent`});
+    }
+  }));
+  const on = (id, fn)=>{ const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+  on('sibCallSave', ()=>{
+    const res = document.querySelector('input[name="sibCallRes"]:checked').value, note = document.getElementById('sibCallNote').value.trim();
+    sibWrite({lastContact: Date.now()}, {type:'call', text:`Call - ${res}${note ? ': '+note : ''}`}).then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Call saved','success'); } });
+  });
+  on('sibNoteSave', ()=>{
+    const note = document.getElementById('sibNoteText').value.trim();
+    if(!note){ toast('Please write a note.','error'); return; }
+    sibWrite({}, {type:'note', text:`Note: ${note}`}).then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Note added','success'); } });
+  });
+  on('sibOutSave', ()=>{
+    const k = document.getElementById('sibOutKey').value, r = document.getElementById('sibOutReason').value;
+    sibWrite({retentionKey:k, outcomeReason:r}, {type: k==='Retained' ? 'signup' : k ? 'decline' : 'status', text:`Outcome: ${k||'Open'}${r ? ' ('+r+')' : ''}`})
+      .then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Outcome saved','success'); } });
+  });
+  on('sibEdSave', ()=>{
+    const email = document.getElementById('sibEdEmail').value.trim();
+    if(email && !isEmail(email)){ toast(`"${email}" doesn't look like an email address.`,'error'); return; }
+    const fields = {mailingName:document.getElementById('sibEdName').value.trim(), salutation:document.getElementById('sibEdSal').value.trim(), email,
+      address:document.getElementById('sibEdAddr').value.trim(), servicingAdviser:document.getElementById('sibEdAdv').value.trim(),
+      notes:document.getElementById('sibEdNotes').value.trim(), doNotContact:document.getElementById('sibEdDnc').checked || null};
+    const changed = Object.keys(fields).filter(k=> (fields[k]||'') !== (c[k]||''));
+    if(!changed.length){ sibAction = null; renderSibCase(); return; }
+    const names = {mailingName:'name', salutation:'salutation', email:'email', address:'address', servicingAdviser:'servicing adviser', notes:'case notes', doNotContact:'do not contact'};
+    sibWrite(fields, {type:'detail', text:`Details updated: ${changed.map(k=> names[k]).join(', ')}`}).then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Details saved','success'); } });
+  });
+  on('sibEmSend', function(){
+    const subject = document.getElementById('sibEmSubject').value.trim(), body = document.getElementById('sibEmBody').value.replace(/\s+$/,'');
+    if(!subject || !body){ toast('Please add a subject and message.','error'); return; }
+    const leftover = (subject+'\n'+body).match(/\[[^\]\n]{1,300}\]/);
+    if(leftover){ toast(`Please fill in or remove "${leftover[0]}" before sending.`,'error'); return; }
+    const p = new URLSearchParams({view:'cm', fs:'1', to:c.email, su:subject, body});
+    const gmail = window.open('https://mail.google.com/mail/?' + p.toString(), 'pltGmail', 'popup,width=980,height=760');
+    if(!gmail){ toast('Your browser blocked the Gmail window. Allow pop-ups for this site, then try again.','error'); return; }
+    sibWrite({lastContact: Date.now()}, {type:'email', text:`Email to client - ${subject}`, emailTo:c.email, emailSubject:subject, emailBody:body})
+      .then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Gmail opened. Click Send there. A copy is in the history.','success'); } });
+  });
+  // history
+  const entries = c.audit ? Object.values(c.audit).filter(Boolean).sort((a,b)=> b.at-a.at) : [];
+  document.getElementById('sibAudit').innerHTML = entries.length ? entries.map(e=> `
+    <div class="audit-item">
+      <div class="audit-icon t-${esc(e.type)}">${auditIcon(e.type)}</div>
+      <div class="audit-line"></div>
+      <div class="audit-content">
+        <div class="audit-text">${esc(e.text)}</div>
+        <div class="audit-meta">${esc(e.byName||'')} · ${fmtDateTime(e.at)}</div>
+        ${e.emailBody ? `<details class="sib-email-copy"><summary>View email</summary><div class="note-quote">${esc(e.emailBody)}</div></details>` : ''}
+      </div>
+    </div>`).join('') : '<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>';
+}
+function todayISO(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+/* ---- Settings: upload the Send in Blue spreadsheet / download it back ---- */
+let xlsxLoading = null;
+function loadXlsx(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(!xlsxLoading) xlsxLoading = new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = ()=> res(window.XLSX); s.onerror = ()=>{ xlsxLoading = null; rej(new Error('Could not load the Excel reader. Check your connection.')); };
+    document.head.appendChild(s);
+  });
+  return xlsxLoading;
+}
+const SIB_HEADERS = {month:'month', exadviser:'exAdviser', servicingadvisor:'servicingAdviser', servicingadviser:'servicingAdviser', caseid:'caseId',
+  mailingname:'mailingName', salutation:'salutation', address1:'address', address:'address', email:'email', retentionkey:'retentionKey',
+  outcomereason:'outcomeReason', emailclient:'emailClient', dateoflastcontact:'lastContact', lastcontact:'lastContact', notes:'notes',
+  '6monthsibsent':'sib6', '3monthsibsent':'sib3', '0monthsibsent':'sib0', donotcontact:'doNotContact'};
+const SIB_MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+// Reads every month tab into case objects. Header row is found by its "CaseId" column.
+function parseSibWorkbook(X, wb){
+  const cases = {}, problems = [];
+  const iso = (y,m,d)=> `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  wb.SheetNames.forEach(name=>{
+    const ws = wb.Sheets[name]; if(!ws || !ws['!ref']) return;
+    const range = X.utils.decode_range(ws['!ref']);
+    const cellAt = (r, c)=> ws[X.utils.encode_cell({r, c})];
+    const val = (r, c)=>{ const x = cellAt(r, c); if(!x || x.t==='e' || x.t==='z') return null; return typeof x.v==='string' ? (x.v.trim() || null) : x.v; };
+    let headerRow = -1, cols = {};
+    for(let r = range.s.r; r <= Math.min(range.e.r, range.s.r+5) && headerRow<0; r++){
+      for(let c = range.s.c; c <= range.e.c; c++){
+        const h = String(val(r, c)||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+        if(h==='caseid') headerRow = r;
+      }
+      if(headerRow===r) for(let c = range.s.c; c <= range.e.c; c++){
+        const f = SIB_HEADERS[String(val(r, c)||'').toLowerCase().replace(/[^a-z0-9]/g,'')];
+        if(f && cols[f]==null) cols[f] = c;
+      }
+    }
+    if(headerRow<0) return;
+    const sm = /^([A-Za-z]{3})\w*\s+(\d{2,4})$/.exec(name.trim());
+    const sheetMonth = sm && SIB_MON[sm[1].toLowerCase()] ? iso(sm[2].length===2 ? 2000+Number(sm[2]) : Number(sm[2]), SIB_MON[sm[1].toLowerCase()], 1).slice(0,7) : null;
+    const seenHere = {};
+    for(let r = headerRow+1; r <= range.e.r; r++){
+      const get = f=> cols[f]==null ? null : val(r, cols[f]);
+      const caseId = get('caseId'), mailingName = get('mailingName');
+      if(caseId==null && !mailingName) continue;
+      const dateVal = v=>{
+        if(typeof v==='number' && v > 20000 && v < 80000){ const p = X.SSF.parse_date_code(v); return iso(p.y, p.m, p.d); }
+        const m = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/.exec(String(v||'').trim());
+        if(m){ let y = m[3] ? Number(m[3]) : new Date().getFullYear(); if(y < 100) y += 2000; const out = iso(y, Number(m[2]), Number(m[1]));
+          if(!m[3] && new Date(out) > new Date()) return iso(y-1, Number(m[2]), Number(m[1])); return out; }
+        return null;
+      };
+      let month = sheetMonth;
+      if(!month){ const mv = dateVal(get('month')); month = mv ? mv.slice(0,7) : null; }
+      if(!month){ problems.push(`${name} row ${r+1}: no month`); continue; }
+      const c = {month, row:r+1};
+      ['exAdviser','servicingAdviser','mailingName','salutation','address','email','notes','outcomeReason'].forEach(f=>{ const v = get(f); if(v!=null) c[f] = String(v).slice(0, f==='notes' ? 4000 : 200); });
+      if(caseId!=null) c.caseId = String(caseId).replace(/\.0+$/,'');
+      const rk = get('retentionKey'); if(rk){ const hit = SIB_RETENTION.find(x=> x.toLowerCase()===String(rk).toLowerCase()); if(hit) c.retentionKey = hit; }
+      const ec = get('emailClient'); if(ec){ const hit = SIB_EMAIL_CLIENT.find(x=> x.toLowerCase()===String(ec).toLowerCase()); if(hit) c.emailClient = hit; }
+      const lc = get('lastContact');
+      if(lc!=null){ const d = dateVal(lc); if(d) c.lastContact = new Date(d+'T12:00:00').getTime(); else c.notes = (c.notes ? c.notes+'\n' : '') + 'Last contact: '+String(lc).slice(0,200); }
+      ['sib6','sib3','sib0'].forEach(f=>{ const v = get(f); if(v==null) return;
+        if(/unsubscribed/i.test(String(v))) c[f] = 'UNSUBSCRIBED'; else { const d = dateVal(v); if(d) c[f] = d; } });
+      const dnc = get('doNotContact');
+      const grey = ['exAdviser','servicingAdviser','mailingName'].some(f=>{ const x = cols[f]!=null && cellAt(r, cols[f]); return x && x.s && x.s.fgColor && /999999$/i.test(String(x.s.fgColor.rgb||'')); });
+      if(grey || /do not contact/i.test(c.notes||'') || (dnc && /^(yes|y|true|1)$/i.test(String(dnc)))) c.doNotContact = true;
+      let key = 'c' + String(c.caseId || (mailingName||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)) + '_' + month.replace('-','');
+      key = key.replace(/[.#$\[\]\/]/g,'-');
+      seenHere[key] = (seenHere[key]||0) + 1;
+      if(seenHere[key] > 1) key += '_' + seenHere[key];
+      cases[key] = c;
+    }
+  });
+  return {cases, problems};
+}
+document.getElementById('sibUploadBtn').addEventListener('click', ()=> document.getElementById('sibFileInput').click());
+document.getElementById('sibFileInput').addEventListener('change', function(){
+  const file = this.files[0]; this.value = '';
+  if(!file) return;
+  const status = document.getElementById('sibImportStatus');
+  status.textContent = 'Reading the spreadsheet…';
+  // Load what's already in the dashboard first, so a re-upload only fills in blanks.
+  Promise.all([loadXlsx(), file.arrayBuffer(), ensureSibLoaded()]).then(([X, buf])=>{
+    const wb = X.read(buf, {type:'array', cellStyles:true});
+    const {cases} = parseSibWorkbook(X, wb);
+    const keys = Object.keys(cases);
+    if(!keys.length){ status.textContent = ''; toast("No cases found. The month tabs need a header row with a CaseId column.",'error'); return; }
+    const existing = keys.filter(k=> SIB[k]);
+    const months = [...new Set(keys.map(k=> cases[k].month))].sort();
+    if(!confirm(`Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.\n\nGo ahead?`)){ status.textContent = ''; return; }
+    const now = Date.now(), batches = [];
+    let updates = {}, n = 0, filled = 0;
+    keys.forEach(k=>{
+      const c = cases[k], cur = SIB[k];
+      if(!cur){
+        updates[`sib/cases/${k}`] = {...c, importedAt:now, audit:{[db.ref().push().key]: {type:'assigned', text:`Imported from spreadsheet (${sibMonthLabel(c.month)})`, byId:currentUser.id, byName:currentUser.name, at:now}}};
+      } else {
+        Object.entries(c).forEach(([f, v])=>{ if(f!=='row' && (cur[f]==null || cur[f]==='')){ updates[`sib/cases/${k}/${f}`] = v; filled++; } });
+      }
+      if(++n % 150 === 0){ batches.push(updates); updates = {}; }
+    });
+    if(Object.keys(updates).length) batches.push(updates);
+    let done = 0;
+    status.textContent = `Saving… 0 of ${batches.length}`;
+    return batches.reduce((p, u)=> p.then(()=> db.ref().update(u)).then(()=>{ status.textContent = `Saving… ${++done} of ${batches.length}`; }), Promise.resolve())
+      .then(()=>{
+        status.textContent = `Last upload: ${keys.length-existing.length} new, ${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in).`;
+        toast(`Send in Blue updated: ${keys.length-existing.length} new cases`,'success');
+      });
+  }).catch(err=>{
+    status.textContent = '';
+    toast('Upload failed: '+err.message+(String(err.code||err.message).toUpperCase().includes('PERMISSION') ? ' Publish the updated Firebase rules first.' : ''),'error');
+  });
+});
+document.getElementById('sibDownloadBtn').addEventListener('click', ()=>{
+  startSibListener();
+  const go = ()=> loadXlsx().then(X=>{
+    const all = sibCases();
+    if(!all.length){ toast('There are no Send in Blue cases to download yet.','error'); return; }
+    const wb = X.utils.book_new();
+    const head = ['Month','Ex Adviser','ServicingAdvisor','CaseId','MailingName','Salutation','Address1','Email','Retention Key','Outcome reason','Email Client?','Date of LAST contact','NOTES','6 Month SIB Sent','3 Month SIB Sent','0 Month SIB Sent','Do not contact','History'];
+    const d = v=> v==='UNSUBSCRIBED' ? v : v ? fmtDateSlash(v) : '';
+    [...new Set(all.map(c=> c.month))].sort().forEach(m=>{
+      const rows = all.filter(c=> c.month===m).sort((a,b)=> (a.row||0)-(b.row||0)).map(c=> [sibMonthLabel(m), c.exAdviser||'', c.servicingAdviser||'', c.caseId||'', c.mailingName||'', c.salutation||'', c.address||'', c.email||'',
+        c.retentionKey||'', c.outcomeReason||'', c.emailClient||'', c.lastContact ? fmtDateSlash(c.lastContact) : '', c.notes||'', d(c.sib6), d(c.sib3), d(c.sib0), c.doNotContact ? 'YES' : '',
+        Object.values(c.audit||{}).filter(Boolean).sort((a,b)=> a.at-b.at).map(e=> `${fmtDateSlash(e.at)} ${e.byName||''}: ${e.text}`).join('\n').slice(0, 30000)]);
+      X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([head, ...rows]), sibMonthLabel(m).slice(0, 31));
+    });
+    X.writeFile(wb, `Send in Blue ${todayISO()}.xlsx`);
+  }).catch(err=> toast(err.message,'error'));
+  ensureSibLoaded().then(go).catch(err=> toast('Could not load Send in Blue cases: '+err.message,'error'));
+});
 
 /* ----------------------------------------------------------------------------
    LOG IN DATA — /logins/{colleagueId} = {lastLogin, lastSeen}. Each colleague

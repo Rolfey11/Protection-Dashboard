@@ -555,6 +555,13 @@ main{max-width:1680px; margin:0 auto; padding:20px 24px 20px;}
   .ref-table td:not(:first-child){min-width:0;}
   .ref-table td:first-child, .ref-table th:first-child{position:static; min-width:0; width:120px;}
 }
+.em-decline{padding:12px; border:1px solid var(--brand-light); border-radius:12px; background:var(--brand-tint);}
+.em-req{font-size:10.5px; font-weight:700; color:#B42318; text-transform:uppercase; letter-spacing:.3px; margin-left:4px;}
+.em-dec-opts{display:flex; flex-wrap:wrap; gap:6px 18px; margin:4px 0 8px;}
+.em-dec-opts label{display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:500; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; color:var(--text);}
+.em-dec-given{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;}
+@media (max-width:560px){ .em-dec-given{grid-template-columns:1fr;} }
+.em-decline.missing{border-color:#B42318; box-shadow:0 0 0 3px rgba(180,35,24,.12);}
 .login-chip{display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; background:var(--brand-tint); color:var(--brand);}
 .login-chip.ok{background:#E6F4EA; color:#1E7B3A;}
 .login-chip.warn{background:#FFF4E0; color:#A15C00;}
@@ -2205,6 +2212,18 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="field">
         <label for="emTemplate">Email Templates</label>
         <select id="emTemplate"></select>
+      </div>
+      <div class="field hidden em-decline" id="emDeclineWrap">
+        <label>Reason for declining <span class="em-req">required</span></label>
+        <div class="em-dec-opts">
+          <label><input type="radio" name="emDecReason" value="none"> They didn't give a reason</label>
+          <label><input type="radio" name="emDecReason" value="given"> They gave a reason</label>
+        </div>
+        <div class="em-dec-given hidden" id="emDecGiven">
+          <input type="text" id="emDecCover" maxlength="80" placeholder="Which cover, e.g. critical illness">
+          <input type="text" id="emDecWhy" maxlength="200" placeholder="Because… e.g. of the cost">
+        </div>
+        <div class="field-hint" id="emDecPreview"></div>
       </div>
       <div class="field">
         <label for="emSubject">Subject</label>
@@ -4202,6 +4221,9 @@ const RISKS_LIST = [
 const RESPONSIBILITY = 'Please be aware that by not taking action, you are accepting full responsibility for any financial implications that may arise in the future and that we have attempted to provide you with a protection solution.';
 const TAILOR = 'If there are certain parts of the recommendation that you value more than others, I’d really welcome the opportunity to talk these through with you. We can tailor the options that matter most to you, while taking into consideration your budget.';
 const SIGN_OFF = 'Kind regards,\n{adviser}';
+// In the Declined template; replaced by the reason the colleague must pick before sending.
+const DECLINE_PLACEHOLDER = "[As you didn't mention a reason / You specified that you did not wish to take X cover because of X.]";
+const DECLINE_PLACEHOLDER_RE = /\[As you didn['’]t mention a reason[^\]]*\]/;
 const DEFAULT_EMAIL_TEMPLATES = [
   {name:'Unable to Contact', subject:'Your life insurance: checking in', body:[
     'Hi {names},',
@@ -4245,7 +4267,7 @@ const DEFAULT_EMAIL_TEMPLATES = [
   {name:'Declined', subject:'Your life insurance decision', body:[
     'Dear {names},',
     'Thank you for your time, and for considering your life insurance options with us.',
-    "I understand you've decided not to go ahead with cover at the moment. [As you didn't mention a reason / You specified that you did not wish to take X cover because of X.]",
+    "I understand you've decided not to go ahead with cover at the moment. " + DECLINE_PLACEHOLDER,
     'Without protection in place:',
     '• You or your family could find it difficult to keep up with the mortgage, household bills or other debts if you were to pass away or become seriously ill. In the worst case, this could put your home at risk.',
     RISKS_LIST[1],
@@ -4289,7 +4311,51 @@ document.getElementById('emTemplate').addEventListener('change', function(){
   const filled = {index:this.value, name:t.name, subject:fillTemplate(t.subject, lead), body:fillTemplate(t.body, lead)};
   subj.value = filled.subject; body.value = filled.body; emLastTemplate = filled;
   body.scrollTop = 0;
+  resetDeclineReason(/declin/i.test(t.name) || DECLINE_PLACEHOLDER_RE.test(filled.body));
 });
+
+/* Declined template: the colleague must say whether the client gave a reason
+   before the email can be sent. Their choice replaces the [ ... ] line. */
+let emDeclineText = null; // what's currently in the message in place of the placeholder
+function declineReasonSentence(){
+  const pick = document.querySelector('input[name="emDecReason"]:checked');
+  if(!pick) return null;
+  if(pick.value==='none') return "As you didn't mention a reason, I wanted to set out the risks of not having cover so that your decision is a fully informed one.";
+  const cover = document.getElementById('emDecCover').value.trim().replace(/\s+cover$/i,'');
+  const why = document.getElementById('emDecWhy').value.trim().replace(/^because\s+/i,'').replace(/[.\s]+$/,'');
+  if(!cover || !why) return null;
+  return `You specified that you did not wish to take ${cover} cover because ${why}.`;
+}
+function resetDeclineReason(show){
+  const wrap = document.getElementById('emDeclineWrap');
+  wrap.classList.toggle('hidden', !show); wrap.classList.remove('missing');
+  document.querySelectorAll('input[name="emDecReason"]').forEach(r=> r.checked = false);
+  document.getElementById('emDecCover').value = ''; document.getElementById('emDecWhy').value = '';
+  document.getElementById('emDecGiven').classList.add('hidden');
+  document.getElementById('emDecPreview').textContent = 'Choose one. Your answer goes into the email in place of the [square brackets].';
+  emDeclineText = null;
+}
+function applyDeclineReason(){
+  const body = document.getElementById('emBody');
+  const sentence = declineReasonSentence();
+  const replacement = sentence || DECLINE_PLACEHOLDER;
+  const old = emDeclineText && body.value.includes(emDeclineText) ? emDeclineText : (body.value.match(DECLINE_PLACEHOLDER_RE)||[])[0];
+  if(old){
+    body.value = body.value.replace(old, ()=> replacement);
+    emDeclineText = replacement;
+    if(emLastTemplate) emLastTemplate.body = body.value;
+  }
+  document.getElementById('emDeclineWrap').classList.toggle('missing', false);
+  document.getElementById('emDecPreview').textContent = sentence ? 'In the email: "'+sentence+'"' :
+    (document.querySelector('input[name="emDecReason"]:checked') ? 'Fill in both boxes.' : 'Choose one. Your answer goes into the email in place of the [square brackets].');
+}
+document.querySelectorAll('input[name="emDecReason"]').forEach(r=> r.addEventListener('change', ()=>{
+  const given = r.value==='given' && r.checked;
+  document.getElementById('emDecGiven').classList.toggle('hidden', !given);
+  applyDeclineReason();
+  if(given) document.getElementById('emDecCover').focus();
+}));
+['emDecCover','emDecWhy'].forEach(id=> document.getElementById(id).addEventListener('input', applyDeclineReason));
 
 let emailLeadId = null;
 let emailFromAction = false; // opened from the case's Email action button
@@ -4301,6 +4367,7 @@ function openEmailCompose(leadId, fromAction=false){
   document.getElementById('emSubject').value = '';
   document.getElementById('emBody').value = '';
   renderTemplateOptions(); emLastTemplate = null;
+  resetDeclineReason(false);
   document.getElementById('emSend').disabled = false;
   openModal('emailComposeOverlay');
   setTimeout(()=> document.getElementById('emSubject').focus(), 50);
@@ -4316,7 +4383,13 @@ document.getElementById('emSend').addEventListener('click', function(){
   if(bad){ toast(`"${bad}" doesn't look like an email address.`,'error'); return; }
   if(!subject){ toast('Please add a subject.','error'); return; }
   if(!body){ toast('Please write a message.','error'); return; }
-  const leftover = (subject+'\n'+body).match(/\[[^\]\n]{1,80}\]/);
+  const declineWrap = document.getElementById('emDeclineWrap');
+  const declineReason = declineWrap.classList.contains('hidden') ? null : declineReasonSentence();
+  if(!declineWrap.classList.contains('hidden') && !declineReason){
+    declineWrap.classList.add('missing'); declineWrap.scrollIntoView({block:'nearest'});
+    toast("Please choose the client's reason for declining before sending.",'error'); return;
+  }
+  const leftover = (subject+'\n'+body).match(/\[[^\]\n]{1,300}\]/);
   if(leftover){ toast(`Please fill in or remove "${leftover[0]}" before sending.`,'error'); return; }
   // Open Gmail straight from the click so the browser doesn't block it,
   // in its own window so closing it after sending lands back on the case.
@@ -4336,6 +4409,7 @@ document.getElementById('emSend').addEventListener('click', function(){
     type:'email', text:`Email to client - ${subject}`,
     emailTo: to.join(', '), emailSubject: subject, emailBody: body,
     ...(emLastTemplate ? {emailTemplate: emLastTemplate.name} : {}),
+    ...(declineReason ? {emailDeclineReason: declineReason} : {}),
     byId:currentUser.id, byName:currentUser.name, at:Date.now()
   }, patch).then(()=>{
     closeModal('emailComposeOverlay');

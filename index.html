@@ -591,6 +591,7 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-filters input{flex:1 1 260px; min-width:0;}
 .sib-filters select{flex:0 1 210px; min-width:0;}
 .sib-table tbody tr{cursor:pointer;}
+.sib-note-preview{margin-top:4px; font-size:12px; color:var(--text-muted); font-style:italic; max-width:460px; white-space:pre-wrap; word-break:break-word;}
 .sib-table tbody tr:hover td{background:var(--brand-tint);}
 .sib-table tr.dnc td{opacity:.6;}
 .sib-email-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
@@ -1877,6 +1878,66 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <input type="file" id="sibFileInput" accept=".xlsx,.xls" class="hidden">
           <p class="nml-note" id="sibImportStatus" style="margin-bottom:0;"></p>
         </div>
+
+        <div class="page-head" style="margin:28px 0 16px;">
+          <div>
+            <h1 style="font-size:19px;">Bulk delete Send in Blue cases</h1>
+            <p class="sub">Delete cases by the month their product ends. They go to the Send in Blue Recycle Bin below for 30 days, so they can be restored.</p>
+          </div>
+        </div>
+        <div class="insights-card" style="max-width:640px;">
+          <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;">
+            <div class="field" style="margin-bottom:0; flex:1; min-width:120px;">
+              <label for="sbdFrom">From month</label>
+              <select id="sbdFrom"></select>
+            </div>
+            <div class="field" style="margin-bottom:0; flex:1; min-width:120px;">
+              <label for="sbdTo">To month</label>
+              <select id="sbdTo"></select>
+            </div>
+            <div class="field" style="margin-bottom:0; flex:1.4; min-width:170px;">
+              <label for="sbdOutcome">Which cases</label>
+              <select id="sbdOutcome">
+                <option value="all">All cases</option>
+                <option value="closed">Closed (any outcome)</option>
+                <option value="open">Open only</option>
+                <option value="Retained">Retained</option>
+                <option value="No Opportunity">No Opportunity</option>
+                <option value="Not Converted">Not Converted</option>
+                <option value="dnc">Do not contact</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" id="sbdSearchBtn" style="margin-bottom:1px;">Find cases</button>
+          </div>
+          <div id="sbdResults" class="hidden">
+            <div class="stat-card bad" style="margin-bottom:14px; max-width:220px;">
+              <div class="sv" id="sbdCount">0</div>
+              <div class="sl">Cases match</div>
+            </div>
+            <div id="sbdPreviewWrap" class="hidden">
+              <div class="section-lbl" style="margin-top:0;">Preview (first 8)</div>
+              <table class="mini-table" id="sbdPreviewTable" style="margin-bottom:16px;"></table>
+            </div>
+            <button class="btn btn-danger" id="sbdDeleteBtn" style="background:var(--red); color:#fff;" disabled>Delete these cases</button>
+          </div>
+        </div>
+
+        <div class="page-head" style="margin:28px 0 16px;">
+          <div>
+            <h1 style="font-size:19px;">Send in Blue Recycle Bin</h1>
+            <p class="sub">Deleted Send in Blue cases are kept here for 30 days before being purged for good.</p>
+          </div>
+        </div>
+        <div class="settings-card">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; padding:12px 14px 0;" id="sibBinActions" class="hidden">
+            <button class="btn btn-secondary btn-sm" id="sibBinRestoreAll">Restore all</button>
+          </div>
+          <table class="users-table">
+            <thead><tr><th>Client</th><th>Product ends</th><th>Deleted by</th><th>Deleted</th><th>Purges in</th><th></th></tr></thead>
+            <tbody id="sibBinBody"></tbody>
+          </table>
+          <div id="sibBinEmpty" class="settings-empty hidden">Recycle Bin is empty.</div>
+        </div>
       </div>
 
       <div id="settingsContentSection" class="hidden" style="margin-bottom:34px;">
@@ -1907,8 +1968,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div id="settingsBulkDeleteSection">
         <div class="page-head" style="margin-bottom:16px;">
           <div>
-            <h1 style="font-size:19px;">Bulk delete cases</h1>
-            <p class="sub">Delete multiple cases at once by their Task Created date range. This can't be undone.</p>
+            <h1 style="font-size:19px;">Bulk delete protection leads</h1>
+            <p class="sub">Delete multiple protection leads at once by their Task Created date range. They go to the Recycle Bin below for 30 days, so they can be restored.</p>
           </div>
         </div>
         <div class="insights-card" style="max-width:640px;">
@@ -1962,8 +2023,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div id="settingsRecycleBinSection" style="margin-top:34px;">
         <div class="page-head" style="margin-bottom:16px;">
           <div>
-            <h1 style="font-size:19px;">Recycle Bin</h1>
-            <p class="sub">Deleted cases are kept here for 30 days before being purged for good.</p>
+            <h1 style="font-size:19px;">Protection Recycle Bin</h1>
+            <p class="sub">Deleted protection leads are kept here for 30 days before being purged for good.</p>
           </div>
         </div>
         <div class="settings-card">
@@ -3056,6 +3117,7 @@ function goPage(page){
     document.getElementById('settingsContentSection').classList.toggle('hidden', currentUser.role!=='management');
     if(currentUser.role==='management') renderContentSettings();
     document.getElementById('settingsSibSection').classList.toggle('hidden', currentUser.role!=='management');
+    if(currentUser.role==='management'){ startSibListener(); resetSibBulkDelete(); renderSibSettings(); }
     if(!isMapa){
       renderUsersTable();
       resetBulkDelete();
@@ -3557,6 +3619,7 @@ function startSibListener(){
     SIB = snap.val() || {}; sibLoaded = true;
     if(!document.getElementById('page-sib').classList.contains('hidden')) renderSib();
     if(sibOpenKey && document.getElementById('sibOverlay').classList.contains('open')) renderSibCase();
+    if(!document.getElementById('page-settings').classList.contains('hidden')) renderSibSettings();
   }, ()=>{
     sibListening = false;
     document.getElementById('sibResults').innerHTML = '<div class="nml-empty">Could not load Send in Blue cases. Publish the updated Firebase rules, then refresh.</div>';
@@ -3600,7 +3663,7 @@ function sibDay(v){
 }
 function sibOutcome(c){ return c.retentionKey || 'Open'; }
 function sibOutcomeClass(o){ return o==='Retained' ? 'ret' : o==='Open' ? 'open' : 'nop'; }
-function sibCases(){ return Object.entries(SIB).filter(([, c])=> c && typeof c==='object').map(([key, c])=> ({...c, key})); }
+function sibCases(){ return Object.entries(SIB).filter(([, c])=> c && typeof c==='object' && !c.deleted).map(([key, c])=> ({...c, key})); }
 
 function sibFilter(list, ignoreMonth){
   const q = sibState.search.trim().toLowerCase();
@@ -3673,7 +3736,7 @@ function renderSib(){
     <tbody>${rows.map(c=>{
       const o = sibOutcome(c);
       return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''}">
-        <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div></td>
+        <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.length>180 ? c.notes.slice(0,180)+'…' : c.notes)}</div>` : ''}</td>
         ${searching ? `<td>${esc(sibMonthLabel(c.month))}</td>` : ''}
         <td>${esc(c.servicingAdviser||'—')}${c.exAdviser ? `<div class="nml-notes">ex ${esc(c.exAdviser.replace(/^X\s+/,''))}</div>` : ''}</td>
         <td>${c.doNotContact ? '<span class="sib-tag nop">Do not contact</span>' : emailTags(c)}</td>
@@ -3691,7 +3754,7 @@ document.getElementById('sibImportShortcut').addEventListener('click', ()=> goPa
 
 /* ---- case window ---- */
 function openSibCase(key){
-  if(!SIB[key]) return;
+  if(!SIB[key] || SIB[key].deleted) return;
   sibOpenKey = key; sibAction = null;
   renderSibCase();
   openModal('sibOverlay');
@@ -3704,7 +3767,7 @@ function sibWrite(fields, entry){
   return db.ref().update(updates).then(()=> true).catch(err=>{ toast('Could not save: '+err.message,'error'); return false; });
 }
 function renderSibCase(){
-  const c = SIB[sibOpenKey]; if(!c) { closeModal('sibOverlay'); return; }
+  const c = SIB[sibOpenKey]; if(!c || c.deleted) { closeModal('sibOverlay'); return; }
   document.getElementById('sibCaseName').textContent = c.mailingName || '(no name)';
   const o = sibOutcome(c);
   const cell = (lbl, val, full)=> `<div class="info-cell${full?' full':''}"><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;
@@ -3732,6 +3795,8 @@ function renderSibCase(){
       <div class="info-cell"><div class="lbl">Email client?</div>
         <select id="sibEmailClient" class="sib-inline-select"><option value="">Not set</option>${SIB_EMAIL_CLIENT.map(v=> `<option ${c.emailClient===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
     </div>
+    <div class="section-lbl" style="margin-top:0;">Case notes</div>
+    <div class="note-quote" style="max-height:220px; margin-top:0;">${c.notes ? esc(c.notes) : '<span style="color:var(--text-faint)">No case notes. Use Edit details to add some.</span>'}</div>
     <div class="section-lbl">Send in Blue emails</div>
     <div class="sib-email-row">${emailBtns}</div>
     <div class="section-lbl">Action</div>
@@ -3742,9 +3807,7 @@ function renderSibCase(){
       <button class="action-btn" data-sib-act="outcome">${ico('checkCircle')}Outcome</button>
       <button class="action-btn" data-sib-act="edit">${ico('pin')}Edit details</button>
     </div>
-    <div id="sibActForm"></div>
-    <div class="section-lbl">Case notes</div>
-    <div class="note-quote" style="max-height:none;">${c.notes ? esc(c.notes) : '<span style="color:var(--text-faint)">No case notes. Use Edit details to add some.</span>'}</div>`;
+    <div id="sibActForm"></div>`;
   const f = document.getElementById('sibActForm');
   if(act==='call') f.innerHTML = `<div class="inline-form">
       <div class="field"><label>How did the call go?</label>
@@ -3861,7 +3924,7 @@ function parseSibWorkbook(X, wb){
     const range = X.utils.decode_range(ws['!ref']);
     const cellAt = (r, c)=> ws[X.utils.encode_cell({r, c})];
     const val = (r, c)=>{ const x = cellAt(r, c); if(!x || x.t==='e' || x.t==='z') return null; return typeof x.v==='string' ? (x.v.trim() || null) : x.v; };
-    let headerRow = -1, cols = {};
+    let headerRow = -1, cols = {}, headerNames = {};
     for(let r = range.s.r; r <= Math.min(range.e.r, range.s.r+5) && headerRow<0; r++){
       for(let c = range.s.c; c <= range.e.c; c++){
         const h = String(val(r, c)||'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -3870,6 +3933,7 @@ function parseSibWorkbook(X, wb){
       if(headerRow===r) for(let c = range.s.c; c <= range.e.c; c++){
         const f = SIB_HEADERS[String(val(r, c)||'').toLowerCase().replace(/[^a-z0-9]/g,'')];
         if(f && cols[f]==null) cols[f] = c;
+        if(val(r, c)!=null) headerNames[c] = String(val(r, c)).trim();
       }
     }
     if(headerRow<0) return;
@@ -3899,6 +3963,14 @@ function parseSibWorkbook(X, wb){
       if(lc!=null){ const d = dateVal(lc); if(d) c.lastContact = new Date(d+'T12:00:00').getTime(); else c.notes = (c.notes ? c.notes+'\n' : '') + 'Last contact: '+String(lc).slice(0,200); }
       ['sib6','sib3','sib0'].forEach(f=>{ const v = get(f); if(v==null) return;
         if(/unsubscribed/i.test(String(v))) c[f] = 'UNSUBSCRIBED'; else { const d = dateVal(v); if(d) c[f] = d; } });
+      // Excel comments / notes on any cell in the row go into the case notes too.
+      for(let cc = range.s.c; cc <= range.e.c; cc++){
+        const x = cellAt(r, cc);
+        (x && x.c || []).forEach(cm=>{
+          const t = String(cm.t||'').trim(); if(!t) return;
+          c.notes = ((c.notes ? c.notes+'\n' : '') + `Comment${headerNames[cc] ? ' on '+headerNames[cc] : ''}${cm.a ? ' ('+String(cm.a).trim()+')' : ''}: ${t}`).slice(0, 4000);
+        });
+      }
       const dnc = get('doNotContact');
       const grey = ['exAdviser','servicingAdviser','mailingName'].some(f=>{ const x = cols[f]!=null && cellAt(r, cols[f]); return x && x.s && x.s.fgColor && /999999$/i.test(String(x.s.fgColor.rgb||'')); });
       if(grey || /do not contact/i.test(c.notes||'') || (dnc && /^(yes|y|true|1)$/i.test(String(dnc)))) c.doNotContact = true;
@@ -3967,6 +4039,103 @@ document.getElementById('sibDownloadBtn').addEventListener('click', ()=>{
     X.writeFile(wb, `Send in Blue ${todayISO()}.xlsx`);
   }).catch(err=> toast(err.message,'error'));
   ensureSibLoaded().then(go).catch(err=> toast('Could not load Send in Blue cases: '+err.message,'error'));
+});
+
+
+/* ---- Bulk delete Send in Blue cases + their Recycle Bin (Management) ----
+   Deleting sets deleted/deletedAt/deletedBy, so cases can be restored for
+   30 days; after that they're removed for good next time Settings opens. */
+let sbdMatches = null;
+function resetSibBulkDelete(){
+  sbdMatches = null;
+  document.getElementById('sbdResults').classList.add('hidden');
+  document.getElementById('sbdPreviewWrap').classList.add('hidden');
+  document.getElementById('sbdDeleteBtn').disabled = true;
+}
+function renderSibSettings(){
+  if(!currentUser || currentUser.role!=='management') return;
+  // month pickers
+  const months = [...new Set(sibCases().map(c=> c.month).filter(Boolean))].sort();
+  ['sbdFrom','sbdTo'].forEach((id, i)=>{
+    const sel = document.getElementById(id), keep = sel.value;
+    sel.innerHTML = months.length ? months.map(m=> `<option value="${esc(m)}">${esc(sibMonthLabel(m))}</option>`).join('') : '<option value="">No cases yet</option>';
+    sel.value = months.includes(keep) ? keep : (i===0 ? months[0] : months[months.length-1]) || '';
+  });
+  document.getElementById('sbdSearchBtn').disabled = !months.length;
+  // recycle bin
+  const now = Date.now(), limit = RECYCLE_BIN_DAYS*86400000;
+  const binned = Object.entries(SIB).filter(([, c])=> c && c.deleted).map(([key, c])=> ({...c, key}));
+  const purge = binned.filter(c=> now - (c.deletedAt||0) >= limit);
+  if(purge.length){
+    const u = {}; purge.forEach(c=> u['sib/cases/'+c.key] = null);
+    db.ref().update(u).catch(()=>{});
+  }
+  const left = binned.filter(c=> now - (c.deletedAt||0) < limit).sort((a,b)=> (b.deletedAt||0)-(a.deletedAt||0) || (a.month||'').localeCompare(b.month||''));
+  document.getElementById('sibBinEmpty').classList.toggle('hidden', left.length>0);
+  document.getElementById('sibBinActions').classList.toggle('hidden', left.length<2);
+  const body = document.getElementById('sibBinBody');
+  const shown = left.slice(0, 200);
+  body.innerHTML = shown.map(c=>{
+    const days = Math.max(0, Math.ceil((limit - (now-(c.deletedAt||0)))/86400000));
+    return `<tr><td style="font-weight:600;">${esc(c.mailingName||'(no name)')}</td><td>${esc(sibMonthLabel(c.month))}</td><td>${esc(c.deletedBy||'—')}</td><td>${fmtDate(c.deletedAt)}</td>
+      <td style="color:${days<=5?'var(--red)':'var(--text-muted)'}; font-weight:${days<=5?700:400};">${days} day${days!==1?'s':''}</td>
+      <td><div class="row-actions"><button class="btn btn-secondary btn-sm" data-sib-restore="${esc(c.key)}">Restore</button>
+      <button class="icon-btn del" data-sib-purge="${esc(c.key)}" title="Delete permanently now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div></td></tr>`;
+  }).join('') + (left.length > shown.length ? `<tr><td colspan="6" style="color:var(--text-muted);">…and ${left.length-shown.length} more. Use Restore all to bring them all back.</td></tr>` : '');
+  body.querySelectorAll('[data-sib-restore]').forEach(b=> b.addEventListener('click', ()=>{
+    b.disabled = true;
+    const k = b.dataset.sibRestore;
+    db.ref('sib/cases/'+k).update({deleted:null, deletedAt:null, deletedBy:null}).then(()=> toast('Case restored','success'))
+      .catch(err=>{ b.disabled = false; toast('Could not restore: '+err.message,'error'); });
+  }));
+  body.querySelectorAll('[data-sib-purge]').forEach(b=> b.addEventListener('click', ()=>{
+    const k = b.dataset.sibPurge;
+    if(!confirm(`Permanently delete ${SIB[k] && SIB[k].mailingName || 'this case'} right now? This can't be undone.`)) return;
+    b.disabled = true;
+    db.ref('sib/cases/'+k).remove().then(()=> toast('Permanently deleted','success'))
+      .catch(err=>{ b.disabled = false; toast('Could not delete: '+err.message,'error'); });
+  }));
+}
+document.getElementById('sibBinRestoreAll').addEventListener('click', function(){
+  const keys = Object.entries(SIB).filter(([, c])=> c && c.deleted).map(([k])=> k);
+  if(!keys.length || !confirm(`Restore all ${keys.length} cases in the Send in Blue Recycle Bin?`)) return;
+  const u = {}; keys.forEach(k=> Object.assign(u, {[`sib/cases/${k}/deleted`]:null, [`sib/cases/${k}/deletedAt`]:null, [`sib/cases/${k}/deletedBy`]:null}));
+  this.disabled = true;
+  db.ref().update(u).then(()=> toast(`Restored ${keys.length} cases`,'success')).catch(err=> toast('Could not restore: '+err.message,'error')).finally(()=>{ this.disabled = false; });
+});
+['sbdFrom','sbdTo','sbdOutcome'].forEach(id=> document.getElementById(id).addEventListener('change', resetSibBulkDelete));
+document.getElementById('sbdSearchBtn').addEventListener('click', ()=>{
+  let from = document.getElementById('sbdFrom').value, to = document.getElementById('sbdTo').value;
+  if(from > to) [from, to] = [to, from];
+  const which = document.getElementById('sbdOutcome').value;
+  const list = sibCases().filter(c=> c.month >= from && c.month <= to).filter(c=>
+    which==='all' ? true : which==='closed' ? !!c.retentionKey : which==='open' ? !c.retentionKey && !c.doNotContact : which==='dnc' ? !!c.doNotContact : c.retentionKey===which)
+    .sort((a,b)=> (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
+  sbdMatches = {list, from, to, which};
+  document.getElementById('sbdResults').classList.remove('hidden');
+  document.getElementById('sbdCount').textContent = list.length;
+  document.getElementById('sbdDeleteBtn').disabled = !list.length;
+  document.getElementById('sbdPreviewWrap').classList.toggle('hidden', !list.length);
+  document.getElementById('sbdPreviewTable').innerHTML = `<thead><tr><th>Client</th><th>Product ends</th><th>Outcome</th></tr></thead>
+    <tbody>${list.slice(0,8).map(c=> `<tr><td style="font-weight:600;">${esc(c.mailingName||'(no name)')}</td><td>${esc(sibMonthLabel(c.month))}</td><td>${esc(c.doNotContact ? 'Do not contact' : sibOutcome(c))}</td></tr>`).join('')}</tbody>`;
+});
+document.getElementById('sbdDeleteBtn').addEventListener('click', function(){
+  if(!sbdMatches || !sbdMatches.list.length) return;
+  const {list, from, to, which} = sbdMatches;
+  const label = document.querySelector(`#sbdOutcome option[value="${which}"]`).textContent;
+  const range = from===to ? sibMonthLabel(from) : `${sibMonthLabel(from)} to ${sibMonthLabel(to)}`;
+  if(!confirm(`Delete ${list.length} Send in Blue case${list.length===1?'':'s'} (${label.toLowerCase()}, ${range})?\n\nThey'll move to the Send in Blue Recycle Bin and can be restored within 30 days.`)) return;
+  const now = Date.now(), batches = [];
+  let u = {};
+  list.forEach((c, i)=>{
+    Object.assign(u, {[`sib/cases/${c.key}/deleted`]:true, [`sib/cases/${c.key}/deletedAt`]:now, [`sib/cases/${c.key}/deletedBy`]:currentUser.name});
+    if((i+1) % 200 === 0){ batches.push(u); u = {}; }
+  });
+  if(Object.keys(u).length) batches.push(u);
+  this.disabled = true;
+  batches.reduce((p, b)=> p.then(()=> db.ref().update(b)), Promise.resolve())
+    .then(()=>{ toast(`Moved ${list.length} case${list.length===1?'':'s'} to the Send in Blue Recycle Bin`,'success'); resetSibBulkDelete(); })
+    .catch(err=>{ this.disabled = false; toast('Could not delete: '+err.message,'error'); });
 });
 
 /* ----------------------------------------------------------------------------

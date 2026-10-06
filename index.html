@@ -4060,8 +4060,11 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
     const keys = Object.keys(cases);
     if(!keys.length){ status.textContent = `Nothing uploaded: no cases found in ${file.name}. Each month tab needs a heading row with a "Case ID" column.`; status.classList.add('sib-status-bad'); toast("No cases found. The month tabs need a header row with a Case ID column.",'error'); return; }
     const existing = keys.filter(k=> SIB[k]);
+    const binned = existing.filter(k=> SIB[k].deleted);
     const months = [...new Set(keys.map(k=> cases[k].month))].sort();
-    if(!confirm(`Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\nTabs read: ${read.map(t=> t.name.trim()+' ('+t.count+')').join(', ')}${skipped.length ? '\nTabs skipped (no cases): '+skipped.join(', ') : ''}\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.\n\nGo ahead?`)){ status.textContent = ''; return; }
+    if(!confirm(`Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\nTabs read: ${read.map(t=> t.name.trim()+' ('+t.count+')').join(', ')}${skipped.length ? '\nTabs skipped (no cases): '+skipped.join(', ') : ''}\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.${binned.length ? `\n${binned.length} of those are in the Send in Blue Recycle Bin (you'll be asked next whether to restore them).` : ''}\n\nGo ahead?`)){ status.textContent = ''; return; }
+    // Cases matched in the Recycle Bin stay hidden unless they're restored.
+    const restore = binned.length > 0 && confirm(`${binned.length} of the cases in this file were deleted and are in the Send in Blue Recycle Bin, so they're hidden.\n\nRestore them now?\n\nOK = restore them\nCancel = leave them in the Recycle Bin`);
     const now = Date.now(), batches = [];
     let updates = {}, n = 0, filled = 0;
     keys.forEach(k=>{
@@ -4070,6 +4073,7 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
         updates[`sib/cases/${k}`] = {...c, importedAt:now, audit:{[db.ref().push().key]: {type:'assigned', text:`Imported from spreadsheet (${sibMonthLabel(c.month)})`, byId:currentUser.id, byName:currentUser.name, at:now}}};
       } else {
         Object.entries(c).forEach(([f, v])=>{ if(f!=='row' && (cur[f]==null || cur[f]==='')){ updates[`sib/cases/${k}/${f}`] = v; filled++; } });
+        if(restore && cur.deleted) Object.assign(updates, {[`sib/cases/${k}/deleted`]:null, [`sib/cases/${k}/deletedAt`]:null, [`sib/cases/${k}/deletedBy`]:null});
       }
       if(++n % 150 === 0){ batches.push(updates); updates = {}; }
     });
@@ -4078,7 +4082,7 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
     status.textContent = `Saving… 0 of ${batches.length}`;
     return batches.reduce((p, u)=> p.then(()=> db.ref().update(u)).then(()=>{ status.textContent = `Saving… ${++done} of ${batches.length}`; }), Promise.resolve())
       .then(()=>{
-        status.textContent = `Last upload (${file.name}): ${keys.length-existing.length} new, ${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in). Saved.`;
+        status.textContent = `Last upload (${file.name}): ${keys.length-existing.length} new, ${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in)${binned.length ? (restore ? `, ${binned.length} restored from the Recycle Bin` : `, ${binned.length} left in the Recycle Bin`) : ''}. Saved.`;
         toast(`Send in Blue updated: ${keys.length-existing.length} new cases`,'success');
       });
   }).catch(err=>{
@@ -4260,9 +4264,12 @@ function renderSibSettings(){
   if(!currentUser || currentUser.role!=='management') return;
   const live = sibCases(), yc = {};
   live.forEach(c=>{ const y = (c.month||'').slice(0,4) || '?'; (yc[y] = yc[y] || new Set()).add(c.month); });
-  document.getElementById('sibYearCounts').innerHTML = !sibLoaded ? '' : live.length
+  const inBin = Object.values(SIB).filter(c=> c && c.deleted), binYears = {};
+  inBin.forEach(c=>{ const y = (c.month||'').slice(0,4) || '?'; binYears[y] = (binYears[y]||0) + 1; });
+  document.getElementById('sibYearCounts').innerHTML = !sibLoaded ? '' : (live.length
     ? '<b>In the dashboard now:</b> ' + Object.keys(yc).sort().map(y=> `<span class="sib-tag open">${esc(y)}: ${live.filter(c=> (c.month||'').startsWith(y)).length} cases · ${yc[y].size} month${yc[y].size===1?'':'s'}</span>`).join(' ')
-    : '<b>In the dashboard now:</b> no Send in Blue cases yet.';
+    : '<b>In the dashboard now:</b> no Send in Blue cases yet.') +
+    (inBin.length ? ` <b style="margin-left:6px;">In the Recycle Bin:</b> ` + Object.keys(binYears).sort().map(y=> `<span class="sib-tag nop">${esc(y)}: ${binYears[y]} cases</span>`).join(' ') : '');
   // month pickers
   const months = [...new Set(sibCases().map(c=> c.month).filter(Boolean))].sort();
   ['sbdFrom','sbdTo'].forEach((id, i)=>{

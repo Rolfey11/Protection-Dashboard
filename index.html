@@ -570,6 +570,10 @@ body.mode-sib .mode-switch button.on{background:#1D6FA5;}
 body.mode-sib .prot-only{display:none !important;}
 body:not(.mode-sib) .sib-only{display:none !important;}
 @media (max-width:700px){ .mode-switch button{padding:6px 9px; font-size:11.5px;} }
+.sib-years{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+.sib-years button{padding:7px 14px; border-radius:999px; border:1.5px solid var(--border-2); background:var(--surface); font:inherit; font-size:13px; font-weight:700; color:var(--text-muted); cursor:pointer;}
+.sib-years button span{font-weight:600; opacity:.75; margin-left:2px;}
+.sib-years button.on{background:#1D6FA5; border-color:#1D6FA5; color:#fff;}
 .sib-months{display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; margin-bottom:12px;}
 @media (min-width:1200px){ .sib-months{grid-template-columns:repeat(12, minmax(0, 1fr));} }
 .sib-month{display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; padding:10px 11px; border:1px solid var(--border); border-radius:12px; background:var(--surface); font:inherit; color:var(--text); cursor:pointer;}
@@ -1724,6 +1728,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
         <button class="btn btn-secondary hidden" id="sibImportShortcut">Upload / download spreadsheet</button>
       </div>
+      <div class="sib-years" id="sibYears" role="group" aria-label="Year"></div>
       <div class="sib-months" id="sibMonths"></div>
       <div class="sib-summary" id="sibSummary"></div>
       <div class="sib-filters">
@@ -1760,6 +1765,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <select id="sibInsTo" aria-label="To month"></select>
         <select id="sibInsAdviser" aria-label="Servicing adviser"><option value="">All servicing advisers</option></select>
       </div>
+      <div class="sib-years" id="sibInsYears" role="group" aria-label="Year" style="margin-top:-4px;"></div>
       <div id="sibInsBody"></div>
     </div>
 
@@ -3680,7 +3686,8 @@ function sibMonthsAway(key){
 }
 function sibMonthTag(key){
   const d = sibMonthsAway(key);
-  if(d <= 0) return ['now', 'Ending now'];
+  if(d < 0) return ['no', 'Ended'];
+  if(d === 0) return ['now', 'Ending now'];
   if(d <= 3) return ['now', 'Call now'];
   if(d <= 6) return ['due', '6-month email due'];
   return null;
@@ -3690,7 +3697,9 @@ function sibUnsubscribed(c){ return c.emailClient==='UNSUBSCRIBED' || c.sib6==='
 function sibEmailState(c, n){
   const v = c['sib'+n];
   if(v && v!=='UNSUBSCRIBED') return {sent:v};
-  return {due: !c.doNotContact && !sibUnsubscribed(c) && sibMonthsAway(c.month) <= n};
+  const d = sibMonthsAway(c.month);
+  // Due from n months before the product ends until it ends; once a month has passed it's no longer actionable.
+  return {due: !c.doNotContact && !sibUnsubscribed(c) && d >= 0 && d <= n};
 }
 function sibDay(v){
   if(!v) return '';
@@ -3731,10 +3740,20 @@ function renderSib(){
   // months
   const byMonth = {};
   all.forEach(c=>{ (byMonth[c.month||''] = byMonth[c.month||''] || []).push(c); });
-  const months = Object.keys(byMonth).sort();
+  const allMonths = Object.keys(byMonth).sort();
   if(!sibState.month || !byMonth[sibState.month]){
-    sibState.month = months.find(m=> sibMonthsAway(m) >= 0) || months[months.length-1];
+    sibState.month = allMonths.find(m=> sibMonthsAway(m) >= 0) || allMonths[allMonths.length-1];
   }
+  // Year buttons: the month cards show one year at a time.
+  const years = [...new Set(allMonths.map(m=> m.slice(0,4)))];
+  const year = sibState.month.slice(0,4);
+  document.getElementById('sibYears').innerHTML = years.map(y=> `<button type="button" class="${y===year?'on':''}" data-sib-year="${esc(y)}">${esc(y)} <span>${allMonths.filter(m=> m.startsWith(y)).reduce((t, m)=> t + byMonth[m].length, 0)}</span></button>`).join('');
+  document.querySelectorAll('[data-sib-year]').forEach(b=> b.addEventListener('click', ()=>{
+    const ym = allMonths.filter(m=> m.startsWith(b.dataset.sibYear));
+    sibState.month = ym.find(m=> sibMonthsAway(m) >= 0) || ym[ym.length-1];
+    renderSib();
+  }));
+  const months = allMonths.filter(m=> m.startsWith(year));
   document.getElementById('sibMonths').innerHTML = months.map(m=>{
     const cs = byMonth[m], contacted = cs.filter(c=> c.lastContact || c.retentionKey).length;
     const closed = cs.filter(c=> c.retentionKey || c.doNotContact).length;
@@ -4114,6 +4133,14 @@ function renderSibInsights(){
   const months = [...new Set(all.map(c=> c.month).filter(Boolean))].sort();
   if(!months.includes(sibIns.from)) sibIns.from = months[0];
   if(!months.includes(sibIns.to)) sibIns.to = months[months.length-1];
+  const insYears = [...new Set(months.map(m=> m.slice(0,4)))];
+  const rangeIs = (a, b)=> (sibIns.from===a && sibIns.to===b);
+  document.getElementById('sibInsYears').innerHTML = (insYears.length > 1 ? `<button type="button" class="${rangeIs(months[0], months[months.length-1])?'on':''}" data-ins-year="">All years</button>` : '') +
+    insYears.map(y=>{ const ym = months.filter(m=> m.startsWith(y)); return `<button type="button" class="${rangeIs(ym[0], ym[ym.length-1])?'on':''}" data-ins-year="${esc(y)}">${esc(y)}</button>`; }).join('');
+  document.querySelectorAll('[data-ins-year]').forEach(b=> b.addEventListener('click', ()=>{
+    const ym = b.dataset.insYear ? months.filter(m=> m.startsWith(b.dataset.insYear)) : months;
+    sibIns.from = ym[0]; sibIns.to = ym[ym.length-1]; renderSibInsights();
+  }));
   const fromSel = document.getElementById('sibInsFrom'), toSel = document.getElementById('sibInsTo'), advSel = document.getElementById('sibInsAdviser');
   fromSel.innerHTML = months.map(m=> `<option value="${esc(m)}">From ${esc(sibMonthLabel(m))}</option>`).join(''); fromSel.value = sibIns.from;
   toSel.innerHTML = months.map(m=> `<option value="${esc(m)}">To ${esc(sibMonthLabel(m))}</option>`).join(''); toSel.value = sibIns.to;
@@ -4123,7 +4150,7 @@ function renderSibInsights(){
   const [lo, hi] = sibIns.from <= sibIns.to ? [sibIns.from, sibIns.to] : [sibIns.to, sibIns.from];
   const list = all.filter(c=> c.month >= lo && c.month <= hi && (!advSel.value || c.servicingAdviser===advSel.value));
   const o = sibOutcomeCounts(list);
-  const atRisk = list.filter(c=> !c.retentionKey && !c.doNotContact && sibMonthsAway(c.month) <= 3 && !sibContacted(c)).length;
+  const atRisk = list.filter(c=> !c.retentionKey && !c.doNotContact && sibMonthsAway(c.month) >= 0 && sibMonthsAway(c.month) <= 3 && !sibContacted(c)).length;
   const overdue = list.reduce((t, c)=> t + [6,3,0].filter(n=> sibEmailState(c, n).due).length, 0);
   const unsub = list.filter(c=> sibUnsubscribed(c)).length, dnc = list.filter(c=> c.doNotContact).length;
   const conv = pct(o.retained, o.retained + o.notConverted);

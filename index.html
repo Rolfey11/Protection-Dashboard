@@ -468,6 +468,19 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .topbar-inner{padding:0 14px; gap:10px;}
   .nav-tab{padding:8px 9px; font-size:13px;}
 }
+/* Phones: the menu tabs get their own row and scroll sideways inside it,
+   so the page itself never scrolls sideways. */
+@media (max-width:700px){
+  .topbar-inner{flex-wrap:wrap; height:auto; padding:8px 12px 0; gap:8px 8px; row-gap:6px;}
+  .brand-icon{width:32px; height:32px;}
+  .nav-tabs{order:10; flex:1 0 100%; min-width:0; overflow-x:auto; scrollbar-width:none; padding-bottom:8px; -webkit-overflow-scrolling:touch;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .daterange-wrap{margin-left:0;}
+  .topbar-right{gap:6px;}
+  .bell-btn,.logout-btn{width:34px; height:34px;}
+  .daterange-btn{height:34px;}
+}
+@media (max-width:380px){ .brand-icon{display:none;} }
 
 .bell-wrap{position:relative;}
 .bell-btn{
@@ -597,6 +610,12 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-filters input{flex:1 1 260px; min-width:0;}
 .sib-filters select{flex:0 1 210px; min-width:0;}
 .sib-table tbody tr{cursor:pointer;}
+.whats-new-entry ul{margin:0 0 14px 18px; padding:0; font-size:13.5px; line-height:1.55; color:var(--text);}
+.whats-new-entry li{margin-bottom:8px;}
+#whatsNewBtn{border:none; background:none; color:var(--brand); font:inherit; font-size:12px; font-weight:600; cursor:pointer; padding:0;}
+.sib-refer-banner{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:12px 0 0; padding:10px 12px; border-radius:10px; background:var(--amber-bg); color:var(--text); font-size:13px;}
+.sib-refer-warn{margin-bottom:12px; padding:10px 12px; border-radius:10px; background:var(--amber-bg); font-size:12.5px; line-height:1.5;}
+.action-btn.sib-refer-btn{border-color:var(--brand-light); color:var(--brand);}
 /* Send in Blue Insights */
 .sib-ins-bar{display:flex; gap:2px; height:10px; min-width:120px; border-radius:4px; overflow:hidden; background:var(--bg);}
 .sib-ins-bar i{display:block; height:100%;}
@@ -1430,7 +1449,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <div class="bell-panel" id="bellPanel">
             <div class="bell-panel-head">
               <h4>Notifications</h4>
-              <button id="markAllReadBtn">Mark all read</button>
+              <div style="display:flex; gap:10px; align-items:center;"><button id="whatsNewBtn" type="button">What's new</button><button id="markAllReadBtn">Mark all read</button></div>
             </div>
             <div id="notifList"></div>
           </div>
@@ -1914,8 +1933,10 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-primary btn-sm" id="sibUploadBtn">Upload Excel file (any year)</button>
             <button class="btn btn-secondary btn-sm" id="sibDownloadBtn">Download as Excel</button>
+            <button class="btn btn-secondary btn-sm" id="sibRestoreBtn">Restore from backup</button>
           </div>
           <input type="file" id="sibFileInput" accept=".xlsx,.xls" class="hidden">
+          <input type="file" id="sibRestoreInput" accept=".json,application/json" class="hidden">
           <p class="nml-note" id="sibImportStatus" style="margin-bottom:0;"></p>
           <div class="sib-year-counts" id="sibYearCounts"></div>
         </div>
@@ -2051,11 +2072,15 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <p style="font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:14px;">
             The first time you sign in each day, a backup file downloads automatically to this computer's Downloads folder. To restore, use <b>Upload Data</b> and choose a backup file. Cases are put back with their advisor, status and audit trail exactly as they were. Don't edit and re-save the file in Excel, as that can damage the backup column.
           </p>
+          <p class="hidden" id="sibBackupNote" style="font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:14px;">
+            <b>Send in Blue</b> is backed up too: Management also get a <b>send-in-blue-backup</b> file each day (every case, its history and the Send in Blue Recycle Bin). If your browser asks whether this site can download multiple files, choose <b>Allow</b>. To restore it, use <b>Restore from backup</b> in the Send in Blue section of Settings.
+          </p>
           <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
             <button class="btn btn-primary" id="backupNowBtn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
               Download backup now
             </button>
+            <button class="btn btn-secondary hidden" id="sibBackupNowBtn">Download Send in Blue backup now</button>
             <span style="font-size:12.5px; color:var(--text-muted);" id="backupLastLbl"></span>
           </div>
         </div>
@@ -2320,6 +2345,14 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 <!-- ============================================================
      MODAL: LEAD DETAIL
      ============================================================ -->
+<div class="modal-overlay" id="whatsNewOverlay">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head"><h2>What's new</h2><button class="modal-close" data-close="whatsNewOverlay">✕</button></div>
+    <div class="modal-body" id="whatsNewBody"></div>
+    <div class="modal-foot"><button class="btn btn-primary" data-close="whatsNewOverlay">Got it</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="sibOverlay">
   <div class="modal lead-modal">
     <div class="modal-head">
@@ -3131,6 +3164,8 @@ function enterApp(){
   goPage(APP_MODE==='sib' ? 'sib' : 'dashboard');
   renderDashboard();
   renderNotifs();
+  // Once per update: a short summary of what's new (after the screen settles).
+  setTimeout(()=>{ if(currentUser && !forcePinActive && !document.querySelector('.modal-overlay.open')) showWhatsNew(false); }, 900);
 }
 
 document.querySelectorAll('.nav-tab').forEach(tab=>{
@@ -3160,6 +3195,8 @@ function goPage(page){
     document.getElementById('settingsContentSection').classList.toggle('hidden', currentUser.role!=='management');
     if(currentUser.role==='management') renderContentSettings();
     document.getElementById('settingsSibSection').classList.toggle('hidden', currentUser.role!=='management');
+    document.getElementById('sibBackupNowBtn').classList.toggle('hidden', currentUser.role!=='management');
+    document.getElementById('sibBackupNote').classList.toggle('hidden', currentUser.role!=='management');
     if(currentUser.role==='management'){ startSibListener(); resetSibBulkDelete(); renderSibSettings(); }
     if(!isMapa){
       renderUsersTable();
@@ -3800,7 +3837,7 @@ function renderSib(){
         <td>${c.doNotContact ? '<span class="sib-tag nop">Do not contact</span>' : emailTags(c)}</td>
         <td>${c.emailClient ? `<span class="sib-tag ${c.emailClient==='YES'?'ok':'no'}">${esc(c.emailClient)}</span>` : '<span class="sib-tag no">Not set</span>'}</td>
         <td>${c.lastContact ? esc(fmtDate(c.lastContact)) : '—'}</td>
-        <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}</td>
+        <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}${c.protectionLeadId ? '<div style="margin-top:4px;"><span class="sib-tag due">Referred to Protection</span></div>' : ''}</td>
       </tr>`;
     }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>');
   out.querySelectorAll('[data-sib-case]').forEach(tr=> tr.addEventListener('click', ()=> openSibCase(tr.dataset.sibCase)));
@@ -3841,6 +3878,7 @@ function renderSibCase(){
       ${c.doNotContact ? '<span class="sib-tag nop" style="font-size:12px;">Do not contact</span>' : ''}
       ${(()=>{ const t = sibMonthTag(c.month); return t ? `<span class="sib-tag ${t[0]}" style="font-size:12px;">${t[1]}</span>` : ''; })()}
     </div>
+    ${sibReferralBanner(c)}
     <div class="info-grid">
       ${cell('Product ends', esc(sibMonthLabel(c.month)))}
       ${cell('Case ID', esc(c.caseId||'—'))}
@@ -3864,6 +3902,7 @@ function renderSibCase(){
       <button class="action-btn" data-sib-act="note">${ico('note')}Note</button>
       <button class="action-btn" data-sib-act="outcome">${ico('checkCircle')}Outcome</button>
       <button class="action-btn" data-sib-act="edit">${ico('pin')}Edit details</button>
+      ${sibReferredLead(c) ? '' : `<button class="action-btn sib-refer-btn" data-sib-act="refer">${ico('shuffle')}Refer to Protection</button>`}
     </div>
     <div id="sibActForm"></div>`;
   const f = document.getElementById('sibActForm');
@@ -3882,6 +3921,7 @@ function renderSibCase(){
       <div class="field"><label for="sibOutKey">Outcome</label><select id="sibOutKey"><option value="">Open (still working on it)</option>${SIB_RETENTION.map(v=> `<option ${c.retentionKey===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
       <div class="field"><label for="sibOutReason">Reason</label><select id="sibOutReason"><option value="">None</option>${[...new Set([...SIB_REASONS, ...(c.outcomeReason?[c.outcomeReason]:[])])].map(v=> `<option ${c.outcomeReason===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
       <button class="btn btn-primary btn-sm" id="sibOutSave">Save outcome</button></div>`;
+  if(act==='refer') f.innerHTML = sibReferFormHtml(c);
   if(act==='edit') f.innerHTML = `<div class="inline-form">
       <div class="field"><label for="sibEdName">Client name(s)</label><input type="text" id="sibEdName" maxlength="200" value="${esc(c.mailingName||'')}"></div>
       <div class="field"><label for="sibEdSal">Salutation (used in emails)</label><input type="text" id="sibEdSal" maxlength="120" value="${esc(c.salutation||'')}"></div>
@@ -3919,6 +3959,8 @@ function renderSibCase(){
     sibWrite({retentionKey:k, outcomeReason:r}, {type: k==='Retained' ? 'signup' : k ? 'decline' : 'status', text:`Outcome: ${k||'Open'}${r ? ' ('+r+')' : ''}`})
       .then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Outcome saved','success'); } });
   });
+  on('sibReferSave', function(){ sibReferToProtection(c, this); });
+  document.querySelectorAll('[data-open-lead]').forEach(b=> b.addEventListener('click', ()=> openLeadFromSib(b.dataset.openLead)));
   on('sibEdSave', ()=>{
     const email = document.getElementById('sibEdEmail').value.trim();
     if(email && !isEmail(email)){ toast(`"${email}" doesn't look like an email address.`,'error'); return; }
@@ -4111,6 +4153,112 @@ document.getElementById('sibDownloadBtn').addEventListener('click', ()=>{
 
 
 
+
+/* ---- Refer a Send in Blue client to Protection ----
+   Creates a protection lead (source "Send in Blue") linked both ways:
+   lead.sibKey -> the Send in Blue case, case.protectionLeadId -> the lead. */
+function sibReferredLead(c){ const l = c.protectionLeadId && LEADS[c.protectionLeadId]; return l && !l.deleted ? l : null; }
+function sibReferralBanner(c){
+  if(!c.protectionLeadId) return '';
+  const l = sibReferredLead(c);
+  if(!l) return `<div class="sib-refer-banner">Referred to Protection on ${esc(fmtDate(c.protectionReferredAt))}${c.protectionReferredBy ? ' by '+esc(c.protectionReferredBy) : ''}. That protection lead has since been deleted.</div>`;
+  return `<div class="sib-refer-banner"><div><b>Referred to Protection</b> on ${esc(fmtDate(c.protectionReferredAt))}${c.protectionReferredBy ? ' by '+esc(c.protectionReferredBy) : ''} · ${esc(l.advisorName||'')} · ${esc(STATUS_LABELS[l.status]||potOf(l))}</div>
+    <button type="button" class="btn btn-secondary btn-sm" data-open-lead="${esc(c.protectionLeadId)}">Open protection lead</button></div>`;
+}
+function sibReferFormHtml(c){
+  const mapas = Object.entries(USERS).filter(([, u])=> u.role==='mapa').sort((a,b)=> a[1].name.localeCompare(b[1].name));
+  const mine = currentUser.role==='mapa' ? currentUser.id : '';
+  const email = (c.email||'').toLowerCase();
+  const dupe = Object.entries(LEADS).find(([, l])=> l && !l.deleted && ((email && leadEmails(l).some(e=> e.toLowerCase()===email)) || (c.mailingName && normalizeName(l.clientName)===normalizeName(c.mailingName))));
+  return `<div class="inline-form">
+    <div class="op-title" style="font-weight:700; margin-bottom:10px;">Refer to Protection</div>
+    ${dupe ? `<div class="sib-refer-warn">This client may already have a protection lead: <b>${esc(dupe[1].clientName)}</b> (${esc(dupe[1].advisorName||'unassigned')}, ${esc(STATUS_LABELS[dupe[1].status]||potOf(dupe[1]))}). <button type="button" class="linkish" data-open-lead="${esc(dupe[0])}">Open it</button></div>` : ''}
+    <div class="field"><label for="sibRefName">Client name(s)</label><input type="text" id="sibRefName" maxlength="200" value="${esc(c.mailingName||'')}"></div>
+    <div class="field"><label for="sibRefEmail">Client email</label><input type="email" id="sibRefEmail" maxlength="200" value="${esc(c.email||'')}"></div>
+    <div class="field"><label for="sibRefAdvisor">Assign to</label><select id="sibRefAdvisor"><option value="">Select a MAPA…</option>${mapas.map(([id, u])=> `<option value="${esc(id)}" ${id===mine?'selected':''}>${esc(u.name)}</option>`).join('')}</select></div>
+    <div class="field"><label for="sibRefNote">Why are you referring them? (optional)</label><textarea id="sibRefNote" maxlength="1000" placeholder="e.g. Remortgaging with us in Feb, no life cover in place, has two children."></textarea></div>
+    <button class="btn btn-primary btn-sm" id="sibReferSave">Create protection lead</button></div>`;
+}
+function sibReferToProtection(c, btn){
+  const key = sibOpenKey;
+  const name = document.getElementById('sibRefName').value.trim();
+  const email = document.getElementById('sibRefEmail').value.trim();
+  const advisorId = document.getElementById('sibRefAdvisor').value;
+  const note = document.getElementById('sibRefNote').value.trim();
+  if(!name){ toast("Please enter the client's name.",'error'); return; }
+  if(email && !isEmail(email)){ toast(`"${email}" doesn't look like an email address.`,'error'); return; }
+  if(!advisorId || !USERS[advisorId]){ toast('Please choose who to assign the lead to.','error'); return; }
+  btn.disabled = true;
+  const advisorName = USERS[advisorId].name, now = Date.now(), leadId = db.ref('leads').push().key;
+  const names = name.split(/\s*&\s*/).filter(Boolean);
+  const lead = {
+    clientName:name, clientNames:names, clientSource:'Send in Blue', advisorId, advisorName, appDate:todayISO(),
+    ...(email ? {clientEmails:[email]} : {}),
+    status:'new', createdBy:currentUser.id, createdByName:currentUser.name, createdAt:now,
+    sibKey:key, sibMonthLabel:sibMonthLabel(c.month),
+    audit:{
+      [uidShort()]: {type:'assigned', text:`Lead assigned to ${advisorName} by ${currentUser.name}`, byId:currentUser.id, byName:currentUser.name, at:now},
+      [uidShort()]: {type:'note', text:`Note: Referred from Send in Blue (mortgage product ends ${sibMonthLabel(c.month)}${c.servicingAdviser ? ', servicing adviser '+c.servicingAdviser : ''})${note ? ': '+note : ''}`, byId:currentUser.id, byName:currentUser.name, at:now+1},
+    },
+  };
+  const updates = {};
+  updates[`leads/${leadId}`] = lead;
+  updates[`sib/cases/${key}/protectionLeadId`] = leadId;
+  updates[`sib/cases/${key}/protectionReferredAt`] = now;
+  updates[`sib/cases/${key}/protectionReferredBy`] = currentUser.name;
+  updates[`sib/cases/${key}/updatedAt`] = now;
+  updates[`sib/cases/${key}/audit/${db.ref().push().key}`] = {type:'assigned', text:`Referred to Protection (assigned to ${advisorName})${note ? ': '+note : ''}`, byId:currentUser.id, byName:currentUser.name, at:now};
+  db.ref().update(updates).then(()=>{
+    db.ref('notifications').push({leadId, leadName:name, toUserId:advisorId, toRole:null, message:`New lead from Send in Blue assigned to you: ${name}`, at:now, readBy:{}}).catch(()=>{});
+    db.ref('notifications').push({leadId, leadName:name, toUserId:null, toRole:'management', message:`Send in Blue referral added to ${advisorName}'s workflow`, at:now, readBy:{}}).catch(()=>{});
+    sibAction = null; renderSibCase();
+    toast(`Protection lead created for ${advisorName}`,'success');
+  }).catch(err=>{ btn.disabled = false; toast('Could not create the lead: '+err.message,'error'); });
+}
+function openLeadFromSib(leadId){
+  if(!LEADS[leadId] || LEADS[leadId].deleted){ toast('That protection lead is no longer available.','error'); return; }
+  closeModal('sibOverlay');
+  setAppMode('protection');
+  setTimeout(()=> openLead(leadId), 50);
+}
+function openSibFromLead(key){
+  closeModal('leadOverlay');
+  setAppMode('sib');
+  startSibListener();
+  ensureSibLoaded().then(()=>{
+    if(!SIB[key] || SIB[key].deleted){ toast('That Send in Blue case is no longer available.','error'); return; }
+    openSibCase(key);
+  });
+}
+
+
+/* ----------------------------------------------------------------------------
+   WHAT'S NEW — shown once after an update (per colleague, per device).
+   Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
+   ---------------------------------------------------------------------------- */
+const WHATS_NEW = [
+  {id:'2026-10-06', date:'2026-10-06', items:[
+    {text:"<b>Refer to Protection</b> from Send in Blue: open a Send in Blue case and click <b>Refer to Protection</b> to create a linked protection lead in one go. The lead links back to the Send in Blue case."},
+    {text:"<b>Send in Blue is backed up daily</b> alongside protection leads, and can be restored from Settings.", roles:['management']},
+    {text:"<b>Better on phones</b>: the menu now sits on its own row and scrolls sideways, so pages no longer scroll off the screen."},
+    {text:"<b>This box</b>: you'll see a quick summary like this whenever something new is added. Find it again any time under the bell → <b>What's new</b>."},
+  ]},
+];
+function whatsNewKey(){ return 'plt_seenNews_' + (currentUser ? currentUser.id : ''); }
+function whatsNewFor(entry){ return entry.items.filter(i=> !i.roles || (currentUser && i.roles.includes(currentUser.role))); }
+function showWhatsNew(all){
+  let seen = ''; try{ seen = localStorage.getItem(whatsNewKey()) || ''; }catch(e){}
+  const entries = WHATS_NEW.filter(e=> (all || e.id > seen) && whatsNewFor(e).length).slice(0, all ? 5 : 3);
+  if(!entries.length) return false;
+  document.getElementById('whatsNewBody').innerHTML = entries.map(e=> `<div class="whats-new-entry">
+    <div class="section-lbl" style="margin-top:0;">${esc(fmtDate(e.date))}</div>
+    <ul>${whatsNewFor(e).map(i=> `<li>${i.text}</li>`).join('')}</ul></div>`).join('');
+  try{ localStorage.setItem(whatsNewKey(), WHATS_NEW[0].id); }catch(e){}
+  openModal('whatsNewOverlay');
+  return true;
+}
+document.getElementById('whatsNewBtn').addEventListener('click', ()=>{ document.getElementById('bellPanel').classList.remove('open'); showWhatsNew(true); });
+
 /* ---- Send in Blue Insights (Management) ---- */
 const sibIns = {from:'', to:'', adviser:'', days:30};
 function pct(a, b){ return b ? Math.round(a/b*100) : null; }
@@ -4175,7 +4323,8 @@ function renderSibInsights(){
     statCard(pctTxt(o.contacted, o.cases), 'Contacted so far', 'accent') +
     statCard(atRisk, 'Ending ≤3 months, not contacted', atRisk ? 'bad' : 'good') +
     statCard(overdue, 'Send in Blue emails due, not ticked', overdue ? 'warn' : 'good') +
-    statCard(unsub + dnc, `Unsubscribed (${unsub}) / do not contact (${dnc})`);
+    statCard(unsub + dnc, `Unsubscribed (${unsub}) / do not contact (${dnc})`) +
+    statCard(list.filter(c=> c.protectionLeadId).length, 'Referred to Protection', 'accent');
   // by month
   const legend = `<div class="sib-legend"><span><i style="background:var(--green)"></i>Retained</span><span><i style="background:var(--red)"></i>Not converted</span><span><i style="background:var(--text-faint)"></i>No opportunity</span><span><i style="background:var(--blue-bg); box-shadow:inset 0 0 0 1px var(--blue)"></i>Open, contacted</span><span><i style="background:var(--bg); box-shadow:inset 0 0 0 1px var(--border-2)"></i>Open, not contacted</span></div>`;
   const monthRows = [...new Set(list.map(c=> c.month))].sort().map(m=>{
@@ -5906,6 +6055,7 @@ function renderLeadModal(){
       <div class="info-cell"><div class="lbl">Task Created</div><div class="val">${fmtDate(lead.appDate)}</div></div>
       <div class="info-cell"><div class="lbl">Client source</div><div class="val">${esc(lead.clientSource||'—')}</div>${canManageLead(lead) ? `<button id="editSourceBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Edit</button>` : ''}</div>
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
+      ${lead.sibKey ? `<div class="info-cell full"><div class="lbl">Referred from Send in Blue</div><div class="val">Mortgage product ends ${esc(lead.sibMonthLabel||'')}</div><button type="button" class="btn btn-secondary btn-sm" id="openSibFromLead" style="margin-top:8px;">Open Send in Blue case</button></div>` : ''}
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
       ${clientEmailCellHtml(lead)}
       ${hasBookedCall(lead) ? `
@@ -5992,6 +6142,8 @@ function renderLeadModal(){
   }
 
   bindClientEmailCell(lead);
+  const openSibBtn = document.getElementById('openSibFromLead');
+  if(openSibBtn) openSibBtn.addEventListener('click', ()=> openSibFromLead(lead.sibKey));
 
   if(currentUser.role==='management'){
     const rb = document.getElementById('reassignBtn');
@@ -6837,7 +6989,34 @@ function downloadBackup(auto){
   toast(`${auto ? 'Daily backup saved' : 'Backup downloaded'}: ${count} case${count===1?'':'s'} to your Downloads folder.`, 'success');
 }
 
+/* Send in Blue backup: one JSON file with every case exactly as stored
+   (history and Recycle Bin included), so it can be restored in full. */
+function sibBackupKey(){ return 'plt_lastSibBackup_' + (currentUser ? currentUser.id : ''); }
+function downloadSibBackup(auto){
+  const n = Object.keys(SIB).length;
+  const blob = new Blob([JSON.stringify({type:'send-in-blue-backup', version:1, exportedAt:Date.now(), exportedBy:currentUser.name, cases:SIB})], {type:'application/json'});
+  const url = URL.createObjectURL(blob), a = document.createElement('a'), day = isoDay(new Date());
+  a.href = url; a.download = `send-in-blue-backup-${day}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 1500);
+  try{ localStorage.setItem(sibBackupKey(), day); }catch(e){}
+  backupDaysThisTab[sibBackupKey()] = day;
+  toast(`${auto ? 'Daily Send in Blue backup saved' : 'Send in Blue backup downloaded'}: ${n} case${n===1?'':'s'} to your Downloads folder.`, 'success');
+}
+function maybeAutoSibBackup(){
+  if(!currentUser || currentUser.role!=='management') return;
+  let last = backupDaysThisTab[sibBackupKey()] || null;
+  try{ last = localStorage.getItem(sibBackupKey()) || last; }catch(e){}
+  if(last === isoDay(new Date())) return;
+  backupDaysThisTab[sibBackupKey()] = isoDay(new Date()); // don't start twice in one sign-in
+  ensureSibLoaded().then(()=>{
+    if(!Object.keys(SIB).length){ delete backupDaysThisTab[sibBackupKey()]; return; } // never save an empty backup
+    setTimeout(()=> downloadSibBackup(true), 2500);
+  }).catch(()=>{ delete backupDaysThisTab[sibBackupKey()]; });
+}
+
 function maybeAutoBackup(){
+  maybeAutoSibBackup();
   if(!currentUser || !leadsLoaded) return;
   if(currentUser.role!=='management' && currentUser.role!=='admin') return;
   if(Object.keys(LEADS).length===0) return; // never overwrite a good backup with an empty one
@@ -6850,6 +7029,37 @@ function renderBackupLabel(){
   const d = lastBackupDay();
   el.textContent = d ? `Last backup on this computer: ${fmtDate(d)}` : 'No backup taken on this computer yet.';
 }
+document.getElementById('sibBackupNowBtn').addEventListener('click', ()=>{
+  ensureSibLoaded().then(()=>{
+    if(!Object.keys(SIB).length){ toast('There are no Send in Blue cases to back up yet.','error'); return; }
+    downloadSibBackup(false);
+  }).catch(err=> toast('Could not load Send in Blue cases: '+err.message,'error'));
+});
+document.getElementById('sibRestoreBtn').addEventListener('click', ()=> document.getElementById('sibRestoreInput').click());
+document.getElementById('sibRestoreInput').addEventListener('change', function(){
+  const file = this.files[0]; this.value = '';
+  if(!file) return;
+  const status = document.getElementById('sibImportStatus');
+  status.classList.remove('sib-status-bad');
+  Promise.all([file.text(), ensureSibLoaded()]).then(([text])=>{
+    let d; try{ d = JSON.parse(text); }catch(e){ throw new Error("that file isn't a Send in Blue backup"); }
+    if(!d || d.type!=='send-in-blue-backup' || !d.cases || typeof d.cases!=='object') throw new Error("that file isn't a Send in Blue backup (send-in-blue-backup-….json)");
+    const entries = Object.entries(d.cases).filter(([k, c])=> c && typeof c==='object' && c.month && !/[.#$\[\]\/]/.test(k));
+    const missing = entries.filter(([k])=> !SIB[k]);
+    const unbin = entries.filter(([k, c])=> SIB[k] && SIB[k].deleted && !c.deleted);
+    if(!missing.length && !unbin.length){ toast('Nothing to restore: every case in that backup is already in the dashboard.','success'); return; }
+    if(!confirm(`Send in Blue backup from ${fmtDateTime(d.exportedAt)}${d.exportedBy ? ' by '+d.exportedBy : ''}: ${entries.length} cases.\n\n${missing.length} missing from the dashboard will be put back exactly as they were, with their history.\n${unbin.length} currently in the Recycle Bin will be restored.\nCases already in the dashboard are left as they are.\n\nGo ahead?`)) return;
+    const batches = []; let u = {}, n = 0;
+    missing.forEach(([k, c])=>{ u['sib/cases/'+k] = c; if(++n % 150 === 0){ batches.push(u); u = {}; } });
+    unbin.forEach(([k])=>{ Object.assign(u, {[`sib/cases/${k}/deleted`]:null, [`sib/cases/${k}/deletedAt`]:null, [`sib/cases/${k}/deletedBy`]:null}); if(++n % 150 === 0){ batches.push(u); u = {}; } });
+    if(Object.keys(u).length) batches.push(u);
+    status.textContent = 'Restoring…';
+    return batches.reduce((p, b)=> p.then(()=> db.ref().update(b)), Promise.resolve()).then(()=>{
+      status.textContent = `Restored from ${file.name}: ${missing.length} put back, ${unbin.length} brought back from the Recycle Bin. Saved.`;
+      toast('Send in Blue backup restored','success');
+    });
+  }).catch(err=>{ status.textContent = 'Restore failed: '+err.message; status.classList.add('sib-status-bad'); toast('Restore failed: '+err.message,'error'); });
+});
 document.getElementById('backupNowBtn').addEventListener('click', ()=>{
   if(Object.keys(LEADS).length===0){ toast('There are no cases to back up yet.','error'); return; }
   downloadBackup(false);

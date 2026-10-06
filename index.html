@@ -570,6 +570,8 @@ body.mode-sib .mode-switch button.on{background:#1D6FA5;}
 body.mode-sib .prot-only{display:none !important;}
 body:not(.mode-sib) .sib-only{display:none !important;}
 @media (max-width:700px){ .mode-switch button{padding:6px 9px; font-size:11.5px;} }
+.sib-year-counts{margin-top:10px; font-size:12.5px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
+.sib-status-bad{color:var(--red) !important; font-weight:600;}
 .sib-years{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
 .sib-years button{padding:7px 14px; border-radius:999px; border:1.5px solid var(--border-2); background:var(--surface); font:inherit; font-size:13px; font-weight:700; color:var(--text-muted); cursor:pointer;}
 .sib-years button span{font-weight:600; opacity:.75; margin-left:2px;}
@@ -1910,11 +1912,12 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
         <div class="insights-card" style="max-width:620px;">
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm" id="sibUploadBtn">Upload Excel file</button>
+            <button class="btn btn-primary btn-sm" id="sibUploadBtn">Upload Excel file (any year)</button>
             <button class="btn btn-secondary btn-sm" id="sibDownloadBtn">Download as Excel</button>
           </div>
           <input type="file" id="sibFileInput" accept=".xlsx,.xls" class="hidden">
           <p class="nml-note" id="sibImportStatus" style="margin-bottom:0;"></p>
+          <div class="sib-year-counts" id="sibYearCounts"></div>
         </div>
 
         <div class="page-head" style="margin:28px 0 16px;">
@@ -3965,14 +3968,14 @@ function loadXlsx(){
   });
   return xlsxLoading;
 }
-const SIB_HEADERS = {month:'month', exadviser:'exAdviser', servicingadvisor:'servicingAdviser', servicingadviser:'servicingAdviser', caseid:'caseId',
+const SIB_HEADERS = {month:'month', exadviser:'exAdviser', ex:'exAdviser', exadv:'exAdviser', exadvisor:'exAdviser', servicingadvisers:'servicingAdviser', servicingadvisor:'servicingAdviser', servicingadviser:'servicingAdviser', caseid:'caseId',
   mailingname:'mailingName', salutation:'salutation', address1:'address', address:'address', email:'email', retentionkey:'retentionKey',
   outcomereason:'outcomeReason', emailclient:'emailClient', dateoflastcontact:'lastContact', lastcontact:'lastContact', notes:'notes',
   '6monthsibsent':'sib6', '3monthsibsent':'sib3', '0monthsibsent':'sib0', donotcontact:'doNotContact'};
 const SIB_MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
 // Reads every month tab into case objects. Header row is found by its "CaseId" column.
 function parseSibWorkbook(X, wb){
-  const cases = {}, problems = [];
+  const cases = {}, problems = [], tabs = [];
   const iso = (y,m,d)=> `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   wb.SheetNames.forEach(name=>{
     const ws = wb.Sheets[name]; if(!ws || !ws['!ref']) return;
@@ -3991,10 +3994,13 @@ function parseSibWorkbook(X, wb){
         if(val(r, c)!=null) headerNames[c] = String(val(r, c)).trim();
       }
     }
-    if(headerRow<0) return;
+    if(headerRow<0){ tabs.push({name, skipped:true}); return; }
+    // Some tabs leave a column heading blank or as "."; in the standard layout Email client? sits right after Retention Key.
+    if(cols.emailClient==null && cols.retentionKey!=null && !Object.values(cols).includes(cols.retentionKey+1)
+       && !/[a-z0-9]/i.test(String(val(headerRow, cols.retentionKey+1)||''))) cols.emailClient = cols.retentionKey + 1;
     const sm = /^([A-Za-z]{3})\w*\s+(\d{2,4})$/.exec(name.trim());
     const sheetMonth = sm && SIB_MON[sm[1].toLowerCase()] ? iso(sm[2].length===2 ? 2000+Number(sm[2]) : Number(sm[2]), SIB_MON[sm[1].toLowerCase()], 1).slice(0,7) : null;
-    const seenHere = {};
+    const seenHere = {}, before = Object.keys(cases).length;
     for(let r = headerRow+1; r <= range.e.r; r++){
       const get = f=> cols[f]==null ? null : val(r, cols[f]);
       const caseId = get('caseId'), mailingName = get('mailingName');
@@ -4035,24 +4041,27 @@ function parseSibWorkbook(X, wb){
       if(seenHere[key] > 1) key += '_' + seenHere[key];
       cases[key] = c;
     }
+    tabs.push({name, count: Object.keys(cases).length - before});
   });
-  return {cases, problems};
+  return {cases, problems, tabs};
 }
 document.getElementById('sibUploadBtn').addEventListener('click', ()=> document.getElementById('sibFileInput').click());
 document.getElementById('sibFileInput').addEventListener('change', function(){
   const file = this.files[0]; this.value = '';
   if(!file) return;
   const status = document.getElementById('sibImportStatus');
-  status.textContent = 'Reading the spreadsheet…';
+  status.classList.remove('sib-status-bad');
+  status.textContent = `Reading ${file.name}…`;
   // Load what's already in the dashboard first, so a re-upload only fills in blanks.
   Promise.all([loadXlsx(), file.arrayBuffer(), ensureSibLoaded()]).then(([X, buf])=>{
     const wb = X.read(buf, {type:'array', cellStyles:true});
-    const {cases} = parseSibWorkbook(X, wb);
+    const {cases, tabs} = parseSibWorkbook(X, wb);
+    const read = tabs.filter(t=> !t.skipped && t.count), skipped = tabs.filter(t=> t.skipped || !t.count).map(t=> t.name.trim());
     const keys = Object.keys(cases);
-    if(!keys.length){ status.textContent = ''; toast("No cases found. The month tabs need a header row with a CaseId column.",'error'); return; }
+    if(!keys.length){ status.textContent = `Nothing uploaded: no cases found in ${file.name}. Each month tab needs a heading row with a "Case ID" column.`; status.classList.add('sib-status-bad'); toast("No cases found. The month tabs need a header row with a Case ID column.",'error'); return; }
     const existing = keys.filter(k=> SIB[k]);
     const months = [...new Set(keys.map(k=> cases[k].month))].sort();
-    if(!confirm(`Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.\n\nGo ahead?`)){ status.textContent = ''; return; }
+    if(!confirm(`Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\nTabs read: ${read.map(t=> t.name.trim()+' ('+t.count+')').join(', ')}${skipped.length ? '\nTabs skipped (no cases): '+skipped.join(', ') : ''}\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.\n\nGo ahead?`)){ status.textContent = ''; return; }
     const now = Date.now(), batches = [];
     let updates = {}, n = 0, filled = 0;
     keys.forEach(k=>{
@@ -4069,11 +4078,11 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
     status.textContent = `Saving… 0 of ${batches.length}`;
     return batches.reduce((p, u)=> p.then(()=> db.ref().update(u)).then(()=>{ status.textContent = `Saving… ${++done} of ${batches.length}`; }), Promise.resolve())
       .then(()=>{
-        status.textContent = `Last upload: ${keys.length-existing.length} new, ${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in).`;
+        status.textContent = `Last upload (${file.name}): ${keys.length-existing.length} new, ${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in). Saved.`;
         toast(`Send in Blue updated: ${keys.length-existing.length} new cases`,'success');
       });
   }).catch(err=>{
-    status.textContent = '';
+    status.textContent = 'Upload failed, nothing more was saved: '+err.message; status.classList.add('sib-status-bad');
     toast('Upload failed: '+err.message+(String(err.code||err.message).toUpperCase().includes('PERMISSION') ? ' Publish the updated Firebase rules first.' : ''),'error');
   });
 });
@@ -4249,6 +4258,11 @@ function resetSibBulkDelete(){
 }
 function renderSibSettings(){
   if(!currentUser || currentUser.role!=='management') return;
+  const live = sibCases(), yc = {};
+  live.forEach(c=>{ const y = (c.month||'').slice(0,4) || '?'; (yc[y] = yc[y] || new Set()).add(c.month); });
+  document.getElementById('sibYearCounts').innerHTML = !sibLoaded ? '' : live.length
+    ? '<b>In the dashboard now:</b> ' + Object.keys(yc).sort().map(y=> `<span class="sib-tag open">${esc(y)}: ${live.filter(c=> (c.month||'').startsWith(y)).length} cases · ${yc[y].size} month${yc[y].size===1?'':'s'}</span>`).join(' ')
+    : '<b>In the dashboard now:</b> no Send in Blue cases yet.';
   // month pickers
   const months = [...new Set(sibCases().map(c=> c.month).filter(Boolean))].sort();
   ['sbdFrom','sbdTo'].forEach((id, i)=>{

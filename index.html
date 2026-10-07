@@ -449,6 +449,22 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 .topbar-right{display:flex; align-items:center; gap:14px; flex-shrink:0; margin-left:auto;}
 
+/* Laptops: compact header (icons only for the date range and profile). */
+@media (max-width:1560px){
+  .topbar-inner{gap:14px;}
+  .nav-tab{padding:9px 12px;}
+  .brand-text .t2{display:none;}
+  .user-meta{display:none;}
+  .user-chip{padding:5px; gap:0;}
+  .daterange-btn span{display:none;}
+  .daterange-btn{padding:0 11px;}
+}
+/* Narrower laptops/tablets: the tabs move to their own row so nothing is pushed off screen. */
+@media (max-width:1400px){
+  .topbar-inner{flex-wrap:wrap; height:auto; padding:8px 24px 0; row-gap:4px;}
+  .nav-tabs{order:10; flex:1 0 100%; min-width:0; overflow-x:auto; scrollbar-width:none; padding-bottom:8px;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+}
 @media (max-width:1180px){
   .brand-text .t2{display:none;}
 }
@@ -623,6 +639,9 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-appt-grid{display:grid; grid-template-columns:1fr 1fr; gap:0 10px;}
 @media (max-width:560px){ .sib-appt-grid{grid-template-columns:1fr;} }
 .sib-appt-chip{border:none; cursor:pointer; font:inherit; font-size:10.5px; font-weight:700;}
+#settingsBack{margin-bottom:6px;}
+#page-settings .set-off{display:none !important;}
+#page-settings > [id^="settings"][id$="Section"]{margin-top:0 !important;}
 .sib-convo-intro{font-size:12.5px; color:var(--text-muted); margin:4px 0 4px; line-height:1.5;}
 .sib-convo-q{margin-bottom:10px;}
 .sib-convo-q .q{font-size:13.5px; font-weight:600; color:var(--text);}
@@ -1838,6 +1857,16 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
     <!-- ============= SETTINGS PAGE ============= -->
     <div id="page-settings" class="hidden">
+      <div id="settingsHome">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1>Settings</h1>
+            <p class="sub">Choose what you'd like to manage.</p>
+          </div>
+        </div>
+        <div class="useful-grid" id="settingsNav"></div>
+      </div>
+      <button type="button" class="linkish useful-back hidden" id="settingsBack">&larr; Settings</button>
       <div id="settingsMyAccountSection" class="hidden" style="margin-bottom:34px;">
         <div class="page-head" style="margin-bottom:16px;">
           <div>
@@ -1910,7 +1939,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div id="settingsColleagueSection">
         <div class="page-head">
           <div>
-            <h1>Settings</h1>
+            <h1 style="font-size:19px;">Colleagues</h1>
             <p class="sub">Manage colleague access — name, user level and PIN.</p>
           </div>
           <div style="display:flex; gap:10px;">
@@ -3204,7 +3233,7 @@ function enterApp(){
 }
 
 document.querySelectorAll('.nav-tab').forEach(tab=>{
-  tab.addEventListener('click', ()=> goPage(tab.dataset.page));
+  tab.addEventListener('click', ()=>{ if(tab.dataset.page==='settings') settingsSel = null; goPage(tab.dataset.page); });
 });
 function goPage(page){
   document.querySelectorAll('.nav-tab').forEach(t=> t.classList.toggle('active', t.dataset.page===page));
@@ -3240,6 +3269,7 @@ function goPage(page){
       renderClientSources();
       renderBackupLabel();
     }
+    renderSettingsNav();
   }
   const shown = document.getElementById('page-'+page);
   if(shown){ shown.classList.remove('page-enter'); void shown.offsetWidth; shown.classList.add('page-enter'); }
@@ -3933,7 +3963,7 @@ function renderSib(){
 document.getElementById('sibSearch').addEventListener('input', function(){ sibState.search = this.value; renderSib(); });
 [['sibAdviser','adviser'],['sibOutcomeFilter','outcome'],['sibEmailFilter','emailClient']].forEach(([id, k])=>
   document.getElementById(id).addEventListener('change', function(){ sibState[k] = this.value; renderSib(); }));
-document.getElementById('sibImportShortcut').addEventListener('click', ()=> goPage('settings'));
+document.getElementById('sibImportShortcut').addEventListener('click', ()=>{ settingsSel = 'settingsSibSection'; goPage('settings'); });
 
 /* ---- case window ---- */
 function openSibCase(key){
@@ -4529,6 +4559,7 @@ const WHATS_NEW = [
   {id:'2026-10-07c', date:'2026-10-07', items:[
     {text:"<b>Appointments in Send in Blue</b>: book a phone, video, face-to-face or office appointment from any Send in Blue case, add it to your Google Calendar or send the client an invite, then mark it attended, rebook or cancel."},
     {text:"Booked appointments show on the case and in the list, and <b>Upcoming appointments</b> in the filter (or the 📅 chip) lists them all, soonest first."},
+    {text:"<b>Tidier Settings</b>: Settings now opens on a page of picture buttons, one for each area, instead of one long page."},
   ]},
   {id:'2026-10-07b', date:'2026-10-07', items:[
     {text:"<b>Send in Blue shows your own cases</b>: MAPAs now see just the Send in Blue cases where they're the servicing adviser, with their own totals.", roles:['mapa']},
@@ -4564,6 +4595,37 @@ function showWhatsNew(all){
   return true;
 }
 document.getElementById('whatsNewBtn').addEventListener('click', ()=>{ document.getElementById('bellPanel').classList.remove('open'); showWhatsNew(true); });
+
+
+/* ---- Settings home: picture buttons that each open a section ----
+   Sections a role can't use stay hidden (class "hidden"); the chosen one is
+   shown on its own (class "set-off" on the rest) with a "← Settings" link. */
+const SETTINGS_ICONS = {"account": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21v-1a7 7 0 0 1 16 0v1\"/></svg>", "team": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M2.5 20v-.5a6.5 6.5 0 0 1 13 0v.5\"/><path d=\"M16 4.5a3.5 3.5 0 0 1 0 7\"/><path d=\"M18.5 20v-.5a6.5 6.5 0 0 0-2.5-5.1\"/></svg>", "bell": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.73 21a2 2 0 0 1-3.46 0\"/></svg>", "mail": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"M3 7l9 6 9-6\"/></svg>", "sheet": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M3 9h18M3 15h18M9 3v18\"/></svg>", "trash": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/><path d=\"M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6\"/></svg>", "restore": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12a9 9 0 1 0 3-6.7\"/><path d=\"M3 4v5h5\"/></svg>", "backup": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"M7 10l5 5 5-5\"/><path d=\"M12 15V3\"/></svg>"};
+const SETTINGS_SECTIONS = [
+  ['settingsMyAccountSection', 'My account', 'account', 'Change your name and PIN.'],
+  ['settingsColleagueSection', 'Colleagues', 'team', 'Add colleagues, user levels and PINs, client sources, and importing leads.'],
+  ['settingsAppSection', 'App & reminders', 'bell', 'Install the desktop app and turn on call reminders.'],
+  ['settingsContentSection', 'Templates & prompts', 'mail', 'Email templates, Send in Blue protection prompts and Useful Info tables.'],
+  ['settingsSibSection', 'Send in Blue data', 'sheet', 'Upload, download, back up and bulk delete Send in Blue cases.'],
+  ['settingsBulkDeleteSection', 'Bulk delete', 'trash', 'Delete protection leads by Task Created date.'],
+  ['settingsRecycleBinSection', 'Recycle Bin', 'restore', 'Restore protection leads deleted in the last 30 days.'],
+  ['settingsBackupSection', 'Backup', 'backup', 'Daily backups and downloading a backup now.'],
+];
+let settingsSel = null; // null = the Settings home page
+function renderSettingsNav(){
+  const avail = SETTINGS_SECTIONS.filter(([id])=> !document.getElementById(id).classList.contains('hidden'));
+  if(settingsSel && !avail.some(([id])=> id===settingsSel)) settingsSel = null;
+  SETTINGS_SECTIONS.forEach(([id])=> document.getElementById(id).classList.toggle('set-off', id!==settingsSel));
+  document.getElementById('settingsHome').classList.toggle('hidden', !!settingsSel);
+  document.getElementById('settingsBack').classList.toggle('hidden', !settingsSel);
+  const nav = document.getElementById('settingsNav');
+  nav.innerHTML = avail.map(([id, label, icon, sub])=> `<button type="button" class="useful-card" data-settings-tab="${id}">
+    <span class="useful-card-ic">${SETTINGS_ICONS[icon]}</span>
+    <span class="useful-card-title">${esc(label)}</span>
+    <span class="useful-card-sub">${esc(sub)}</span></button>`).join('');
+  nav.querySelectorAll('[data-settings-tab]').forEach(b=> b.addEventListener('click', ()=>{ settingsSel = b.dataset.settingsTab; renderSettingsNav(); window.scrollTo(0, 0); }));
+}
+document.getElementById('settingsBack').addEventListener('click', ()=>{ settingsSel = null; renderSettingsNav(); window.scrollTo(0, 0); });
 
 /* ---- Send in Blue Insights (Management) ---- */
 const sibIns = {from:'', to:'', adviser:'', days:30};

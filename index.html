@@ -583,6 +583,7 @@ body.mode-sib .mode-switch button.on{background:#1D6FA5;}
 body.mode-sib .prot-only{display:none !important;}
 body:not(.mode-sib) .sib-only{display:none !important;}
 @media (max-width:700px){ .mode-switch button{padding:6px 9px; font-size:11.5px;} }
+.sib-unmatched{margin-top:10px; font-size:12.5px; line-height:1.7; color:var(--text-muted);}
 .sib-year-counts{margin-top:10px; font-size:12.5px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
 .sib-status-bad{color:var(--red) !important; font-weight:600;}
 .sib-years{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
@@ -646,6 +647,9 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-weeks i{display:block; width:100%; max-width:38px; background:var(--brand); border-radius:4px 4px 0 0; min-height:2px;}
 .sib-ins-table td.num,.sib-ins-table th.num{text-align:right;}
 .sib-ins-wrap{overflow-x:auto;}
+.sib-oi-table th.sib-oi-grp{text-align:center; border-bottom:1px solid var(--border); color:var(--text-muted);}
+.sib-oi-table td.sib-oi-pct{font-weight:700;}
+.sib-oi-table tr.sib-oi-total td{font-weight:700; border-top:2px solid var(--border-2);}
 .sib-note-preview{margin-top:4px; font-size:12px; color:var(--text-muted); font-style:italic; max-width:460px; white-space:pre-wrap; word-break:break-word;}
 .sib-table tbody tr:hover td{background:var(--brand-tint);}
 .sib-table tr.dnc td{opacity:.6;}
@@ -1792,7 +1796,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="page-head">
         <div>
           <h1>Send in Blue Insights</h1>
-          <p class="sub">How the retention book is performing: outcomes, follow-up, advisers and team activity.</p>
+          <p class="sub" id="sibInsSub">How the retention book is performing: outcomes, follow-up, advisers and team activity.</p>
         </div>
       </div>
       <div class="sib-filters">
@@ -1953,6 +1957,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <input type="file" id="sibRestoreInput" accept=".json,application/json" class="hidden">
           <p class="nml-note" id="sibImportStatus" style="margin-bottom:0;"></p>
           <div class="sib-year-counts" id="sibYearCounts"></div>
+          <div class="sib-unmatched" id="sibUnmatched"></div>
         </div>
 
         <div class="page-head" style="margin:28px 0 16px;">
@@ -3174,7 +3179,7 @@ function enterApp(){
   document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role==='admin');
   document.getElementById('usefulTab').classList.toggle('hidden', currentUser.role!=='mapa' && currentUser.role!=='management');
   document.getElementById('loginsTab').classList.toggle('hidden', currentUser.role!=='management');
-  document.getElementById('sibInsightsTab').classList.toggle('hidden', currentUser.role!=='management');
+  document.getElementById('sibInsightsTab').classList.remove('hidden');
 
   const first = currentUser.name.split(' ')[0];
   document.getElementById('dashGreeting').textContent = `Welcome back, ${first}`;
@@ -3800,12 +3805,29 @@ function sibDay(v){
 function sibOutcome(c){ return c.retentionKey || 'Open'; }
 function sibOutcomeClass(o){ return o==='Retained' ? 'ret' : o==='Open' ? 'open' : 'nop'; }
 function sibCases(){ return Object.entries(SIB).filter(([, c])=> c && typeof c==='object' && !c.deleted).map(([key, c])=> ({...c, key})); }
+/* MAPAs see only the cases where they're the servicing adviser (matched on
+   their name); Management and Admin see every case. */
+function sibName(n){ return String(n||'').replace(/^x\s+/i,'').toLowerCase().replace(/[^a-z]+/g,' ').trim(); }
+function sibIsMine(c){ return !!currentUser && sibName(c.servicingAdviser) === sibName(currentUser.name); }
+// One tidy name per adviser, so "Sima Rai" and "Sima Rai " (or different case) group together.
+function sibAdvLabel(c){
+  const k = sibName(c.servicingAdviser); if(!k) return 'Not set';
+  const u = Object.values(USERS).find(x=> x && sibName(x.name)===k);
+  return u ? u.name : String(c.servicingAdviser).trim().replace(/\s+/g,' ');
+}
+function sibSeesAll(){ return !!currentUser && currentUser.role!=='mapa'; }
+function sibVisibleCases(){ const all = sibCases(); return sibSeesAll() ? all : all.filter(sibIsMine); }
+// Inherited = the client came from another (usually ex) adviser.
+function sibInherited(c){ const ex = sibName(c.exAdviser); return !!ex && ex !== sibName(c.servicingAdviser); }
+// Retained % leaves out "No Opportunity" cases: there was nothing to win.
+function sibRetPct(o){ return pctTxt(o.retained, o.cases - o.noOpp); }
+function sibRetTitle(o){ return `${o.retained} retained ÷ (${o.cases} cases − ${o.noOpp} no opportunity)`; }
 
 function sibFilter(list, ignoreMonth){
   const q = sibState.search.trim().toLowerCase();
   return list.filter(c=>{
     if(!ignoreMonth && !q && c.month !== sibState.month) return false;
-    if(sibState.adviser && (c.servicingAdviser||'') !== sibState.adviser) return false;
+    if(sibState.adviser && sibAdvLabel(c) !== sibState.adviser) return false;
     if(sibState.outcome==='open' && c.retentionKey) return false;
     if(sibState.outcome && sibState.outcome!=='open' && sibState.outcome!=='all' && c.retentionKey !== sibState.outcome) return false;
     if(sibState.emailClient==='none' && c.emailClient) return false;
@@ -3820,7 +3842,8 @@ function renderSib(){
   if(page.classList.contains('hidden')) return;
   const isMg = currentUser && currentUser.role==='management';
   document.getElementById('sibImportShortcut').classList.toggle('hidden', !isMg);
-  const all = sibCases();
+  const all = sibVisibleCases();
+  document.getElementById('sibAdviser').classList.toggle('hidden', !sibSeesAll());
   const out = document.getElementById('sibResults');
   if(!sibLoaded){ out.innerHTML = '<div class="nml-empty">Loading…</div>'; return; }
   if(!all.length){
@@ -3865,7 +3888,7 @@ function renderSib(){
     <span class="sib-tag nop">${count('No Opportunity')} no opportunity</span><span class="sib-tag nop">${count('Not Converted')} not converted</span>
     <span class="sib-tag due">${mc.filter(c=> [6,3,0].some(n=> sibEmailState(c,n).due)).length} SIB email${mc.length===1?'':'s'} due</span>`;
   // adviser options
-  const advs = [...new Set(all.map(c=> c.servicingAdviser).filter(Boolean))].sort();
+  const advs = [...new Set(all.map(sibAdvLabel))].filter(a=> a!=='Not set').sort();
   const advSel = document.getElementById('sibAdviser');
   advSel.innerHTML = '<option value="">All servicing advisers</option>' + advs.map(a=> `<option value="${esc(a)}">${esc(a)}</option>`).join('');
   advSel.value = advs.includes(sibState.adviser) ? sibState.adviser : '';
@@ -3901,6 +3924,7 @@ document.getElementById('sibImportShortcut').addEventListener('click', ()=> goPa
 /* ---- case window ---- */
 function openSibCase(key){
   if(!SIB[key] || SIB[key].deleted) return;
+  if(!sibSeesAll() && !sibIsMine(SIB[key])){ toast('That Send in Blue case belongs to another adviser.','error'); return; }
   sibOpenKey = key; sibAction = null;
   renderSibCase();
   openModal('sibOverlay');
@@ -4395,6 +4419,13 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-07b', date:'2026-10-07', items:[
+    {text:"<b>Send in Blue shows your own cases</b>: MAPAs now see just the Send in Blue cases where they're the servicing adviser, with their own totals.", roles:['mapa']},
+    {text:"<b>Send in Blue Insights for MAPAs</b>: see how your own clients and your inherited clients are going, and your retained %.", roles:['mapa']},
+    {text:"<b>MAPAs now see only their own Send in Blue cases.</b> Management and Admin still see everything. Settings lists any servicing advisers whose name doesn't match a MAPA login.", roles:['management','admin']},
+    {text:"<b>Own vs inherited</b> in Send in Blue Insights: cases, retained and retained % for each adviser's own clients, inherited clients and total.", roles:['management','admin']},
+    {text:"<b>Retained %</b> now leaves out \"No opportunity\" cases (sold, moved, cleared the mortgage), so nobody is penalised for cases that couldn't be won."},
+  ]},
   {id:'2026-10-07', date:'2026-10-07', items:[
     {text:"<b>Protection chat</b> in Send in Blue: a handful of open questions to get clients talking about protection on retention calls, with hints on what to listen for. Jot down what they say and choose how it went."},
     {text:"<b>Interested?</b> One click adds them to your own protection pipeline as a new lead, with their answers attached."},
@@ -4449,10 +4480,12 @@ function sibHBars(entries, total){
 }
 function renderSibInsights(){
   const page = document.getElementById('page-sibInsights');
-  if(!page || page.classList.contains('hidden') || !currentUser || currentUser.role!=='management') return;
+  if(!page || page.classList.contains('hidden') || !currentUser) return;
   const body = document.getElementById('sibInsBody');
+  document.getElementById('sibInsSub').textContent = sibSeesAll() ? 'How the retention book is performing: outcomes, follow-up, advisers and team activity.' : 'How your Send in Blue cases are going: your own clients and the ones you inherited.';
   if(!sibLoaded){ body.innerHTML = '<div class="nml-empty">Loading…</div>'; return; }
-  const all = sibCases();
+  const all = sibVisibleCases();
+  document.getElementById('sibInsAdviser').classList.toggle('hidden', !sibSeesAll());
   if(!all.length){ body.innerHTML = '<div class="nml-empty">No Send in Blue cases yet. Upload the spreadsheet in Settings.</div>'; return; }
   // filters
   const months = [...new Set(all.map(c=> c.month).filter(Boolean))].sort();
@@ -4469,11 +4502,11 @@ function renderSibInsights(){
   const fromSel = document.getElementById('sibInsFrom'), toSel = document.getElementById('sibInsTo'), advSel = document.getElementById('sibInsAdviser');
   fromSel.innerHTML = months.map(m=> `<option value="${esc(m)}">From ${esc(sibMonthLabel(m))}</option>`).join(''); fromSel.value = sibIns.from;
   toSel.innerHTML = months.map(m=> `<option value="${esc(m)}">To ${esc(sibMonthLabel(m))}</option>`).join(''); toSel.value = sibIns.to;
-  const advs = [...new Set(all.map(c=> c.servicingAdviser).filter(Boolean))].sort();
+  const advs = [...new Set(all.map(sibAdvLabel))].filter(a=> a!=='Not set').sort();
   advSel.innerHTML = '<option value="">All servicing advisers</option>' + advs.map(a=> `<option value="${esc(a)}">${esc(a)}</option>`).join('');
   advSel.value = advs.includes(sibIns.adviser) ? sibIns.adviser : '';
   const [lo, hi] = sibIns.from <= sibIns.to ? [sibIns.from, sibIns.to] : [sibIns.to, sibIns.from];
-  const list = all.filter(c=> c.month >= lo && c.month <= hi && (!advSel.value || c.servicingAdviser===advSel.value));
+  const list = all.filter(c=> c.month >= lo && c.month <= hi && (!advSel.value || sibAdvLabel(c)===advSel.value));
   const o = sibOutcomeCounts(list);
   const atRisk = list.filter(c=> !c.retentionKey && !c.doNotContact && sibMonthsAway(c.month) >= 0 && sibMonthsAway(c.month) <= 3 && !sibContacted(c)).length;
   const overdue = list.reduce((t, c)=> t + [6,3,0].filter(n=> sibEmailState(c, n).due).length, 0);
@@ -4481,7 +4514,7 @@ function renderSibInsights(){
   const conv = pct(o.retained, o.retained + o.notConverted);
   const tiles =
     statCard(o.cases, 'Cases in range') +
-    statCard(`${o.retained} · ${pctTxt(o.retained, o.closed)}`, 'Retained (of closed cases)', 'good') +
+    statCard(`${o.retained} · ${sibRetPct(o)}`, 'Retained (excl. no opportunity)', 'good') +
     statCard(conv==null ? '—' : conv+'%', 'Conversion where there was an opportunity', conv==null ? '' : conv>=70 ? 'good' : conv>=40 ? 'warn' : 'bad') +
     statCard(`${o.notConverted}`, 'Not converted (lost)', o.notConverted ? 'bad' : '') +
     statCard(pctTxt(o.contacted, o.cases), 'Contacted so far', 'accent') +
@@ -4494,12 +4527,12 @@ function renderSibInsights(){
   const legend = `<div class="sib-legend"><span><i style="background:var(--green)"></i>Retained</span><span><i style="background:var(--red)"></i>Not converted</span><span><i style="background:var(--text-faint)"></i>No opportunity</span><span><i style="background:var(--blue-bg); box-shadow:inset 0 0 0 1px var(--blue)"></i>Open, contacted</span><span><i style="background:var(--bg); box-shadow:inset 0 0 0 1px var(--border-2)"></i>Open, not contacted</span></div>`;
   const monthRows = [...new Set(list.map(c=> c.month))].sort().map(m=>{
     const mc = list.filter(c=> c.month===m), mo = sibOutcomeCounts(mc), tag = sibMonthTag(m);
-    return `<tr><td style="font-weight:600;">${esc(sibMonthLabel(m))}${tag ? ` <span class="sib-tag ${tag[0]}">${tag[1]}</span>` : ''}</td><td class="num">${mo.cases}</td><td class="num">${pctTxt(mo.contacted, mo.cases)}</td><td class="num">${mo.retained}</td><td class="num">${mo.notConverted}</td><td class="num">${mo.noOpp}</td><td class="num">${mo.open}</td><td class="num">${pctTxt(mo.retained, mo.closed)}</td><td>${sibOutcomeBar(mo)}</td></tr>`;
+    return `<tr><td style="font-weight:600;">${esc(sibMonthLabel(m))}${tag ? ` <span class="sib-tag ${tag[0]}">${tag[1]}</span>` : ''}</td><td class="num">${mo.cases}</td><td class="num">${pctTxt(mo.contacted, mo.cases)}</td><td class="num">${mo.retained}</td><td class="num">${mo.notConverted}</td><td class="num">${mo.noOpp}</td><td class="num">${mo.open}</td><td class="num" title="${sibRetTitle(mo)}">${sibRetPct(mo)}</td><td>${sibOutcomeBar(mo)}</td></tr>`;
   }).join('');
   // by adviser
-  const advRows = [...new Set(list.map(c=> c.servicingAdviser || 'Not set'))].map(a=> [a, sibOutcomeCounts(list.filter(c=> (c.servicingAdviser || 'Not set')===a))])
+  const advRows = [...new Set(list.map(sibAdvLabel))].map(a=> [a, sibOutcomeCounts(list.filter(c=> sibAdvLabel(c)===a))])
     .sort((x,y)=> y[1].cases - x[1].cases || x[0].localeCompare(y[0]))
-    .map(([a, ao])=> `<tr><td style="font-weight:600;">${esc(a)}</td><td class="num">${ao.cases}</td><td class="num">${ao.open}</td><td class="num">${pctTxt(ao.contacted, ao.cases)}</td><td class="num">${ao.retained}</td><td class="num">${ao.notConverted}</td><td class="num">${ao.noOpp}</td><td class="num">${pctTxt(ao.retained, ao.closed)}</td></tr>`).join('');
+    .map(([a, ao])=> `<tr><td style="font-weight:600;">${esc(a)}</td><td class="num">${ao.cases}</td><td class="num">${ao.open}</td><td class="num">${pctTxt(ao.contacted, ao.cases)}</td><td class="num">${ao.retained}</td><td class="num">${ao.notConverted}</td><td class="num">${ao.noOpp}</td><td class="num" title="${sibRetTitle(ao)}">${sibRetPct(ao)}</td></tr>`).join('');
   // reasons
   const reasonCounts = filterFn=> Object.entries(list.filter(filterFn).reduce((m, c)=>{ const r = c.outcomeReason || 'No reason recorded'; m[r] = (m[r]||0)+1; return m; }, {})).sort((a,b)=> b[1]-a[1]);
   const lost = list.filter(c=> c.retentionKey==='Not Converted' || c.retentionKey==='No Opportunity').length;
@@ -4527,14 +4560,26 @@ function renderSibInsights(){
   const wMax = Math.max(1, ...weeks.map(w=> w.n));
   // inherited book
   const exRows = [...new Set(list.filter(c=> c.exAdviser).map(c=> c.exAdviser.replace(/^X\s+/,'')))].map(a=> [a, sibOutcomeCounts(list.filter(c=> c.exAdviser && c.exAdviser.replace(/^X\s+/,'')===a))])
-    .sort((x,y)=> y[1].cases - x[1].cases).map(([a, ao])=> `<tr><td style="font-weight:600;">${esc(a)}</td><td class="num">${ao.cases}</td><td class="num">${ao.open}</td><td class="num">${ao.retained}</td><td class="num">${ao.notConverted + ao.noOpp}</td><td class="num">${pctTxt(ao.retained, ao.closed)}</td></tr>`).join('');
+    .sort((x,y)=> y[1].cases - x[1].cases).map(([a, ao])=> `<tr><td style="font-weight:600;">${esc(a)}</td><td class="num">${ao.cases}</td><td class="num">${ao.open}</td><td class="num">${ao.retained}</td><td class="num">${ao.notConverted + ao.noOpp}</td><td class="num" title="${sibRetTitle(ao)}">${sibRetPct(ao)}</td></tr>`).join('');
+  // Own vs inherited clients per servicing adviser (just you, for a MAPA).
+  const advNames = sibSeesAll() ? [...new Set(list.map(sibAdvLabel))] : [currentUser.name];
+  const oiCells = sub=> { const x = sibOutcomeCounts(sub); return `<td class="num">${x.cases}</td><td class="num">${x.retained}</td><td class="num sib-oi-pct" title="${sibRetTitle(x)}">${sibRetPct(x)}</td>`; };
+  const oiRow = (label, sub, cls='')=> `<tr class="${cls}"><td style="font-weight:600;">${esc(label)}</td>${oiCells(sub.filter(c=> !sibInherited(c)))}${oiCells(sub.filter(sibInherited))}${oiCells(sub)}</tr>`;
+  const oiRows = advNames.map(a=> [a, sibSeesAll() ? list.filter(c=> sibAdvLabel(c)===a) : list])
+    .sort((x,y)=> y[1].length - x[1].length || String(x[0]).localeCompare(String(y[0])))
+    .map(([a, sub])=> oiRow(a, sub)).join('') + (sibSeesAll() && advNames.length > 1 ? oiRow('All advisers', list, 'sib-oi-total') : '');
+  const oiHead = `<tr><th rowspan="2">${sibSeesAll() ? 'Servicing adviser' : 'Adviser'}</th><th colspan="3" class="sib-oi-grp">Own clients</th><th colspan="3" class="sib-oi-grp">Inherited</th><th colspan="3" class="sib-oi-grp">Total</th></tr>
+    <tr>${'<th class="num">Cases</th><th class="num">Retained</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>'.repeat(3)}</tr>`;
   const table = (head, rows, empty)=> rows ? `<div class="sib-ins-wrap"><table class="mini-table sib-ins-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="insights-empty">${empty}</div>`;
   body.innerHTML = `
     <div class="stat-grid">${tiles}</div>
     <div class="insights-card" style="margin-bottom:20px;"><h4>Retention by month (when the product ends)</h4>${legend}
-      ${table('<th>Month</th><th class="num">Cases</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Open</th><th class="num">Retention</th><th>Outcomes</th>', monthRows, 'No cases.')}</div>
-    <div class="insights-card" style="margin-bottom:20px;"><h4>By servicing adviser</h4>
-      ${table('<th>Servicing adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Retention</th>', advRows, 'No cases.')}</div>
+      ${table('<th>Month</th><th class="num">Cases</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Open</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th><th>Outcomes</th>', monthRows, 'No cases.')}</div>
+    <div class="insights-card" style="margin-bottom:20px;"><h4>Own vs inherited clients</h4>
+      <p class="nml-note" style="margin-top:-6px;">Inherited = the client came from another adviser (the Ex Adviser column). Retained % leaves out "No opportunity" cases.</p>
+      <div class="sib-ins-wrap"><table class="mini-table sib-ins-table sib-oi-table"><thead>${oiHead}</thead><tbody>${oiRows}</tbody></table></div></div>
+    <div class="insights-card${sibSeesAll() ? '' : ' hidden'}" style="margin-bottom:20px;"><h4>By servicing adviser</h4>
+      ${table('<th>Servicing adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', advRows, 'No cases.')}</div>
     <div class="insights-cols">
       <div class="insights-card"><h4>Why business is lost (${lost} not converted / no opportunity)</h4>${sibHBars(reasonCounts(c=> c.retentionKey==='Not Converted' || c.retentionKey==='No Opportunity'), lost)}</div>
       <div class="insights-card"><h4>How cases were retained (${o.retained})</h4>${sibHBars(reasonCounts(c=> c.retentionKey==='Retained'), o.retained)}</div>
@@ -4558,7 +4603,7 @@ function renderSibInsights(){
       <div class="sib-weeks" role="img" aria-label="Actions per week">${weeks.map(w=> `<div title="Week of ${esc(fmtDate(w.start))}: ${w.n} action${w.n===1?'':'s'}"><span>${w.n}</span><i style="height:${w.n/wMax*80}%"></i><span>${esc(new Date(w.start).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))}</span></div>`).join('')}</div>
     </div>
     <div class="insights-card" style="margin-bottom:20px;"><h4>Inherited book (clients of ex advisers)</h4>
-      ${table('<th>Ex adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Retained</th><th class="num">Lost</th><th class="num">Retention</th>', exRows, 'No ex-adviser cases in this range.')}</div>`;
+      ${table('<th>Ex adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Retained</th><th class="num">Lost</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', exRows, 'No ex-adviser cases in this range.')}</div>`;
   const daysSel = document.getElementById('sibInsDays');
   daysSel.value = String(sibIns.days);
   daysSel.addEventListener('change', ()=>{ sibIns.days = Number(daysSel.value); renderSibInsights(); });
@@ -4579,6 +4624,12 @@ function resetSibBulkDelete(){
 }
 function renderSibSettings(){
   if(!currentUser || currentUser.role!=='management') return;
+  const mapaNames = new Set(Object.values(USERS).filter(u=> u && u.role==='mapa').map(u=> sibName(u.name)));
+  const unmatched = {};
+  sibCases().forEach(c=>{ const n = sibAdvLabel(c); if(n!=='Not set' && !mapaNames.has(sibName(n))) unmatched[n] = (unmatched[n]||0) + 1; });
+  const um = Object.entries(unmatched).sort((a,b)=> b[1]-a[1]);
+  document.getElementById('sibUnmatched').innerHTML = !sibLoaded || !um.length ? '' :
+    `<b>Servicing advisers with no matching MAPA login</b> (no MAPA sees these cases; Management and Admin still do): ${um.map(([n, k])=> `<span class="sib-tag no">${esc(n)} · ${k}</span>`).join(' ')}<br>To give a MAPA these cases, make their name in Settings → Colleagues match the spreadsheet exactly.`;
   const live = sibCases(), yc = {};
   live.forEach(c=>{ const y = (c.month||'').slice(0,4) || '?'; (yc[y] = yc[y] || new Set()).add(c.month); });
   const inBin = Object.values(SIB).filter(c=> c && c.deleted), binYears = {};

@@ -696,6 +696,14 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-note-preview{margin-top:4px; font-size:12px; color:var(--text-muted); font-style:italic; max-width:460px; white-space:pre-wrap; word-break:break-word;}
 .sib-table tbody tr:hover td{background:var(--brand-tint);}
 .sib-table tr.dnc td{opacity:.6;}
+/* Compact rows: tighter padding, one-line notes and details (full text on hover). */
+.sib-table td{padding:7px 10px; line-height:1.35;} .sib-table th{padding:8px 10px;}
+.sib-table .nml-notes{margin-top:1px; line-height:1.3;}
+.sib-table td:first-child{max-width:340px;}
+.sib-table td:first-child .nml-notes,.sib-table .sib-note-preview{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.sib-table .sib-note-preview{margin-top:1px; max-width:none;}
+.sib-table .sib-letter{gap:2px;} .sib-table .sib-letter .track{height:4px;}
+.sib-prot{white-space:nowrap;} .sib-prot + .sib-prot{margin-top:3px;} .sib-prot small{font-size:11px; color:var(--text-muted);}
 .sib-email-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
 .sib-email-btn{padding:10px 8px; border-radius:10px; border:1.5px solid var(--border-2); background:var(--surface); font:inherit; font-size:12px; font-weight:700; color:var(--text-muted); cursor:pointer;}
 .sib-email-btn.sent{background:var(--green-bg); border-color:transparent; color:var(--green);}
@@ -3969,7 +3977,7 @@ function renderSib(){
     <tbody>${rows.map(c=>{
       const o = sibOutcome(c);
       return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''}">
-        <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.length>180 ? c.notes.slice(0,180)+'…' : c.notes)}</div>` : ''}</td>
+        <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.replace(/\s+/g,' ').slice(0,240))}</div>` : ''}</td>
         <td>${sibLetterPill(c)}</td>
         ${searching ? `<td>${esc(sibMonthLabel(c.month))}</td>` : ''}
         <td>${esc(c.servicingAdviser||'—')}${c.exAdviser ? `<div class="nml-notes">ex ${esc(c.exAdviser.replace(/^X\s+/,''))}</div>` : ''}</td>
@@ -4546,12 +4554,12 @@ function sibProtectionCell(c){
   const out = [], v = c.protectionConvo;
   if(v){
     const [cls, lbl] = SIB_CONVO_TAG[v.outcome] || ['due','Discussed'];
-    out.push(`<span class="sib-tag ${cls}" title="${esc((SIB_CONVO_OUTCOMES[v.outcome]||'Protection conversation')+(v.reason ? ': '+v.reason : ''))}">${esc(lbl)}</span><div class="nml-notes">${esc([fmtDate(v.at), v.reason].filter(Boolean).join(' · '))}</div>`);
+    out.push(`<div class="sib-prot" title="${esc(`${SIB_CONVO_OUTCOMES[v.outcome]||'Protection conversation'}${v.reason ? ': '+v.reason : ''}, ${fmtDate(v.at)}${v.by ? ' by '+v.by : ''}`)}"><span class="sib-tag ${cls}">${esc(lbl)}</span> <small>${esc([sibDay(v.at), v.reason].filter(Boolean).join(' · '))}</small></div>`);
   }
   if(c.protectionLeadId){
     const l = sibReferredLead(c);
     const [cls, lbl] = l ? (SIB_LEAD_TAG[potOf(l)] || ['open','Referred']) : ['no','Lead deleted'];
-    out.push(`<div style="margin-top:${v ? 6 : 0}px;"><span class="sib-tag ${cls}">${esc(lbl)}</span></div><div class="nml-notes">${esc(['Referred '+fmtDate(c.protectionReferredAt), l && l.advisorName].filter(Boolean).join(' · '))}</div>`);
+    out.push(`<div class="sib-prot" title="${esc(['Referred '+fmtDate(c.protectionReferredAt), l && l.advisorName].filter(Boolean).join(' · '))}"><span class="sib-tag ${cls}">${esc(lbl)}</span> <small>${esc(l && l.advisorName ? l.advisorName.split(' ')[0] : '')}</small></div>`);
   }
   return out.length ? out.join('') : c.doNotContact ? '—' : '<span class="sib-tag no">Not had yet</span>';
 }
@@ -4647,6 +4655,10 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-08d', date:'2026-10-08', items:[
+    {text:"<b>Insights: retained before vs after the lender letter</b>. A new table compares the retained % (leaving out No opportunity cases) for clients first contacted before their lender letter, after it, and those with no contact logged."},
+    {text:"<b>Slimmer Send in Blue list</b>: each case now takes about a third less height, so more fit on screen. Case notes show on one line; hover over them to read the full note."},
+  ]},
   {id:'2026-10-08c', date:'2026-10-08', items:[
     {text:"<b>Protection column</b> in the Send in Blue list: see at a glance whether the protection conversation has been had (Interested, Already covered, Not interested), and whether the client has been referred as a protection lead and where that lead is now."},
   ]},
@@ -4850,6 +4862,11 @@ function renderSibInsights(){
     .map(([a, sub])=> oiRow(a, sub)).join('') + (sibSeesAll() && advNames.length > 1 ? oiRow('All advisers', list, 'sib-oi-total') : '');
   const oiHead = `<tr><th rowspan="2">${sibSeesAll() ? 'Servicing adviser' : 'Adviser'}</th><th colspan="3" class="sib-oi-grp">Own clients</th><th colspan="3" class="sib-oi-grp">Inherited</th><th colspan="3" class="sib-oi-grp">Total</th></tr>
     <tr>${'<th class="num">Cases</th><th class="num">Retained</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>'.repeat(3)}</tr>`;
+  // Retained % by when the client was first contacted, relative to the lender letter.
+  const byLetter = [['Contacted before the letter', c=> sibLetterState(c)?.kind==='done'], ['Contacted after the letter', c=> sibLetterState(c)?.kind==='after'],
+    ['No contact logged', c=> !['done','after'].includes(sibLetterState(c)?.kind)]];
+  const letterRows = byLetter.map(([lbl, fn])=>{ const x = sibOutcomeCounts(list.filter(fn));
+    return `<tr><td style="font-weight:600;">${lbl}</td><td class="num" title="${x.cases} cases − ${x.noOpp} no opportunity">${x.cases - x.noOpp}</td><td class="num">${x.retained}</td><td class="num">${x.notConverted}</td><td class="num">${x.open}</td><td class="num sib-oi-pct" title="${sibRetTitle(x)}">${sibRetPct(x)}</td></tr>`; }).join('');
   const table = (head, rows, empty)=> rows ? `<div class="sib-ins-wrap"><table class="mini-table sib-ins-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="insights-empty">${empty}</div>`;
   body.innerHTML = `
     <div class="stat-grid">${tiles}</div>
@@ -4858,6 +4875,9 @@ function renderSibInsights(){
     <div class="insights-card" style="margin-bottom:20px;"><h4>Own vs inherited clients</h4>
       <p class="nml-note" style="margin-top:-6px;">Inherited = the client came from another adviser (the Ex Adviser column). Cases and retained % both leave out "No opportunity" cases (sold, moved, cleared the mortgage).</p>
       <div class="sib-ins-wrap"><table class="mini-table sib-ins-table sib-oi-table"><thead>${oiHead}</thead><tbody>${oiRows}</tbody></table></div></div>
+    <div class="insights-card" style="margin-bottom:20px;"><h4>Retained: contacted before vs after the lender letter</h4>
+      <p class="nml-note" style="margin-top:-6px;">First contact = the first call, email, appointment or protection chat logged (or the spreadsheet's last contact date). Cases and retained % both leave out "No opportunity" cases (sold, moved, cleared the mortgage).</p>
+      ${table('<th>First contact</th><th class="num">Cases</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">Open</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', letterRows, 'No cases.')}</div>
     <div class="insights-card${sibSeesAll() ? '' : ' hidden'}" style="margin-bottom:20px;"><h4>By servicing adviser</h4>
       ${table('<th>Servicing adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', advRows, 'No cases.')}</div>
     <div class="insights-cols">

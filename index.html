@@ -641,12 +641,12 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-letter.soon{color:#D2591F;} .sib-letter.soon .track i{background:#D2591F;}
 .sib-letter.urgent,.sib-letter.late{color:var(--red);} .sib-letter.urgent .track i,.sib-letter.late .track i{background:var(--red);}
 .sib-letter.late .lbl{animation:sibPulse 1.6s ease-in-out infinite;}
-.sib-letter.done{color:var(--green); font-weight:700;} .sib-letter.closed{color:var(--text-faint); font-weight:600;}
+.sib-letter.done{color:var(--green); font-weight:700;} .sib-letter.after{color:var(--amber); font-weight:700; white-space:normal;} .sib-letter.closed{color:var(--text-faint); font-weight:600;}
 .sib-letter.big{font-size:20px; min-width:130px;} .sib-letter.big .track{height:7px;}
 @keyframes sibPulse{50%{opacity:.45;}}
 @media (prefers-reduced-motion:reduce){ .sib-letter.late .lbl{animation:none;} }
 .sib-letter-banner{display:flex; align-items:center; gap:14px; margin:12px 0 0; padding:12px 14px; border-radius:12px; font-size:13px; line-height:1.5; background:var(--green-bg);}
-.sib-letter-banner.warn{background:var(--amber-bg);} .sib-letter-banner.soon,.sib-letter-banner.urgent,.sib-letter-banner.late{background:var(--red-bg);}
+.sib-letter-banner.warn,.sib-letter-banner.after{background:var(--amber-bg);} .sib-letter-banner.soon,.sib-letter-banner.urgent,.sib-letter-banner.late{background:var(--red-bg);}
 .sib-letter-banner > .sib-letter{flex-shrink:0;}
 @media (max-width:560px){ .sib-letter-banner{flex-direction:column; align-items:flex-start;} }
 .sib-letter-setting{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:14px; font-size:13px;}
@@ -901,10 +901,6 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .lead-card{flex-shrink:0;}
 .lead-card .lc-sub{line-height:15px; height:15px;}
 .lc-due{line-height:1;}
-.lead-card .lc-meta{display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;}
-.lead-card .lc-meta .tag{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; padding:3px 8px;}
-.lead-card .lc-meta .tag .ico{width:11px; height:11px;}
-.lead-card .lc-commission{font-family:var(--fh); font-size:17px; font-weight:700; color:var(--green); margin-top:6px; line-height:1.1; letter-spacing:-.3px; font-variant-numeric:tabular-nums;}
 .tag{font-size:10px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted);}
 .tag.advisor{background:var(--brand-tint); color:var(--brand);}
 .lead-card .lc-activity{font-size:10.5px; color:var(--text-faint); margin-top:2px; display:flex; justify-content:space-between; gap:6px;}
@@ -1147,7 +1143,6 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .theme-card.active .theme-check{display:flex;}
 
 .settings-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); overflow:hidden;}
-.settings-head{padding:18px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;}
 table.users-table{width:100%; border-collapse:collapse;}
 table.users-table th{
   text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--text-faint);
@@ -1332,8 +1327,6 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 .empty-state svg{width:44px; height:44px; margin-bottom:14px; opacity:.5;}
 .empty-state p{font-size:13.5px; max-width:280px;}
 
-.spinner{width:22px; height:22px; border:2.5px solid var(--border); border-top-color:var(--brand); border-radius:50%; animation:spin .7s linear infinite; margin:40px auto;}
-@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 <script>
   // Applied before the body paints so switching to Dark (or any preset)
@@ -3951,7 +3944,7 @@ function renderSib(){
   document.getElementById('sibSummary').innerHTML = `<b>${esc(sibMonthLabel(sibState.month))}:</b>
     <span class="sib-tag open">${count('Open')} open</span><span class="sib-tag ret">${count('Retained')} retained</span>
     <span class="sib-tag nop">${count('No Opportunity')} no opportunity</span><span class="sib-tag nop">${count('Not Converted')} not converted</span>
-    <span class="sib-tag due">${mc.filter(c=> [6,3,0].some(n=> sibEmailState(c,n).due)).length} SIB email${mc.length===1?'':'s'} due</span>
+    ${(()=>{ const n = mc.filter(c=> [6,3,0].some(k=> sibEmailState(c,k).due)).length; return `<span class="sib-tag due">${n} SIB email${n===1?'':'s'} due</span>`; })()}
     ${(()=>{ const n = all.filter(sibApptUpcoming).length; return n ? `<button type="button" class="sib-tag open sib-appt-chip" id="sibApptChip">📅 ${n} upcoming appointment${n===1?'':'s'}</button>` : ''; })()}`;
   const chip = document.getElementById('sibApptChip');
   if(chip) chip.addEventListener('click', ()=>{ sibState.outcome = 'appt'; document.getElementById('sibOutcomeFilter').value = 'appt'; renderSib(); });
@@ -3961,7 +3954,8 @@ function renderSib(){
   const advSel = document.getElementById('sibAdviser');
   advSel.innerHTML = '<option value="">All servicing advisers</option>' + advs.map(a=> `<option value="${esc(a)}">${esc(a)}</option>`).join('') +
     (unalloc ? `<option value="${SIB_UNALLOCATED}">Not allocated (no servicing adviser) · ${unalloc}</option>` : '');
-  advSel.value = advs.includes(sibState.adviser) ? sibState.adviser : '';
+  advSel.value = advs.includes(sibState.adviser) || (unalloc && sibState.adviser===SIB_UNALLOCATED) ? sibState.adviser : '';
+  if(advSel.value !== sibState.adviser) sibState.adviser = advSel.value;
   // rows
   const rows = sibFilter(all).sort((a,b)=> sibState.outcome==='appt' ? sibApptMs(a) - sibApptMs(b) : sibState.outcome==='letter' ? sibLetterState(a).days - sibLetterState(b).days : (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
   const searching = !!sibState.search.trim() || sibState.outcome==='appt' || sibState.outcome==='letter';
@@ -4348,6 +4342,7 @@ function sibLetterState(c){
   const first = sibFirstContact(c), letterEnd = letter.getTime() + 86400000;
   const when = letter.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
   if(first && first < letterEnd) return {kind:'done', days, when, label:'✓ Before letter', title:`Contacted before the lender letter (${when})`};
+  if(first) return {kind:'after', days, when, label:'Contacted after letter', title:`First contacted ${fmtDate(first)}, after the lender letter (${when})`};
   if(c.retentionKey || c.doNotContact || sibMonthsAway(c.month) < 0) return {kind:'closed', days, when, label:'—', title:`Lender letter ${days < 0 ? 'was' : 'is'} due ${when}`};
   if(days < 0) return {kind:'late', days, when, label:`Letter sent ${-days}d ago`, title:`The lender letter went out around ${when} and the client hasn't been contacted yet`};
   const kind = days <= 14 ? 'urgent' : days <= 30 ? 'soon' : days <= 60 ? 'warn' : 'ok';
@@ -4357,13 +4352,14 @@ function sibLetterPill(c, big){
   const st = sibLetterState(c); if(!st) return '';
   const pct = st.kind==='late' ? 100 : Math.max(4, Math.min(100, 100 - (st.days / 120) * 100));
   return `<span class="sib-letter ${st.kind}${big ? ' big' : ''}" title="${esc(st.title)}">
-    <span class="lbl">${st.kind==='done' || st.kind==='closed' || st.kind==='late' ? '' : '⏳ '}${esc(st.label)}</span>
-    ${st.kind!=='done' && st.kind!=='closed' ? `<span class="track"><i style="width:${pct}%"></i></span>` : ''}
+    <span class="lbl">${['done','closed','late','after'].includes(st.kind) ? '' : '⏳ '}${esc(st.label)}</span>
+    ${!['done','closed','after'].includes(st.kind) ? `<span class="track"><i style="width:${pct}%"></i></span>` : ''}
   </span>`;
 }
 function sibLetterBanner(c){
   const st = sibLetterState(c); if(!st || st.kind==='closed') return '';
   const msg = st.kind==='done' ? `Contacted before the lender's letter (due around ${st.when}). Nice work.`
+    : st.kind==='after' ? `The lender's reminder letter went out around ${esc(st.when)}; the first contact was on ${esc(fmtDate(sibFirstContact(c)))}.`
     : st.kind==='late' ? `The lender's reminder letter went out around <b>${esc(st.when)}</b> and this client hasn't been contacted yet. Call them today.`
     : `<b>${st.days===0 ? 'The lender letter is due today' : `${st.days} day${st.days===1?'':'s'} until the lender's reminder letter`}</b> (around ${esc(st.when)}). Get in touch before it lands.`;
   return `<div class="sib-letter-banner ${st.kind}">${sibLetterPill(c, true)}<div>${msg}${c.letterDate ? '' : `<div class="nml-notes">Estimated: ${sibLetterMonths()} month${sibLetterMonths()===1?'':'s'} before the product end month. Set the exact date in Edit details if you know it.</div>`}</div></div>`;
@@ -4634,6 +4630,11 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-08b', date:'2026-10-08', items:[
+    {text:"<b>Lender letter countdown fixes</b>: clients first contacted after their letter went out now show <b>Contacted after letter</b> instead of \"hasn't been contacted\", and they drop off the Beat the letter list."},
+    {text:"<b>Not allocated</b> now stays selected in the Send in Blue adviser filter.", roles:['management','admin']},
+    {text:"Renaming a colleague in Settings now updates the name on their cases too, and the last Management login can't be removed or changed to another role by mistake.", roles:['management']},
+  ]},
   {id:'2026-10-08', date:'2026-10-08', items:[
     {text:"<b>⏳ Lender letter countdown</b> on every Send in Blue case: how many days until the lender sends their reminder letter, turning amber then red as it gets close. The goal is to contact the client <b>before</b> the letter lands."},
     {text:"Pick <b>Beat the letter</b> in the filter to list everyone not yet contacted, soonest letter first."},
@@ -6451,6 +6452,7 @@ document.getElementById('raSubmit').addEventListener('click', function(){
    9) LEAD DETAIL MODAL
    ---------------------------------------------------------------------------- */
 function openLead(id){
+  if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
   actionUIState = null;
   renderLeadModal();
@@ -6996,7 +6998,8 @@ function renderDynamicArea(lead){
         status:newStatus, declineReason:reason, declineDetail:detail, ...ticked
       }).then(()=>{
         DECLINE_STEPS.forEach((st,i)=>{
-          if(ticked[st.field]) logAudit(lead.id, {type:st.type, text:st.audit, byId:currentUser.id, byName:currentUser.name, at:Date.now()+1+i});
+          if(ticked[st.field]) logAudit(lead.id, {type:st.type, text:st.audit, byId:currentUser.id, byName:currentUser.name, at:Date.now()+1+i})
+            .catch(()=> toast(`The decline was saved, but "${st.done}" wasn't added to the audit trail.`,'error'));
         });
         toast(`Decline recorded. Moved to ${STATUS_LABELS[newStatus]}.`,'success'); actionUIState=null; refreshLeadModal();
       }).catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled=false; });
@@ -8162,8 +8165,11 @@ document.getElementById('uSubmit').addEventListener('click', function(){
   if(!name){ toast('Please enter a name.','error'); return; }
   if(!/^\d{4}$/.test(pin)){ toast('PIN must be exactly 4 digits.','error'); return; }
 
-  const dupe = Object.entries(USERS).find(([id,u])=> id!==editingUserId && u.name.toLowerCase()===name.toLowerCase());
+  const dupe = Object.entries(USERS).find(([id,u])=> id!==editingUserId && u && String(u.name||'').toLowerCase()===name.toLowerCase());
   if(dupe){ toast('A colleague with that name already exists.','error'); return; }
+  if(editingUserId && USERS[editingUserId].role==='management' && selectedRole!=='management' && managementCount()<=1){
+    toast('Keep at least one Management login. Make someone else Management first.','error'); return;
+  }
 
   const btn = this;
   btn.disabled = true;
@@ -8217,7 +8223,13 @@ document.getElementById('uSubmit').addEventListener('click', function(){
   }
 
   syncAuthAccount()
-    .then(()=> db.ref().update({['users/'+userId]: payload, ['pins/'+userId]: pin}))
+    .then(()=>{
+      // Cases show the advisor's name, so a rename updates their cases too.
+      const u = {['users/'+userId]: payload, ['pins/'+userId]: pin};
+      if(!isNew && USERS[userId] && USERS[userId].name !== name)
+        Object.entries(LEADS).forEach(([id,l])=>{ if(l && l.advisorId===userId) u['leads/'+id+'/advisorName'] = name; });
+      return db.ref().update(u);
+    })
     // Link the account now so it works straight away; the colleague's own
     // sign-in does the same, so a refusal here is not a problem.
     .then(()=> linkedUid ? db.ref('members/'+linkedUid).set(userId).catch(()=>{}) : null)
@@ -8228,9 +8240,10 @@ document.getElementById('uSubmit').addEventListener('click', function(){
     .finally(()=>{ btn.disabled = false; });
 });
 
+function managementCount(){ return Object.values(USERS).filter(u=> u && u.role==='management').length; }
 function renderUsersTable(){
   const body = document.getElementById('usersTableBody');
-  const list = Object.entries(USERS).sort((a,b)=>a[1].name.localeCompare(b[1].name));
+  const list = Object.entries(USERS).filter(([, u])=> u).sort((a,b)=> String(a[1].name||'').localeCompare(String(b[1].name||'')));
   document.getElementById('usersEmpty').classList.toggle('hidden', list.length>0);
   body.innerHTML = list.map(([id,u])=> `
     <tr>
@@ -8247,6 +8260,8 @@ function renderUsersTable(){
   body.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click', ()=> openUserModal(b.dataset.edit)));
   body.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{
     const u = USERS[b.dataset.del];
+    if(b.dataset.del===currentUser.id){ toast("You can't remove your own login. Ask another Management colleague to do it.",'error'); return; }
+    if(u.role==='management' && managementCount()<=1){ toast('Keep at least one Management login.','error'); return; }
     if(confirm(`Remove ${u.name} from the system? This won't delete any leads already assigned to them.`)){
       const userId = b.dataset.del;
       const theirPin = pinFor(userId);

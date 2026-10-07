@@ -3810,8 +3810,9 @@ function sibCases(){ return Object.entries(SIB).filter(([, c])=> c && typeof c==
 function sibName(n){ return String(n||'').replace(/^x\s+/i,'').toLowerCase().replace(/[^a-z]+/g,' ').trim(); }
 function sibIsMine(c){ return !!currentUser && sibName(c.servicingAdviser) === sibName(currentUser.name); }
 // One tidy name per adviser, so "Sima Rai" and "Sima Rai " (or different case) group together.
+const SIB_UNALLOCATED = 'Not allocated';
 function sibAdvLabel(c){
-  const k = sibName(c.servicingAdviser); if(!k) return 'Not set';
+  const k = sibName(c.servicingAdviser); if(!k) return SIB_UNALLOCATED;
   const u = Object.values(USERS).find(x=> x && sibName(x.name)===k);
   return u ? u.name : String(c.servicingAdviser).trim().replace(/\s+/g,' ');
 }
@@ -3888,9 +3889,11 @@ function renderSib(){
     <span class="sib-tag nop">${count('No Opportunity')} no opportunity</span><span class="sib-tag nop">${count('Not Converted')} not converted</span>
     <span class="sib-tag due">${mc.filter(c=> [6,3,0].some(n=> sibEmailState(c,n).due)).length} SIB email${mc.length===1?'':'s'} due</span>`;
   // adviser options
-  const advs = [...new Set(all.map(sibAdvLabel))].filter(a=> a!=='Not set').sort();
+  const advs = [...new Set(all.map(sibAdvLabel))].filter(a=> a!==SIB_UNALLOCATED).sort();
+  const unalloc = all.filter(c=> sibAdvLabel(c)===SIB_UNALLOCATED).length;
   const advSel = document.getElementById('sibAdviser');
-  advSel.innerHTML = '<option value="">All servicing advisers</option>' + advs.map(a=> `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  advSel.innerHTML = '<option value="">All servicing advisers</option>' + advs.map(a=> `<option value="${esc(a)}">${esc(a)}</option>`).join('') +
+    (unalloc ? `<option value="${SIB_UNALLOCATED}">Not allocated (no servicing adviser) · ${unalloc}</option>` : '');
   advSel.value = advs.includes(sibState.adviser) ? sibState.adviser : '';
   // rows
   const rows = sibFilter(all).sort((a,b)=> (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
@@ -4502,7 +4505,7 @@ function renderSibInsights(){
   const fromSel = document.getElementById('sibInsFrom'), toSel = document.getElementById('sibInsTo'), advSel = document.getElementById('sibInsAdviser');
   fromSel.innerHTML = months.map(m=> `<option value="${esc(m)}">From ${esc(sibMonthLabel(m))}</option>`).join(''); fromSel.value = sibIns.from;
   toSel.innerHTML = months.map(m=> `<option value="${esc(m)}">To ${esc(sibMonthLabel(m))}</option>`).join(''); toSel.value = sibIns.to;
-  const advs = [...new Set(all.map(sibAdvLabel))].filter(a=> a!=='Not set').sort();
+  const advs = [...new Set(all.map(sibAdvLabel))].filter(a=> a!==SIB_UNALLOCATED).sort();
   advSel.innerHTML = '<option value="">All servicing advisers</option>' + advs.map(a=> `<option value="${esc(a)}">${esc(a)}</option>`).join('');
   advSel.value = advs.includes(sibIns.adviser) ? sibIns.adviser : '';
   const [lo, hi] = sibIns.from <= sibIns.to ? [sibIns.from, sibIns.to] : [sibIns.to, sibIns.from];
@@ -4563,7 +4566,7 @@ function renderSibInsights(){
     .sort((x,y)=> y[1].cases - x[1].cases).map(([a, ao])=> `<tr><td style="font-weight:600;">${esc(a)}</td><td class="num">${ao.cases}</td><td class="num">${ao.open}</td><td class="num">${ao.retained}</td><td class="num">${ao.notConverted + ao.noOpp}</td><td class="num" title="${sibRetTitle(ao)}">${sibRetPct(ao)}</td></tr>`).join('');
   // Own vs inherited clients per servicing adviser (just you, for a MAPA).
   const advNames = sibSeesAll() ? [...new Set(list.map(sibAdvLabel))] : [currentUser.name];
-  const oiCells = sub=> { const x = sibOutcomeCounts(sub); return `<td class="num">${x.cases}</td><td class="num">${x.retained}</td><td class="num sib-oi-pct" title="${sibRetTitle(x)}">${sibRetPct(x)}</td>`; };
+  const oiCells = sub=> { const x = sibOutcomeCounts(sub); return `<td class="num" title="${x.cases} cases − ${x.noOpp} no opportunity">${x.cases - x.noOpp}</td><td class="num">${x.retained}</td><td class="num sib-oi-pct" title="${sibRetTitle(x)}">${sibRetPct(x)}</td>`; };
   const oiRow = (label, sub, cls='')=> `<tr class="${cls}"><td style="font-weight:600;">${esc(label)}</td>${oiCells(sub.filter(c=> !sibInherited(c)))}${oiCells(sub.filter(sibInherited))}${oiCells(sub)}</tr>`;
   const oiRows = advNames.map(a=> [a, sibSeesAll() ? list.filter(c=> sibAdvLabel(c)===a) : list])
     .sort((x,y)=> y[1].length - x[1].length || String(x[0]).localeCompare(String(y[0])))
@@ -4576,7 +4579,7 @@ function renderSibInsights(){
     <div class="insights-card" style="margin-bottom:20px;"><h4>Retention by month (when the product ends)</h4>${legend}
       ${table('<th>Month</th><th class="num">Cases</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Open</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th><th>Outcomes</th>', monthRows, 'No cases.')}</div>
     <div class="insights-card" style="margin-bottom:20px;"><h4>Own vs inherited clients</h4>
-      <p class="nml-note" style="margin-top:-6px;">Inherited = the client came from another adviser (the Ex Adviser column). Retained % leaves out "No opportunity" cases.</p>
+      <p class="nml-note" style="margin-top:-6px;">Inherited = the client came from another adviser (the Ex Adviser column). Cases and retained % both leave out "No opportunity" cases (sold, moved, cleared the mortgage).</p>
       <div class="sib-ins-wrap"><table class="mini-table sib-ins-table sib-oi-table"><thead>${oiHead}</thead><tbody>${oiRows}</tbody></table></div></div>
     <div class="insights-card${sibSeesAll() ? '' : ' hidden'}" style="margin-bottom:20px;"><h4>By servicing adviser</h4>
       ${table('<th>Servicing adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', advRows, 'No cases.')}</div>
@@ -4626,10 +4629,12 @@ function renderSibSettings(){
   if(!currentUser || currentUser.role!=='management') return;
   const mapaNames = new Set(Object.values(USERS).filter(u=> u && u.role==='mapa').map(u=> sibName(u.name)));
   const unmatched = {};
-  sibCases().forEach(c=>{ const n = sibAdvLabel(c); if(n!=='Not set' && !mapaNames.has(sibName(n))) unmatched[n] = (unmatched[n]||0) + 1; });
+  sibCases().forEach(c=>{ const n = sibAdvLabel(c); if(n!==SIB_UNALLOCATED && !mapaNames.has(sibName(n))) unmatched[n] = (unmatched[n]||0) + 1; });
+  const unalloc = sibCases().filter(c=> sibAdvLabel(c)===SIB_UNALLOCATED).length;
   const um = Object.entries(unmatched).sort((a,b)=> b[1]-a[1]);
   document.getElementById('sibUnmatched').innerHTML = !sibLoaded || !um.length ? '' :
     `<b>Servicing advisers with no matching MAPA login</b> (no MAPA sees these cases; Management and Admin still do): ${um.map(([n, k])=> `<span class="sib-tag no">${esc(n)} · ${k}</span>`).join(' ')}<br>To give a MAPA these cases, make their name in Settings → Colleagues match the spreadsheet exactly.`;
+  if(sibLoaded && unalloc) document.getElementById('sibUnmatched').innerHTML += `${um.length ? '<br>' : ''}<b>${unalloc} case${unalloc===1?' has':'s have'} no servicing adviser</b> (shown as "Not allocated"). Find them on the Cases page with the adviser filter, and set the adviser with Edit details.`;
   const live = sibCases(), yc = {};
   live.forEach(c=>{ const y = (c.month||'').slice(0,4) || '?'; (yc[y] = yc[y] || new Set()).add(c.month); });
   const inBin = Object.values(SIB).filter(c=> c && c.deleted), binYears = {};

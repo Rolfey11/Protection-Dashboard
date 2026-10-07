@@ -449,6 +449,22 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 .topbar-right{display:flex; align-items:center; gap:14px; flex-shrink:0; margin-left:auto;}
 
+/* Laptops: compact header (icons only for the date range and profile). */
+@media (max-width:1560px){
+  .topbar-inner{gap:14px;}
+  .nav-tab{padding:9px 12px;}
+  .brand-text .t2{display:none;}
+  .user-meta{display:none;}
+  .user-chip{padding:5px; gap:0;}
+  .daterange-btn span{display:none;}
+  .daterange-btn{padding:0 11px;}
+}
+/* Narrower laptops/tablets: the tabs move to their own row so nothing is pushed off screen. */
+@media (max-width:1400px){
+  .topbar-inner{flex-wrap:wrap; height:auto; padding:8px 24px 0; row-gap:4px;}
+  .nav-tabs{order:10; flex:1 0 100%; min-width:0; overflow-x:auto; scrollbar-width:none; padding-bottom:8px;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+}
 @media (max-width:1180px){
   .brand-text .t2{display:none;}
 }
@@ -617,6 +633,15 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .convo-edit-row{display:grid; grid-template-columns:1fr 2fr 2fr auto; gap:6px; margin-bottom:6px; align-items:center;}
 .convo-edit-row input{padding:7px 9px; border:1.5px solid var(--border-2); border-radius:8px; font:inherit; font-size:12.5px; background:var(--surface); color:var(--text); min-width:0;}
 @media (max-width:700px){ .convo-edit-row{grid-template-columns:1fr auto;} .convo-edit-row input[data-cf="q"],.convo-edit-row input[data-cf="cue"]{grid-column:1 / -1;} }
+.sib-appt-banner{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0 0; padding:10px 12px; border-radius:10px; background:var(--blue-bg); font-size:13px;}
+.sib-appt-banner.past{background:var(--amber-bg);}
+.sib-appt-btns{display:flex; gap:6px; flex-wrap:wrap;}
+.sib-appt-grid{display:grid; grid-template-columns:1fr 1fr; gap:0 10px;}
+@media (max-width:560px){ .sib-appt-grid{grid-template-columns:1fr;} }
+.sib-appt-chip{border:none; cursor:pointer; font:inherit; font-size:10.5px; font-weight:700;}
+#settingsBack{margin-bottom:6px;}
+#page-settings .set-off{display:none !important;}
+#page-settings > [id^="settings"][id$="Section"]{margin-top:0 !important;}
 .sib-convo-intro{font-size:12.5px; color:var(--text-muted); margin:4px 0 4px; line-height:1.5;}
 .sib-convo-q{margin-bottom:10px;}
 .sib-convo-q .q{font-size:13.5px; font-weight:600; color:var(--text);}
@@ -1779,6 +1804,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <option value="Retained">Retained</option>
           <option value="No Opportunity">No Opportunity</option>
           <option value="Not Converted">Not Converted</option>
+          <option value="appt">Upcoming appointments (all months)</option>
         </select>
         <select id="sibEmailFilter">
           <option value="">Email client? any</option>
@@ -1831,6 +1857,16 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 
     <!-- ============= SETTINGS PAGE ============= -->
     <div id="page-settings" class="hidden">
+      <div id="settingsHome">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1>Settings</h1>
+            <p class="sub">Choose what you'd like to manage.</p>
+          </div>
+        </div>
+        <div class="useful-grid" id="settingsNav"></div>
+      </div>
+      <button type="button" class="linkish useful-back hidden" id="settingsBack">&larr; Settings</button>
       <div id="settingsMyAccountSection" class="hidden" style="margin-bottom:34px;">
         <div class="page-head" style="margin-bottom:16px;">
           <div>
@@ -1903,7 +1939,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div id="settingsColleagueSection">
         <div class="page-head">
           <div>
-            <h1>Settings</h1>
+            <h1 style="font-size:19px;">Colleagues</h1>
             <p class="sub">Manage colleague access — name, user level and PIN.</p>
           </div>
           <div style="display:flex; gap:10px;">
@@ -3197,7 +3233,7 @@ function enterApp(){
 }
 
 document.querySelectorAll('.nav-tab').forEach(tab=>{
-  tab.addEventListener('click', ()=> goPage(tab.dataset.page));
+  tab.addEventListener('click', ()=>{ if(tab.dataset.page==='settings') settingsSel = null; goPage(tab.dataset.page); });
 });
 function goPage(page){
   document.querySelectorAll('.nav-tab').forEach(t=> t.classList.toggle('active', t.dataset.page===page));
@@ -3233,6 +3269,7 @@ function goPage(page){
       renderClientSources();
       renderBackupLabel();
     }
+    renderSettingsNav();
   }
   const shown = document.getElementById('page-'+page);
   if(shown){ shown.classList.remove('page-enter'); void shown.offsetWidth; shown.classList.add('page-enter'); }
@@ -3827,10 +3864,11 @@ function sibRetTitle(o){ return `${o.retained} retained ÷ (${o.cases} cases −
 function sibFilter(list, ignoreMonth){
   const q = sibState.search.trim().toLowerCase();
   return list.filter(c=>{
-    if(!ignoreMonth && !q && c.month !== sibState.month) return false;
+    if(!ignoreMonth && !q && sibState.outcome!=='appt' && c.month !== sibState.month) return false;
+    if(sibState.outcome==='appt') return sibApptUpcoming(c) && (!q || [c.mailingName, c.salutation, c.address, c.email, c.caseId, c.notes].some(v=> String(v||'').toLowerCase().includes(q))) && (!sibState.adviser || sibAdvLabel(c)===sibState.adviser);
     if(sibState.adviser && sibAdvLabel(c) !== sibState.adviser) return false;
     if(sibState.outcome==='open' && c.retentionKey) return false;
-    if(sibState.outcome && sibState.outcome!=='open' && sibState.outcome!=='all' && c.retentionKey !== sibState.outcome) return false;
+    if(sibState.outcome && !['open','all','appt'].includes(sibState.outcome) && c.retentionKey !== sibState.outcome) return false;
     if(sibState.emailClient==='none' && c.emailClient) return false;
     if(sibState.emailClient && sibState.emailClient!=='none' && c.emailClient !== sibState.emailClient) return false;
     if(q && ![c.mailingName, c.salutation, c.address, c.email, c.caseId, c.notes].some(v=> String(v||'').toLowerCase().includes(q))) return false;
@@ -3887,7 +3925,10 @@ function renderSib(){
   document.getElementById('sibSummary').innerHTML = `<b>${esc(sibMonthLabel(sibState.month))}:</b>
     <span class="sib-tag open">${count('Open')} open</span><span class="sib-tag ret">${count('Retained')} retained</span>
     <span class="sib-tag nop">${count('No Opportunity')} no opportunity</span><span class="sib-tag nop">${count('Not Converted')} not converted</span>
-    <span class="sib-tag due">${mc.filter(c=> [6,3,0].some(n=> sibEmailState(c,n).due)).length} SIB email${mc.length===1?'':'s'} due</span>`;
+    <span class="sib-tag due">${mc.filter(c=> [6,3,0].some(n=> sibEmailState(c,n).due)).length} SIB email${mc.length===1?'':'s'} due</span>
+    ${(()=>{ const n = all.filter(sibApptUpcoming).length; return n ? `<button type="button" class="sib-tag open sib-appt-chip" id="sibApptChip">📅 ${n} upcoming appointment${n===1?'':'s'}</button>` : ''; })()}`;
+  const chip = document.getElementById('sibApptChip');
+  if(chip) chip.addEventListener('click', ()=>{ sibState.outcome = 'appt'; document.getElementById('sibOutcomeFilter').value = 'appt'; renderSib(); });
   // adviser options
   const advs = [...new Set(all.map(sibAdvLabel))].filter(a=> a!==SIB_UNALLOCATED).sort();
   const unalloc = all.filter(c=> sibAdvLabel(c)===SIB_UNALLOCATED).length;
@@ -3896,13 +3937,13 @@ function renderSib(){
     (unalloc ? `<option value="${SIB_UNALLOCATED}">Not allocated (no servicing adviser) · ${unalloc}</option>` : '');
   advSel.value = advs.includes(sibState.adviser) ? sibState.adviser : '';
   // rows
-  const rows = sibFilter(all).sort((a,b)=> (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
-  const searching = !!sibState.search.trim();
+  const rows = sibFilter(all).sort((a,b)=> sibState.outcome==='appt' ? sibApptMs(a) - sibApptMs(b) : (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
+  const searching = !!sibState.search.trim() || sibState.outcome==='appt';
   const emailTags = c=> sibUnsubscribed(c) ? '<span class="sib-tag no">Unsubscribed</span>' : [6,3,0].map(n=>{
     const s = sibEmailState(c, n);
     return s.sent ? `<span class="sib-tag ok" title="${n}-month email sent">${n}m ✓ ${esc(sibDay(s.sent))}</span>` : s.due ? `<span class="sib-tag due">${n}m due</span>` : `<span class="sib-tag no">${n}m</span>`;
   }).join(' ');
-  out.innerHTML = (searching ? `<p class="nml-note" style="margin-top:0;">Searching every month for "${esc(sibState.search.trim())}".</p>` : '') +
+  out.innerHTML = (sibState.outcome==='appt' ? `<p class="nml-note" style="margin-top:0;">Upcoming appointments across every month, soonest first.</p>` : searching ? `<p class="nml-note" style="margin-top:0;">Searching every month for "${esc(sibState.search.trim())}".</p>` : '') +
     (rows.length ? `<div class="nml-table-wrap"><table class="nml-table sib-table">
     <thead><tr><th>Client</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th>Outcome</th></tr></thead>
     <tbody>${rows.map(c=>{
@@ -3913,7 +3954,7 @@ function renderSib(){
         <td>${esc(c.servicingAdviser||'—')}${c.exAdviser ? `<div class="nml-notes">ex ${esc(c.exAdviser.replace(/^X\s+/,''))}</div>` : ''}</td>
         <td>${c.doNotContact ? '<span class="sib-tag nop">Do not contact</span>' : emailTags(c)}</td>
         <td>${c.emailClient ? `<span class="sib-tag ${c.emailClient==='YES'?'ok':'no'}">${esc(c.emailClient)}</span>` : '<span class="sib-tag no">Not set</span>'}</td>
-        <td>${c.lastContact ? esc(fmtDate(c.lastContact)) : '—'}</td>
+        <td>${c.lastContact ? esc(fmtDate(c.lastContact)) : '—'}${sibApptTag(c)}</td>
         <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}${c.protectionLeadId ? '<div style="margin-top:4px;"><span class="sib-tag due">In protection pipeline</span></div>' : c.protectionConvo ? '<div style="margin-top:4px;"><span class="sib-tag ok">Protection discussed</span></div>' : ''}</td>
       </tr>`;
     }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>');
@@ -3922,7 +3963,7 @@ function renderSib(){
 document.getElementById('sibSearch').addEventListener('input', function(){ sibState.search = this.value; renderSib(); });
 [['sibAdviser','adviser'],['sibOutcomeFilter','outcome'],['sibEmailFilter','emailClient']].forEach(([id, k])=>
   document.getElementById(id).addEventListener('change', function(){ sibState[k] = this.value; renderSib(); }));
-document.getElementById('sibImportShortcut').addEventListener('click', ()=> goPage('settings'));
+document.getElementById('sibImportShortcut').addEventListener('click', ()=>{ settingsSel = 'settingsSibSection'; goPage('settings'); });
 
 /* ---- case window ---- */
 function openSibCase(key){
@@ -3956,6 +3997,7 @@ function renderSibCase(){
       ${c.doNotContact ? '<span class="sib-tag nop" style="font-size:12px;">Do not contact</span>' : ''}
       ${(()=>{ const t = sibMonthTag(c.month); return t ? `<span class="sib-tag ${t[0]}" style="font-size:12px;">${t[1]}</span>` : ''; })()}
     </div>
+    ${sibApptBanner(c)}
     ${sibReferralBanner(c)}
     ${sibConvoLine(c)}
     ${!c.protectionConvo && !c.doNotContact && act!=='protect' ? `<div class="sib-convo-nudge"><span><b>Protection conversation</b> not had yet. A few open questions on your next call.</span><button type="button" class="btn btn-secondary btn-sm" data-sib-act="protect">Start</button></div>` : ''}
@@ -3979,6 +4021,7 @@ function renderSibCase(){
     <div class="action-bar">
       <button class="action-btn" data-sib-act="call">${ico('phone')}Call</button>
       <button class="action-btn" data-sib-act="email" ${c.email?'':'disabled title="No email address on file"'}>${ico('mail')}Email</button>
+      <button class="action-btn" data-sib-act="appt">${ico('calendar')}Appointment</button>
       <button class="action-btn" data-sib-act="note">${ico('note')}Note</button>
       <button class="action-btn" data-sib-act="outcome">${ico('checkCircle')}Outcome</button>
       <button class="action-btn" data-sib-act="edit">${ico('pin')}Edit details</button>
@@ -3997,6 +4040,7 @@ function renderSibCase(){
       <div class="field"><label for="sibEmBody">Message</label><textarea id="sibEmBody" style="min-height:200px;">${esc(`Dear ${c.salutation || c.mailingName || ''},\n\nI hope you're well. Your current mortgage product is due to end in ${sibMonthLong(c.month)}, so now is a good time to look at your options.\n\n[Add your message]\n\nKind regards,\n${currentUser.name}`)}</textarea></div>
       <div class="field-hint">Opens Gmail with this filled in. Anything left in [square brackets] must be filled in first. A copy is saved to the history.</div>
       <button class="btn btn-primary btn-sm" id="sibEmSend" style="margin-top:10px;">Open in Gmail</button></div>`;
+  if(act==='appt') f.innerHTML = sibApptFormHtml(c);
   if(act==='note') f.innerHTML = `<div class="inline-form"><div class="field"><label for="sibNoteText">Note</label><textarea id="sibNoteText"></textarea></div><button class="btn btn-primary btn-sm" id="sibNoteSave">Add note</button></div>`;
   if(act==='outcome') f.innerHTML = `<div class="inline-form">
       <div class="field"><label for="sibOutKey">Outcome</label><select id="sibOutKey"><option value="">Open (still working on it)</option>${SIB_RETENTION.map(v=> `<option ${c.retentionKey===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
@@ -4048,6 +4092,8 @@ function renderSibCase(){
       .then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Outcome saved','success'); } });
   });
   on('sibReferSave', function(){ sibReferToProtection(c, this); });
+  if(act==='appt') sibApptWire(c);
+  sibApptBannerWire(c);
   if(act==='protect') sibConvoWire(c);
   document.querySelectorAll('[data-open-lead]').forEach(b=> b.addEventListener('click', ()=> openLeadFromSib(b.dataset.openLead)));
   on('sibEdSave', ()=>{
@@ -4244,6 +4290,94 @@ document.getElementById('sibDownloadBtn').addEventListener('click', ()=>{
 
 
 
+
+/* ---- Send in Blue appointments ----
+   case.appointment = {date:'YYYY-MM-DD', time:'HH:MM', type, with, note, by, at}.
+   Marking it attended or cancelled records it in the history and clears it. */
+const SIB_APPT_TYPES = {phone:'Phone call', video:'Video call', face:'Face to face', office:'In the office'};
+function sibApptMs(c){ const a = c.appointment; return a && a.date ? new Date(`${a.date}T${a.time||'09:00'}:00`).getTime() : Infinity; }
+function sibApptUpcoming(c){ return !!(c.appointment && c.appointment.date) && sibApptMs(c) >= new Date().setHours(0,0,0,0); }
+function sibApptWhen(a){
+  const d = new Date(`${a.date}T${a.time||'09:00'}:00`);
+  return d.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'}) + (a.time ? ' at ' + a.time : '');
+}
+function sibApptTag(c){
+  const a = c.appointment; if(!a || !a.date) return '';
+  const past = sibApptMs(c) < Date.now();
+  return `<div style="margin-top:4px;"><span class="sib-tag ${past ? 'due' : 'open'}" title="${esc(SIB_APPT_TYPES[a.type]||'Appointment')}">📅 ${esc(new Date(a.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric', month:'short'}))}${a.time ? ' '+esc(a.time) : ''}${past ? ' · update' : ''}</span></div>`;
+}
+function sibGcalUrl(c, invite){
+  const a = c.appointment;
+  const start = new Date(`${a.date}T${a.time||'09:00'}:00`);
+  const end = new Date(start.getTime() + (a.type==='face' || a.type==='office' ? 60 : 30)*60000);
+  const utc = d=> d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const type = SIB_APPT_TYPES[a.type] || 'Appointment';
+  const details = invite
+    ? [`Dear ${c.salutation || c.mailingName || ''},`, '', `This is your ${type.toLowerCase()} to review your mortgage, as your current product ends in ${sibMonthLong(c.month)}.`, a.with ? `You'll be speaking with ${a.with}.` : '', '', 'Kind regards,', currentUser.name, COMPANY_NAME].filter(x=> x!==null).join('\n')
+    : [`Send in Blue mortgage review (${type})`, `Client: ${c.mailingName||''}`, c.caseId ? `Case ID: ${c.caseId}` : '', `Product ends: ${sibMonthLong(c.month)}`, c.email ? `Email: ${c.email}` : '', a.with ? `With: ${a.with}` : '', a.note ? `Note: ${a.note}` : ''].filter(Boolean).join('\n');
+  const p = new URLSearchParams({action:'TEMPLATE', text: invite ? `Mortgage review with ${COMPANY_NAME}` : `Mortgage review: ${c.mailingName||'client'}`, dates:`${utc(start)}/${utc(end)}`, details});
+  p.set('location', type);
+  if(invite && c.email) p.set('add', c.email);
+  return 'https://calendar.google.com/calendar/render?' + p.toString();
+}
+function sibApptBanner(c){
+  const a = c.appointment; if(!a || !a.date) return '';
+  const past = sibApptMs(c) < Date.now();
+  return `<div class="sib-appt-banner ${past ? 'past' : ''}">
+    <div><b>${past ? 'Appointment was' : 'Appointment'}:</b> ${esc(sibApptWhen(a))} · ${esc(SIB_APPT_TYPES[a.type]||'Appointment')}${a.with ? ' · with '+esc(a.with) : ''}${a.note ? `<div class="nml-notes">${esc(a.note)}</div>` : ''}${past ? '<div class="nml-notes">How did it go? Mark it attended, or rebook / cancel.</div>' : ''}</div>
+    <div class="sib-appt-btns">
+      <a class="btn btn-secondary btn-sm" href="${esc(sibGcalUrl(c, false))}" target="_blank" rel="noopener">Add to my calendar</a>
+      ${c.email ? `<a class="btn btn-secondary btn-sm" href="${esc(sibGcalUrl(c, true))}" target="_blank" rel="noopener">Invite client</a>` : ''}
+      <button type="button" class="btn btn-secondary btn-sm" data-appt-done>Attended</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-sib-act="appt">Rebook</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-appt-cancel>Cancel</button>
+    </div></div>`;
+}
+function sibApptFormHtml(c){
+  const a = c.appointment || {};
+  const tmr = new Date(Date.now() + 86400000);
+  const def = `${tmr.getFullYear()}-${String(tmr.getMonth()+1).padStart(2,'0')}-${String(tmr.getDate()).padStart(2,'0')}`;
+  return `<div class="inline-form">
+    <div class="op-title" style="font-weight:700; margin-bottom:10px;">${a.date ? 'Rebook appointment' : 'Book an appointment'}</div>
+    <div class="sib-appt-grid">
+      <div class="field"><label for="sibApDate">Date</label><input type="date" id="sibApDate" value="${esc(a.date || def)}"></div>
+      <div class="field"><label for="sibApTime">Time</label><input type="time" id="sibApTime" value="${esc(a.time || '10:00')}" step="300"></div>
+      <div class="field"><label for="sibApType">Type</label><select id="sibApType">${Object.entries(SIB_APPT_TYPES).map(([k, v])=> `<option value="${k}" ${(a.type||'phone')===k?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
+      <div class="field"><label for="sibApWith">With</label><input type="text" id="sibApWith" maxlength="80" value="${esc(a.with || c.servicingAdviser || currentUser.name)}"></div>
+    </div>
+    <div class="field"><label for="sibApNote">Note (optional)</label><textarea id="sibApNote" maxlength="1000" placeholder="e.g. Review product transfer vs remortgage options; bring latest payslips.">${esc(a.note||'')}</textarea></div>
+    <button class="btn btn-primary btn-sm" id="sibApSave">${a.date ? 'Save new time' : 'Book appointment'}</button></div>`;
+}
+function sibApptWire(c){
+  const btn = document.getElementById('sibApSave'); if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    const date = document.getElementById('sibApDate').value, time = document.getElementById('sibApTime').value;
+    const type = document.getElementById('sibApType').value, withWho = document.getElementById('sibApWith').value.trim(), note = document.getElementById('sibApNote').value.trim();
+    if(!date || !time){ toast('Please choose a date and time.','error'); return; }
+    if(new Date(`${date}T${time}:00`).getTime() < Date.now() - 60000){ toast("That time has already passed. Choose a future date and time.",'error'); return; }
+    const appt = {date, time, type, ...(withWho ? {with:withWho} : {}), ...(note ? {note} : {}), by:currentUser.name, at:Date.now()};
+    const rebook = !!(c.appointment && c.appointment.date);
+    btn.disabled = true;
+    sibWrite({appointment:appt, lastContact:Date.now()}, {type:'appointment', text:`${rebook ? 'Appointment rebooked' : 'Appointment booked'}: ${sibApptWhen(appt)} (${SIB_APPT_TYPES[type]})${withWho ? ' with '+withWho : ''}${note ? ': '+note : ''}`})
+      .then(ok=>{ btn.disabled = false; if(ok){ sibAction = null; renderSibCase(); toast(`Appointment ${rebook ? 'rebooked' : 'booked'}. Use "Add to my calendar" or "Invite client" to put it in Google Calendar.`,'success'); } });
+  });
+}
+function sibApptBannerWire(c){
+  const done = document.querySelector('[data-appt-done]'), cancel = document.querySelector('[data-appt-cancel]');
+  if(done) done.addEventListener('click', ()=>{
+    const note = prompt('Appointment attended. Add a note about how it went (optional):', '');
+    if(note===null) return;
+    sibWrite({appointment:null, lastContact:Date.now()}, {type:'appointment', text:`Appointment attended (${sibApptWhen(c.appointment)})${note.trim() ? ': '+note.trim() : ''}`})
+      .then(ok=>{ if(ok) toast('Marked as attended. Set the outcome when you know it.','success'); });
+  });
+  if(cancel) cancel.addEventListener('click', ()=>{
+    const why = prompt('Cancel this appointment? Add a reason (optional):', '');
+    if(why===null) return;
+    sibWrite({appointment:null}, {type:'appointment', text:`Appointment cancelled (${sibApptWhen(c.appointment)})${why.trim() ? ': '+why.trim() : ''}`})
+      .then(ok=>{ if(ok) toast('Appointment cancelled','success'); });
+  });
+}
+
 /* ---- Refer a Send in Blue client to Protection ----
    Creates a protection lead (source "Send in Blue") linked both ways:
    lead.sibKey -> the Send in Blue case, case.protectionLeadId -> the lead. */
@@ -4422,6 +4556,11 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-07c', date:'2026-10-07', items:[
+    {text:"<b>Appointments in Send in Blue</b>: book a phone, video, face-to-face or office appointment from any Send in Blue case, add it to your Google Calendar or send the client an invite, then mark it attended, rebook or cancel."},
+    {text:"Booked appointments show on the case and in the list, and <b>Upcoming appointments</b> in the filter (or the 📅 chip) lists them all, soonest first."},
+    {text:"<b>Tidier Settings</b>: Settings now opens on a page of picture buttons, one for each area, instead of one long page."},
+  ]},
   {id:'2026-10-07b', date:'2026-10-07', items:[
     {text:"<b>Send in Blue shows your own cases</b>: MAPAs now see just the Send in Blue cases where they're the servicing adviser, with their own totals.", roles:['mapa']},
     {text:"<b>Send in Blue Insights for MAPAs</b>: see how your own clients and your inherited clients are going, and your retained %.", roles:['mapa']},
@@ -4456,6 +4595,37 @@ function showWhatsNew(all){
   return true;
 }
 document.getElementById('whatsNewBtn').addEventListener('click', ()=>{ document.getElementById('bellPanel').classList.remove('open'); showWhatsNew(true); });
+
+
+/* ---- Settings home: picture buttons that each open a section ----
+   Sections a role can't use stay hidden (class "hidden"); the chosen one is
+   shown on its own (class "set-off" on the rest) with a "← Settings" link. */
+const SETTINGS_ICONS = {"account": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21v-1a7 7 0 0 1 16 0v1\"/></svg>", "team": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M2.5 20v-.5a6.5 6.5 0 0 1 13 0v.5\"/><path d=\"M16 4.5a3.5 3.5 0 0 1 0 7\"/><path d=\"M18.5 20v-.5a6.5 6.5 0 0 0-2.5-5.1\"/></svg>", "bell": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.73 21a2 2 0 0 1-3.46 0\"/></svg>", "mail": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"M3 7l9 6 9-6\"/></svg>", "sheet": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M3 9h18M3 15h18M9 3v18\"/></svg>", "trash": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/><path d=\"M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6\"/></svg>", "restore": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12a9 9 0 1 0 3-6.7\"/><path d=\"M3 4v5h5\"/></svg>", "backup": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"M7 10l5 5 5-5\"/><path d=\"M12 15V3\"/></svg>"};
+const SETTINGS_SECTIONS = [
+  ['settingsMyAccountSection', 'My account', 'account', 'Change your name and PIN.'],
+  ['settingsColleagueSection', 'Colleagues', 'team', 'Add colleagues, user levels and PINs, client sources, and importing leads.'],
+  ['settingsAppSection', 'App & reminders', 'bell', 'Install the desktop app and turn on call reminders.'],
+  ['settingsContentSection', 'Templates & prompts', 'mail', 'Email templates, Send in Blue protection prompts and Useful Info tables.'],
+  ['settingsSibSection', 'Send in Blue data', 'sheet', 'Upload, download, back up and bulk delete Send in Blue cases.'],
+  ['settingsBulkDeleteSection', 'Bulk delete', 'trash', 'Delete protection leads by Task Created date.'],
+  ['settingsRecycleBinSection', 'Recycle Bin', 'restore', 'Restore protection leads deleted in the last 30 days.'],
+  ['settingsBackupSection', 'Backup', 'backup', 'Daily backups and downloading a backup now.'],
+];
+let settingsSel = null; // null = the Settings home page
+function renderSettingsNav(){
+  const avail = SETTINGS_SECTIONS.filter(([id])=> !document.getElementById(id).classList.contains('hidden'));
+  if(settingsSel && !avail.some(([id])=> id===settingsSel)) settingsSel = null;
+  SETTINGS_SECTIONS.forEach(([id])=> document.getElementById(id).classList.toggle('set-off', id!==settingsSel));
+  document.getElementById('settingsHome').classList.toggle('hidden', !!settingsSel);
+  document.getElementById('settingsBack').classList.toggle('hidden', !settingsSel);
+  const nav = document.getElementById('settingsNav');
+  nav.innerHTML = avail.map(([id, label, icon, sub])=> `<button type="button" class="useful-card" data-settings-tab="${id}">
+    <span class="useful-card-ic">${SETTINGS_ICONS[icon]}</span>
+    <span class="useful-card-title">${esc(label)}</span>
+    <span class="useful-card-sub">${esc(sub)}</span></button>`).join('');
+  nav.querySelectorAll('[data-settings-tab]').forEach(b=> b.addEventListener('click', ()=>{ settingsSel = b.dataset.settingsTab; renderSettingsNav(); window.scrollTo(0, 0); }));
+}
+document.getElementById('settingsBack').addEventListener('click', ()=>{ settingsSel = null; renderSettingsNav(); window.scrollTo(0, 0); });
 
 /* ---- Send in Blue Insights (Management) ---- */
 const sibIns = {from:'', to:'', adviser:'', days:30};

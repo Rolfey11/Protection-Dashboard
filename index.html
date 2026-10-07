@@ -3965,7 +3965,7 @@ function renderSib(){
   }).join(' ');
   out.innerHTML = (sibState.outcome==='letter' ? `<p class="nml-note" style="margin-top:0;">Clients not contacted yet whose lender letter is due within 120 days (or has already gone), soonest first. Letters that have already gone are at the top.</p>` : sibState.outcome==='appt' ? `<p class="nml-note" style="margin-top:0;">Upcoming appointments across every month, soonest first.</p>` : searching ? `<p class="nml-note" style="margin-top:0;">Searching every month for "${esc(sibState.search.trim())}".</p>` : '') +
     (rows.length ? `<div class="nml-table-wrap"><table class="nml-table sib-table">
-    <thead><tr><th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th>Outcome</th></tr></thead>
+    <thead><tr><th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th title="Protection conversation and referral to the protection team">Protection</th><th>Outcome</th></tr></thead>
     <tbody>${rows.map(c=>{
       const o = sibOutcome(c);
       return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''}">
@@ -3976,7 +3976,8 @@ function renderSib(){
         <td>${c.doNotContact ? '<span class="sib-tag nop">Do not contact</span>' : emailTags(c)}</td>
         <td>${c.emailClient ? `<span class="sib-tag ${c.emailClient==='YES'?'ok':'no'}">${esc(c.emailClient)}</span>` : '<span class="sib-tag no">Not set</span>'}</td>
         <td>${c.lastContact ? esc(fmtDate(c.lastContact)) : '—'}${sibApptTag(c)}</td>
-        <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}${c.protectionLeadId ? '<div style="margin-top:4px;"><span class="sib-tag due">In protection pipeline</span></div>' : c.protectionConvo ? '<div style="margin-top:4px;"><span class="sib-tag ok">Protection discussed</span></div>' : ''}</td>
+        <td>${sibProtectionCell(c)}</td>
+        <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}</td>
       </tr>`;
     }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>');
   out.querySelectorAll('[data-sib-case]').forEach(tr=> tr.addEventListener('click', ()=> openSibCase(tr.dataset.sibCase)));
@@ -4538,6 +4539,22 @@ function sibConvoPrompts(){
   const saved = CONFIG.sibProtectionPrompts ? Object.values(CONFIG.sibProtectionPrompts).filter(x=> x && x.q) : [];
   return saved.length ? saved : SIB_CONVO_DEFAULT;
 }
+// Protection column on the Send in Blue list: the conversation, then the referral.
+const SIB_CONVO_TAG = {interested:['ok','Interested'], covered:['open','Already covered'], notnow:['nop','Not interested'], notes:['due','Discussed']};
+const SIB_LEAD_TAG = {new:['open','New lead'], existing:['open','Lead: contacted'], underwriting:['ok','Lead: in underwriting'], signedup:['ok','Lead: signed up'], decline:['nop','Lead: declined'], completed:['nop','Lead: declined']};
+function sibProtectionCell(c){
+  const out = [], v = c.protectionConvo;
+  if(v){
+    const [cls, lbl] = SIB_CONVO_TAG[v.outcome] || ['due','Discussed'];
+    out.push(`<span class="sib-tag ${cls}" title="${esc((SIB_CONVO_OUTCOMES[v.outcome]||'Protection conversation')+(v.reason ? ': '+v.reason : ''))}">${esc(lbl)}</span><div class="nml-notes">${esc([fmtDate(v.at), v.reason].filter(Boolean).join(' · '))}</div>`);
+  }
+  if(c.protectionLeadId){
+    const l = sibReferredLead(c);
+    const [cls, lbl] = l ? (SIB_LEAD_TAG[potOf(l)] || ['open','Referred']) : ['no','Lead deleted'];
+    out.push(`<div style="margin-top:${v ? 6 : 0}px;"><span class="sib-tag ${cls}">${esc(lbl)}</span></div><div class="nml-notes">${esc(['Referred '+fmtDate(c.protectionReferredAt), l && l.advisorName].filter(Boolean).join(' · '))}</div>`);
+  }
+  return out.length ? out.join('') : c.doNotContact ? '—' : '<span class="sib-tag no">Not had yet</span>';
+}
 function sibConvoLine(c){
   const v = c.protectionConvo; if(!v) return '';
   return `<div class="sib-convo-done"><b>Protection conversation</b> on ${esc(fmtDate(v.at))}${v.by ? ' by '+esc(v.by) : ''}: ${esc(SIB_CONVO_OUTCOMES[v.outcome]||v.outcome)}${v.reason ? ' ('+esc(v.reason)+')' : ''}</div>`;
@@ -4630,6 +4647,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-08c', date:'2026-10-08', items:[
+    {text:"<b>Protection column</b> in the Send in Blue list: see at a glance whether the protection conversation has been had (Interested, Already covered, Not interested), and whether the client has been referred as a protection lead and where that lead is now."},
+  ]},
   {id:'2026-10-08b', date:'2026-10-08', items:[
     {text:"<b>Lender letter countdown fixes</b>: clients first contacted after their letter went out now show <b>Contacted after letter</b> instead of \"hasn't been contacted\", and they drop off the Beat the letter list."},
     {text:"<b>Not allocated</b> now stays selected in the Send in Blue adviser filter.", roles:['management','admin']},

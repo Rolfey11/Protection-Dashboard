@@ -633,6 +633,22 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .convo-edit-row{display:grid; grid-template-columns:1fr 2fr 2fr auto; gap:6px; margin-bottom:6px; align-items:center;}
 .convo-edit-row input{padding:7px 9px; border:1.5px solid var(--border-2); border-radius:8px; font:inherit; font-size:12.5px; background:var(--surface); color:var(--text); min-width:0;}
 @media (max-width:700px){ .convo-edit-row{grid-template-columns:1fr auto;} .convo-edit-row input[data-cf="q"],.convo-edit-row input[data-cf="cue"]{grid-column:1 / -1;} }
+.sib-letter{display:inline-flex; flex-direction:column; gap:3px; min-width:92px; font-size:12px; font-weight:800; white-space:nowrap;}
+.sib-letter .track{display:block; height:5px; border-radius:5px; background:var(--border); overflow:hidden;}
+.sib-letter .track i{display:block; height:100%; border-radius:5px;}
+.sib-letter.ok{color:var(--green);} .sib-letter.ok .track i{background:var(--green);}
+.sib-letter.warn{color:var(--amber);} .sib-letter.warn .track i{background:var(--amber);}
+.sib-letter.soon{color:#D2591F;} .sib-letter.soon .track i{background:#D2591F;}
+.sib-letter.urgent,.sib-letter.late{color:var(--red);} .sib-letter.urgent .track i,.sib-letter.late .track i{background:var(--red);}
+.sib-letter.late .lbl{animation:sibPulse 1.6s ease-in-out infinite;}
+.sib-letter.done{color:var(--green); font-weight:700;} .sib-letter.closed{color:var(--text-faint); font-weight:600;}
+.sib-letter.big{font-size:20px; min-width:130px;} .sib-letter.big .track{height:7px;}
+@keyframes sibPulse{50%{opacity:.45;}}
+@media (prefers-reduced-motion:reduce){ .sib-letter.late .lbl{animation:none;} }
+.sib-letter-banner{display:flex; align-items:center; gap:14px; margin:12px 0 0; padding:12px 14px; border-radius:12px; font-size:13px; line-height:1.5; background:var(--green-bg);}
+.sib-letter-banner.warn{background:var(--amber-bg);} .sib-letter-banner.soon,.sib-letter-banner.urgent,.sib-letter-banner.late{background:var(--red-bg);}
+.sib-letter-setting{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:14px; font-size:13px;}
+.sib-letter-setting input{width:72px; padding:6px 8px; border:1.5px solid var(--border-2); border-radius:8px; font:inherit; background:var(--surface); color:var(--text);}
 .sib-appt-banner{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0 0; padding:10px 12px; border-radius:10px; background:var(--blue-bg); font-size:13px;}
 .sib-appt-banner.past{background:var(--amber-bg);}
 .sib-appt-btns{display:flex; gap:6px; flex-wrap:wrap;}
@@ -1805,6 +1821,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <option value="No Opportunity">No Opportunity</option>
           <option value="Not Converted">Not Converted</option>
           <option value="appt">Upcoming appointments (all months)</option>
+          <option value="letter">Beat the letter: not contacted yet, soonest letter first (all months)</option>
         </select>
         <select id="sibEmailFilter">
           <option value="">Email client? any</option>
@@ -1992,6 +2009,12 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <input type="file" id="sibFileInput" accept=".xlsx,.xls" class="hidden">
           <input type="file" id="sibRestoreInput" accept=".json,application/json" class="hidden">
           <p class="nml-note" id="sibImportStatus" style="margin-bottom:0;"></p>
+          <div class="sib-letter-setting">
+            <label for="sibLetterDaysInput"><b>Lender reminder letter:</b> sent</label>
+            <input type="number" id="sibLetterDaysInput" min="1" max="12" step="1">
+            <span>months before the product ends</span>
+            <button class="btn btn-secondary btn-sm" id="sibLetterDaysSave">Save</button>
+          </div>
           <div class="sib-year-counts" id="sibYearCounts"></div>
           <div class="sib-unmatched" id="sibUnmatched"></div>
         </div>
@@ -3864,11 +3887,12 @@ function sibRetTitle(o){ return `${o.retained} retained ÷ (${o.cases} cases −
 function sibFilter(list, ignoreMonth){
   const q = sibState.search.trim().toLowerCase();
   return list.filter(c=>{
-    if(!ignoreMonth && !q && sibState.outcome!=='appt' && c.month !== sibState.month) return false;
+    if(!ignoreMonth && !q && sibState.outcome!=='appt' && sibState.outcome!=='letter' && c.month !== sibState.month) return false;
+    if(sibState.outcome==='letter'){ const st = sibLetterState(c); return !!st && ['urgent','soon','warn','ok','late'].includes(st.kind) && st.days <= 120 && (!sibState.adviser || sibAdvLabel(c)===sibState.adviser) && (!q || [c.mailingName, c.salutation, c.address, c.email, c.caseId, c.notes].some(v=> String(v||'').toLowerCase().includes(q))); }
     if(sibState.outcome==='appt') return sibApptUpcoming(c) && (!q || [c.mailingName, c.salutation, c.address, c.email, c.caseId, c.notes].some(v=> String(v||'').toLowerCase().includes(q))) && (!sibState.adviser || sibAdvLabel(c)===sibState.adviser);
     if(sibState.adviser && sibAdvLabel(c) !== sibState.adviser) return false;
     if(sibState.outcome==='open' && c.retentionKey) return false;
-    if(sibState.outcome && !['open','all','appt'].includes(sibState.outcome) && c.retentionKey !== sibState.outcome) return false;
+    if(sibState.outcome && !['open','all','appt','letter'].includes(sibState.outcome) && c.retentionKey !== sibState.outcome) return false;
     if(sibState.emailClient==='none' && c.emailClient) return false;
     if(sibState.emailClient && sibState.emailClient!=='none' && c.emailClient !== sibState.emailClient) return false;
     if(q && ![c.mailingName, c.salutation, c.address, c.email, c.caseId, c.notes].some(v=> String(v||'').toLowerCase().includes(q))) return false;
@@ -3926,7 +3950,10 @@ function renderSib(){
     <span class="sib-tag open">${count('Open')} open</span><span class="sib-tag ret">${count('Retained')} retained</span>
     <span class="sib-tag nop">${count('No Opportunity')} no opportunity</span><span class="sib-tag nop">${count('Not Converted')} not converted</span>
     <span class="sib-tag due">${mc.filter(c=> [6,3,0].some(n=> sibEmailState(c,n).due)).length} SIB email${mc.length===1?'':'s'} due</span>
+    ${(()=>{ const n = all.filter(c=>{ const st = sibLetterState(c); return st && (st.kind==='urgent' || st.kind==='late'); }).length; return n ? `<button type="button" class="sib-tag nop sib-appt-chip" id="sibLetterChip">⏳ ${n} to contact before / since the lender letter</button>` : ''; })()}
     ${(()=>{ const n = all.filter(sibApptUpcoming).length; return n ? `<button type="button" class="sib-tag open sib-appt-chip" id="sibApptChip">📅 ${n} upcoming appointment${n===1?'':'s'}</button>` : ''; })()}`;
+  const lchip = document.getElementById('sibLetterChip');
+  if(lchip) lchip.addEventListener('click', ()=>{ sibState.outcome = 'letter'; document.getElementById('sibOutcomeFilter').value = 'letter'; renderSib(); });
   const chip = document.getElementById('sibApptChip');
   if(chip) chip.addEventListener('click', ()=>{ sibState.outcome = 'appt'; document.getElementById('sibOutcomeFilter').value = 'appt'; renderSib(); });
   // adviser options
@@ -3937,19 +3964,20 @@ function renderSib(){
     (unalloc ? `<option value="${SIB_UNALLOCATED}">Not allocated (no servicing adviser) · ${unalloc}</option>` : '');
   advSel.value = advs.includes(sibState.adviser) ? sibState.adviser : '';
   // rows
-  const rows = sibFilter(all).sort((a,b)=> sibState.outcome==='appt' ? sibApptMs(a) - sibApptMs(b) : (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
-  const searching = !!sibState.search.trim() || sibState.outcome==='appt';
+  const rows = sibFilter(all).sort((a,b)=> sibState.outcome==='appt' ? sibApptMs(a) - sibApptMs(b) : sibState.outcome==='letter' ? sibLetterState(a).days - sibLetterState(b).days : (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
+  const searching = !!sibState.search.trim() || sibState.outcome==='appt' || sibState.outcome==='letter';
   const emailTags = c=> sibUnsubscribed(c) ? '<span class="sib-tag no">Unsubscribed</span>' : [6,3,0].map(n=>{
     const s = sibEmailState(c, n);
     return s.sent ? `<span class="sib-tag ok" title="${n}-month email sent">${n}m ✓ ${esc(sibDay(s.sent))}</span>` : s.due ? `<span class="sib-tag due">${n}m due</span>` : `<span class="sib-tag no">${n}m</span>`;
   }).join(' ');
-  out.innerHTML = (sibState.outcome==='appt' ? `<p class="nml-note" style="margin-top:0;">Upcoming appointments across every month, soonest first.</p>` : searching ? `<p class="nml-note" style="margin-top:0;">Searching every month for "${esc(sibState.search.trim())}".</p>` : '') +
+  out.innerHTML = (sibState.outcome==='letter' ? `<p class="nml-note" style="margin-top:0;">Clients not contacted yet whose lender letter is due within 120 days (or has already gone), soonest first. Letters that have already gone are at the top.</p>` : sibState.outcome==='appt' ? `<p class="nml-note" style="margin-top:0;">Upcoming appointments across every month, soonest first.</p>` : searching ? `<p class="nml-note" style="margin-top:0;">Searching every month for "${esc(sibState.search.trim())}".</p>` : '') +
     (rows.length ? `<div class="nml-table-wrap"><table class="nml-table sib-table">
-    <thead><tr><th>Client</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th>Outcome</th></tr></thead>
+    <thead><tr><th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th>Outcome</th></tr></thead>
     <tbody>${rows.map(c=>{
       const o = sibOutcome(c);
       return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''}">
         <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.length>180 ? c.notes.slice(0,180)+'…' : c.notes)}</div>` : ''}</td>
+        <td>${sibLetterPill(c)}</td>
         ${searching ? `<td>${esc(sibMonthLabel(c.month))}</td>` : ''}
         <td>${esc(c.servicingAdviser||'—')}${c.exAdviser ? `<div class="nml-notes">ex ${esc(c.exAdviser.replace(/^X\s+/,''))}</div>` : ''}</td>
         <td>${c.doNotContact ? '<span class="sib-tag nop">Do not contact</span>' : emailTags(c)}</td>
@@ -3997,6 +4025,7 @@ function renderSibCase(){
       ${c.doNotContact ? '<span class="sib-tag nop" style="font-size:12px;">Do not contact</span>' : ''}
       ${(()=>{ const t = sibMonthTag(c.month); return t ? `<span class="sib-tag ${t[0]}" style="font-size:12px;">${t[1]}</span>` : ''; })()}
     </div>
+    ${sibLetterBanner(c)}
     ${sibApptBanner(c)}
     ${sibReferralBanner(c)}
     ${sibConvoLine(c)}
@@ -4054,6 +4083,7 @@ function renderSibCase(){
       <div class="field"><label for="sibEdEmail">Email</label><input type="email" id="sibEdEmail" maxlength="200" value="${esc(c.email||'')}"></div>
       <div class="field"><label for="sibEdAddr">Address</label><input type="text" id="sibEdAddr" maxlength="200" value="${esc(c.address||'')}"></div>
       <div class="field"><label for="sibEdAdv">Servicing adviser</label><input type="text" id="sibEdAdv" maxlength="80" value="${esc(c.servicingAdviser||'')}"></div>
+      <div class="field"><label for="sibEdLetter">Lender letter date (if known)</label><input type="date" id="sibEdLetter" value="${esc(c.letterDate||'')}"><div class="field-hint">Leave blank to use the estimate (${sibLetterMonths()} month${sibLetterMonths()===1?'':'s'} before the product end month).</div></div>
       <div class="field"><label for="sibEdNotes">Case notes</label><textarea id="sibEdNotes" maxlength="4000">${esc(c.notes||'')}</textarea></div>
       <label class="checkbox-row" style="margin-top:0;"><input type="checkbox" id="sibEdDnc" ${c.doNotContact?'checked':''}> Do not contact this client</label>
       <button class="btn btn-primary btn-sm" id="sibEdSave">Save details</button></div>`;
@@ -4101,10 +4131,11 @@ function renderSibCase(){
     if(email && !isEmail(email)){ toast(`"${email}" doesn't look like an email address.`,'error'); return; }
     const fields = {mailingName:document.getElementById('sibEdName').value.trim(), salutation:document.getElementById('sibEdSal').value.trim(), email,
       address:document.getElementById('sibEdAddr').value.trim(), servicingAdviser:document.getElementById('sibEdAdv').value.trim(),
-      notes:document.getElementById('sibEdNotes').value.trim(), doNotContact:document.getElementById('sibEdDnc').checked || null};
+      notes:document.getElementById('sibEdNotes').value.trim(), doNotContact:document.getElementById('sibEdDnc').checked || null,
+      letterDate:document.getElementById('sibEdLetter').value || null};
     const changed = Object.keys(fields).filter(k=> (fields[k]||'') !== (c[k]||''));
     if(!changed.length){ sibAction = null; renderSibCase(); return; }
-    const names = {mailingName:'name', salutation:'salutation', email:'email', address:'address', servicingAdviser:'servicing adviser', notes:'case notes', doNotContact:'do not contact'};
+    const names = {mailingName:'name', salutation:'salutation', email:'email', address:'address', servicingAdviser:'servicing adviser', notes:'case notes', doNotContact:'do not contact', letterDate:'lender letter date'};
     sibWrite(fields, {type:'detail', text:`Details updated: ${changed.map(k=> names[k]).join(', ')}`}).then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Details saved','success'); } });
   });
   on('sibEmSend', function(){
@@ -4290,6 +4321,54 @@ document.getElementById('sibDownloadBtn').addEventListener('click', ()=>{
 
 
 
+
+
+/* ---- Lender letter countdown ----
+   Lenders send a "your rate is ending" letter before the product ends. We
+   only know the month, so the product end is taken as the 1st of that month
+   (the cautious choice) and the letter as N months before it (Management set
+   N in Settings, default 6). A known letter date on the case overrides this.
+   The aim: contact the client before the letter lands. */
+function sibLetterMonths(){ const v = Number(CONFIG.sibLetterMonths); return v >= 1 && v <= 12 ? Math.round(v) : 6; }
+function sibLetterDate(c){
+  if(c.letterDate) return new Date(c.letterDate + 'T00:00:00');
+  const [y, m] = String(c.month||'').split('-').map(Number);
+  if(!y || !m) return null;
+  return new Date(y, m-1 - sibLetterMonths(), 1);
+}
+// When the team first got hold of / tried the client (calls, emails, appointments, chats).
+function sibFirstContact(c){
+  const ts = Object.values(c.audit||{}).filter(a=> a && a.at && (a.type==='call' || a.type==='email' || a.type==='appointment' || /^Protection conversation/.test(a.text||''))).map(a=> a.at);
+  if(c.lastContact) ts.push(c.lastContact);
+  return ts.length ? Math.min(...ts) : null;
+}
+function sibLetterState(c){
+  const letter = sibLetterDate(c); if(!letter) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = Math.round((letter - today) / 86400000);
+  const first = sibFirstContact(c), letterEnd = letter.getTime() + 86400000;
+  const when = letter.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+  if(first && first < letterEnd) return {kind:'done', days, when, label:'✓ Before letter', title:`Contacted before the lender letter (${when})`};
+  if(c.retentionKey || c.doNotContact) return {kind:'closed', days, when, label:'—', title:`Lender letter ${days < 0 ? 'was' : 'is'} due ${when}`};
+  if(days < 0) return {kind:'late', days, when, label:`Letter sent ${-days}d ago`, title:`The lender letter went out around ${when} and the client hasn't been contacted yet`};
+  const kind = days <= 14 ? 'urgent' : days <= 30 ? 'soon' : days <= 60 ? 'warn' : 'ok';
+  return {kind, days, when, label: days===0 ? 'Letter today' : `${days} day${days===1?'':'s'}`, title:`Lender letter due around ${when}. Contact the client before then.`};
+}
+function sibLetterPill(c, big){
+  const st = sibLetterState(c); if(!st) return '';
+  const pct = st.kind==='late' ? 100 : Math.max(4, Math.min(100, 100 - (st.days / 120) * 100));
+  return `<span class="sib-letter ${st.kind}${big ? ' big' : ''}" title="${esc(st.title)}">
+    <span class="lbl">${st.kind==='done' || st.kind==='closed' || st.kind==='late' ? '' : '⏳ '}${esc(st.label)}</span>
+    ${st.kind!=='done' && st.kind!=='closed' ? `<span class="track"><i style="width:${pct}%"></i></span>` : ''}
+  </span>`;
+}
+function sibLetterBanner(c){
+  const st = sibLetterState(c); if(!st || st.kind==='closed') return '';
+  const msg = st.kind==='done' ? `Contacted before the lender's letter (due around ${st.when}). Nice work.`
+    : st.kind==='late' ? `The lender's reminder letter went out around <b>${esc(st.when)}</b> and this client hasn't been contacted yet. Call them today.`
+    : `<b>${st.days===0 ? 'The lender letter is due today' : `${st.days} day${st.days===1?'':'s'} until the lender's reminder letter`}</b> (around ${esc(st.when)}). Get in touch before it lands.`;
+  return `<div class="sib-letter-banner ${st.kind}">${sibLetterPill(c, true)}<div>${msg}${c.letterDate ? '' : `<div class="nml-notes">Estimated: ${sibLetterMonths()} month${sibLetterMonths()===1?'':'s'} before the product end month. Set the exact date in Edit details if you know it.</div>`}</div></div>`;
+}
 
 /* ---- Send in Blue appointments ----
    case.appointment = {date:'YYYY-MM-DD', time:'HH:MM', type, with, note, by, at}.
@@ -4556,6 +4635,11 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-08', date:'2026-10-08', items:[
+    {text:"<b>⏳ Lender letter countdown</b> on every Send in Blue case: how many days until the lender sends their reminder letter, turning amber then red as it gets close. The goal is to contact the client <b>before</b> the letter lands."},
+    {text:"Pick <b>Beat the letter</b> in the filter (or tap the ⏳ chip) to list everyone not yet contacted, soonest letter first."},
+    {text:"Management can change when the letter goes (default 6 months before the product ends) in <b>Settings → Send in Blue data</b>, and Insights shows how many clients were contacted before their letter.", roles:['management']},
+  ]},
   {id:'2026-10-07c', date:'2026-10-07', items:[
     {text:"<b>Appointments in Send in Blue</b>: book a phone, video, face-to-face or office appointment from any Send in Blue case, add it to your Google Calendar or send the client an invite, then mark it attended, rebook or cancel."},
     {text:"Booked appointments show on the case and in the list, and <b>Upcoming appointments</b> in the filter (or the 📅 chip) lists them all, soonest first."},
@@ -4694,6 +4778,9 @@ function renderSibInsights(){
     statCard(atRisk, 'Ending ≤3 months, not contacted', atRisk ? 'bad' : 'good') +
     statCard(overdue, 'Send in Blue emails due, not ticked', overdue ? 'warn' : 'good') +
     statCard(unsub + dnc, `Unsubscribed (${unsub}) / do not contact (${dnc})`) +
+    (()=>{ const due = list.filter(c=>{ const d = sibLetterDate(c); return d && d <= new Date() && !c.doNotContact && c.retentionKey!=='No Opportunity'; });
+           const beat = due.filter(c=> sibLetterState(c).kind==='done').length;
+           return statCard(`${beat} · ${pctTxt(beat, due.length)}`, `Contacted before the lender letter (of ${due.length} letters gone)`, due.length && beat/due.length >= .7 ? 'good' : 'warn'); })() +
     statCard(`${list.filter(c=> c.protectionConvo).length} · ${pctTxt(list.filter(c=> c.protectionConvo).length, o.contacted)}`, 'Protection conversations (of clients contacted)', 'accent') +
     statCard(list.filter(c=> c.protectionLeadId).length, 'Added to protection pipeline', 'good');
   // by month
@@ -4797,6 +4884,7 @@ function resetSibBulkDelete(){
 }
 function renderSibSettings(){
   if(!currentUser || currentUser.role!=='management') return;
+  const ld = document.getElementById('sibLetterDaysInput'); if(document.activeElement !== ld) ld.value = sibLetterMonths();
   const mapaNames = new Set(Object.values(USERS).filter(u=> u && u.role==='mapa').map(u=> sibName(u.name)));
   const unmatched = {};
   sibCases().forEach(c=>{ const n = sibAdvLabel(c); if(n!==SIB_UNALLOCATED && !mapaNames.has(sibName(n))) unmatched[n] = (unmatched[n]||0) + 1; });
@@ -7428,6 +7516,13 @@ document.getElementById('sibBackupNowBtn').addEventListener('click', ()=>{
     if(!Object.keys(SIB).length){ toast('There are no Send in Blue cases to back up yet.','error'); return; }
     downloadSibBackup(false);
   }).catch(err=> toast('Could not load Send in Blue cases: '+err.message,'error'));
+});
+document.getElementById('sibLetterDaysSave').addEventListener('click', function(){
+  const v = Math.round(Number(document.getElementById('sibLetterDaysInput').value));
+  if(!(v >= 1 && v <= 12)){ toast('Enter a number of months between 1 and 12.','error'); return; }
+  this.disabled = true;
+  db.ref('config/sibLetterMonths').set(v).then(()=> toast(`Lender letter countdown now ${v} month${v===1?'':'s'} before the product ends`,'success'))
+    .catch(err=> toast('Could not save: '+err.message,'error')).finally(()=>{ this.disabled = false; });
 });
 document.getElementById('sibRestoreBtn').addEventListener('click', ()=> document.getElementById('sibRestoreInput').click());
 document.getElementById('sibRestoreInput').addEventListener('change', function(){

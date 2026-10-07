@@ -692,6 +692,11 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-ins-wrap{overflow-x:auto;}
 .sib-oi-table th.sib-oi-grp{text-align:center; border-bottom:1px solid var(--border); color:var(--text-muted);}
 .sib-oi-table td.sib-oi-pct{font-weight:700;}
+.sib-ins-tabs{display:flex; gap:2px; margin:20px 0 16px; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none;}
+.sib-ins-tabs::-webkit-scrollbar{display:none;}
+.sib-ins-tabs button{flex:none; border:none; background:none; padding:9px 14px; margin-bottom:-1px; border-bottom:2.5px solid transparent; border-radius:8px 8px 0 0; font:inherit; font-size:13.5px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap;}
+.sib-ins-tabs button:hover{background:var(--brand-tint); color:var(--text);}
+.sib-ins-tabs button.on{color:var(--brand); border-bottom-color:var(--brand);}
 .sib-oi-table tr.sib-oi-total td{font-weight:700; border-top:2px solid var(--border-2);}
 .sib-note-preview{margin-top:4px; font-size:12px; color:var(--text-muted); font-style:italic; max-width:460px; white-space:pre-wrap; word-break:break-word;}
 .sib-table tbody tr:hover td{background:var(--brand-tint);}
@@ -4655,6 +4660,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-09', date:'2026-10-09', items:[
+    {text:"<b>Tidier Send in Blue Insights</b>: the headline figures stay at the top, and the detail now sits under tabs (By month, Advisers, Lender letter, Won & lost, Protection, Emails, Team activity), so you only see one section at a time."},
+  ]},
   {id:'2026-10-08d', date:'2026-10-08', items:[
     {text:"<b>Insights: retained before vs after the lender letter</b>. A new table compares the retained % (leaving out No opportunity cases) for clients first contacted before their lender letter, after it, and those with no contact logged."},
     {text:"<b>Slimmer Send in Blue list</b>: each case now takes about a third less height, so more fit on screen. Case notes show on one line; hover over them to read the full note."},
@@ -4744,7 +4752,7 @@ function renderSettingsNav(){
 document.getElementById('settingsBack').addEventListener('click', ()=>{ settingsSel = null; renderSettingsNav(); window.scrollTo(0, 0); });
 
 /* ---- Send in Blue Insights (Management) ---- */
-const sibIns = {from:'', to:'', adviser:'', days:30};
+const sibIns = {from:'', to:'', adviser:'', days:30, tab:'months'};
 function pct(a, b){ return b ? Math.round(a/b*100) : null; }
 function pctTxt(a, b){ const p = pct(a, b); return p==null ? '—' : p+'%'; }
 function sibContacted(c){ return !!(c.lastContact || c.retentionKey || Object.values(c.audit||{}).some(a=> a && (a.type==='call' || a.type==='email'))); }
@@ -4868,31 +4876,40 @@ function renderSibInsights(){
   const letterRows = byLetter.map(([lbl, fn])=>{ const x = sibOutcomeCounts(list.filter(fn));
     return `<tr><td style="font-weight:600;">${lbl}</td><td class="num" title="${x.cases} cases − ${x.noOpp} no opportunity">${x.cases - x.noOpp}</td><td class="num">${x.retained}</td><td class="num">${x.notConverted}</td><td class="num">${x.open}</td><td class="num sib-oi-pct" title="${sibRetTitle(x)}">${sibRetPct(x)}</td></tr>`; }).join('');
   const table = (head, rows, empty)=> rows ? `<div class="sib-ins-wrap"><table class="mini-table sib-ins-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="insights-empty">${empty}</div>`;
-  body.innerHTML = `
-    <div class="stat-grid">${tiles}</div>
+  // Detail tables sit behind tabs; the headline figures above stay visible.
+  const sections = [
+    ['months', 'By month', `
     <div class="insights-card" style="margin-bottom:20px;"><h4>Retention by month (when the product ends)</h4>${legend}
-      ${table('<th>Month</th><th class="num">Cases</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Open</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th><th>Outcomes</th>', monthRows, 'No cases.')}</div>
+      ${table('<th>Month</th><th class="num">Cases</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Open</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th><th>Outcomes</th>', monthRows, 'No cases.')}</div>`],
+    ['advisers', sibSeesAll() ? 'Advisers' : 'Own vs inherited', `
     <div class="insights-card" style="margin-bottom:20px;"><h4>Own vs inherited clients</h4>
       <p class="nml-note" style="margin-top:-6px;">Inherited = the client came from another adviser (the Ex Adviser column). Cases and retained % both leave out "No opportunity" cases (sold, moved, cleared the mortgage).</p>
       <div class="sib-ins-wrap"><table class="mini-table sib-ins-table sib-oi-table"><thead>${oiHead}</thead><tbody>${oiRows}</tbody></table></div></div>
-    <div class="insights-card" style="margin-bottom:20px;"><h4>Retained: contacted before vs after the lender letter</h4>
-      <p class="nml-note" style="margin-top:-6px;">First contact = the first call, email, appointment or protection chat logged (or the spreadsheet's last contact date). Cases and retained % both leave out "No opportunity" cases (sold, moved, cleared the mortgage).</p>
-      ${table('<th>First contact</th><th class="num">Cases</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">Open</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', letterRows, 'No cases.')}</div>
     <div class="insights-card${sibSeesAll() ? '' : ' hidden'}" style="margin-bottom:20px;"><h4>By servicing adviser</h4>
       ${table('<th>Servicing adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', advRows, 'No cases.')}</div>
+    <div class="insights-card" style="margin-bottom:20px;"><h4>Inherited book (clients of ex advisers)</h4>
+      ${table('<th>Ex adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Retained</th><th class="num">Lost</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', exRows, 'No ex-adviser cases in this range.')}</div>`],
+    ['letter', 'Lender letter', `
+    <div class="insights-card" style="margin-bottom:20px;"><h4>Retained: contacted before vs after the lender letter</h4>
+      <p class="nml-note" style="margin-top:-6px;">First contact = the first call, email, appointment or protection chat logged (or the spreadsheet's last contact date). Cases and retained % both leave out "No opportunity" cases (sold, moved, cleared the mortgage).</p>
+      ${table('<th>First contact</th><th class="num">Cases</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">Open</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', letterRows, 'No cases.')}</div>`],
+    ['outcomes', 'Won & lost', `
     <div class="insights-cols">
       <div class="insights-card"><h4>Why business is lost (${lost} not converted / no opportunity)</h4>${sibHBars(reasonCounts(c=> c.retentionKey==='Not Converted' || c.retentionKey==='No Opportunity'), lost)}</div>
       <div class="insights-card"><h4>How cases were retained (${o.retained})</h4>${sibHBars(reasonCounts(c=> c.retentionKey==='Retained'), o.retained)}</div>
-    </div>
+    </div>`],
+    ['protection', 'Protection', `
     <div class="insights-card" style="margin-bottom:20px;"><h4>Protection conversations (${list.filter(c=> c.protectionConvo).length})</h4>
       ${sibHBars(Object.entries(list.filter(c=> c.protectionConvo).reduce((m, c)=>{ const v = c.protectionConvo, k = (SIB_CONVO_OUTCOMES[v.outcome]||v.outcome) + (v.reason ? ': '+v.reason : ''); m[k] = (m[k]||0)+1; return m; }, {})).sort((a,b)=> b[1]-a[1]), list.filter(c=> c.protectionConvo).length)}
-      ${(()=>{ const leads = list.map(c=> c.protectionLeadId && LEADS[c.protectionLeadId]).filter(l=> l && !l.deleted); const won = leads.filter(l=> ['signedup','underwriting','completed'].includes(potOf(l))).length; return leads.length ? `<p class="nml-note" style="margin-bottom:0;">${leads.length} in the protection pipeline from Send in Blue; ${won} signed up or in underwriting so far.</p>` : ''; })()}</div>
+      ${(()=>{ const leads = list.map(c=> c.protectionLeadId && LEADS[c.protectionLeadId]).filter(l=> l && !l.deleted); const won = leads.filter(l=> ['signedup','underwriting','completed'].includes(potOf(l))).length; return leads.length ? `<p class="nml-note" style="margin-bottom:0;">${leads.length} in the protection pipeline from Send in Blue; ${won} signed up or in underwriting so far.</p>` : ''; })()}</div>`],
+    ['emails', 'Emails', `
     <div class="insights-cols">
       <div class="insights-card"><h4>Client email engagement ("Email client?")</h4>${sibHBars(ec, o.cases)}</div>
       <div class="insights-card"><h4>Send in Blue emails sent on time</h4>
         ${table('<th>Email</th><th class="num">Now due</th><th class="num">Ticked</th><th class="num">Not ticked</th><th class="num">Done</th>', sibCover, '')}
         <p class="nml-note" style="margin-bottom:0;">"Now due" counts cases within 6, 3 or 0 months of the product ending, excluding unsubscribed and do-not-contact clients.</p></div>
-    </div>
+    </div>`],
+    ['activity', 'Team activity', `
     <div class="insights-card" style="margin-bottom:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
         <h4 style="margin:0;">Team activity on these cases</h4>
@@ -4901,9 +4918,18 @@ function renderSibInsights(){
       ${table('<th>Colleague</th><th class="num">Calls</th><th class="num">Emails</th><th class="num">Notes</th><th class="num">Outcomes</th><th class="num">SIB ticks</th><th class="num">Total</th><th>Last action</th>', actRows, 'No activity in this period.')}
       <div class="section-lbl">Actions per week (last 8 weeks)</div>
       <div class="sib-weeks" role="img" aria-label="Actions per week">${weeks.map(w=> `<div title="Week of ${esc(fmtDate(w.start))}: ${w.n} action${w.n===1?'':'s'}"><span>${w.n}</span><i style="height:${w.n/wMax*80}%"></i><span>${esc(new Date(w.start).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))}</span></div>`).join('')}</div>
-    </div>
-    <div class="insights-card" style="margin-bottom:20px;"><h4>Inherited book (clients of ex advisers)</h4>
-      ${table('<th>Ex adviser</th><th class="num">Cases</th><th class="num">Open</th><th class="num">Retained</th><th class="num">Lost</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th>', exRows, 'No ex-adviser cases in this range.')}</div>`;
+    </div>`],
+  ];
+  if(!sections.some(([k])=> k===sibIns.tab)) sibIns.tab = 'months';
+  body.innerHTML = `
+    <div class="stat-grid">${tiles}</div>
+    <div class="sib-ins-tabs" role="tablist" aria-label="Insights sections">${sections.map(([k, lbl])=> `<button type="button" role="tab" data-ins-tab="${k}" aria-selected="${k===sibIns.tab}" class="${k===sibIns.tab?'on':''}">${lbl}</button>`).join('')}</div>
+    ${sections.map(([k, , html])=> `<div class="sib-ins-sec${k===sibIns.tab?'':' hidden'}" data-ins-sec="${k}" role="tabpanel">${html}</div>`).join('')}`;
+  body.querySelectorAll('[data-ins-tab]').forEach(b=> b.addEventListener('click', ()=>{
+    sibIns.tab = b.dataset.insTab;
+    body.querySelectorAll('[data-ins-tab]').forEach(x=>{ const on = x===b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
+    body.querySelectorAll('[data-ins-sec]').forEach(x=> x.classList.toggle('hidden', x.dataset.insSec!==sibIns.tab));
+  }));
   const daysSel = document.getElementById('sibInsDays');
   daysSel.value = String(sibIns.days);
   daysSel.addEventListener('change', ()=>{ sibIns.days = Number(daysSel.value); renderSibInsights(); });

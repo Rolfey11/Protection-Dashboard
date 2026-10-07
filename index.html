@@ -647,6 +647,8 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 @media (prefers-reduced-motion:reduce){ .sib-letter.late .lbl{animation:none;} }
 .sib-letter-banner{display:flex; align-items:center; gap:14px; margin:12px 0 0; padding:12px 14px; border-radius:12px; font-size:13px; line-height:1.5; background:var(--green-bg);}
 .sib-letter-banner.warn{background:var(--amber-bg);} .sib-letter-banner.soon,.sib-letter-banner.urgent,.sib-letter-banner.late{background:var(--red-bg);}
+.sib-letter-banner > .sib-letter{flex-shrink:0;}
+@media (max-width:560px){ .sib-letter-banner{flex-direction:column; align-items:flex-start;} }
 .sib-letter-setting{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:14px; font-size:13px;}
 .sib-letter-setting input{width:72px; padding:6px 8px; border:1.5px solid var(--border-2); border-radius:8px; font:inherit; background:var(--surface); color:var(--text);}
 .sib-appt-banner{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0 0; padding:10px 12px; border-radius:10px; background:var(--blue-bg); font-size:13px;}
@@ -3950,10 +3952,7 @@ function renderSib(){
     <span class="sib-tag open">${count('Open')} open</span><span class="sib-tag ret">${count('Retained')} retained</span>
     <span class="sib-tag nop">${count('No Opportunity')} no opportunity</span><span class="sib-tag nop">${count('Not Converted')} not converted</span>
     <span class="sib-tag due">${mc.filter(c=> [6,3,0].some(n=> sibEmailState(c,n).due)).length} SIB email${mc.length===1?'':'s'} due</span>
-    ${(()=>{ const n = all.filter(c=>{ const st = sibLetterState(c); return st && (st.kind==='urgent' || st.kind==='late'); }).length; return n ? `<button type="button" class="sib-tag nop sib-appt-chip" id="sibLetterChip">⏳ ${n} to contact before / since the lender letter</button>` : ''; })()}
     ${(()=>{ const n = all.filter(sibApptUpcoming).length; return n ? `<button type="button" class="sib-tag open sib-appt-chip" id="sibApptChip">📅 ${n} upcoming appointment${n===1?'':'s'}</button>` : ''; })()}`;
-  const lchip = document.getElementById('sibLetterChip');
-  if(lchip) lchip.addEventListener('click', ()=>{ sibState.outcome = 'letter'; document.getElementById('sibOutcomeFilter').value = 'letter'; renderSib(); });
   const chip = document.getElementById('sibApptChip');
   if(chip) chip.addEventListener('click', ()=>{ sibState.outcome = 'appt'; document.getElementById('sibOutcomeFilter').value = 'appt'; renderSib(); });
   // adviser options
@@ -4349,7 +4348,7 @@ function sibLetterState(c){
   const first = sibFirstContact(c), letterEnd = letter.getTime() + 86400000;
   const when = letter.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
   if(first && first < letterEnd) return {kind:'done', days, when, label:'✓ Before letter', title:`Contacted before the lender letter (${when})`};
-  if(c.retentionKey || c.doNotContact) return {kind:'closed', days, when, label:'—', title:`Lender letter ${days < 0 ? 'was' : 'is'} due ${when}`};
+  if(c.retentionKey || c.doNotContact || sibMonthsAway(c.month) < 0) return {kind:'closed', days, when, label:'—', title:`Lender letter ${days < 0 ? 'was' : 'is'} due ${when}`};
   if(days < 0) return {kind:'late', days, when, label:`Letter sent ${-days}d ago`, title:`The lender letter went out around ${when} and the client hasn't been contacted yet`};
   const kind = days <= 14 ? 'urgent' : days <= 30 ? 'soon' : days <= 60 ? 'warn' : 'ok';
   return {kind, days, when, label: days===0 ? 'Letter today' : `${days} day${days===1?'':'s'}`, title:`Lender letter due around ${when}. Contact the client before then.`};
@@ -4637,7 +4636,7 @@ function openSibFromLead(key){
 const WHATS_NEW = [
   {id:'2026-10-08', date:'2026-10-08', items:[
     {text:"<b>⏳ Lender letter countdown</b> on every Send in Blue case: how many days until the lender sends their reminder letter, turning amber then red as it gets close. The goal is to contact the client <b>before</b> the letter lands."},
-    {text:"Pick <b>Beat the letter</b> in the filter (or tap the ⏳ chip) to list everyone not yet contacted, soonest letter first."},
+    {text:"Pick <b>Beat the letter</b> in the filter to list everyone not yet contacted, soonest letter first."},
     {text:"Management can change when the letter goes (default 6 months before the product ends) in <b>Settings → Send in Blue data</b>, and Insights shows how many clients were contacted before their letter.", roles:['management']},
   ]},
   {id:'2026-10-07c', date:'2026-10-07', items:[

@@ -2814,11 +2814,16 @@ function toDate(d){
   return new Date(d);
 }
 
+/* One shared formatter per format. toLocaleDateString builds a new one on
+   every call, which gets slow across thousands of Send in Blue cases. */
+const DATE_FMTS = {};
+function dfmt(opts){ const k = JSON.stringify(opts); return DATE_FMTS[k] || (DATE_FMTS[k] = new Intl.DateTimeFormat('en-GB', opts)); }
+
 function fmtDate(d){
   if(!d) return '—';
   const dt = toDate(d);
   if(isNaN(dt)) return esc(d);
-  return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  return dfmt({day:'numeric',month:'short',year:'numeric'}).format(dt);
 }
 
 /* Used specifically in audit trail entries, e.g. "Call - Follow Up - 30/09/2026" */
@@ -2826,14 +2831,14 @@ function fmtDateSlash(d){
   if(!d) return '—';
   const dt = toDate(d);
   if(isNaN(dt)) return esc(d);
-  return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+  return dfmt({day:'2-digit',month:'2-digit',year:'numeric'}).format(dt);
 }
 
 function fmtDateTime(ts){
   if(!ts) return '—';
   const dt = new Date(ts);
-  return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) + ' at ' +
-         dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  return dfmt({day:'numeric',month:'short',year:'numeric'}).format(dt) + ' at ' +
+         dfmt({hour:'2-digit',minute:'2-digit'}).format(dt);
 }
 
 function timeAgo(ts){
@@ -2855,11 +2860,8 @@ function csvCell(v){
   return `"${t.replace(/"/g,'""')}"`;
 }
 
-function esc(str){
-  const d = document.createElement('div');
-  d.textContent = str==null? '' : String(str);
-  return d.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
+const ESC_MAP = {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'};
+function esc(str){ return (str==null ? '' : String(str)).replace(/[&<>"']/g, ch=> ESC_MAP[ch]); }
 
 
 /* ----------------------------------------------------------------------------
@@ -3848,7 +3850,7 @@ let APP_MODE = 'protection';
 try{ if(localStorage.getItem('plt_mode')==='sib') APP_MODE = 'sib'; }catch(e){}
 let SIB = {}, sibListening = false, sibLoaded = false, sibOpenKey = null, sibAction = null;
 document.body.classList.toggle('mode-sib', APP_MODE==='sib');
-const sibState = {month:null, search:'', adviser:'', outcome:'open', emailClient:''};
+const sibState = {month:null, search:'', adviser:'', outcome:'open', emailClient:'', showAll:false};
 
 function setAppMode(mode, go=true){
   APP_MODE = mode==='sib' ? 'sib' : 'protection';
@@ -3888,7 +3890,7 @@ function sibMonthLabel(key){
 }
 function sibMonthLong(key){
   const [y, m] = String(key||'').split('-').map(Number);
-  return y && m ? new Date(y, m-1, 1).toLocaleDateString('en-GB', {month:'long', year:'numeric'}) : '';
+  return y && m ? dfmt({month:'long', year:'numeric'}).format(new Date(y, m-1, 1)) : '';
 }
 function sibMonthsAway(key){
   const [y, m] = String(key||'').split('-').map(Number);
@@ -3915,21 +3917,33 @@ function sibEmailState(c, n){
 function sibDay(v){
   if(!v) return '';
   const d = typeof v==='number' ? new Date(v) : toDate(v);
-  return isNaN(d) ? String(v) : d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+  return isNaN(d) ? String(v) : dfmt({day:'numeric', month:'short'}).format(d);
 }
 function sibOutcome(c){ return c.retentionKey || 'Open'; }
 function sibOutcomeClass(o){ return o==='Retained' ? 'ret' : o==='Open' ? 'open' : 'nop'; }
 function sibCases(){ return Object.entries(SIB).filter(([, c])=> c && typeof c==='object' && !c.deleted).map(([key, c])=> ({...c, key})); }
 /* MAPAs see only the cases where they're the servicing adviser (matched on
    their name); Management and Admin see every case. */
-function sibName(n){ return String(n||'').replace(/^x\s+/i,'').toLowerCase().replace(/[^a-z]+/g,' ').trim(); }
+const sibNameMemo = new Map();
+function sibName(n){
+  const raw = String(n||'');
+  let v = sibNameMemo.get(raw);
+  if(v === undefined){ v = raw.replace(/^x\s+/i,'').toLowerCase().replace(/[^a-z]+/g,' ').trim(); if(sibNameMemo.size < 5000) sibNameMemo.set(raw, v); }
+  return v;
+}
 function sibIsMine(c){ return !!currentUser && sibName(c.servicingAdviser) === sibName(currentUser.name); }
 // One tidy name per adviser, so "Sima Rai" and "Sima Rai " (or different case) group together.
 const SIB_UNALLOCATED = 'Not allocated';
+// Remembered per spreadsheet name; cleared whenever the colleague list changes.
+const sibAdvCache = new Map();
 function sibAdvLabel(c){
-  const k = sibName(c.servicingAdviser); if(!k) return SIB_UNALLOCATED;
-  const u = Object.values(USERS).find(x=> x && sibName(x.name)===k);
-  return u ? u.name : String(c.servicingAdviser).trim().replace(/\s+/g,' ');
+  const raw = c.servicingAdviser == null ? '' : String(c.servicingAdviser);
+  if(sibAdvCache.has(raw)) return sibAdvCache.get(raw);
+  const k = sibName(raw);
+  const u = k && Object.values(USERS).find(x=> x && sibName(x.name)===k);
+  const label = !k ? SIB_UNALLOCATED : u ? u.name : raw.trim().replace(/\s+/g,' ');
+  sibAdvCache.set(raw, label);
+  return label;
 }
 function sibSeesAll(){ return !!currentUser && currentUser.role!=='mapa'; }
 function sibVisibleCases(){ const all = sibCases(); return sibSeesAll() ? all : all.filter(sibIsMine); }
@@ -3958,6 +3972,7 @@ function sibFilter(list, ignoreMonth){
 function renderSib(){
   const page = document.getElementById('page-sib');
   if(page.classList.contains('hidden')) return;
+  sibLetterMemo.clear();
   const isMg = currentUser && currentUser.role==='management';
   document.getElementById('sibImportShortcut').classList.toggle('hidden', !isMg);
   const all = sibVisibleCases();
@@ -3981,6 +3996,7 @@ function renderSib(){
   const year = sibState.month.slice(0,4);
   document.getElementById('sibYears').innerHTML = years.map(y=> `<button type="button" class="${y===year?'on':''}" data-sib-year="${esc(y)}">${esc(y)} <span>${allMonths.filter(m=> m.startsWith(y)).reduce((t, m)=> t + byMonth[m].length, 0)}</span></button>`).join('');
   document.querySelectorAll('[data-sib-year]').forEach(b=> b.addEventListener('click', ()=>{
+    sibState.showAll = false;
     const ym = allMonths.filter(m=> m.startsWith(b.dataset.sibYear));
     sibState.month = ym.find(m=> sibMonthsAway(m) >= 0) || ym[ym.length-1];
     renderSib();
@@ -3997,7 +4013,7 @@ function renderSib(){
       ${tag ? `<span class="sib-tag ${tag[0]}">${tag[1]}</span>` : ''}
     </button>`;
   }).join('');
-  document.querySelectorAll('[data-sib-month]').forEach(b=> b.addEventListener('click', ()=>{ sibState.month = b.dataset.sibMonth; sibState.search = ''; document.getElementById('sibSearch').value = ''; renderSib(); }));
+  document.querySelectorAll('[data-sib-month]').forEach(b=> b.addEventListener('click', ()=>{ sibState.month = b.dataset.sibMonth; sibState.search = ''; sibState.showAll = false; document.getElementById('sibSearch').value = ''; renderSib(); }));
   // summary for the chosen month
   const mc = byMonth[sibState.month] || [];
   const count = k=> mc.filter(c=> sibOutcome(c)===k).length;
@@ -4007,7 +4023,7 @@ function renderSib(){
     ${(()=>{ const n = mc.filter(c=> [6,3,0].some(k=> sibEmailState(c,k).due)).length; return `<span class="sib-tag due">${n} SIB email${n===1?'':'s'} due</span>`; })()}
     ${(()=>{ const n = all.filter(sibApptUpcoming).length; return n ? `<button type="button" class="sib-tag open sib-appt-chip" id="sibApptChip">📅 ${n} upcoming appointment${n===1?'':'s'}</button>` : ''; })()}`;
   const chip = document.getElementById('sibApptChip');
-  if(chip) chip.addEventListener('click', ()=>{ sibState.outcome = 'appt'; document.getElementById('sibOutcomeFilter').value = 'appt'; renderSib(); });
+  if(chip) chip.addEventListener('click', ()=>{ sibState.showAll = false; sibState.outcome = 'appt'; document.getElementById('sibOutcomeFilter').value = 'appt'; renderSib(); });
   // adviser options
   const advs = [...new Set(all.map(sibAdvLabel))].filter(a=> a!==SIB_UNALLOCATED).sort();
   const unalloc = all.filter(c=> sibAdvLabel(c)===SIB_UNALLOCATED).length;
@@ -4019,6 +4035,9 @@ function renderSib(){
   // rows
   const rows = sibFilter(all).sort((a,b)=> sibState.outcome==='appt' ? sibApptMs(a) - sibApptMs(b) : sibState.outcome==='letter' ? sibLetterState(a).days - sibLetterState(b).days : (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
   const searching = !!sibState.search.trim() || sibState.outcome==='appt' || sibState.outcome==='letter';
+  // Long lists (Beat the letter, searches) show the first 200; "Show all" draws the rest.
+  const total = rows.length;
+  if(!sibState.showAll && rows.length > 200) rows.length = 200;
   const emailTags = c=> sibUnsubscribed(c) ? '<span class="sib-tag no">Unsubscribed</span>' : [6,3,0].map(n=>{
     const s = sibEmailState(c, n);
     return s.sent ? `<span class="sib-tag ok" title="${n}-month email sent">${n}m ✓ ${esc(sibDay(s.sent))}</span>` : s.due ? `<span class="sib-tag due">${n}m due</span>` : `<span class="sib-tag no">${n}m</span>`;
@@ -4039,12 +4058,15 @@ function renderSib(){
         <td>${sibProtectionCell(c)}</td>
         <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}</td>
       </tr>`;
-    }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>');
+    }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>') +
+    (total > rows.length ? `<div style="text-align:center; margin-top:12px;"><span class="nml-note">Showing the first ${rows.length} of ${total}.</span> <button type="button" class="btn btn-secondary btn-sm" id="sibShowAll">Show all ${total}</button></div>` : '');
   out.querySelectorAll('[data-sib-case]').forEach(tr=> tr.addEventListener('click', ()=> openSibCase(tr.dataset.sibCase)));
+  const more = document.getElementById('sibShowAll');
+  if(more) more.addEventListener('click', ()=>{ sibState.showAll = true; renderSib(); });
 }
-document.getElementById('sibSearch').addEventListener('input', function(){ sibState.search = this.value; renderSib(); });
+document.getElementById('sibSearch').addEventListener('input', function(){ sibState.search = this.value; sibState.showAll = false; renderSib(); });
 [['sibAdviser','adviser'],['sibOutcomeFilter','outcome'],['sibEmailFilter','emailClient']].forEach(([id, k])=>
-  document.getElementById(id).addEventListener('change', function(){ sibState[k] = this.value; renderSib(); }));
+  document.getElementById(id).addEventListener('change', function(){ sibState[k] = this.value; sibState.showAll = false; renderSib(); }));
 document.getElementById('sibImportShortcut').addEventListener('click', ()=>{ settingsSel = 'settingsSibSection'; goPage('settings'); });
 document.getElementById('uploadLeadsShortcut').addEventListener('click', ()=>{ settingsSel = 'settingsUploadSection'; goPage('settings'); });
 
@@ -4397,12 +4419,20 @@ function sibFirstContact(c){
   if(c.lastContact) ts.push(c.lastContact);
   return ts.length ? Math.min(...ts) : null;
 }
+// Worked out once per case per screen draw (renderSib / renderSibInsights clear it).
+const sibLetterMemo = new Map();
 function sibLetterState(c){
+  if(c.key && sibLetterMemo.has(c.key)) return sibLetterMemo.get(c.key);
+  const st = sibLetterStateCalc(c);
+  if(c.key) sibLetterMemo.set(c.key, st);
+  return st;
+}
+function sibLetterStateCalc(c){
   const letter = sibLetterDate(c); if(!letter) return null;
   const today = new Date(); today.setHours(0,0,0,0);
   const days = Math.round((letter - today) / 86400000);
   const first = sibFirstContact(c), letterEnd = letter.getTime() + 86400000;
-  const when = letter.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+  const when = dfmt({day:'numeric', month:'short', year:'numeric'}).format(letter);
   if(first && first < letterEnd) return {kind:'done', days, when, label:'✓ Before letter', title:`Contacted before the lender letter (${when})`};
   if(first) return {kind:'after', days, when, label:'Contacted after letter', title:`First contacted ${fmtDate(first)}, after the lender letter (${when})`};
   if(c.retentionKey || c.doNotContact || sibMonthsAway(c.month) < 0) return {kind:'closed', days, when, label:'—', title:`Lender letter ${days < 0 ? 'was' : 'is'} due ${when}`};
@@ -4435,7 +4465,7 @@ function sibApptMs(c){ const a = c.appointment; return a && a.date ? new Date(`$
 function sibApptUpcoming(c){ return !!(c.appointment && c.appointment.date) && sibApptMs(c) >= new Date().setHours(0,0,0,0); }
 function sibApptWhen(a){
   const d = new Date(`${a.date}T${a.time||'09:00'}:00`);
-  return d.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'}) + (a.time ? ' at ' + a.time : '');
+  return dfmt({weekday:'short', day:'numeric', month:'short', year:'numeric'}).format(d) + (a.time ? ' at ' + a.time : '');
 }
 function sibApptTag(c){
   const a = c.appointment; if(!a || !a.date) return '';
@@ -4708,6 +4738,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-09d', date:'2026-10-09', items:[
+    {text:"<b>Faster Send in Blue</b>: the Beat the letter list, the case list and Insights now open in a fraction of the time. Long lists show the first 200 cases (soonest first), with a <b>Show all</b> button underneath."},
+  ]},
   {id:'2026-10-09c', date:'2026-10-09', items:[
     {text:"<b>New pot: Terms Issued</b>, between <b>Submitted / In Underwriting</b> (renamed from In Underwriting) and <b>On Risk</b> (renamed from Sign Ups)."},
     {text:"<b>Fully declined cases are off the board</b>: the Declined · email sent pot is now hidden. Click <b>Fully Declined Leads</b> (right of the advisor filter) to see them."},
@@ -4835,6 +4868,7 @@ function sibHBars(entries, total){
 function renderSibInsights(){
   const page = document.getElementById('page-sibInsights');
   if(!page || page.classList.contains('hidden') || !currentUser) return;
+  sibLetterMemo.clear();
   const body = document.getElementById('sibInsBody');
   document.getElementById('sibInsSub').textContent = sibSeesAll() ? 'How the retention book is performing: outcomes, follow-up, advisers and team activity.' : 'How your Send in Blue cases are going: your own clients and the ones you inherited.';
   if(!sibLoaded){ body.innerHTML = '<div class="nml-empty">Loading…</div>'; return; }
@@ -5197,6 +5231,7 @@ function refreshInsightsIfVisible(){
 db.ref('users').on('value', snap=>{
   USERS = snap.val() || {};
   usersLoaded = true;
+  sibAdvCache.clear();
   migratePinsOutOfUsers();
   renderUserSelect();
   tryResolveSession();
@@ -5633,7 +5668,7 @@ function followUpInline(dateStr, timeStr){
   const due = toDate(dateStr); due.setHours(0,0,0,0);
   const diff = Math.round((due - today) / 86400000);
   const at = timeStr ? `, ${esc(timeStr)}` : '';
-  const short = toDate(dateStr).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const short = dfmt({day:'numeric',month:'short'}).format(toDate(dateStr));
   const [label, tone] = isCallOverdue(dateStr, timeStr) ? [diff===0 ? `Overdue today${at}` : `Overdue ${short}${at}`, 'bad']
     : diff === 0 ? [`Call today${at}`, 'warn']
     : diff === 1 ? [`Call tomorrow${at}`, 'soon']

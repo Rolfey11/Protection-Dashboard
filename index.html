@@ -49,6 +49,7 @@
   --green:#1A9A63;   --green-bg:#E4F7EE;
   --teal:#0E8F8F;    --teal-bg:#E2F6F6;
   --violet:#7C4DDB;  --violet-bg:#F0EAFD;
+  --indigo:#3F51C7;  --indigo-bg:#E8EBFC;
 
   --radius-sm:8px;
   --radius:14px;
@@ -79,6 +80,7 @@
   --green:#3FCB8E; --green-bg:#123023;
   --teal:#3FC6C6; --teal-bg:#123333;
   --violet:#A98BFF; --violet-bg:#2A2147;
+  --indigo:#8C9BFF; --indigo-bg:#1F2446;
   color-scheme:dark;
 }
 :root[data-theme="ocean"]{
@@ -792,6 +794,8 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .btn svg{width:15px; height:15px;}
 
 .filter-row{display:flex; align-items:center; gap:8px; margin-bottom:20px; flex-wrap:wrap;}
+.filter-chip.declined-chip{margin-left:auto; border-color:var(--teal); color:var(--teal);}
+.fd-table tbody tr{cursor:pointer;} .fd-table tbody tr:hover td{background:var(--brand-tint);}
 .filter-chip{
   padding:7px 14px; border-radius:99px; border:1.5px solid var(--border-2); background:var(--surface);
   font-size:12.5px; font-weight:600; color:var(--text-muted); transition:.15s;
@@ -821,7 +825,7 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .pot.flash,.outcome-panel.flash{animation:potFlash 1.1s ease;}
 .outcome-panel.flash{--pot:var(--brand);}
 @keyframes potFlash{0%,100%{box-shadow:var(--shadow-sm);}30%{box-shadow:0 0 0 3px color-mix(in srgb, var(--pot) 35%, transparent), var(--shadow);}}
-.pot-head{padding:11px 11px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px;}
+.pot-head{padding:11px 11px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px; min-height:50px;}
 .pot-head-title{display:flex; align-items:center; gap:8px; min-width:0;}
 .pot-head h3{font-size:12.5px; font-weight:600; color:var(--text); letter-spacing:-.1px; line-height:1.25;}
 .pot-count{
@@ -1004,6 +1008,7 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .status-pill.decline{background:var(--red-bg); color:var(--red);}
 .status-pill.signedup{background:var(--green-bg); color:var(--green);}
 .status-pill.underwriting{background:var(--violet-bg); color:var(--violet);}
+.status-pill.terms{background:var(--indigo-bg); color:var(--indigo);}
 .status-pill.completed{background:var(--teal-bg); color:var(--teal);}
 
 .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0 20px;}
@@ -1065,6 +1070,7 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .audit-icon .ico{width:15px; height:15px;}
 .audit-icon.t-signup{color:var(--green); background:var(--green-bg); border-color:transparent;}
 .audit-icon.t-underwriting{color:var(--violet); background:var(--violet-bg); border-color:transparent;}
+.audit-icon.t-terms{color:var(--indigo); background:var(--indigo-bg); border-color:transparent;}
 .audit-icon.t-decline{color:var(--red); background:var(--red-bg); border-color:transparent;}
 .audit-icon.t-followup{color:var(--amber); background:var(--amber-bg); border-color:transparent;}
 .audit-icon.t-call,.audit-icon.t-text,.audit-icon.t-email,.audit-icon.t-appointment{color:var(--blue); background:var(--blue-bg); border-color:transparent;}
@@ -1589,19 +1595,24 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <div class="pot-body" id="pot-existing"></div>
         </div>
         <div class="pot" data-pot="underwriting" style="--pot:var(--violet)">
-          <div class="pot-head"><div class="pot-head-title"><h3>In Underwriting</h3></div><span class="pot-count" id="count-underwriting">0</span></div>
+          <div class="pot-head"><div class="pot-head-title"><h3>Submitted / In Underwriting</h3></div><span class="pot-count" id="count-underwriting">0</span></div>
           <div class="pot-body" id="pot-underwriting"></div>
         </div>
+        <div class="pot" data-pot="terms" style="--pot:var(--indigo)">
+          <div class="pot-head"><div class="pot-head-title"><h3>Terms Issued</h3></div><span class="pot-count" id="count-terms">0</span></div>
+          <div class="pot-body" id="pot-terms"></div>
+        </div>
         <div class="pot" data-pot="signedup" style="--pot:var(--green)">
-          <div class="pot-head"><div class="pot-head-title"><h3>Sign Ups</h3></div><span class="pot-count" id="count-signedup">0</span></div>
+          <div class="pot-head"><div class="pot-head-title"><h3>On Risk</h3></div><span class="pot-count" id="count-signedup">0</span></div>
           <div class="pot-body" id="pot-signedup"></div>
         </div>
         <div class="pot" data-pot="decline" style="--pot:var(--red)">
           <div class="pot-head"><div class="pot-head-title"><h3>Declined · email pending</h3></div><span class="pot-count" id="count-decline">0</span></div>
           <div class="pot-body" id="pot-decline"></div>
         </div>
-        <div class="pot" data-pot="completed" style="--pot:var(--teal)">
-          <div class="pot-head"><div class="pot-head-title"><h3>Declined · email sent</h3></div><span class="pot-count" id="count-completed">0</span></div>
+        <!-- Fully declined cases: kept off the board, listed via the "Fully Declined Leads" button. -->
+        <div class="pot hidden" data-pot="completed" style="--pot:var(--teal)">
+          <div class="pot-head"><div class="pot-head-title"><h3>Fully Declined</h3></div><span class="pot-count" id="count-completed">0</span></div>
           <div class="pot-body" id="pot-completed"></div>
         </div>
       </div>
@@ -2324,10 +2335,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <select id="csStatus">
           <option value="new">New Cases</option>
           <option value="existing">Contacted Clients</option>
-          <option value="underwriting">In Underwriting</option>
-          <option value="signedup">Sign Ups</option>
+          <option value="underwriting">Submitted / In Underwriting</option>
+          <option value="terms">Terms Issued</option>
+          <option value="signedup">On Risk</option>
           <option value="decline">Declined · email pending</option>
-          <option value="completed">Declined · email sent</option>
+          <option value="completed">Fully Declined (email sent)</option>
         </select>
       </div>
     </div>
@@ -2599,6 +2611,17 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <button class="btn btn-secondary" data-close="emailComposeOverlay">Cancel</button>
       <button class="btn btn-primary" id="emSend">Send in Gmail</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="fullyDeclinedOverlay">
+  <div class="modal" style="max-width:860px;">
+    <div class="modal-head"><h2>Fully Declined Leads</h2><button class="modal-close" data-close="fullyDeclinedOverlay">✕</button></div>
+    <div class="modal-body">
+      <p class="sub" id="fdSub" style="font-size:13px; color:var(--text-muted); margin:0 0 12px;"></p>
+      <div id="fdBody"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-secondary" data-close="fullyDeclinedOverlay">Close</button></div>
   </div>
 </div>
 
@@ -4579,7 +4602,7 @@ function sibConvoPrompts(){
 }
 // Protection column on the Send in Blue list: the conversation, then the referral.
 const SIB_CONVO_TAG = {interested:['ok','Interested'], covered:['open','Already covered'], notnow:['nop','Not interested'], notes:['due','Discussed']};
-const SIB_LEAD_TAG = {new:['open','New lead'], existing:['open','Lead: contacted'], underwriting:['ok','Lead: in underwriting'], signedup:['ok','Lead: signed up'], decline:['nop','Lead: declined'], completed:['nop','Lead: declined']};
+const SIB_LEAD_TAG = {new:['open','New lead'], existing:['open','Lead: contacted'], underwriting:['ok','Lead: submitted'], terms:['ok','Lead: terms issued'], signedup:['ok','Lead: on risk'], decline:['nop','Lead: declined'], completed:['nop','Lead: declined']};
 function sibProtectionCell(c){
   const out = [], v = c.protectionConvo;
   if(v){
@@ -4685,6 +4708,11 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-09c', date:'2026-10-09', items:[
+    {text:"<b>New pot: Terms Issued</b>, between <b>Submitted / In Underwriting</b> (renamed from In Underwriting) and <b>On Risk</b> (renamed from Sign Ups)."},
+    {text:"<b>Fully declined cases are off the board</b>: the Declined · email sent pot is now hidden. Click <b>Fully Declined Leads</b> (right of the advisor filter) to see them."},
+    {text:"On a case in underwriting, click <b>Terms issued</b> (add the terms if you like) to move it to Terms Issued. When the client goes ahead, click <b>On Risk</b> to move it to On Risk.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-09b', date:'2026-10-09', items:[
     {text:"<b>Upload leads has its own button</b>: find it on the Settings home page (and the <b>Upload leads</b> button next to New Task on the protection dashboard), with the spreadsheet layout explained. It used to be tucked inside Colleagues.", roles:['management']},
   ]},
@@ -4930,7 +4958,7 @@ function renderSibInsights(){
     ['protection', 'Protection', `
     <div class="insights-card" style="margin-bottom:20px;"><h4>Protection conversations (${list.filter(c=> c.protectionConvo).length})</h4>
       ${sibHBars(Object.entries(list.filter(c=> c.protectionConvo).reduce((m, c)=>{ const v = c.protectionConvo, k = (SIB_CONVO_OUTCOMES[v.outcome]||v.outcome) + (v.reason ? ': '+v.reason : ''); m[k] = (m[k]||0)+1; return m; }, {})).sort((a,b)=> b[1]-a[1]), list.filter(c=> c.protectionConvo).length)}
-      ${(()=>{ const leads = list.map(c=> c.protectionLeadId && LEADS[c.protectionLeadId]).filter(l=> l && !l.deleted); const won = leads.filter(l=> ['signedup','underwriting','completed'].includes(potOf(l))).length; return leads.length ? `<p class="nml-note" style="margin-bottom:0;">${leads.length} in the protection pipeline from Send in Blue; ${won} signed up or in underwriting so far.</p>` : ''; })()}</div>`],
+      ${(()=>{ const leads = list.map(c=> c.protectionLeadId && LEADS[c.protectionLeadId]).filter(l=> l && !l.deleted); const won = leads.filter(l=> ['signedup','underwriting','terms'].includes(potOf(l))).length; return leads.length ? `<p class="nml-note" style="margin-bottom:0;">${leads.length} in the protection pipeline from Send in Blue; ${won} submitted, with terms or on risk so far.</p>` : ''; })()}</div>`],
     ['emails', 'Emails', `
     <div class="insights-cols">
       <div class="insights-card"><h4>Client email engagement ("Email client?")</h4>${sibHBars(ec, o.cases)}</div>
@@ -5361,11 +5389,12 @@ function visibleLeads(){
 
 /* Booked follow-up calls live on Contacted Clients cases and on cases being
    chased while In Underwriting. */
-function hasBookedCall(l){ const pot = potOf(l); return (pot==='existing' || pot==='underwriting') && !!l.followUpDate; }
+function hasBookedCall(l){ const pot = potOf(l); return (pot==='existing' || pot==='underwriting' || pot==='terms') && !!l.followUpDate; }
 
 function potOf(lead){
   if(lead.status==='signedup') return 'signedup';
   if(lead.status==='underwriting') return 'underwriting';
+  if(lead.status==='terms') return 'terms';
   // Backwards-compatibility: leads signed up before this pot existed were
   // saved with status "completed" plus a commission and no decline reason.
   // Treat those as Sign Ups rather than Completed Workflow.
@@ -5378,23 +5407,45 @@ function potOf(lead){
 
 function renderAdvisorFilter(){
   const row = document.getElementById('advisorFilterRow');
-  if(currentUser.role!=='management' && currentUser.role!=='admin'){ row.classList.add('hidden'); return; }
-  const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
-  if(mapas.length===0){ row.classList.add('hidden'); return; }
   row.classList.remove('hidden');
+  const nDeclined = leadsLoaded ? fullyDeclinedLeads().length : 0;
+  const declinedBtn = `<button type="button" class="filter-chip declined-chip" id="fullyDeclinedBtn" title="Declined cases with every step done (reasoning sent, HLP email, NPW)">Fully Declined Leads${nDeclined ? ' ('+nDeclined+')' : ''}</button>`;
+  const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
+  if((currentUser.role!=='management' && currentUser.role!=='admin') || mapas.length===0){
+    row.innerHTML = declinedBtn;
+    document.getElementById('fullyDeclinedBtn').addEventListener('click', openFullyDeclined);
+    return;
+  }
   const unassignedCount = Object.values(LEADS).filter(l=> !l.deleted && !l.advisorId).length;
   row.innerHTML = `<span style="font-size:12px;font-weight:600;color:var(--text-muted);margin-right:2px;">Filter by advisor:</span>` +
     `<button class="filter-chip ${!selectedAdvisorFilter?'active':''}" data-adv="">All advisors</button>` +
     `<button class="filter-chip ${selectedAdvisorFilter==='__unassigned__'?'active':''}" data-adv="__unassigned__" style="${selectedAdvisorFilter==='__unassigned__'?'':'border-color:var(--amber);color:var(--amber);'}">Unassigned${unassignedCount?' ('+unassignedCount+')':''}</button>` +
-    mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${esc(id)}">${esc(u.name)}</button>`).join('');
-  row.querySelectorAll('.filter-chip').forEach(chip=>{
+    mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${esc(id)}">${esc(u.name)}</button>`).join('') + declinedBtn;
+  document.getElementById('fullyDeclinedBtn').addEventListener('click', openFullyDeclined);
+  row.querySelectorAll('.filter-chip[data-adv]').forEach(chip=>{
     chip.addEventListener('click', ()=>{ selectedAdvisorFilter = chip.dataset.adv || null; renderDashboard(); });
   });
 }
 
+/* Fully declined cases (every decline step done) are off the board; this
+   lists them, following the same advisor / date / search filters. */
+function fullyDeclinedLeads(){ return visibleLeads().filter(l=> potOf(l)==='completed'); }
+function openFullyDeclined(){
+  const list = fullyDeclinedLeads().map(l=>{ const d = Object.values(l.audit||{}).filter(a=> a && a.type==='decline').sort((a,b)=> b.at-a.at)[0]; return {...l, _declAt: d ? d.at : (leadLastActivity(l)||{}).at || l.createdAt || 0}; })
+    .sort((a,b)=> b._declAt - a._declAt);
+  const showAdv = currentUser.role!=='mapa';
+  document.getElementById('fdSub').textContent = `${list.length} case${list.length===1?'':'s'} declined with every step done (reasoning sent, HLP email, NPW)${selectedAdvisorFilter || dateRangeFrom || dateRangeTo || searchTerm ? ', matching the filters on the dashboard' : ''}. Click a case to open it.`;
+  document.getElementById('fdBody').innerHTML = list.length ? `<div class="nml-table-wrap"><table class="nml-table fd-table">
+    <thead><tr><th>Client</th>${showAdv ? '<th>Advisor</th>' : ''}<th>Reason</th><th>Declined</th><th>Task Created</th></tr></thead>
+    <tbody>${list.map(l=> `<tr data-fd="${esc(l.id)}"><td><div class="nml-ins">${esc(l.clientName)}</div>${l.clientSource ? `<div class="nml-notes">${esc(l.clientSource)}</div>` : ''}</td>${showAdv ? `<td>${esc(l.advisorName||'Unassigned')}</td>` : ''}<td>${esc(l.declineReason||'—')}${l.declineDetail ? `<div class="nml-notes">${esc(l.declineDetail.length>120 ? l.declineDetail.slice(0,120)+'…' : l.declineDetail)}</div>` : ''}</td><td>${l._declAt ? esc(fmtDate(l._declAt)) : '—'}</td><td>${esc(fmtDate(l.appDate))}</td></tr>`).join('')}</tbody></table></div>`
+    : '<div class="nml-empty">No fully declined cases'+(selectedAdvisorFilter || dateRangeFrom || dateRangeTo || searchTerm ? ' match the filters on the dashboard.' : ' yet.')+'</div>';
+  document.querySelectorAll('#fdBody [data-fd]').forEach(tr=> tr.addEventListener('click', ()=>{ closeModal('fullyDeclinedOverlay'); openLead(tr.dataset.fd); }));
+  openModal('fullyDeclinedOverlay');
+}
+
 /* Audit entries that mean someone actually contacted / progressed the
    client, as opposed to admin like assigning, notes or detail edits. */
-const CONTACT_TYPES = ['call','text','email','appointment','other','signup','underwriting','followup','decline'];
+const CONTACT_TYPES = ['call','text','email','appointment','other','signup','underwriting','terms','followup','decline'];
 function isContactEntry(a){ return a && CONTACT_TYPES.includes(a.type); }
 /* A logged phone call: a call note, or a Sign Up / Follow Up / Decline
    saved from the Call button. Older entries have no "via" tag, so fall
@@ -5470,7 +5521,7 @@ document.getElementById('dateRangeReset').addEventListener('click', ()=>{
    "loading" rather than empty. */
 function renderDashLoading(){
   const skelCard = '<div class="skel-card"><div class="skel w60"></div><div class="skel w40"></div><div class="skel w80"></div></div>';
-  const counts = {new:3, existing:2, underwriting:1, signedup:1, decline:1, completed:1};
+  const counts = {new:3, existing:2, underwriting:1, terms:1, signedup:1, decline:1, completed:1};
   Object.keys(counts).forEach(k=>{
     document.getElementById('count-'+k).textContent = '–';
     document.getElementById('pot-'+k).innerHTML = skelCard.repeat(counts[k]);
@@ -5488,7 +5539,7 @@ function renderDashboard(){
   renderMyDay();
   renderDashKpis();
   const leads = visibleLeads();
-  const buckets = {new:[], existing:[], underwriting:[], decline:[], signedup:[], completed:[]};
+  const buckets = {new:[], existing:[], underwriting:[], terms:[], decline:[], signedup:[], completed:[]};
   leads.forEach(l=>{ const la = leadLastActivity(l); l._lastAt = la?.at || l.createdAt || 0; l._last = la; buckets[potOf(l)].push(l); });
   const byRecent = (a,b)=> b._lastAt - a._lastAt;
   Object.keys(buckets).forEach(k=>{
@@ -5744,7 +5795,7 @@ function renderDashKpis(){
           sub: `<span class="kpi-note">${dueTomorrow ? dueTomorrow+' due tomorrow' : 'None due tomorrow'}</span>`}) +
     tile({label:'Overdue calls', icon:'alert', value:overdue.length, jump:'existing', tone: overdue.length ? 'bad' : 'good',
           sub: overdue.length ? `<span class="kpi-note">${oldest>0 ? `Oldest ${oldest} day${oldest>1?'s':''} overdue` : 'All from earlier today'}</span>` : `<span class="kpi-delta up">${ico('check')}All on track</span>`}) +
-    tile({label:'Sign-ups this month', icon:'pound', value:signedThisMonth.length, jump:'signedup', tone:'brand',
+    tile({label:'On risk this month', icon:'pound', value:signedThisMonth.length, jump:'signedup', tone:'brand',
           sub: `<span class="kpi-note">£${commission.toLocaleString(undefined,{maximumFractionDigits:0})} commission</span>${delta(signedThisMonth.length, signedLastMonth, 'vs last month')}`});
 
   host.querySelectorAll('.kpi').forEach(k=>{
@@ -6364,7 +6415,7 @@ function leadCardHtml(lead, potKey){
   // and Sign Ups replace the second line rather than adding new rows.
   if(potKey==='existing' && lead.followUpDate){
     sub = followUpInline(lead.followUpDate, lead.followUpTime) + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
-  } else if(potKey==='underwriting' && lead.commission!=null){
+  } else if((potKey==='underwriting' || potKey==='terms') && lead.commission!=null){
     sub = `<span class="lc-money">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})} pending</span>` + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
   } else if(potKey==='signedup' && lead.commission!=null){
     sub = `<span class="lc-money">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</span>` + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
@@ -6623,7 +6674,7 @@ function renderLeadModal(){
   document.getElementById('ldClientName').textContent = lead.clientName;
 
   const potKey = potOf(lead);
-  const statusMap = {new:['new','New'],existing:['existing','In progress'],decline:['decline','Decline pending'],underwriting:['underwriting','In underwriting'],signedup:['signedup','Signed up'],completed:['completed','Completed']};
+  const statusMap = {new:['new','New'],existing:['existing','In progress'],decline:['decline','Decline pending'],underwriting:['underwriting','Submitted / In underwriting'],terms:['terms','Terms issued'],signedup:['signedup','On risk'],completed:['completed','Fully declined']};
   const [statusClass, statusLabel] = statusMap[potKey] || ['new','New'];
 
   let infoHtml = `
@@ -6642,8 +6693,10 @@ function renderLeadModal(){
         <div class="val" style="color:var(--amber);">${followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim()}</div>
         ${calButtonsHtml(lead, true)}
       </div>` : ''}
-      ${potKey==='underwriting' && lead.commission!=null ? `
-      <div class="info-cell commission full"><div class="lbl">Commission (pending underwriting)</div><div class="val">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
+      ${potKey==='terms' ? `
+      <div class="info-cell full" style="background:var(--indigo-bg);"><div class="lbl" style="color:var(--indigo);">Terms issued${lead.termsIssuedAt ? ' '+esc(fmtDate(lead.termsIssuedAt)) : ''}</div><div class="val" style="color:var(--indigo); font-weight:600;">${esc(lead.termsNote||'No details added')}</div></div>` : ''}
+      ${(potKey==='underwriting' || potKey==='terms') && lead.commission!=null ? `
+      <div class="info-cell commission full"><div class="lbl">Commission (pending${potKey==='terms' ? ', terms issued' : ' underwriting'})</div><div class="val">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
       ${potKey==='signedup' && lead.commission!=null ? `
       <div class="info-cell commission full"><div class="lbl">Commission</div><div class="val">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
       ${lead.declineReason ? `
@@ -6682,8 +6735,17 @@ function renderLeadModal(){
       <div id="dynamicActionArea"></div>
       ${lead.status==='underwriting' ? `
       <div class="outcome-panel" style="border-color:var(--violet); background:var(--violet-bg);">
-        <div class="op-title" style="color:var(--violet);">${ico('clock')} This case is in underwriting. When the insurer accepts it and it goes on risk, mark it here.</div>
-        <button id="nowOnRiskBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:13px; font-weight:700;">Now on risk</button>
+        <div class="op-title" style="color:var(--violet);">${ico('clock')} This case is submitted / in underwriting. When the insurer issues terms, mark it here.</div>
+        <button id="termsIssuedBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--indigo); color:#fff; font-size:13px; font-weight:700;">Terms issued</button>
+        <div id="termsForm" class="hidden" style="margin-top:10px;">
+          <div class="field" style="margin-bottom:8px;"><label for="termsNote">Terms (optional)</label><input type="text" id="termsNote" maxlength="200" placeholder="e.g. Standard terms, or +50% loading on CI"></div>
+          <button class="btn btn-primary btn-sm" id="termsSave">Save: terms issued</button>
+        </div>
+      </div>` : ''}
+      ${lead.status==='terms' ? `
+      <div class="outcome-panel" style="border-color:var(--indigo); background:var(--indigo-bg);">
+        <div class="op-title" style="color:var(--indigo);">${ico('checkCircle')} Terms have been issued. If the client goes ahead and the policy goes on risk, mark it here. If they don't, use Decline above.</div>
+        <button id="nowOnRiskBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:13px; font-weight:700;">On Risk</button>
       </div>` : ''}
       ${lead.status==='decline' ? `
       <div class="outcome-panel" style="border-color:var(--red); background:var(--red-bg);">
@@ -6742,6 +6804,17 @@ function renderLeadModal(){
     renderDynamicArea(lead);
     const nor = document.getElementById('nowOnRiskBtn');
     if(nor) nor.addEventListener('click', ()=> openSignup(lead.id, '', 'nowonrisk', lead.commission!=null ? lead.commission : null));
+    const tib = document.getElementById('termsIssuedBtn');
+    if(tib) tib.addEventListener('click', ()=>{ document.getElementById('termsForm').classList.toggle('hidden'); document.getElementById('termsNote').focus(); });
+    const ts = document.getElementById('termsSave');
+    if(ts) ts.addEventListener('click', function(){
+      const note = document.getElementById('termsNote').value.trim();
+      this.disabled = true;
+      logAudit(lead.id, {type:'terms', text:`Terms issued - ${fmtDateSlash(Date.now())}${note ? ' - '+note : ''}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()},
+        {status:'terms', termsIssuedAt:Date.now(), termsNote:note||null})
+        .then(()=>{ toast('Terms issued. Moved to Terms Issued.','success'); actionUIState = null; refreshLeadModal(); })
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    });
     if(lead.status==='decline'){
       document.querySelectorAll('[data-decline-step]').forEach(btn=>{
         if(!lead[btn.dataset.declineStep]) btn.addEventListener('click', ()=> markDeclineFlag(lead, btn.dataset.declineStep, btn));
@@ -6775,12 +6848,12 @@ function renderLeadModal(){
 function auditIcon(type){
   const map = {
     assigned:'pin', call:'phone', text:'message', email:'mail', appointment:'calendar', other:'note',
-    signup:'checkCircle', underwriting:'clock', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
+    signup:'checkCircle', underwriting:'clock', terms:'note', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
   };
   return map[type] ? ico(map[type]) : '•';
 }
 
-/* The steps a decline needs before it's closed out ("Declined · email sent").
+/* The steps a decline needs before it's closed out ("Fully Declined").
    Cases completed before the NPW step existed have no npwDone field; they
    were closed out under the old two-step list, so they count as done. */
 const DECLINE_STEPS = [
@@ -6809,7 +6882,7 @@ function markDeclineFlag(lead, field, btn){
   if(allDone) patch.status = 'completed';
   logAudit(lead.id, {type:step.type, text:step.audit, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, patch)
     .then(()=>{
-      toast(allDone ? 'All steps confirmed. Moved to Declined · email sent.' : step.toast, 'success');
+      toast(allDone ? 'All steps confirmed. Moved to Fully Declined Leads.' : step.toast, 'success');
       refreshLeadModal();
     }).catch(err=>{ toast('Could not save: '+err.message,'error'); if(btn) btn.disabled=false; });
 }
@@ -6859,7 +6932,7 @@ document.getElementById('esSubmit').addEventListener('click', function(){
     .finally(()=>{ btn.disabled = false; });
 });
 
-const STATUS_LABELS = {new:'New Cases', existing:'Contacted Clients', underwriting:'In Underwriting', signedup:'Sign Ups', decline:'Declined · email pending', completed:'Declined · email sent'};
+const STATUS_LABELS = {new:'New Cases', existing:'Contacted Clients', underwriting:'Submitted / In Underwriting', terms:'Terms Issued', signedup:'On Risk', decline:'Declined · email pending', completed:'Fully Declined'};
 
 document.getElementById('csSubmit').addEventListener('click', function(){
   const leadId = this.dataset.leadId;
@@ -6924,8 +6997,8 @@ function renderDynamicArea(lead){
         <div class="signup-choice hidden" id="signupChoice">
           <div class="op-title">Sign Up: where is the case now?</div>
           <div class="outcome-buttons">
-            <button class="ob-onrisk" data-signup="onrisk">On risk</button>
-            <button class="ob-uw" data-signup="underwriting">Sent to underwriting</button>
+            <button class="ob-onrisk" data-signup="onrisk">On Risk</button>
+            <button class="ob-uw" data-signup="underwriting">Submitted to underwriting</button>
           </div>
         </div>
       </div>
@@ -7013,9 +7086,10 @@ function renderDynamicArea(lead){
       const gTab = mode !== 'save' ? window.open('about:blank', '_blank') : null;
       allBtns.forEach(b=> b.disabled = true);
       const when = fmtDateSlash(date) + (time ? ` at ${time}` : '');
-      // A chase call on a case in underwriting keeps it In Underwriting.
-      const stayInUw = (LEADS[lead.id] || lead).status === 'underwriting';
-      const fuPatch = {status: stayInUw ? 'underwriting' : 'existing', followUpDate:date, followUpTime:time||null};
+      // A chase call on a case in underwriting (or with terms issued) keeps it in that pot.
+      const curStatus = (LEADS[lead.id] || lead).status;
+      const stayInUw = curStatus==='underwriting' || curStatus==='terms';
+      const fuPatch = {status: stayInUw ? curStatus : 'existing', followUpDate:date, followUpTime:time||null};
       const calNote = mode==='invite' ? ` - Calendar invite prepared for ${inviteTo.join(', ')}` : mode==='calendar' ? ' - Added to calendar (no client invite)' : '';
       const text = `${label} - Follow Up - ${when}` + (comment? ` - ${comment}` : '') + calNote;
       logAudit(lead.id, {type:'followup', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, fuPatch)
@@ -7025,7 +7099,7 @@ function renderDynamicArea(lead){
             try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
           }
           const next = mode==='invite' ? 'In Google, click Save, then Send to invite the client.'
-            : mode==='calendar' ? 'Google Calendar opened: click Save there.' : (stayInUw ? 'Still In Underwriting.' : 'Moved to Contacted Clients.');
+            : mode==='calendar' ? 'Google Calendar opened: click Save there.' : (stayInUw ? `Still in ${STATUS_LABELS[curStatus]}.` : 'Moved to Contacted Clients.');
           toast(`Follow-up booked for ${fmtDate(date)}${time?' at '+time:''}. ${next}`,'success');
           actionUIState=null; refreshLeadModal();
         })
@@ -7105,12 +7179,12 @@ function renderDynamicArea(lead){
   area.innerHTML = '';
 }
 
-/* mode: 'onrisk' → Sign Ups; 'underwriting' → In Underwriting;
-   'nowonrisk' → an underwriting case the insurer has now put on risk. */
+/* mode: 'onrisk' → On Risk; 'underwriting' → Submitted / In Underwriting;
+   'nowonrisk' → a case with terms issued that the client has taken up. */
 const SIGNUP_MODES = {
-  onrisk:       {title:'Sign Up: On risk',            status:'signedup',     type:'signup',       what:'Sign Up (On risk)'},
-  underwriting: {title:'Sign Up: Sent to underwriting', status:'underwriting', type:'underwriting', what:'Sent to Underwriting'},
-  nowonrisk:    {title:'Now on risk',                 status:'signedup',     type:'signup',       what:'Underwriting complete - On risk'},
+  onrisk:       {title:'Sign Up: On Risk',            status:'signedup',     type:'signup',       what:'Sign Up (On Risk)'},
+  underwriting: {title:'Sign Up: Submitted to underwriting', status:'underwriting', type:'underwriting', what:'Submitted to Underwriting'},
+  nowonrisk:    {title:'On Risk',                     status:'signedup',     type:'signup',       what:'Terms accepted - On Risk'},
 };
 function openSignup(leadId, actionKind, mode='onrisk', commission=null){
   document.getElementById('commissionInput').value = commission!=null ? commission : '';
@@ -7133,7 +7207,7 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
   const text = (this.dataset.mode==='nowonrisk' ? '' : `${label} - `) + `${m.what} - ${fmtDateSlash(Date.now())} - Commission ${money}`;
   logAudit(leadId, {type:m.type, via:this.dataset.actionKind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:m.status, commission:Number(val)})
     .then(()=>{
-      toast(m.status==='underwriting' ? `Sent to underwriting with ${money} commission pending. Moved to In Underwriting.` : `On risk with ${money} commission. Moved to Sign Ups.`,'success'); closeModal('signupOverlay');
+      toast(m.status==='underwriting' ? `Submitted to underwriting with ${money} commission pending. Moved to Submitted / In Underwriting.` : `On risk with ${money} commission. Moved to On Risk.`,'success'); closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();
     }).catch(err=> toast('Could not save: '+err.message,'error'))
     .finally(()=>{ btn.disabled = false; });
@@ -7257,21 +7331,22 @@ function renderInsights(){
 
   document.getElementById('weekDigest').innerHTML =
     statCard(newThisWeek, 'New leads (7 days)') +
-    statCard(signedThisWeek, 'Signed up (7 days)', 'good') +
+    statCard(signedThisWeek, 'On risk (7 days)', 'good') +
     statCard(declinedThisWeek, 'Declined (7 days)') +
     statCard(overdueNow, 'Overdue calls right now', overdueNow>0?'bad':'good');
 
   /* ---- Funnel ---- */
-  const counts = {new:0, existing:0, underwriting:0, decline:0, signedup:0, completed:0};
+  const counts = {new:0, existing:0, underwriting:0, terms:0, decline:0, signedup:0, completed:0};
   leads.forEach(l=> counts[potOf(l)]++);
   const pct = n => total ? Math.round(n/total*100) : 0;
   const funnelDefs = [
     ['New Cases', counts.new, 'var(--blue)'],
     ['Contacted Clients', counts.existing, 'var(--amber)'],
-    ['In Underwriting', counts.underwriting, 'var(--violet)'],
-    ['Sign Ups', counts.signedup, 'var(--green)'],
+    ['Submitted / In Underwriting', counts.underwriting, 'var(--violet)'],
+    ['Terms Issued', counts.terms, 'var(--indigo)'],
+    ['On Risk', counts.signedup, 'var(--green)'],
     ['Declined · email pending', counts.decline, 'var(--red)'],
-    ['Declined · email sent', counts.completed, 'var(--teal)']
+    ['Fully Declined', counts.completed, 'var(--teal)']
   ];
   document.getElementById('funnelChart').innerHTML = total===0
     ? `<div class="insights-empty">No leads in this filter/date range yet.</div>`
@@ -7281,7 +7356,7 @@ function renderInsights(){
         <div class="funnel-track"><div class="funnel-fill" style="width:${Math.max(pct(n),n>0?6:0)}%; background:${color};">${n>0? n+' · '+pct(n)+'%' : ''}</div></div>
       </div>`).join('') +
       `<div style="margin-top:12px; font-size:12px; color:var(--text-muted); font-weight:600;">
-         Overall conversion (Sign Ups ÷ total): <span style="color:var(--green);">${pct(counts.signedup)}%</span>
+         Overall conversion (On Risk ÷ total): <span style="color:var(--green);">${pct(counts.signedup)}%</span>
        </div>`;
 
   /* ---- Commission ---- */
@@ -7290,46 +7365,53 @@ function renderInsights(){
   const avgCommission = signedLeads.length ? totalCommission/signedLeads.length : 0;
   document.getElementById('commissionStats').innerHTML =
     statCard('£'+totalCommission.toLocaleString(undefined,{maximumFractionDigits:0}), 'Total commission', 'accent') +
-    statCard('£'+avgCommission.toLocaleString(undefined,{maximumFractionDigits:0}), 'Average per sign-up') +
-    statCard(signedLeads.length, 'Sign-ups counted');
+    statCard('£'+avgCommission.toLocaleString(undefined,{maximumFractionDigits:0}), 'Average per case on risk') +
+    statCard(signedLeads.length, 'Cases on risk counted');
 
   /* ---- Underwriting ----
-     Sent = cases with a 'Sent to underwriting' entry; on risk = a sign-up
-     logged after it. Pending = cases sitting In Underwriting now. */
+     Sent = cases with a 'Submitted to underwriting' entry; terms / on risk =
+     those logged after it. Pending = cases sitting in underwriting or with
+     terms issued now. */
   const uwInfo = l=>{
     const audit = Object.values(l.audit||{}).sort((a,b)=> a.at-b.at);
     const sent = audit.find(a=> a.type==='underwriting');
     if(!sent) return null;
     const onRisk = audit.find(a=> a.type==='signup' && a.at > sent.at);
-    return {sentAt: sent.at, onRiskAt: onRisk ? onRisk.at : null};
+    const terms = audit.find(a=> a.type==='terms' && a.at > sent.at);
+    return {sentAt: sent.at, onRiskAt: onRisk ? onRisk.at : null, termsAt: terms ? terms.at : null};
   };
   const uwSummary = list=>{
     const infos = list.map(uwInfo).filter(Boolean);
     const done = infos.filter(i=> i.onRiskAt);
-    const now = list.filter(l=> potOf(l)==='underwriting');
+    const now = list.filter(l=> potOf(l)==='underwriting' || potOf(l)==='terms');
+    const withTerms = infos.filter(i=> i.termsAt);
     return {
       sent: infos.length, onRisk: done.length,
       rate: infos.length ? Math.round(done.length/infos.length*100) : null,
       avgDays: done.length ? done.reduce((s,i)=> s + (i.onRiskAt-i.sentAt), 0)/done.length/86400000 : null,
-      nowCount: now.length, pending: now.reduce((s,l)=> s + Number(l.commission||0), 0)
+      nowCount: now.filter(l=> potOf(l)==='underwriting').length, termsCount: now.filter(l=> potOf(l)==='terms').length,
+      avgTermsDays: withTerms.length ? withTerms.reduce((s,i)=> s + (i.termsAt-i.sentAt), 0)/withTerms.length/86400000 : null,
+      pending: now.reduce((s,l)=> s + Number(l.commission||0), 0)
     };
   };
   const uw = uwSummary(leads);
   const daysTxt = d=> d==null ? '—' : d<1 ? '<1 day' : Math.round(d)+' day'+(Math.round(d)===1?'':'s');
   document.getElementById('uwStats').innerHTML =
-    statCard(uw.nowCount, 'In underwriting now') +
-    statCard('£'+uw.pending.toLocaleString(undefined,{maximumFractionDigits:0}), 'Commission pending underwriting', 'accent') +
-    statCard(uw.sent, 'Sent to underwriting') +
-    statCard(uw.rate==null ? '—' : `${uw.onRisk} · ${uw.rate}%`, 'Now on risk (of those sent)', uw.rate==null?'':uw.rate>=70?'good':uw.rate>=40?'warn':'bad') +
-    statCard(daysTxt(uw.avgDays), 'Avg. time in underwriting');
+    statCard(uw.nowCount, 'Submitted / in underwriting now') +
+    statCard(uw.termsCount, 'Terms issued, waiting on client') +
+    statCard('£'+uw.pending.toLocaleString(undefined,{maximumFractionDigits:0}), 'Commission pending (underwriting + terms)', 'accent') +
+    statCard(uw.sent, 'Submitted to underwriting') +
+    statCard(daysTxt(uw.avgTermsDays), 'Avg. time from submitted to terms') +
+    statCard(uw.rate==null ? '—' : `${uw.onRisk} · ${uw.rate}%`, 'Now on risk (of those submitted)', uw.rate==null?'':uw.rate>=70?'good':uw.rate>=40?'warn':'bad') +
+    statCard(daysTxt(uw.avgDays), 'Avg. time from submitted to on risk');
   document.getElementById('uwAdvisorCard').classList.toggle('hidden', isMapa);
   if(!isMapa){
     const rows = mapas.map(([id,u])=> ({name:u.name, ...uwSummary(leads.filter(l=> l.advisorId===id))}))
-      .filter(r=> r.sent || r.nowCount).sort((a,b)=> b.pending - a.pending);
+      .filter(r=> r.sent || r.nowCount || r.termsCount).sort((a,b)=> b.pending - a.pending);
     document.getElementById('uwAdvisorTable').innerHTML = rows.length===0
-      ? `<tr><td class="insights-empty">No cases sent to underwriting in this filter/date range yet.</td></tr>`
-      : `<thead><tr><th>Advisor</th><th>In UW now</th><th>Pending</th><th>Sent</th><th>On risk</th><th>Avg. time</th></tr></thead>
-         <tbody>${rows.map(r=> `<tr><td style="font-weight:600;">${esc(r.name)}</td><td>${r.nowCount}</td><td>£${r.pending.toLocaleString(undefined,{maximumFractionDigits:0})}</td><td>${r.sent}</td><td>${r.onRisk}${r.rate==null?'':' ('+r.rate+'%)'}</td><td>${daysTxt(r.avgDays)}</td></tr>`).join('')}</tbody>`;
+      ? `<tr><td class="insights-empty">No cases submitted to underwriting in this filter/date range yet.</td></tr>`
+      : `<thead><tr><th>Advisor</th><th>In UW now</th><th>Terms issued</th><th>Pending</th><th>Submitted</th><th>On risk</th><th>Avg. time</th></tr></thead>
+         <tbody>${rows.map(r=> `<tr><td style="font-weight:600;">${esc(r.name)}</td><td>${r.nowCount}</td><td>${r.termsCount}</td><td>£${r.pending.toLocaleString(undefined,{maximumFractionDigits:0})}</td><td>${r.sent}</td><td>${r.onRisk}${r.rate==null?'':' ('+r.rate+'%)'}</td><td>${daysTxt(r.avgDays)}</td></tr>`).join('')}</tbody>`;
   }
 
   /* ---- By advisor ---- */
@@ -7343,7 +7425,7 @@ function renderInsights(){
 
   document.getElementById('advisorTable').innerHTML = advisorRows.length===0
     ? `<tr><td class="insights-empty">No MAPAs set up yet.</td></tr>`
-    : `<thead><tr><th>Advisor</th><th>Leads</th><th>Signed up</th><th>Conv.</th><th>Commission</th></tr></thead>
+    : `<thead><tr><th>Advisor</th><th>Leads</th><th>On risk</th><th>Conv.</th><th>Commission</th></tr></thead>
        <tbody>${advisorRows.map(r=> `
          <tr><td style="font-weight:600;">${esc(r.name)}</td><td>${r.total}</td><td>${r.signed}</td><td>${r.convRate}%</td><td>£${r.commission.toLocaleString(undefined,{maximumFractionDigits:0})}</td></tr>
        `).join('')}</tbody>`;
@@ -7383,7 +7465,7 @@ function renderInsights(){
 
   /* ---- Advisor workload (open, non-terminal cases) ---- */
   const workloadRows = mapas.map(([id,u])=>{
-    const open = leads.filter(l=> l.advisorId===id && ['new','existing','underwriting','decline'].includes(potOf(l))).length;
+    const open = leads.filter(l=> l.advisorId===id && ['new','existing','underwriting','terms','decline'].includes(potOf(l))).length;
     return {name:u.name, open};
   }).sort((a,b)=> b.open - a.open);
   const maxWorkload = Math.max(1, ...workloadRows.map(r=>r.open));
@@ -7425,7 +7507,7 @@ function renderInsights(){
 
   /* ---- Stale cases ---- */
   const staleThresholdMs = 5*24*60*60*1000;
-  const stale = leads.filter(l=> ['new','existing','underwriting','decline'].includes(potOf(l))).map(l=>{
+  const stale = leads.filter(l=> ['new','existing','underwriting','terms','decline'].includes(potOf(l))).map(l=>{
     const last = leadLastActivity(l);
     const lastAt = last?.at || l.createdAt || 0;
     return {...l, lastAt};

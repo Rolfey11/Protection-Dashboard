@@ -1556,6 +1556,10 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
             <input type="text" id="globalSearch" placeholder="Search name, source…">
           </div>
+          <button class="btn btn-secondary hidden" id="uploadLeadsShortcut" title="Add protection leads in bulk from a spreadsheet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+            Upload leads
+          </button>
           <button class="btn btn-primary hidden" id="newTaskBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             New Task
@@ -1968,10 +1972,6 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <p class="sub">Manage colleague access — name, user level and PIN.</p>
           </div>
           <div style="display:flex; gap:10px;">
-            <button class="btn btn-secondary" id="uploadDataBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-              Upload Data
-            </button>
             <button class="btn btn-primary" id="addUserBtn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
               Add Colleague
@@ -2156,6 +2156,28 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
       </div>
 
+      <div id="settingsUploadSection" style="margin-top:34px;">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1 style="font-size:19px;">Upload protection leads</h1>
+            <p class="sub">Add protection leads in bulk from a spreadsheet, or restore a protection backup.</p>
+          </div>
+        </div>
+        <div class="insights-card" style="max-width:640px;">
+          <p style="font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:10px;">Save the spreadsheet as a <b>CSV</b> file (in Excel: File, Save As, CSV) with these column headings:</p>
+          <ul style="font-size:13px; color:var(--text-muted); line-height:1.6; margin:0 0 12px 18px;">
+            <li><b>Date created</b>: when the lead came in, e.g. 28/09/2026</li>
+            <li><b>Advisor</b>: matched to a colleague by name; anyone not found comes in as Unassigned</li>
+            <li><b>Client</b>: joint clients in one cell, separated by commas</li>
+          </ul>
+          <p style="font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:14px;">You'll see a preview before anything is saved. To restore from a backup, choose a <b>protection-lead-tracker-backup</b> file instead; it's recognised automatically.</p>
+          <button class="btn btn-primary" id="uploadDataBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+            Upload leads
+          </button>
+        </div>
+      </div>
+
       <div id="settingsBackupSection" style="margin-top:34px;">
         <div class="page-head" style="margin-bottom:16px;">
           <div>
@@ -2165,7 +2187,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
         <div class="insights-card" style="max-width:640px;">
           <p style="font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:14px;">
-            The first time you sign in each day, a backup file downloads automatically to this computer's Downloads folder. To restore, use <b>Upload Data</b> and choose a backup file. Cases are put back with their advisor, status and audit trail exactly as they were. Don't edit and re-save the file in Excel, as that can damage the backup column.
+            The first time you sign in each day, a backup file downloads automatically to this computer's Downloads folder. To restore, use <b>Settings → Upload leads</b> and choose a backup file. Cases are put back with their advisor, status and audit trail exactly as they were. Don't edit and re-save the file in Excel, as that can damage the backup column.
           </p>
           <p class="hidden" id="sibBackupNote" style="font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:14px;">
             <b>Send in Blue</b> is backed up too: Management also get a <b>send-in-blue-backup</b> file each day (every case, its history and the Send in Blue Recycle Bin). If your browser asks whether this site can download multiple files, choose <b>Allow</b>. To restore it, use <b>Restore from backup</b> in the Send in Blue section of Settings.
@@ -3242,6 +3264,7 @@ function enterApp(){
   document.getElementById('userRoleLbl').textContent = ROLE_LABEL[currentUser.role]||currentUser.role;
 
   document.getElementById('newTaskBtn').classList.remove('hidden');
+  document.getElementById('uploadLeadsShortcut').classList.toggle('hidden', currentUser.role!=='management');
   document.getElementById('settingsTab').classList.remove('hidden');
   document.getElementById('insightsTab').classList.toggle('hidden', currentUser.role==='admin');
   document.getElementById('usefulTab').classList.toggle('hidden', currentUser.role!=='mapa' && currentUser.role!=='management');
@@ -3283,6 +3306,7 @@ function goPage(page){
     const isMapa = currentUser.role==='mapa';
     document.getElementById('settingsMyAccountSection').classList.toggle('hidden', currentUser.role==='management');
     document.getElementById('settingsColleagueSection').classList.toggle('hidden', currentUser.role!=='management');
+    document.getElementById('settingsUploadSection').classList.toggle('hidden', currentUser.role!=='management');
     ['settingsBulkDeleteSection','settingsBackupSection','settingsRecycleBinSection'].forEach(id=>
       document.getElementById(id).classList.toggle('hidden', isMapa));
     renderMyAccount();
@@ -3999,6 +4023,7 @@ document.getElementById('sibSearch').addEventListener('input', function(){ sibSt
 [['sibAdviser','adviser'],['sibOutcomeFilter','outcome'],['sibEmailFilter','emailClient']].forEach(([id, k])=>
   document.getElementById(id).addEventListener('change', function(){ sibState[k] = this.value; renderSib(); }));
 document.getElementById('sibImportShortcut').addEventListener('click', ()=>{ settingsSel = 'settingsSibSection'; goPage('settings'); });
+document.getElementById('uploadLeadsShortcut').addEventListener('click', ()=>{ settingsSel = 'settingsUploadSection'; goPage('settings'); });
 
 /* ---- case window ---- */
 function openSibCase(key){
@@ -4660,6 +4685,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-09b', date:'2026-10-09', items:[
+    {text:"<b>Upload leads has its own button</b>: find it on the Settings home page (and the <b>Upload leads</b> button next to New Task on the protection dashboard), with the spreadsheet layout explained. It used to be tucked inside Colleagues.", roles:['management']},
+  ]},
   {id:'2026-10-09', date:'2026-10-09', items:[
     {text:"<b>Tidier Send in Blue Insights</b>: the headline figures stay at the top, and the detail now sits under tabs (By month, Advisers, Lender letter, Won & lost, Protection, Emails, Team activity), so you only see one section at a time."},
   ]},
@@ -4724,10 +4752,11 @@ document.getElementById('whatsNewBtn').addEventListener('click', ()=>{ document.
 /* ---- Settings home: picture buttons that each open a section ----
    Sections a role can't use stay hidden (class "hidden"); the chosen one is
    shown on its own (class "set-off" on the rest) with a "← Settings" link. */
-const SETTINGS_ICONS = {"account": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21v-1a7 7 0 0 1 16 0v1\"/></svg>", "team": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M2.5 20v-.5a6.5 6.5 0 0 1 13 0v.5\"/><path d=\"M16 4.5a3.5 3.5 0 0 1 0 7\"/><path d=\"M18.5 20v-.5a6.5 6.5 0 0 0-2.5-5.1\"/></svg>", "bell": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.73 21a2 2 0 0 1-3.46 0\"/></svg>", "mail": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"M3 7l9 6 9-6\"/></svg>", "sheet": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M3 9h18M3 15h18M9 3v18\"/></svg>", "trash": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/><path d=\"M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6\"/></svg>", "restore": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12a9 9 0 1 0 3-6.7\"/><path d=\"M3 4v5h5\"/></svg>", "backup": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"M7 10l5 5 5-5\"/><path d=\"M12 15V3\"/></svg>"};
+const SETTINGS_ICONS = {"upload": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"M17 8l-5-5-5 5\"/><path d=\"M12 3v12\"/></svg>", "account": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21v-1a7 7 0 0 1 16 0v1\"/></svg>", "team": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M2.5 20v-.5a6.5 6.5 0 0 1 13 0v.5\"/><path d=\"M16 4.5a3.5 3.5 0 0 1 0 7\"/><path d=\"M18.5 20v-.5a6.5 6.5 0 0 0-2.5-5.1\"/></svg>", "bell": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.73 21a2 2 0 0 1-3.46 0\"/></svg>", "mail": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"M3 7l9 6 9-6\"/></svg>", "sheet": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M3 9h18M3 15h18M9 3v18\"/></svg>", "trash": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/><path d=\"M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6\"/></svg>", "restore": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12a9 9 0 1 0 3-6.7\"/><path d=\"M3 4v5h5\"/></svg>", "backup": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"M7 10l5 5 5-5\"/><path d=\"M12 15V3\"/></svg>"};
 const SETTINGS_SECTIONS = [
   ['settingsMyAccountSection', 'My account', 'account', 'Change your name and PIN.'],
-  ['settingsColleagueSection', 'Colleagues', 'team', 'Add colleagues, user levels and PINs, client sources, and importing leads.'],
+  ['settingsColleagueSection', 'Colleagues', 'team', 'Add colleagues, user levels and PINs, and client sources.'],
+  ['settingsUploadSection', 'Upload leads', 'upload', 'Add protection leads in bulk from a spreadsheet, or restore a backup.'],
   ['settingsAppSection', 'App & reminders', 'bell', 'Install the desktop app and turn on call reminders.'],
   ['settingsContentSection', 'Templates & prompts', 'mail', 'Email templates, Send in Blue protection prompts and Useful Info tables.'],
   ['settingsSibSection', 'Send in Blue data', 'sheet', 'Upload, download, back up and bulk delete Send in Blue cases.'],

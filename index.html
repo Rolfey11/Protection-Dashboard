@@ -452,7 +452,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .topbar-right{display:flex; align-items:center; gap:14px; flex-shrink:0; margin-left:auto;}
 
 /* Laptops: compact header (icons only for the date range and profile). */
-@media (max-width:1560px){
+@media (max-width:1700px){
   .topbar-inner{gap:14px;}
   .nav-tab{padding:9px 12px;}
   .brand-text .t2{display:none;}
@@ -794,6 +794,19 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .btn svg{width:15px; height:15px;}
 
 .filter-row{display:flex; align-items:center; gap:8px; margin-bottom:20px; flex-wrap:wrap;}
+.help-group{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--text-faint); margin:16px 0 6px;}
+.help-group:first-child{margin-top:0;}
+.help-item{border:1px solid var(--border); border-radius:10px; margin-bottom:6px; background:var(--surface);}
+.help-item summary{cursor:pointer; padding:10px 14px; font-weight:600; font-size:13.5px; list-style:none;}
+.help-item summary::-webkit-details-marker{display:none;}
+.help-item summary::before{content:'›'; display:inline-block; width:14px; color:var(--brand); font-weight:700; transition:transform .15s;}
+.help-item[open] summary::before{transform:rotate(90deg);}
+.help-item .help-text{padding:0 14px 12px 28px; font-size:13px; line-height:1.6; color:var(--text-muted);}
+.help-item .help-text ol,.help-item .help-text ul{margin:4px 0 4px 18px;}
+.help-item .help-text b{color:var(--text);}
+.filter-chip.bulk-reassign-chip{margin-left:auto; border-style:dashed;}
+.filter-chip.bulk-reassign-chip + .declined-chip{margin-left:0;}
+.br-table td:first-child,.br-table th:first-child{width:34px;} .br-table tbody tr{cursor:pointer;} .br-table tbody tr.on td{background:var(--brand-tint);}
 .filter-chip.declined-chip{margin-left:auto; border-color:var(--teal); color:var(--teal);}
 .fd-table tbody tr{cursor:pointer;} .fd-table tbody tr:hover td{background:var(--brand-tint);}
 .filter-chip{
@@ -918,6 +931,8 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .lead-card{flex-shrink:0;}
 .lead-card .lc-sub{line-height:15px; height:15px;}
 .lc-due{line-height:1;}
+.lc-att{display:inline-flex; align-items:center; gap:2px; flex:none; font-size:10.5px; font-weight:700; color:var(--text-muted); background:var(--bg); border-radius:999px; padding:1px 6px; margin-left:auto; margin-right:4px;} .lc-att .ico{width:10px; height:10px;}
+.tel-link{display:inline-flex; align-items:center; gap:5px; color:var(--brand); font-weight:700; text-decoration:none; margin-right:10px;} .tel-link:hover{text-decoration:underline;} .tel-link .ico{width:14px; height:14px;}
 .tag{font-size:10px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted);}
 .tag.advisor{background:var(--brand-tint); color:var(--brand);}
 .lead-card .lc-activity{font-size:10.5px; color:var(--text-faint); margin-top:2px; display:flex; justify-content:space-between; gap:6px;}
@@ -1514,6 +1529,9 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       </div>
 
       <div class="topbar-right">
+        <button class="bell-btn" id="helpBtn" title="Help: how to use the tracker" aria-label="Help">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        </button>
         <div class="bell-wrap" id="bellWrap">
           <button class="bell-btn" id="bellBtn" title="Notifications">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -2180,6 +2198,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <li><b>Date created</b>: when the lead came in, e.g. 28/09/2026</li>
             <li><b>Advisor</b>: matched to a colleague by name; anyone not found comes in as Unassigned</li>
             <li><b>Client</b>: joint clients in one cell, separated by commas</li>
+            <li><b>Phone</b> and <b>Email</b> (optional): any column with those headings is picked up too</li>
           </ul>
           <p style="font-size:13px; color:var(--text-muted); line-height:1.55; margin-bottom:14px;">You'll see a preview before anything is saved. To restore from a backup, choose a <b>protection-lead-tracker-backup</b> file instead; it's recognised automatically.</p>
           <button class="btn btn-primary" id="uploadDataBtn">
@@ -2271,6 +2290,10 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <input type="email" id="ntEmail" placeholder="e.g. sarah.jenkins@email.com" autocomplete="off">
         <div class="field-hint">Used to send the client a calendar invite when a follow-up call is booked.</div>
       </div>
+      <div class="field">
+        <label for="ntPhone">Client phone <span class="label-opt">(optional)</span></label>
+        <input type="tel" id="ntPhone" placeholder="e.g. 07700 900123" autocomplete="off">
+      </div>
       <div id="ntExtraClients"></div>
       <button type="button" class="btn btn-secondary btn-sm" id="ntAddClientBtn" style="margin-bottom:18px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>
@@ -2293,6 +2316,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="newTaskOverlay">Cancel</button>
+      <button class="btn btn-secondary" id="ntSubmitAnother" title="Save this lead and start another, keeping the source, advisor and date">Save &amp; add another</button>
       <button class="btn btn-primary" id="ntSubmit">Assign lead</button>
     </div>
   </div>
@@ -2610,6 +2634,40 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="emailComposeOverlay">Cancel</button>
       <button class="btn btn-primary" id="emSend">Send in Gmail</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="helpOverlay">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-head"><h2>Help</h2><button class="modal-close" data-close="helpOverlay">✕</button></div>
+    <div class="modal-body">
+      <p class="sub" style="font-size:13px; color:var(--text-muted); margin:0 0 12px;">Quick guides for the things you do most. Click a topic to open it.</p>
+      <input type="search" id="helpSearch" placeholder="Search help, e.g. decline, follow-up, letter" style="width:100%; margin-bottom:12px;">
+      <div id="helpBody"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-secondary" data-close="helpOverlay">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="bulkReassignOverlay">
+  <div class="modal" style="max-width:860px;">
+    <div class="modal-head"><h2>Reassign several leads</h2><button class="modal-close" data-close="bulkReassignOverlay">✕</button></div>
+    <div class="modal-body">
+      <p class="sub" id="brSub" style="font-size:13px; color:var(--text-muted); margin:0 0 12px;"></p>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+        <label class="checkbox-row" style="margin:0;"><input type="checkbox" id="brAll"> Select all</label>
+        <span id="brCount" style="font-size:12.5px; color:var(--text-muted); font-weight:600;"></span>
+      </div>
+      <div id="brBody" style="max-height:46vh; overflow:auto;"></div>
+      <div class="field" style="margin-top:14px; max-width:340px;">
+        <label for="brAdvisor">Move the selected leads to</label>
+        <select id="brAdvisor"><option value="">Select an advisor…</option></select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="bulkReassignOverlay">Cancel</button>
+      <button class="btn btn-primary" id="brSubmit" disabled>Reassign</button>
     </div>
   </div>
 </div>
@@ -4738,6 +4796,13 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-09f', date:'2026-10-09', items:[
+    {text:"<b>No answer</b> button on each case: logs a call attempt in one click and counts them (you'll see the count on the case and card), then offers to book the next try.", roles:['mapa','management']},
+    {text:"<b>My Day</b> now also flags cases with no next call booked, cases not touched for 7+ days, terms issued 7+ days ago and cases submitted to underwriting 14+ days ago.", roles:['mapa']},
+    {text:"<b>Client phone numbers</b> on each case: click to dial. Add them on New Task, or with Add phone on the case."},
+    {text:"<b>Save &amp; add another</b> on New Task keeps the source, advisor and date, and <b>Reassign several</b> (next to the advisor filter) moves many leads at once.", roles:['admin','management']},
+    {text:"<b>Help</b>: click the <b>?</b> at the top right for quick guides to everyday jobs."},
+  ]},
   {id:'2026-10-09e', date:'2026-10-09', items:[
     {text:"<b>Admins can now reassign leads</b>: open a case and click <b>Reassign</b> under the advisor's name. It's recorded in the case history and the new advisor is notified.", roles:['admin','management']},
   ]},
@@ -5417,9 +5482,10 @@ function visibleLeads(){
     all = all.filter(l=>{
       const haystack = [
         l.clientName, l.clientSource, l.advisorName, l.createdByName,
-        l.declineReason, l.declineDetail, fmtDate(l.appDate)
+        l.declineReason, l.declineDetail, fmtDate(l.appDate), ...leadEmails(l)
       ].filter(Boolean).join(' ').toLowerCase();
-      return haystack.includes(q);
+      const qd = q.replace(/\D/g,'');
+      return haystack.includes(q) || (qd.length >= 4 && leadPhones(l).some(p=> p.replace(/\D/g,'').includes(qd)));
     });
   }
   return all;
@@ -5458,8 +5524,10 @@ function renderAdvisorFilter(){
   row.innerHTML = `<span style="font-size:12px;font-weight:600;color:var(--text-muted);margin-right:2px;">Filter by advisor:</span>` +
     `<button class="filter-chip ${!selectedAdvisorFilter?'active':''}" data-adv="">All advisors</button>` +
     `<button class="filter-chip ${selectedAdvisorFilter==='__unassigned__'?'active':''}" data-adv="__unassigned__" style="${selectedAdvisorFilter==='__unassigned__'?'':'border-color:var(--amber);color:var(--amber);'}">Unassigned${unassignedCount?' ('+unassignedCount+')':''}</button>` +
-    mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${esc(id)}">${esc(u.name)}</button>`).join('') + declinedBtn;
+    mapas.map(([id,u])=> `<button class="filter-chip ${selectedAdvisorFilter===id?'active':''}" data-adv="${esc(id)}">${esc(u.name)}</button>`).join('') +
+    `<button type="button" class="filter-chip bulk-reassign-chip" id="bulkReassignBtn" title="Move several leads to a different advisor at once">Reassign several</button>` + declinedBtn;
   document.getElementById('fullyDeclinedBtn').addEventListener('click', openFullyDeclined);
+  document.getElementById('bulkReassignBtn').addEventListener('click', openBulkReassign);
   row.querySelectorAll('.filter-chip[data-adv]').forEach(chip=>{
     chip.addEventListener('click', ()=>{ selectedAdvisorFilter = chip.dataset.adv || null; renderDashboard(); });
   });
@@ -5721,34 +5789,53 @@ function renderOverdueBanner(){
    haven't touched yet, and declines still waiting on compliance steps.
    Management/Admin don't get this — it's specifically to replace scanning
    five pots every morning with one list. */
+/* How long before a quiet case is flagged in My Day. */
+const MYDAY_STALE_DAYS = 7, MYDAY_TERMS_DAYS = 7, MYDAY_UW_DAYS = 14;
+function daysSince(ts){ return ts ? Math.floor((Date.now() - ts) / 86400000) : 0; }
 function myDayItems(){
   if(currentUser.role!=='mapa') return [];
   const mine = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted && l.advisorId===currentUser.id);
-  const today = new Date(); today.setHours(0,0,0,0);
   const items = [];
-
+  // One row per case; a case can have more than one reason, shown together.
   mine.forEach(l=>{
     const pot = potOf(l);
+    const reasons = []; // [sortKey, tone, text]  0 = most urgent
     if(hasBookedCall(l)){
       const late = isCallOverdue(l.followUpDate, l.followUpTime);
       if(late || daysLate(l.followUpDate)===0){
-        items.push({
-          lead:l, sortKey:0,
-          reason: late ? `Call ${overdueText(l.followUpDate, l.followUpTime)}` : `Call due today${l.followUpTime ? ' at '+l.followUpTime : ''}`,
-          tone: late ? 'bad' : 'warn'
-        });
+        reasons.push(late ? [0,'bad',`Call ${overdueText(l.followUpDate, l.followUpTime)}`] : [0,'warn',`Call due today${l.followUpTime ? ' at '+l.followUpTime : ''}`]);
       }
     }
     if(pot==='new' && !Object.values(l.audit||{}).some(isContactEntry)){
-      items.push({lead:l, sortKey:1, reason:'New — no contact yet', tone:'accent'});
+      reasons.push([1,'accent','New — no contact yet']);
     }
     if(pot==='decline'){
       const left = DECLINE_STEPS.filter(st=> !declineStepDone(l, st)).map(st=> st.short);
-      const reason = 'Decline — ' + (left.length > 1 ? left.slice(0,-1).join(', ') + ' & ' + left[left.length-1] : left[0] || 'steps') + ' pending';
-      items.push({lead:l, sortKey:0, reason, tone:'bad'});
+      reasons.push([0,'bad','Decline — ' + (left.length > 1 ? left.slice(0,-1).join(', ') + ' & ' + left[left.length-1] : left[0] || 'steps') + ' pending']);
     }
+    if(pot==='existing' && !l.followUpDate){
+      reasons.push([1,'warn','No next call booked']);
+    }
+    if(pot==='terms'){
+      const at = l.termsIssuedAt || (Object.values(l.audit||{}).filter(a=> a && a.type==='terms').sort((x,y)=> y.at-x.at)[0]||{}).at;
+      const d = daysSince(at);
+      if(at && d >= MYDAY_TERMS_DAYS) reasons.push([1,'warn',`Terms issued ${d} days ago — chase the client`]);
+    }
+    if(pot==='underwriting'){
+      const at = (Object.values(l.audit||{}).filter(a=> a && a.type==='underwriting').sort((x,y)=> y.at-x.at)[0]||{}).at;
+      const d = daysSince(at);
+      if(at && d >= MYDAY_UW_DAYS) reasons.push([2,'accent',`Submitted ${d} days ago — check with the insurer`]);
+    }
+    // Skip "not touched" when a reminder above already says how long it's been.
+    if(['new','existing','underwriting','terms'].includes(pot) && !reasons.some(r=> r[0]===0 || /days ago/.test(r[2]))){
+      const last = leadLastActivity(l), d = daysSince((last && last.at) || l.createdAt);
+      if(d >= MYDAY_STALE_DAYS) reasons.push([1,'warn',`Not touched for ${d} days`]);
+    }
+    if(!reasons.length) return;
+    reasons.sort((x,y)=> x[0]-y[0]);
+    const tone = reasons.some(r=> r[1]==='bad') ? 'bad' : reasons.some(r=> r[1]==='warn') ? 'warn' : 'accent';
+    items.push({lead:l, sortKey:reasons[0][0], reason: reasons.map(r=> r[2]).join(' · '), tone});
   });
-
   items.sort((a,b)=> a.sortKey-b.sortKey);
   return items;
 }
@@ -5914,6 +6001,13 @@ function clientEventText(lead){
   ].join('\n');
 }
 
+// UK-style phone numbers: digits with optional +, spaces, brackets or dashes (7 to 15 digits).
+function isPhone(p){ const t = String(p||'').trim(); const d = t.replace(/\D/g,''); return /^[+(]?[\d\s()+-]+$/.test(t) && d.length >= 7 && d.length <= 15; }
+function leadPhones(lead){
+  if(!lead || !lead.clientPhones) return [];
+  return (Array.isArray(lead.clientPhones) ? lead.clientPhones : Object.values(lead.clientPhones)).filter(Boolean);
+}
+function telHref(p){ return 'tel:' + String(p).replace(/[^\d+]/g,''); }
 function isEmail(e){ return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(e||'').trim()); }
 function leadEmails(lead){
   if(!lead || !lead.clientEmails) return [];
@@ -6235,7 +6329,7 @@ function openViewEmail(auditId){
 
 function clientEmailCellHtml(lead){
   const emails = leadEmails(lead);
-  const canEdit = canManageLead(lead) || canAction(lead);
+  const canEdit = canEditContact(lead);
   return `
       <div class="info-cell full" id="clientEmailCell">
         <div class="lbl">Client email</div>
@@ -6249,6 +6343,42 @@ function clientEmailCellHtml(lead){
           <button type="button" class="btn btn-ghost btn-sm" id="ceCancel">Cancel</button>
         </div>` : ''}
       </div>`;
+}
+function canEditContact(lead){ return canManageLead(lead) || canAction(lead) || currentUser.role==='admin'; }
+function clientPhoneCellHtml(lead){
+  const phones = leadPhones(lead);
+  const canEdit = canEditContact(lead);
+  return `
+      <div class="info-cell full" id="clientPhoneCell">
+        <div class="lbl">Client phone</div>
+        <div class="ce-view" id="cpView">
+          <div class="val">${phones.length ? phones.map(p=> `<a href="${esc(telHref(p))}" class="tel-link" title="Call ${esc(p)}">${ico('phone')}${esc(p)}</a>`).join(' ') : '<span style="color:var(--text-faint); font-weight:500;">Not added yet</span>'}</div>
+          ${canEdit ? `<button type="button" class="btn btn-secondary btn-sm" id="cpEditBtn">${phones.length ? 'Edit' : 'Add phone'}</button>` : ''}
+        </div>
+        ${canEdit ? `<div class="ce-edit hidden" id="cpEdit">
+          <input type="tel" id="cpInput" value="${esc(phones.join(', '))}" placeholder="07700 900123 (separate joint clients with a comma)">
+          <button type="button" class="btn btn-primary btn-sm" id="cpSave">Save</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="cpCancel">Cancel</button>
+        </div>` : ''}
+      </div>`;
+}
+function bindClientPhoneCell(lead){
+  const edit = document.getElementById('cpEditBtn'); if(!edit) return;
+  const view = document.getElementById('cpView'), box = document.getElementById('cpEdit'), input = document.getElementById('cpInput');
+  edit.addEventListener('click', ()=>{ view.classList.add('hidden'); box.classList.remove('hidden'); input.focus(); });
+  document.getElementById('cpCancel').addEventListener('click', ()=>{ box.classList.add('hidden'); view.classList.remove('hidden'); });
+  const save = function(){
+    const phones = input.value.split(/[,;]+/).map(x=> x.trim()).filter(Boolean);
+    const bad = phones.find(x=> !isPhone(x));
+    if(bad){ toast(`"${bad}" doesn't look like a phone number.`,'error'); return; }
+    const btn = document.getElementById('cpSave'); btn.disabled = true;
+    const text = phones.length ? `Client phone updated to ${phones.join(', ')}` : 'Client phone removed';
+    logAudit(lead.id, {type:'detail', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {clientPhones: phones.length ? phones : null})
+      .then(()=>{ toast(phones.length ? 'Client phone saved' : 'Client phone removed', 'success'); refreshLeadModal(true); })
+      .catch(err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; });
+  };
+  document.getElementById('cpSave').addEventListener('click', save);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); if(e.key==='Escape') document.getElementById('cpCancel').click(); });
 }
 function bindClientEmailCell(lead){
   const edit = document.getElementById('ceEditBtn'); if(!edit) return;
@@ -6463,6 +6593,7 @@ function leadCardHtml(lead, potKey){
     <div class="lead-card ${isOverdue?'overdue':''}" data-id="${esc(lead.id)}">
       <div class="lc-top">
         <div class="lc-name">${esc(lead.clientName)}</div>
+        ${(potKey==='new' || potKey==='existing') ? (()=>{ const n = contactAttempts(lead); return n ? `<span class="lc-att" title="${n} contact attempt${n===1?'':'s'}">${ico('phone')}${n}</span>` : ''; })() : ''}
         ${advisor}
       </div>
       <div class="lc-sub">${sub}</div>
@@ -6496,7 +6627,8 @@ document.getElementById('ntAddClientBtn').addEventListener('click', ()=>{
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </div>
-    <input type="email" class="ntExtraEmail" placeholder="Their email (optional)" autocomplete="off" style="margin-top:8px;">`;
+    <input type="email" class="ntExtraEmail" placeholder="Their email (optional)" autocomplete="off" style="margin-top:8px;">
+    <input type="tel" class="ntExtraPhone" placeholder="Their phone (optional)" autocomplete="off" style="margin-top:8px;">`;
   wrap.appendChild(row);
   row.querySelector('.ntRemoveClient').addEventListener('click', ()=>{
     row.remove();
@@ -6509,9 +6641,11 @@ document.getElementById('ntAddClientBtn').addEventListener('click', ()=>{
 document.getElementById('newTaskBtn').addEventListener('click', ()=>{
   document.getElementById('ntName').value='';
   document.getElementById('ntEmail').value='';
+  document.getElementById('ntPhone').value='';
   document.getElementById('ntDate').value = isoDay(new Date()); // defaults to today; bulk upload keeps its own dates
   document.getElementById('ntDupeWarning').classList.add('hidden');
   document.getElementById('ntSubmit').disabled = false;
+  document.getElementById('ntSubmitAnother').disabled = false;
   ntResetExtraClients();
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   const sel = document.getElementById('ntAdvisor');
@@ -6541,7 +6675,9 @@ document.getElementById('ntName').addEventListener('input', function(){
   }
 });
 
-document.getElementById('ntSubmit').addEventListener('click', function(){
+document.getElementById('ntSubmit').addEventListener('click', ()=> submitNewTask(false));
+document.getElementById('ntSubmitAnother').addEventListener('click', ()=> submitNewTask(true));
+function submitNewTask(another){
   const extraNames = Array.from(document.querySelectorAll('.ntExtraName')).map(i=>i.value.trim()).filter(Boolean);
   const names = [document.getElementById('ntName').value.trim(), ...extraNames].filter(Boolean);
   const name = names.join(' & ');
@@ -6556,8 +6692,12 @@ document.getElementById('ntSubmit').addEventListener('click', function(){
     .map(e=> e.trim()).filter(Boolean);
   const badEmail = emails.find(e=> !isEmail(e));
   if(badEmail){ toast(`"${badEmail}" doesn't look like an email address.`,'error'); return; }
+  const phones = [document.getElementById('ntPhone').value, ...Array.from(document.querySelectorAll('.ntExtraPhone')).map(i=>i.value)]
+    .map(p=> p.trim()).filter(Boolean);
+  const badPhone = phones.find(p=> !isPhone(p));
+  if(badPhone){ toast(`"${badPhone}" doesn't look like a phone number.`,'error'); return; }
 
-  const btn = this;
+  const btn = document.getElementById(another ? 'ntSubmitAnother' : 'ntSubmit');
   btn.disabled = true;
   const advisorName = USERS[advisorId]?.name || 'Unknown';
   const now = Date.now();
@@ -6566,6 +6706,7 @@ document.getElementById('ntSubmit').addEventListener('click', function(){
   const lead = {
     clientName:name, clientNames:names, clientSource, advisorId, advisorName, appDate,
     ...(emails.length ? {clientEmails: emails} : {}),
+    ...(phones.length ? {clientPhones: phones} : {}),
     status:'new', createdBy:currentUser.id, createdByName:currentUser.name, createdAt:now,
     audit:{ [auditId]: {type:'assigned', text:`Lead assigned to ${advisorName} by ${currentUser.name}`, byId:currentUser.id, byName:currentUser.name, at:now} }
   };
@@ -6580,10 +6721,128 @@ document.getElementById('ntSubmit').addEventListener('click', function(){
       leadId:leadRef.key, leadName:name, toUserId:null, toRole:'management',
       message:`A task has been added to ${advisorName}'s workflow`, at:now, readBy:{}
     });
-    toast('Lead assigned to '+advisorName, 'success');
-    closeModal('newTaskOverlay');
+    if(another){
+      // Keep the source, advisor and date; clear the client details for the next one.
+      ['ntName','ntEmail','ntPhone'].forEach(id=> document.getElementById(id).value = '');
+      ntResetExtraClients();
+      document.getElementById('ntDupeWarning').classList.add('hidden');
+      toast(`${name} assigned to ${advisorName}. Ready for the next one.`, 'success');
+      document.getElementById('ntName').focus();
+    } else {
+      toast('Lead assigned to '+advisorName, 'success');
+      closeModal('newTaskOverlay');
+    }
   }).catch(err=> toast('Could not save: '+err.message,'error'))
     .finally(()=>{ btn.disabled = false; });
+}
+
+/* ---- Help: short how-to guides, shown by role ----
+   roles: who sees the topic (omit = everyone). */
+const HELP = [
+  {group:'Your day', items:[
+    {t:'What is My Day?', roles:['mapa'], h:`<b>My Day</b> at the top of the dashboard lists every case that needs you today, most urgent first:<ul><li>calls overdue or due today</li><li>new cases with no contact yet</li><li>declines still waiting on their steps</li><li><b>No next call booked</b>: a Contacted Client with no follow-up date</li><li><b>Not touched for 7+ days</b></li><li><b>Terms issued 7+ days ago</b>: chase the client</li><li><b>Submitted 14+ days ago</b>: check with the insurer</li></ul>Click a row to open the case.`},
+    {t:'Notifications and What\'s new', roles:['mapa','management'], h:`The <b>bell</b> shows new leads assigned to you and cases moved to you. Click one to open the case. <b>What's new</b> (inside the bell) lists recent changes to the tracker.`},
+    {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},
+  ]},
+  {group:'Protection cases', items:[
+    {t:'Log a call', roles:['mapa','management'], h:`<ol><li>Open the case and click <b>Call</b>.</li><li>Choose what happened: <b>Sign Up</b>, <b>Follow Up</b> or <b>Decline</b>, or just save a note.</li></ol>The client's phone number shows at the top of the Call box. Click it to dial.`},
+    {t:'No answer', roles:['mapa','management'], h:`Click <b>No answer</b> on the case. That's it: the attempt is logged and counted (you'll see "Contact attempts" on the case, and the count on the card). The follow-up box then opens so you can book when to try again; close the case if you don't want to.`},
+    {t:'Book a follow-up call', roles:['mapa','management'], h:`<ol><li>On the case, click <b>Call</b> (or Text, Email…), then <b>Follow Up</b>.</li><li>Choose the date and time and add a comment.</li><li><b>Add to Calendar – Client invite</b> sends the client an invite through Google Calendar; <b>No invite</b> puts it just in your calendar; or <b>Save without adding to Calendar</b>.</li></ol>The case moves to Contacted Clients and shows when the call is due.`},
+    {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
+    {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the commission.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission is filled in for you.</li></ol>`},
+    {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
+    {t:'Client phone and email', h:`Both show on the case. Click a phone number to dial it. Use <b>Add phone</b> / <b>Edit</b> to change them; the change is recorded in the history.`},
+    {t:'Move a case by hand', roles:['mapa','management'], h:`Use <b>Change status</b> at the bottom of the case to put it back into a different pot (for example if something was clicked by mistake). The change is recorded.`},
+  ]},
+  {group:'Adding and moving leads', roles:['admin','management'], items:[
+    {t:'Add a lead', roles:['admin','management'], h:`Click <b>New Task</b>, fill in the client's name, email and phone (optional), source, advisor and date, then <b>Assign lead</b>. Adding several? Use <b>Save &amp; add another</b>: it keeps the source, advisor and date and clears the client details. The advisor is notified.`},
+    {t:'Reassign a lead', roles:['admin','management'], h:`Open the case and click <b>Reassign</b> under the advisor's name.`},
+    {t:'Reassign several leads at once', roles:['admin','management'], h:`<ol><li>Optional: click an advisor in <b>Filter by advisor</b> to see just their leads.</li><li>Click <b>Reassign several</b>.</li><li>Tick the leads (or <b>Select all</b>), choose the new advisor and click <b>Reassign</b>.</li></ol>Each case's history records the move, and the new advisor gets one notification.`},
+    {t:'Upload leads from a spreadsheet', roles:['management'], h:`<b>Upload leads</b> (next to New Task, or Settings → Upload leads). Save the spreadsheet as CSV with columns <b>Date created</b>, <b>Advisor</b> and <b>Client</b> (Phone and Email are optional). You'll see a preview first.`},
+    {t:'Deleted cases and backups', roles:['admin','management'], h:`Deleted cases go to <b>Settings → Recycle Bin</b> for 30 days and can be restored. A backup file downloads automatically each day; <b>Settings → Backup</b> to download one now.`},
+  ]},
+  {group:'Send in Blue', items:[
+    {t:'Finding clients', h:`Use the <b>year</b> buttons and <b>month</b> cards (the month the product ends), or search by name, address, email or case ID across all months. Filters: adviser, outcome, email client.`},
+    {t:'The lender letter countdown', h:`Shows how many days until the lender sends their reminder letter (6 months before the product ends unless a date is set). It turns amber, then red as it gets close. The aim is to contact the client <b>before</b> the letter. Pick <b>Beat the letter</b> in the filter for everyone not yet contacted, soonest first.`},
+    {t:'Working a case', h:`Open the client and use <b>Call</b>, <b>Email</b>, <b>Appointment</b>, <b>Note</b>, <b>Outcome</b> or <b>Edit details</b>. Tick the <b>6 / 3 / 0 month</b> Send in Blue emails when sent. Everything goes in the case history.`},
+    {t:'Protection chat and referrals', h:`<b>Protection chat</b> gives a few open questions to get the client talking; note what they say and how it went. <b>Interested</b> adds them to the protection pipeline. <b>Refer to Protection</b> creates a protection lead for a MAPA. The <b>Protection</b> column shows where each client is.`},
+  ]},
+  {group:'Management', roles:['management'], items:[
+    {t:'Settings', roles:['management'], h:`Colleagues and PINs, client sources, email templates and protection prompts, Useful Info tables, Send in Blue upload/download and the lender letter timing, bulk delete, Recycle Bin and backups. Each has its own button on the Settings page.`},
+    {t:'Insights and Log in Data', roles:['management'], h:`<b>Insights</b> shows the funnel, commission, underwriting and decline figures (it follows the advisor and date filters). Send in Blue has its own Insights with tabs. <b>Log in Data</b> shows when each MAPA and Admin last signed in and worked on a lead.`},
+  ]},
+];
+function renderHelp(){
+  const q = (document.getElementById('helpSearch').value||'').trim().toLowerCase();
+  const role = currentUser ? currentUser.role : 'mapa';
+  const okRole = x=> !x.roles || x.roles.includes(role);
+  const strip = h=> h.replace(/<[^>]+>/g,' ').toLowerCase();
+  const html = HELP.filter(okRole).map(g=>{
+    const items = g.items.filter(okRole).filter(it=> !q || it.t.toLowerCase().includes(q) || strip(it.h).includes(q));
+    return items.length ? `<div class="help-group">${esc(g.group)}</div>` + items.map(it=> `<details class="help-item"${q ? ' open' : ''}><summary>${esc(it.t)}</summary><div class="help-text">${it.h}</div></details>`).join('') : '';
+  }).join('');
+  document.getElementById('helpBody').innerHTML = html || '<div class="nml-empty">Nothing found. Try another word, or ask Management.</div>';
+}
+document.getElementById('helpBtn').addEventListener('click', ()=>{ document.getElementById('helpSearch').value = ''; renderHelp(); openModal('helpOverlay'); });
+document.getElementById('helpSearch').addEventListener('input', renderHelp);
+
+/* ---- Reassign several leads at once (Management and Admin) ----
+   Lists the leads on the dashboard (same advisor / date / search filters),
+   fully declined ones left out. Each lead gets its own history entry. */
+let brSelected = new Set();
+function openBulkReassign(){
+  brSelected = new Set();
+  const list = visibleLeads().filter(l=> potOf(l)!=='completed')
+    .sort((a,b)=> String(a.advisorName||'').localeCompare(String(b.advisorName||'')) || String(a.clientName||'').localeCompare(String(b.clientName||'')));
+  const filtered = selectedAdvisorFilter || dateRangeFrom || dateRangeTo || searchTerm;
+  document.getElementById('brSub').textContent = `Tick the leads to move, choose the advisor, then click Reassign. ${list.length} lead${list.length===1?'':'s'} shown${filtered ? ', matching the filters on the dashboard (e.g. pick an advisor there first to see just their leads)' : '. Tip: pick an advisor in the dashboard filter first to see just their leads'}. Fully declined leads aren't listed.`;
+  document.getElementById('brBody').innerHTML = list.length ? `<table class="nml-table br-table"><thead><tr><th></th><th>Client</th><th>Advisor now</th><th>Pot</th><th>Task Created</th></tr></thead>
+    <tbody>${list.map(l=> `<tr data-br="${esc(l.id)}"><td><input type="checkbox" data-brc="${esc(l.id)}" aria-label="Select ${esc(l.clientName)}"></td><td><div class="nml-ins">${esc(l.clientName)}</div></td><td>${esc(l.advisorName||'Unassigned')}</td><td>${esc(STATUS_LABELS[potOf(l)]||potOf(l))}</td><td>${esc(fmtDate(l.appDate))}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="nml-empty">No leads match the filters on the dashboard.</div>';
+  const mapas = Object.entries(USERS).filter(([, u])=> u && u.role==='mapa').sort((a,b)=> a[1].name.localeCompare(b[1].name));
+  document.getElementById('brAdvisor').innerHTML = '<option value="">Select an advisor…</option>' + mapas.map(([id,u])=> `<option value="${esc(id)}">${esc(u.name)}</option>`).join('');
+  document.getElementById('brAll').checked = false;
+  const sync = ()=>{
+    document.querySelectorAll('#brBody [data-brc]').forEach(cb=>{ cb.checked = brSelected.has(cb.dataset.brc); cb.closest('tr').classList.toggle('on', cb.checked); });
+    document.getElementById('brCount').textContent = `${brSelected.size} selected`;
+    document.getElementById('brAll').checked = list.length>0 && brSelected.size===list.length;
+    document.getElementById('brSubmit').disabled = !brSelected.size || !document.getElementById('brAdvisor').value;
+    document.getElementById('brSubmit').textContent = brSelected.size ? `Reassign ${brSelected.size} lead${brSelected.size===1?'':'s'}` : 'Reassign';
+  };
+  document.querySelectorAll('#brBody tr[data-br]').forEach(tr=> tr.addEventListener('click', e=>{
+    const id = tr.dataset.br;
+    if(e.target.matches('input[type=checkbox]')){ if(e.target.checked) brSelected.add(id); else brSelected.delete(id); }
+    else { if(brSelected.has(id)) brSelected.delete(id); else brSelected.add(id); }
+    sync();
+  }));
+  document.getElementById('brAll').onchange = function(){ brSelected = this.checked ? new Set(list.map(l=> l.id)) : new Set(); sync(); };
+  document.getElementById('brAdvisor').onchange = sync;
+  sync();
+  openModal('bulkReassignOverlay');
+}
+document.getElementById('brSubmit').addEventListener('click', function(){
+  const toId = document.getElementById('brAdvisor').value, to = USERS[toId];
+  if(!to || !brSelected.size) return;
+  const ids = [...brSelected].filter(id=> LEADS[id] && !LEADS[id].deleted && LEADS[id].advisorId !== toId);
+  if(!ids.length){ toast(`Those leads are already with ${to.name}.`,'error'); return; }
+  if(!confirm(`Move ${ids.length} lead${ids.length===1?'':'s'} to ${to.name}?`)) return;
+  this.disabled = true;
+  const now = Date.now(), updates = {};
+  ids.forEach((id, i)=>{
+    const l = LEADS[id], from = l.advisorName || 'Unassigned';
+    updates[`leads/${id}/advisorId`] = toId;
+    updates[`leads/${id}/advisorName`] = to.name;
+    updates[`leads/${id}/audit/${uidShort()+(now+i).toString(36)}`] = {type:'assigned', text:`Reassigned from ${from} to ${to.name} by ${currentUser.name}`, byId:currentUser.id, byName:currentUser.name, at:now};
+  });
+  db.ref().update(updates).then(()=>{
+    const names = ids.map(id=> LEADS[id] && LEADS[id].clientName).filter(Boolean);
+    const summary = names.slice(0,3).join(', ') + (names.length > 3 ? ` and ${names.length-3} more` : '');
+    db.ref('notifications').push({leadId: ids.length===1 ? ids[0] : null, leadName: summary, toUserId:toId, toRole:null, message:`${ids.length} lead${ids.length===1?' has':'s have'} been reassigned to you: ${summary}`, at:now, readBy:{}}).catch(()=>{});
+    db.ref('notifications').push({leadId:null, leadName: summary, toUserId:null, toRole:'management', message:`${currentUser.name} reassigned ${ids.length} lead${ids.length===1?'':'s'} to ${to.name}`, at:now, readBy:{}}).catch(()=>{});
+    toast(`${ids.length} lead${ids.length===1?'':'s'} moved to ${to.name}`,'success');
+    closeModal('bulkReassignOverlay');
+  }).catch(err=> toast('Could not reassign: '+err.message,'error'))
+    .finally(()=>{ this.disabled = false; });
 });
 
 /* ---- Reassign a lead to a different advisor (Management and Admin) ---- */
@@ -6725,6 +6984,8 @@ function renderLeadModal(){
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
       ${lead.sibKey ? `<div class="info-cell full"><div class="lbl">Referred from Send in Blue</div><div class="val">Mortgage product ends ${esc(lead.sibMonthLabel||'')}</div><button type="button" class="btn btn-secondary btn-sm" id="openSibFromLead" style="margin-top:8px;">Open Send in Blue case</button></div>` : ''}
       <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
+      <div class="info-cell"><div class="lbl">Contact attempts</div><div class="val">${(()=>{ const att = Object.values(lead.audit||{}).filter(isContactAttempt).sort((a,b)=> b.at-a.at); return att.length ? `${att.length} <span style="font-weight:500; font-size:12px; color:var(--text-muted);">· last ${esc(timeAgo(att[0].at))}</span>` : '0'; })()}</div></div>
+      ${clientPhoneCellHtml(lead)}
       ${clientEmailCellHtml(lead)}
       ${hasBookedCall(lead) ? `
       <div class="info-cell full" style="background:var(--amber-bg);">
@@ -6766,6 +7027,7 @@ function renderLeadModal(){
       <div class="section-lbl">Action</div>
       <div class="action-bar" id="actionBar">
         <button class="action-btn" data-act="call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Call</button>
+        <button class="action-btn" data-act="noanswer" title="Tried to call, no answer: log the attempt in one click"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 13.3a16 16 0 0 0 3.4 2.6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-3.3-2.6M5.2 13.4A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9"/><path d="M22 2 2 22"/></svg>No answer</button>
         <button class="action-btn" data-act="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Text</button>
         <button class="action-btn" data-act="email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>Email</button>
         <button class="action-btn" data-act="appointment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Appointment</button>
@@ -6821,6 +7083,7 @@ function renderLeadModal(){
   }
 
   bindClientEmailCell(lead);
+  bindClientPhoneCell(lead);
   const openSibBtn = document.getElementById('openSibFromLead');
   if(openSibBtn) openSibBtn.addEventListener('click', ()=> openSibFromLead(lead.sibKey));
 
@@ -7001,6 +7264,32 @@ function logAudit(leadId, entry, patch={}){
   return db.ref().update(updates);
 }
 
+/* ---- Contact attempts ----
+   Every logged try at reaching the client: calls (including "No answer"),
+   texts, emails, appointments and other contact, plus outcomes saved from
+   those buttons. Notes don't count. */
+function isContactAttempt(a){
+  if(!a || isNoteEntry(a)) return false;
+  if(['call','text','email','appointment','other'].includes(a.type)) return true;
+  if(['followup','decline','signup','underwriting'].includes(a.type)) return !!a.via || /^(Call|Text|Email|Appointment|Other contact) - /.test(a.text||'');
+  return false;
+}
+function contactAttempts(lead){ return Object.values((lead && lead.audit)||{}).filter(isContactAttempt).length; }
+let noAnswerBusy = false;
+function logNoAnswer(lead){
+  if(noAnswerBusy) return;
+  noAnswerBusy = true;
+  const n = contactAttempts(LEADS[lead.id] || lead) + 1;
+  logAudit(lead.id, {type:'call', via:'call', noAnswer:true, text:`Call - No answer (attempt ${n})`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+    .then(()=>{
+      actionUIState = {kind:'call', stage:'followup'};
+      refreshLeadModal();
+      toast(`No answer logged (attempt ${n}). Book when to try again below, or close the case.`,'success');
+    })
+    .catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ noAnswerBusy = false; });
+}
+
 /* ---- Action button click handling ----
    actionUIState drives what's shown below the action buttons. Every action
    type (Call, Text, Email, Appointment, Other) now behaves the same way:
@@ -7015,6 +7304,7 @@ const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'App
 function handleActionClick(lead, type){
   // Email: write it first; the outcome buttons appear once it's sent.
   if(type==='email'){ openEmailCompose(lead.id, true); return; }
+  if(type==='noanswer'){ logNoAnswer(lead); return; }
   actionUIState = {kind:type};
   renderDynamicArea(lead);
 }
@@ -7027,7 +7317,7 @@ function renderDynamicArea(lead){
     const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
     area.innerHTML = `
       <div class="outcome-panel">
-        <div class="op-title">${label} outcome</div>
+        <div class="op-title">${label} outcome${actionUIState.kind==='call' && leadPhones(lead).length ? ` <span style="font-weight:600;">· ${leadPhones(lead).map(p=> `<a href="${esc(telHref(p))}" class="tel-link">${esc(p)}</a>`).join(' ')}</span>` : ''}</div>
         <div class="outcome-buttons">
           <button class="ob-signup" data-o="signup">Sign Up</button>
           <button class="ob-followup" data-o="followup">Follow Up</button>
@@ -7167,7 +7457,7 @@ function renderDynamicArea(lead){
         </div>
         <div id="dcContactWarning" class="hidden" style="display:flex; gap:9px; background:var(--amber-bg); border:1.5px solid var(--amber); border-radius:10px; padding:12px 13px; margin-bottom:16px;">
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px;flex:none;color:var(--amber);"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-          <span style="font-size:12.5px; font-weight:600; color:var(--amber);">Before declining, please ensure you have tried to contact the client 10 times.</span>
+          <span style="font-size:12.5px; font-weight:600; color:var(--amber);">Before declining, please ensure you have tried to contact the client 10 times. <span id="dcAttempts">So far: ${contactAttempts(LEADS[lead.id] || lead)} attempt${contactAttempts(LEADS[lead.id] || lead)===1?'':'s'} logged.</span></span>
         </div>
         <div class="field">
           <label for="dcDetail">Please give detail of why this client has declined</label>
@@ -7199,6 +7489,8 @@ function renderDynamicArea(lead){
       const detail = document.getElementById('dcDetail').value.trim();
       if(!reason){ toast('Please select a decline reason.','error'); return; }
       if(!detail){ toast('Please add detail for the decline.','error'); return; }
+      const tries = contactAttempts(LEADS[lead.id] || lead);
+      if(reason==='Unable to Contact' && tries < 10 && !confirm(`Only ${tries} contact attempt${tries===1?' is':'s are'} logged, and the rule is 10.\n\nDecline as Unable to Contact anyway?`)) return;
       this.disabled = true;
       const text = `${label} - Decline - ${fmtDateSlash(Date.now())} - ${reason}: ${detail}`;
       const newStatus = DECLINE_STEPS.every(st=> ticked[st.field]) ? 'completed' : 'decline';
@@ -7569,12 +7861,12 @@ function renderInsights(){
 /* ---- CSV export (respects the same advisor + date-range scope) ---- */
 document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
   const leads = insightsLeads();
-  const headers = ['Client Name','Client Source','Advisor','Task Created','Pot','Commission','Decline Reason','Decline Detail','Decline Sent','Decline Email on HLP','NPW in HLP Swim Lane','Assigned Date','Last Activity'];
+  const headers = ['Client Name','Client Phone','Client Email','Client Source','Advisor','Task Created','Pot','Commission','Decline Reason','Decline Detail','Decline Sent','Decline Email on HLP','NPW in HLP Swim Lane','Assigned Date','Last Activity'];
   const csvEscape = csvCell;
   const rows = leads.map(l=>{
     const last = leadLastActivity(l);
     return [
-      l.clientName, l.clientSource||'', l.advisorName||'', l.appDate||'',
+      l.clientName, leadPhones(l).join(', '), leadEmails(l).join(', '), l.clientSource||'', l.advisorName||'', l.appDate||'',
       STATUS_LABELS[l.status]||potOf(l), l.commission!=null? l.commission : '',
       l.declineReason||'', l.declineDetail||'', l.declineSent?'Yes':'No', l.hlpAdded?'Yes':'No', l.npwDone?'Yes':(isLegacyClosedStep(l, DECLINE_STEPS[2])?'n/a':'No'),
       l.createdAt ? fmtDate(l.createdAt) : '', last ? fmtDateTime(last.at) : ''
@@ -7811,6 +8103,8 @@ document.getElementById('udFileInput').addEventListener('change', function(){
     const dateCol = findCol(headers, 'date created', 'created', 'date');
     const advisorCol = findCol(headers, 'advisor');
     const clientCol = findCol(headers, 'client', 'clients', 'client name', 'client names');
+    const phoneCol = findCol(headers, 'phone', 'phone number', 'telephone', 'mobile', 'client phone');
+    const emailCol = findCol(headers, 'email', 'client email', 'email address');
 
     if(dateCol<0 || advisorCol<0 || clientCol<0){
       errText.textContent = 'Could not find "Date created", "Advisor" and "Client" columns in the header row.';
@@ -7852,7 +8146,9 @@ document.getElementById('udFileInput').addEventListener('change', function(){
       if(names.length===0){ skipped.push({row:i+1, reason:'no client name'}); continue; }
 
       const advisor = findAdvisor(rawAdvisor);
-      ready.push({
+      const phones = phoneCol>=0 ? String(r[phoneCol]||'').split(/[,;\/]+/).map(x=> x.trim()).filter(isPhone) : [];
+      const emails = emailCol>=0 ? String(r[emailCol]||'').split(/[,;\s]+/).map(x=> x.trim()).filter(isEmail) : [];
+      ready.push({ phones, emails,
         clientNames: names,
         clientName: names.join(' & '),
         rawAdvisor,
@@ -7966,6 +8262,8 @@ document.getElementById('udImportBtn').addEventListener('click', function(){
       clientName:r.clientName, clientNames:r.clientNames,
       advisorId:r.advisorId, advisorName:r.advisorName,
       appDate:r.appDate, status:'new',
+      ...(r.phones && r.phones.length ? {clientPhones:r.phones} : {}),
+      ...(r.emails && r.emails.length ? {clientEmails:r.emails} : {}),
       createdBy:currentUser.id, createdByName:currentUser.name, createdAt:r.ts,
       audit:{ [auditId]: {
         type:'assigned',

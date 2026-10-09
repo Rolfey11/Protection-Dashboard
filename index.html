@@ -4738,6 +4738,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-09e', date:'2026-10-09', items:[
+    {text:"<b>Admins can now reassign leads</b>: open a case and click <b>Reassign</b> under the advisor's name. It's recorded in the case history and the new advisor is notified.", roles:['admin','management']},
+  ]},
   {id:'2026-10-09d', date:'2026-10-09', items:[
     {text:"<b>Faster Send in Blue</b>: the Beat the letter list, the case list and Insights now open in a fraction of the time. Long lists show the first 200 cases (soonest first), with a <b>Show all</b> button underneath."},
   ]},
@@ -6583,7 +6586,8 @@ document.getElementById('ntSubmit').addEventListener('click', function(){
     .finally(()=>{ btn.disabled = false; });
 });
 
-/* ---- Reassign a lead to a different advisor (Management only) ---- */
+/* ---- Reassign a lead to a different advisor (Management and Admin) ---- */
+function canReassign(){ return !!currentUser && (currentUser.role==='management' || currentUser.role==='admin'); }
 function openReassign(lead){
   document.getElementById('raClientName').textContent = lead.clientName;
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
@@ -6715,7 +6719,7 @@ function renderLeadModal(){
   let infoHtml = `
     <span class="status-pill ${statusClass}">${statusLabel}</span>
     <div class="info-grid">
-      <div class="info-cell"><div class="lbl">Advisor</div><div class="val">${esc(lead.advisorName)}</div>${currentUser.role==='management' ? `<button id="reassignBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Reassign</button>` : ''}</div>
+      <div class="info-cell"><div class="lbl">Advisor</div><div class="val">${esc(lead.advisorName)}</div>${canReassign() ? `<button id="reassignBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Reassign</button>` : ''}</div>
       <div class="info-cell"><div class="lbl">Task Created</div><div class="val">${fmtDate(lead.appDate)}</div></div>
       <div class="info-cell"><div class="lbl">Client source</div><div class="val">${esc(lead.clientSource||'—')}</div>${canManageLead(lead) ? `<button id="editSourceBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Edit</button>` : ''}</div>
       <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
@@ -6820,7 +6824,7 @@ function renderLeadModal(){
   const openSibBtn = document.getElementById('openSibFromLead');
   if(openSibBtn) openSibBtn.addEventListener('click', ()=> openSibFromLead(lead.sibKey));
 
-  if(currentUser.role==='management'){
+  if(canReassign()){
     const rb = document.getElementById('reassignBtn');
     if(rb) rb.addEventListener('click', ()=> openReassign(lead));
   }

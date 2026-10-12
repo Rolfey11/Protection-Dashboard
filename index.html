@@ -1073,6 +1073,7 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .section-lbl{font-size:12px; font-weight:700; color:var(--ink-2); text-transform:uppercase; letter-spacing:.4px; margin:24px 0 10px;}
 
 .action-bar{display:flex; gap:8px; flex-wrap:wrap;}
+.action-hint{font-size:12px; color:var(--text-muted); margin:-4px 0 10px;}
 .action-btn{
   flex:1; min-width:90px; display:flex; flex-direction:column; align-items:center; gap:6px; padding:13px 8px;
   border:1.5px solid var(--border-2); border-radius:11px; background:var(--surface); font-size:12px; font-weight:600; color:var(--text);
@@ -5019,6 +5020,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-12b', date:'2026-10-12', items:[
+    {text:"<b>Notes now go with an action</b>: on a protection case, press Call, Text, Appointment or Other first, then add your note in the box that opens. The separate Notes box has gone, so every note says what was done.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-12', date:'2026-10-12', items:[
     {text:"<b>Send in Blue outcome reasons</b> can now be edited in <b>Settings → Templates &amp; prompts</b>, with a separate list for Open, Retained, No Opportunity and Not Converted.", roles:['management']},
     {text:"In a Send in Blue case's <b>Outcome</b> box, the Reason list now changes to match the outcome you pick.", roles:['mapa','admin']},
@@ -6978,7 +6982,7 @@ const HELP = [
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},
   ]},
   {group:'Protection cases', items:[
-    {t:'Log a call', roles:['mapa','management'], h:`<ol><li>Open the case and click <b>Call</b>.</li><li>Choose what happened: <b>Sign Up</b>, <b>Follow Up</b> or <b>Decline</b>, or just save a note.</li></ol>The client's phone number shows at the top of the Call box. Click it to dial.`},
+    {t:'Log a call', roles:['mapa','management'], h:`<ol><li>Open the case and click <b>Call</b>.</li><li>Choose what happened: <b>Sign Up</b>, <b>Follow Up</b> or <b>Decline</b>, and/or add a note about the call.</li></ol>Notes are always added through an action like this, so each note says what was done.The client's phone number shows at the top of the Call box. Click it to dial.`},
     {t:'No answer', roles:['mapa','management'], h:`Click <b>No answer</b> on the case. That's it: the attempt is logged and counted (you'll see "Contact attempts" on the case, and the count on the card). The follow-up box then opens so you can book when to try again; close the case if you don't want to.`},
     {t:'Book a follow-up call', roles:['mapa','management'], h:`<ol><li>On the case, click <b>Call</b> (or Text, Email…), then <b>Follow Up</b>.</li><li>Choose the date and time and add a comment.</li><li><b>Add to Calendar – Client invite</b> sends the client an invite through Google Calendar; <b>No invite</b> puts it just in your calendar; or <b>Save without adding to Calendar</b>.</li></ol>The case moves to Contacted Clients and shows when the call is due.`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
@@ -7244,20 +7248,15 @@ function renderLeadModal(){
     </div>
   `;
 
-  const notesHtml = `
-    <div class="section-lbl" style="margin-top:18px;">Notes</div>
-    ${canManageLead(lead) ? `
-      <textarea id="leadNotesInput" placeholder="Add a note about this case. It's saved to the audit trail." style="width:100%; min-height:70px; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); font-size:13.5px; font-family:inherit; resize:vertical;"></textarea>
-      <button class="btn btn-secondary btn-sm" id="leadNotesSave" style="margin-top:8px;">Add note</button>
-    ` : `
-      <div class="info-cell full"><div class="val" style="font-weight:500;">Notes are shown in the audit trail.</div></div>
-    `}
-  `;
+  // Notes are added through an action (Call, Text, Email, Appointment, Other),
+  // so every note is tied to something that was actually done.
+  const notesHtml = '';
 
   let actionHtml = '';
   if(canAction(lead)){
     actionHtml = `
       <div class="section-lbl">Action</div>
+      <p class="action-hint">Press an action to log what you did. You can add a note once you've chosen one.</p>
       <div class="action-bar" id="actionBar">
         <button class="action-btn" data-act="call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Call</button>
         <button class="action-btn" data-act="noanswer" title="Tried to call, no answer: log the attempt in one click"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 13.3a16 16 0 0 0 3.4 2.6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-3.3-2.6M5.2 13.4A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9"/><path d="M22 2 2 22"/></svg>No answer</button>
@@ -7297,23 +7296,6 @@ function renderLeadModal(){
   ` : '';
 
   document.getElementById('leadLeftPane').innerHTML = infoHtml + notesHtml + actionHtml + changeStatusHtml;
-
-  const notesSaveBtn = document.getElementById('leadNotesSave');
-  if(notesSaveBtn){
-    notesSaveBtn.addEventListener('click', function(){
-      const input = document.getElementById('leadNotesInput');
-      const val = input.value.trim();
-      if(!val){ toast('Type a note first.','error'); return; }
-      this.disabled = true;
-      // Clear the box straight away, so the live refresh that follows the
-      // save doesn't carry the old text back into it.
-      input.value = '';
-      logAudit(lead.id, {type:'note', text:`Note: ${val}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
-        .then(()=>{ toast('Note added to the audit trail','success'); refreshLeadModal(); })
-        .catch(err=>{ toast('Could not save: '+err.message,'error'); const i = document.getElementById('leadNotesInput'); if(i) i.value = val; })
-        .finally(()=>{ this.disabled = false; });
-    });
-  }
 
   bindClientEmailCell(lead);
   bindClientPhoneCell(lead);

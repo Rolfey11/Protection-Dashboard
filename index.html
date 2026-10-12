@@ -826,6 +826,9 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .btn svg{width:15px; height:15px;}
 
 .filter-row{display:flex; align-items:center; gap:8px; margin-bottom:20px; flex-wrap:wrap;}
+.reasons-editor{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;}
+.reasons-editor label{display:block; font-size:12px; font-weight:700; margin-bottom:4px;}
+.reasons-editor textarea{width:100%; min-height:150px; font-size:12.5px; line-height:1.5; resize:vertical;}
 .help-group{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--text-faint); margin:16px 0 6px;}
 .help-group:first-child{margin-top:0;}
 .help-item{border:1px solid var(--border); border-radius:10px; margin-bottom:6px; background:var(--surface);}
@@ -2173,6 +2176,15 @@ table.users-table tr:hover td{background:var(--brand-tint);}
               <button class="btn btn-secondary btn-sm" id="convoAddBtn">Add prompt</button>
               <button class="btn btn-primary btn-sm" id="convoSaveBtn">Save prompts</button>
               <button class="btn btn-ghost btn-sm hidden" id="convoResetBtn">Restore standard prompts</button>
+            </div>
+          </div>
+          <div class="insights-card" style="flex:1; min-width:300px;">
+            <div class="section-lbl" style="margin-top:0;">Send in Blue outcome reasons</div>
+            <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px; line-height:1.5;" id="reasonsNote">The reasons offered in a Send in Blue case's Outcome box, separately for each outcome. One reason per line.</p>
+            <div id="reasonsEditor" class="reasons-editor"></div>
+            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" id="reasonsSaveBtn">Save reasons</button>
+              <button class="btn btn-ghost btn-sm hidden" id="reasonsResetBtn">Restore standard reasons</button>
             </div>
           </div>
           <div class="insights-card" style="flex:1; min-width:300px;">
@@ -3901,8 +3913,36 @@ document.getElementById('convoResetBtn').addEventListener('click', ()=>{
   if(!confirm('Go back to the standard protection prompts? Your edits will be removed for everyone.')) return;
   db.ref('config/sibProtectionPrompts').remove().then(()=>{ convoDraft = null; toast('Standard prompts restored','success'); }).catch(err=> toast('Could not save: '+err.message,'error'));
 });
+function renderReasonsEditor(){
+  // Don't wipe what someone is typing when another setting changes.
+  const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('#reasonsEditor');
+  if(typing) return;
+  const custom = !!CONFIG.sibOutcomeReasons;
+  document.getElementById('reasonsResetBtn').classList.toggle('hidden', !custom);
+  document.getElementById('reasonsNote').textContent = `${custom ? 'Your edited reasons are in use.' : 'The standard reasons are in use.'} One reason per line; each outcome has its own list. Reasons already saved on cases are kept.`;
+  document.getElementById('reasonsEditor').innerHTML = SIB_REASON_OUTCOMES.map(([k, label, outcome])=>
+    `<div><label for="reasons_${k}">${esc(label)}</label><textarea id="reasons_${k}" data-reasons="${k}" spellcheck="true">${esc(sibReasonsFor(outcome).join('\n'))}</textarea></div>`).join('');
+}
+document.getElementById('reasonsSaveBtn').addEventListener('click', function(){
+  const data = {}; let problem = null;
+  document.querySelectorAll('#reasonsEditor [data-reasons]').forEach(t=>{
+    const list = [...new Set(t.value.split('\n').map(x=> x.trim()).filter(Boolean))];
+    if(list.length > 40) problem = 'Keep each list to 40 reasons or fewer.';
+    if(list.some(x=> x.length > 80)) problem = 'Keep each reason under 80 characters.';
+    data[t.dataset.reasons] = list;
+  });
+  if(problem){ toast(problem,'error'); return; }
+  this.disabled = true;
+  db.ref('config/sibOutcomeReasons').set(data).then(()=> toast('Outcome reasons saved for everyone','success'))
+    .catch(err=> toast('Could not save: '+err.message,'error')).finally(()=>{ this.disabled = false; });
+});
+document.getElementById('reasonsResetBtn').addEventListener('click', ()=>{
+  if(!confirm('Go back to the standard outcome reasons? Your edits will be removed for everyone.')) return;
+  db.ref('config/sibOutcomeReasons').remove().then(()=> toast('Standard reasons restored','success')).catch(err=> toast('Could not save: '+err.message,'error'));
+});
 function renderContentSettings(){
   convoDraft = null; renderConvoPrompts();
+  renderReasonsEditor();
   const custom = savedTemplates();
   const list = getEmailTemplates();
   document.getElementById('tplList').innerHTML = `<div class="cfg-sub" style="margin-bottom:6px;">${custom ? 'Using your edited templates.' : 'Using the standard templates.'}</div>` +
@@ -4066,6 +4106,16 @@ document.getElementById('nmlCover').addEventListener('change', ()=>{ if(NML) ren
    ---------------------------------------------------------------------------- */
 const SIB_RETENTION = ['Retained','No Opportunity','Not Converted'];
 const SIB_EMAIL_CLIENT = ['YES','NO','UNSUBSCRIBED','See Notes'];
+/* Outcome reasons, editable per outcome in Settings → Templates & prompts
+   (config/sibOutcomeReasons = {open:[...], retained:[...], noopp:[...], notconv:[...]}).
+   The standard set starts every outcome with the full original list. */
+const SIB_REASON_OUTCOMES = [['open','Open (still working on it)',''],['retained','Retained','Retained'],['noopp','No Opportunity','No Opportunity'],['notconv','Not Converted','Not Converted']];
+function sibReasonsFor(outcome){
+  const row = SIB_REASON_OUTCOMES.find(r=> r[2]===(outcome||'')) || SIB_REASON_OUTCOMES[0];
+  const saved = CONFIG.sibOutcomeReasons && CONFIG.sibOutcomeReasons[row[0]];
+  if(CONFIG.sibOutcomeReasons) return (Array.isArray(saved) ? saved : Object.values(saved||{})).filter(x=> typeof x==='string' && x.trim());
+  return SIB_REASONS;
+}
 const SIB_REASONS = ['Resi Product Transfer','Resi Remortgage','Mortgage NTU','BTL Remortgage','BTL Product Transfer','Discussing Options','Client/s went direct','Client/s have moved','Client/s have cleared mortgage','Not Due yet','Clients separated','Unsubscribed from SIB'];
 let APP_MODE = 'protection';
 try{ if(localStorage.getItem('plt_mode')==='sib') APP_MODE = 'sib'; }catch(e){}
@@ -4371,7 +4421,7 @@ function renderSibCase(){
   if(act==='note') f.innerHTML = `<div class="inline-form"><div class="field"><label for="sibNoteText">Note</label><textarea id="sibNoteText"></textarea></div><button class="btn btn-primary btn-sm" id="sibNoteSave">Add note</button></div>`;
   if(act==='outcome') f.innerHTML = `<div class="inline-form">
       <div class="field"><label for="sibOutKey">Outcome</label><select id="sibOutKey"><option value="">Open (still working on it)</option>${SIB_RETENTION.map(v=> `<option ${c.retentionKey===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
-      <div class="field"><label for="sibOutReason">Reason</label><select id="sibOutReason"><option value="">None</option>${[...new Set([...SIB_REASONS, ...(c.outcomeReason?[c.outcomeReason]:[])])].map(v=> `<option ${c.outcomeReason===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
+      <div class="field"><label for="sibOutReason">Reason</label><select id="sibOutReason">${sibReasonOptions(c.retentionKey||'', c.outcomeReason)}</select></div>
       <button class="btn btn-primary btn-sm" id="sibOutSave">Save outcome</button></div>`;
   if(act==='refer') f.innerHTML = sibReferFormHtml(c);
   if(act==='protect') f.innerHTML = sibConvoFormHtml(c);
@@ -4413,6 +4463,11 @@ function renderSibCase(){
     const note = document.getElementById('sibNoteText').value.trim();
     if(!note){ toast('Please write a note.','error'); return; }
     sibWrite({}, {type:'note', text:`Note: ${note}`}).then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Note added','success'); } });
+  });
+  const outKey = document.getElementById('sibOutKey');
+  if(outKey) outKey.addEventListener('change', ()=>{
+    const sel = document.getElementById('sibOutReason'), keep = sel.value;
+    sel.innerHTML = sibReasonOptions(outKey.value, keep && sibReasonsFor(outKey.value).includes(keep) ? keep : (outKey.value===(c.retentionKey||'') ? c.outcomeReason : ''));
   });
   on('sibOutSave', ()=>{
     const k = document.getElementById('sibOutKey').value, r = document.getElementById('sibOutReason').value;
@@ -4460,6 +4515,11 @@ function renderSibCase(){
         ${e.convoNotes ? `<details class="sib-email-copy" open><summary>What they said</summary><div class="note-quote">${esc(e.convoNotes)}</div></details>` : ''}
       </div>
     </div>`).join('') : '<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>';
+}
+// Reason options for an outcome; the case's saved reason stays available even if it's no longer on the list.
+function sibReasonOptions(outcome, current){
+  const list = [...new Set([...sibReasonsFor(outcome), ...(current ? [current] : [])])];
+  return '<option value="">None</option>' + list.map(v=> `<option ${current===v?'selected':''}>${esc(v)}</option>`).join('');
 }
 function todayISO(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
@@ -4959,6 +5019,10 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-12', date:'2026-10-12', items:[
+    {text:"<b>Send in Blue outcome reasons</b> can now be edited in <b>Settings → Templates &amp; prompts</b>, with a separate list for Open, Retained, No Opportunity and Not Converted.", roles:['management']},
+    {text:"In a Send in Blue case's <b>Outcome</b> box, the Reason list now changes to match the outcome you pick.", roles:['mapa','admin']},
+  ]},
   {id:'2026-10-09g', date:'2026-10-09', items:[
     {text:"<b>A friendlier welcome</b>: a time-of-day greeting, a smoother sign-in, and a line under the greeting showing how your week is going."},
     {text:"<b>🎉 Celebrations</b>: confetti when a case goes On Risk or a Send in Blue client is Retained, and a sparkle for Terms issued.", roles:['mapa','management']},
@@ -5055,7 +5119,7 @@ const SETTINGS_SECTIONS = [
   ['settingsColleagueSection', 'Colleagues', 'team', 'Add colleagues, user levels and PINs, and client sources.'],
   ['settingsUploadSection', 'Upload leads', 'upload', 'Add protection leads in bulk from a spreadsheet, or restore a backup.'],
   ['settingsAppSection', 'App & reminders', 'bell', 'Install the desktop app and turn on call reminders.'],
-  ['settingsContentSection', 'Templates & prompts', 'mail', 'Email templates, Send in Blue protection prompts and Useful Info tables.'],
+  ['settingsContentSection', 'Templates & prompts', 'mail', 'Email templates, Send in Blue protection prompts and outcome reasons, and Useful Info tables.'],
   ['settingsSibSection', 'Send in Blue data', 'sheet', 'Upload, download, back up and bulk delete Send in Blue cases.'],
   ['settingsBulkDeleteSection', 'Bulk delete', 'trash', 'Delete protection leads by Task Created date.'],
   ['settingsRecycleBinSection', 'Recycle Bin', 'restore', 'Restore protection leads deleted in the last 30 days.'],

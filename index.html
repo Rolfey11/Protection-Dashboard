@@ -224,6 +224,38 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .lg-feat b{display:block; font-size:14px; font-weight:600;}
 .lg-feat span{display:block; font-size:12.5px; color:rgba(255,255,255,.62); margin-top:1px;}
 @keyframes riseIn{from{opacity:0; transform:translateY(16px);}to{opacity:1; transform:none;}}
+/* Sign-in form eases in; PIN boxes pop as they fill; on success the screen fades away to the dashboard. */
+.lg-form > *{animation:riseIn .6s cubic-bezier(.2,.8,.2,1) both;}
+.lg-form > *:nth-child(2){animation-delay:.06s;} .lg-form > *:nth-child(3){animation-delay:.12s;} .lg-form > *:nth-child(5){animation-delay:.18s;}
+.lg-form > *:nth-child(6){animation-delay:.24s;} .lg-form > *:nth-child(7){animation-delay:.3s;} .lg-form > *:nth-child(n+8){animation-delay:.36s;}
+.lg-wave{display:inline-block; transform-origin:70% 70%; animation:wave 1.6s ease-in-out .2s 2;}
+@keyframes wave{0%,60%,100%{transform:rotate(0);}10%,30%{transform:rotate(14deg);}20%{transform:rotate(-8deg);}40%{transform:rotate(-4deg);}50%{transform:rotate(10deg);}}
+.pin-dot.filled{animation:dotPop .32s cubic-bezier(.3,1.6,.5,1);}
+@keyframes dotPop{0%{transform:scale(.92);}60%{transform:scale(1.06);}100%{transform:scale(1);}}
+.pin-dots.ok .pin-dot{transition-delay:calc(var(--i,0) * 70ms);}
+.pin-dots.ok .pin-dot:nth-child(2){--i:1;} .pin-dots.ok .pin-dot:nth-child(3){--i:2;} .pin-dots.ok .pin-dot:nth-child(4){--i:3;}
+#loginScreen.lg-leave{pointer-events:none; animation:lgLeave .55s cubic-bezier(.4,0,.2,1) .35s forwards;}
+@keyframes lgLeave{to{opacity:0; transform:scale(1.03); filter:blur(6px);}}
+#appShell.app-enter .page-head,#appShell.app-enter .filter-row,#appShell.app-enter .kpi-row,#appShell.app-enter #myDaySection,#appShell.app-enter .pots-grid{animation:riseIn .6s cubic-bezier(.2,.8,.2,1) both;}
+#appShell.app-enter .filter-row{animation-delay:.08s;} #appShell.app-enter .kpi-row{animation-delay:.14s;} #appShell.app-enter #myDaySection{animation-delay:.2s;} #appShell.app-enter .pots-grid{animation-delay:.26s;}
+/* Streak / personal-best badges under the greeting */
+.fun-badges{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+.fun-badges:empty{display:none;}
+.fun-badge{display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; background:var(--brand-tint); color:var(--brand); animation:riseIn .5s cubic-bezier(.2,.8,.2,1) both .3s;}
+.fun-badge.fire{background:color-mix(in srgb, #F97316 14%, var(--surface)); color:#C2410C;}
+.fun-badge.gold{background:color-mix(in srgb, #EAB308 18%, var(--surface)); color:#A16207;}
+:root[data-theme="dark"] .fun-badge.fire{color:#FDBA74;} :root[data-theme="dark"] .fun-badge.gold{color:#FDE047;}
+/* Celebration banner + confetti */
+.celebrate-banner{position:fixed; left:50%; top:22%; z-index:300; transform:translate(-50%,0); padding:16px 28px; border-radius:18px; background:var(--surface); color:var(--text); font-family:var(--fh); font-size:24px; font-weight:700; letter-spacing:-.3px; box-shadow:0 24px 60px -12px rgba(0,0,0,.35); border:2px solid var(--brand-light); pointer-events:none; animation:celebIn .5s cubic-bezier(.3,1.5,.5,1) both, celebOut .45s ease-in 2.4s forwards; white-space:nowrap;}
+.celebrate-banner.small{font-size:18px; padding:12px 22px; border-color:var(--indigo,#3F51C7);}
+@keyframes celebIn{from{opacity:0; transform:translate(-50%,16px) scale(.8);}to{opacity:1; transform:translate(-50%,0) scale(1);}}
+@keyframes celebOut{to{opacity:0; transform:translate(-50%,-12px) scale(.96);}}
+.confetti-canvas{position:fixed; inset:0; z-index:299; pointer-events:none;}
+@media (prefers-reduced-motion:reduce){
+  .lg-form > *,.pin-dot.filled,.lg-wave,#appShell.app-enter *,.fun-badge{animation:none !important;}
+  #loginScreen.lg-leave{animation:none;}
+  .celebrate-banner{animation:celebOut .3s ease-in 2.4s forwards;}
+}
 
 .lg-brand-foot{display:flex; justify-content:space-between; gap:16px; font-size:12px; color:rgba(255,255,255,.5);}
 .lg-brand-foot span{display:inline-flex; align-items:center; gap:6px;}
@@ -1574,6 +1606,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <div>
           <h1 id="dashGreeting">Welcome back</h1>
           <p class="sub" id="dashSub">Here's what's happening across the workflow.</p>
+          <div class="fun-badges" id="dashBadges"></div>
         </div>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
           <div class="search-wrap">
@@ -3068,7 +3101,14 @@ document.getElementById('pinReveal').addEventListener('click', (e)=>{
   pinInput.focus();
 });
 
+function setLoginTitle(){
+  const h = new Date().getHours();
+  const hello = h>=5 && h<12 ? 'Good morning' : h>=12 && h<17 ? 'Good afternoon' : h>=17 && h<22 ? 'Good evening' : 'Hello';
+  const u = USERS[userSelect.value];
+  document.getElementById('loginTitle').innerHTML = u ? `${esc(hello)}, ${esc(u.name.split(' ')[0])} <span class="lg-wave" aria-hidden="true">👋</span>` : esc(hello === 'Hello' ? 'Welcome back' : hello);
+}
 userSelect.addEventListener('change', ()=>{
+  setLoginTitle();
   hideLoginError(); renderPinDots();
   if(userSelect.value){
     if(pinBuffer.length===4) attemptLogin();
@@ -3278,8 +3318,11 @@ function logout(){
   auth.signOut();
   currentUser = null;
   pendingAuthUser = null;
+  clearTimeout(loginLeaveTimer);
   document.getElementById('appShell').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('appShell').classList.remove('app-enter');
+  document.getElementById('loginScreen').classList.remove('hidden','lg-leave');
+  pinDots.classList.remove('ok');
   pinBuffer=''; renderPinDots();
   userSelect.value='';
   setLoginLoading(false);
@@ -3337,10 +3380,130 @@ document.getElementById('fpSignOut').addEventListener('click', ()=>{ forcePinAct
 /* ----------------------------------------------------------------------------
    5) ENTER APP / NAV
    ---------------------------------------------------------------------------- */
+/* ---- Friendly touches: greeting, week-so-far line, streaks, celebrations ---- */
+function motionOK(){ return !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+function greetingFor(first){
+  const now = new Date(), h = now.getHours(), day = now.getDay();
+  if(day===5 && h>=12 && h<18) return `Happy Friday, ${first} 🎉`;
+  if(h>=5 && h<12) return `Good morning, ${first} ☀️`;
+  if(h>=12 && h<17) return `Good afternoon, ${first} 👋`;
+  if(h>=17 && h<22) return `Good evening, ${first} 🌆`;
+  return `Working late, ${first}? 🌙`;
+}
+function setGreeting(){ if(currentUser) document.getElementById('dashGreeting').textContent = greetingFor(currentUser.name.split(' ')[0]); }
+let loginLeaveTimer = null;
+
+/* Contact attempts / on-risk entries logged by one colleague, from the case histories. */
+function myEntries(byId, test){
+  const out = [];
+  Object.values(LEADS).forEach(l=>{ if(!l || l.deleted) return; Object.values(l.audit||{}).forEach(a=>{ if(a && a.at && (!byId || a.byId===byId) && test(a)) out.push(a.at); }); });
+  return out;
+}
+function weekLine(){
+  if(!currentUser || !leadsLoaded) return null;
+  const now = Date.now(), wk = startOfWeek(now), DAY = 86400000, isMon = new Date().getDay()===1;
+  const inThis = t=> t >= wk && t <= now, inLast = t=> t >= wk - 7*DAY && t <= now - 7*DAY;
+  const fri = ''; // Friday afternoons are greeted in the heading instead
+  const diffTxt = (a, b)=> a===b ? (a ? ', same as this time last week' : '') : a > b ? `, ${a-b} more than this time last week 📈` : `, ${b-a} fewer than this time last week`;
+  const plural = (n, w)=> `${n} ${w}${n===1?'':'s'}`;
+  if(currentUser.role==='admin'){
+    const added = Object.values(LEADS).filter(l=> l && !l.deleted && (l.createdAt||0) >= wk);
+    const mine = added.filter(l=> l.createdBy===currentUser.id).length;
+    return `${plural(added.length,'lead')} added this week${mine ? ` (${mine} by you)` : ''}.` + fri;
+  }
+  const by = currentUser.role==='mapa' ? currentUser.id : null;
+  const att = myEntries(by, isContactAttempt), onr = myEntries(by, a=> a.type==='signup');
+  const a1 = att.filter(inThis).length, a0 = att.filter(inLast).length, r1 = onr.filter(inThis).length;
+  if(by){
+    if(!a1 && !r1) return (isMon ? 'New week, fresh start 💪' : 'No client contacts logged yet this week.') + fri;
+    return (r1 ? `${plural(r1,'case')} went on risk this week 👏 · ` : '') + `${plural(a1,'client contact')} logged this week${diffTxt(a1, a0)}.` + fri;
+  }
+  return `Team this week: ${plural(a1,'client contact')}${diffTxt(a1, a0)}${r1 ? `, and ${plural(r1,'case')} on risk 👏` : ''}.` + fri;
+}
+/* Private to the person signed in: working-day streak, best week, best month. */
+function myBadges(){
+  if(!currentUser || !leadsLoaded || currentUser.role==='admin') return [];
+  const me = currentUser.id, DAY = 86400000, badges = [];
+  const att = myEntries(me, isContactAttempt);
+  const days = new Set(att.map(t=> isoDay(t)));
+  // Streak: Mon–Fri days in a row with a contact logged; today counts once it has one.
+  let streak = 0; const d = new Date(); d.setHours(12,0,0,0);
+  if(!days.has(isoDay(d))) d.setDate(d.getDate()-1);
+  for(let i=0; i<400; i++){
+    const wd = d.getDay();
+    if(wd===0 || wd===6){ d.setDate(d.getDate()-1); continue; }
+    if(!days.has(isoDay(d))) break;
+    streak++; d.setDate(d.getDate()-1);
+  }
+  if(streak >= 2) badges.push(['fire', `🔥 ${streak}-day streak`, `You've logged client contact ${streak} working days in a row`]);
+  // Best week: this week's contacts beat each of the previous 12 weeks (and at least 10).
+  const wk = startOfWeek(Date.now());
+  const weekCount = k=> att.filter(t=> t >= wk - k*7*DAY && t < wk - (k-1)*7*DAY).length;
+  const thisWeek = att.filter(t=> t >= wk).length;
+  const prevWeeks = Array.from({length:12}, (_, i)=> weekCount(i+1));
+  if(thisWeek >= 10 && prevWeeks.some(n=> n>0) && thisWeek > Math.max(...prevWeeks)) badges.push(['gold', '⭐ Best week yet', `${thisWeek} client contacts this week, your most in the last 3 months`]);
+  // Best month: more cases on risk this month than in any earlier month.
+  const onr = myEntries(me, a=> a.type==='signup'), ym = t=> { const x = new Date(t); return x.getFullYear()*12 + x.getMonth(); };
+  const cur = ym(Date.now()), byMonth = {};
+  onr.forEach(t=> byMonth[ym(t)] = (byMonth[ym(t)]||0) + 1);
+  const thisM = byMonth[cur]||0, earlier = Object.entries(byMonth).filter(([k])=> Number(k) < cur).map(([, v])=> v);
+  if(thisM >= 2 && earlier.length && thisM > Math.max(...earlier)) badges.push(['gold', `🏆 Best month yet: ${thisM} on risk`, 'More cases on risk this month than in any month before']);
+  return badges;
+}
+function renderFunBits(){
+  if(!currentUser) return;
+  setGreeting();
+  const line = weekLine();
+  if(line) document.getElementById('dashSub').textContent = line;
+  document.getElementById('dashBadges').innerHTML = myBadges().map(([cls, txt, title])=> `<span class="fun-badge ${cls}" title="${esc(title)}">${esc(txt)}</span>`).join('');
+}
+/* Confetti + a short banner for the good moments. Banner only when motion is reduced. */
+function celebrate(msg, big=true){
+  const banner = document.createElement('div');
+  banner.className = 'celebrate-banner' + (big ? '' : ' small');
+  banner.textContent = msg;
+  document.body.appendChild(banner);
+  setTimeout(()=> banner.remove(), 3000);
+  if(!motionOK()) return;
+  const cv = document.createElement('canvas'); cv.className = 'confetti-canvas';
+  const W = cv.width = window.innerWidth, H = cv.height = window.innerHeight;
+  document.body.appendChild(cv);
+  const ctx = cv.getContext('2d');
+  const cs = getComputedStyle(document.documentElement);
+  const colours = [cs.getPropertyValue('--brand').trim()||'#A6297A', cs.getPropertyValue('--brand-light').trim()||'#D9469C', '#F59E0B', '#22C55E', '#3B82F6', '#F472B6'];
+  const n = big ? 160 : 50, parts = [];
+  for(let i=0; i<n; i++){
+    const fromLeft = i % 2 === 0;
+    parts.push({x: big ? (fromLeft ? 0 : W) : W/2 + (Math.random()-.5)*160, y: big ? H*0.7 : H*0.32,
+      vx: big ? (fromLeft ? 1 : -1) * (4 + Math.random()*9) : (Math.random()-.5)*8, vy: big ? -(9 + Math.random()*12) : -(3 + Math.random()*7),
+      w: 5 + Math.random()*6, h: 8 + Math.random()*8, r: Math.random()*Math.PI, vr: (Math.random()-.5)*.3, c: colours[i % colours.length]});
+  }
+  const start = performance.now(), life = big ? 2600 : 1600;
+  const step = t=>{
+    const el = t - start;
+    ctx.clearRect(0, 0, W, H);
+    parts.forEach(p=>{ p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      ctx.save(); ctx.globalAlpha = Math.max(0, 1 - el/life); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore(); });
+    if(el < life) requestAnimationFrame(step); else cv.remove();
+  };
+  requestAnimationFrame(step);
+}
+
 function enterApp(){
   if(forcePinActive) return;
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('appShell').classList.remove('hidden');
+  const ls = document.getElementById('loginScreen'), shell = document.getElementById('appShell');
+  const fromLogin = !ls.classList.contains('hidden');
+  shell.classList.remove('hidden');
+  if(fromLogin && motionOK()){
+    // Green tick on the PIN boxes, then the sign-in screen fades away over the dashboard.
+    pinDots.classList.add('ok');
+    ls.classList.add('lg-leave');
+    shell.classList.add('app-enter');
+    clearTimeout(loginLeaveTimer);
+    loginLeaveTimer = setTimeout(()=>{ ls.classList.add('hidden'); ls.classList.remove('lg-leave'); pinDots.classList.remove('ok'); shell.classList.remove('app-enter'); }, 950);
+  } else {
+    ls.classList.add('hidden');
+  }
 
   document.getElementById('userAvatar').textContent = initials(currentUser.name);
   document.getElementById('userNameLbl').textContent = currentUser.name;
@@ -3355,7 +3518,7 @@ function enterApp(){
   document.getElementById('sibInsightsTab').classList.remove('hidden');
 
   const first = currentUser.name.split(' ')[0];
-  document.getElementById('dashGreeting').textContent = `Welcome back, ${first}`;
+  document.getElementById('dashGreeting').textContent = greetingFor(first);
   document.getElementById('dashSub').textContent =
     currentUser.role==='mapa' ? "Here's your current workflow." :
     currentUser.role==='admin' ? "Here's everything logged across the team." :
@@ -4254,7 +4417,7 @@ function renderSibCase(){
   on('sibOutSave', ()=>{
     const k = document.getElementById('sibOutKey').value, r = document.getElementById('sibOutReason').value;
     sibWrite({retentionKey:k, outcomeReason:r}, {type: k==='Retained' ? 'signup' : k ? 'decline' : 'status', text:`Outcome: ${k||'Open'}${r ? ' ('+r+')' : ''}`})
-      .then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Outcome saved','success'); } });
+      .then(ok=>{ if(ok){ if(k==='Retained' && c.retentionKey!=='Retained') celebrate('Retained! 🎉'); sibAction = null; renderSibCase(); toast('Outcome saved','success'); } });
   });
   on('sibReferSave', function(){ sibReferToProtection(c, this); });
   if(act==='appt') sibApptWire(c);
@@ -4796,6 +4959,11 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-09g', date:'2026-10-09', items:[
+    {text:"<b>A friendlier welcome</b>: a time-of-day greeting, a smoother sign-in, and a line under the greeting showing how your week is going."},
+    {text:"<b>🎉 Celebrations</b>: confetti when a case goes On Risk or a Send in Blue client is Retained, and a sparkle for Terms issued.", roles:['mapa','management']},
+    {text:"<b>🔥 Streaks and personal bests</b>: under your greeting, just for you. Contact clients every working day to keep your streak going.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-09f', date:'2026-10-09', items:[
     {text:"<b>No answer</b> button on each case: logs a call attempt in one click and counts them (you'll see the count on the case and card), then offers to book the next try.", roles:['mapa','management']},
     {text:"<b>My Day</b> now also flags cases with no next call booked, cases not touched for 7+ days, terms issued 7+ days ago and cases submitted to underwriting 14+ days ago.", roles:['mapa']},
@@ -5315,7 +5483,7 @@ db.ref('users').on('value', snap=>{
       currentUser.name = me.name;
       document.getElementById('userAvatar').textContent = initials(me.name);
       document.getElementById('userNameLbl').textContent = me.name;
-      document.getElementById('dashGreeting').textContent = `Welcome back, ${me.name.split(' ')[0]}`;
+      setGreeting();
     }
     renderDashboard(); renderUsersTable();
   }
@@ -5644,6 +5812,7 @@ function renderDashboard(){
   renderOverdueBanner();
   renderMyDay();
   renderDashKpis();
+  renderFunBits();
   const leads = visibleLeads();
   const buckets = {new:[], existing:[], underwriting:[], terms:[], decline:[], signedup:[], completed:[]};
   leads.forEach(l=>{ const la = leadLastActivity(l); l._lastAt = la?.at || l.createdAt || 0; l._last = la; buckets[potOf(l)].push(l); });
@@ -7114,7 +7283,7 @@ function renderLeadModal(){
       this.disabled = true;
       logAudit(lead.id, {type:'terms', text:`Terms issued - ${fmtDateSlash(Date.now())}${note ? ' - '+note : ''}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()},
         {status:'terms', termsIssuedAt:Date.now(), termsNote:note||null})
-        .then(()=>{ toast('Terms issued. Moved to Terms Issued.','success'); actionUIState = null; refreshLeadModal(); })
+        .then(()=>{ celebrate('Terms issued ✨', false); toast('Terms issued. Moved to Terms Issued.','success'); actionUIState = null; refreshLeadModal(); })
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
     });
     if(lead.status==='decline'){
@@ -7538,6 +7707,7 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
   const text = (this.dataset.mode==='nowonrisk' ? '' : `${label} - `) + `${m.what} - ${fmtDateSlash(Date.now())} - Commission ${money}`;
   logAudit(leadId, {type:m.type, via:this.dataset.actionKind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:m.status, commission:Number(val)})
     .then(()=>{
+      if(m.status==='signedup') celebrate(`${money} on risk! 🎉`);
       toast(m.status==='underwriting' ? `Submitted to underwriting with ${money} commission pending. Moved to Submitted / In Underwriting.` : `On risk with ${money} commission. Moved to On Risk.`,'success'); closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();
     }).catch(err=> toast('Could not save: '+err.message,'error'))
@@ -8810,6 +8980,7 @@ function currentOverdueSignature(){
 }
 setInterval(()=>{
   if(!currentUser || !leadsLoaded) return;
+  setGreeting();
   checkCallReminders();
   maybeAutoBackup(); // catches the day rolling over while the tracker is left open
   const sig = currentOverdueSignature();
@@ -8822,6 +8993,7 @@ setInterval(()=>{
 }, 30000);
 
 renderPinDots();
+setLoginTitle();
 }); // end DOMContentLoaded
 </script>
 </body>

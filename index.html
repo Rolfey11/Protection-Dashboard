@@ -1056,6 +1056,8 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .fu-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .fu-actions .btn .ico{width:15px; height:15px;}
 .fu-hint{font-size:11.5px; color:var(--text-faint); margin-top:8px;}
+.fu-hint.bad{color:var(--red); font-weight:700; font-size:12.5px;}
+.inline-form input.missing{border-color:var(--red); background:var(--red-bg); box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 18%, transparent);}
 .fu-invite{display:flex; align-items:flex-start; gap:8px; margin-top:10px; padding:9px 11px; border-radius:9px; font-size:12px; line-height:1.45; background:var(--green-bg); color:var(--green);}
 .fu-invite.none{background:var(--bg); color:var(--text-muted);}
 .fu-invite .ico{width:15px; height:15px; margin-top:1px;}
@@ -5238,6 +5240,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14b', date:'2026-10-14', items:[
+    {text:"<b>Follow-ups now need a date and a time.</b> If either is missing (or the time has already passed), the box is highlighted in red and it won't save until it's filled in. This keeps My Day, the calendar and call reminders accurate.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-14', date:'2026-10-14', items:[
     {text:"Selecting text in a box and letting go of the mouse outside it no longer closes the box. Clicking outside still closes it as before."},
   ]},
@@ -7221,7 +7226,7 @@ const HELP = [
   {group:'Protection cases', items:[
     {t:'Log a call', roles:['mapa','management'], h:`<ol><li>Open the case and click <b>Call</b>.</li><li>Choose what happened: <b>Sign Up</b>, <b>Follow Up</b> or <b>Decline</b>, and/or add a note about the call.</li></ol>Notes are always added through an action like this, so each note says what was done.The client's phone number shows at the top of the Call box. Click it to dial.`},
     {t:'No answer', roles:['mapa','management'], h:`Click <b>No answer</b> on the case. That's it: the attempt is logged and counted (you'll see "Contact attempts" on the case, and the count on the card). The follow-up box then opens so you can book when to try again; close the case if you don't want to.`},
-    {t:'Book a follow-up call', roles:['mapa','management'], h:`<ol><li>On the case, click <b>Call</b> (or Text, Email…), then <b>Follow Up</b>.</li><li>Choose the date and time and add a comment.</li><li><b>Add to Calendar – Client invite</b> sends the client an invite through Google Calendar; <b>No invite</b> puts it just in your calendar; or <b>Save without adding to Calendar</b>.</li></ol>The case moves to Contacted Clients and shows when the call is due.`},
+    {t:'Book a follow-up call', roles:['mapa','management'], h:`<ol><li>On the case, click <b>Call</b> (or Text, Email…), then <b>Follow Up</b>.</li><li>Choose the date and time (both are needed) and add a comment.</li><li><b>Add to Calendar – Client invite</b> sends the client an invite through Google Calendar; <b>No invite</b> puts it just in your calendar; or <b>Save without adding to Calendar</b>.</li></ol>The case moves to Contacted Clients and shows when the call is due.`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
     {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the commission.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission is filled in for you.</li></ol>`},
     {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
@@ -7851,12 +7856,15 @@ function renderDynamicArea(lead){
     const clientEmails = ()=> leadEmails(LEADS[lead.id] || lead);
     const syncFuButtons = ()=>{
       const ready = !!(fuDate.value && fuTime.value);
+      if(fuDate.value) fuDate.classList.remove('missing');
+      if(fuTime.value) fuTime.classList.remove('missing');
+      document.getElementById('fuHint').classList.remove('bad');
       const em = clientEmails();
       fuCalBtn.disabled = !ready;
       fuInviteBtn.disabled = !ready || !em.length;
       document.getElementById('fuHint').textContent = ready
         ? `The calendar options open Google Calendar with a 1-hour call at ${fuTime.value} on ${fmtDate(fuDate.value)}. Just click Save there.`
-        : 'Choose a date and time to add the call to Google Calendar.';
+        : 'Choose a date and time for the follow-up call.';
       const inv = document.getElementById('fuInvite');
       inv.innerHTML = em.length
         ? (ready ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(em.join(', '))}</b> (already in Guests). In Google, click <b>Save</b>, then <b>Send</b>. If a Google Meet link appears, click the <b>×</b> next to it first.</span></div>` : '')
@@ -7871,8 +7879,20 @@ function renderDynamicArea(lead){
     const saveFollowUp = (mode)=>{
       const date = fuDate.value, time = fuTime.value;
       const comment = document.getElementById('fuComment').value.trim();
-      if(!date){ toast('Please choose a follow-up date.','error'); return; }
-      if(mode !== 'save' && !time){ toast('Please choose a time to add the call to Google Calendar.','error'); return; }
+      // Every follow-up needs a date and a time, so the call shows up on time in My Day, the calendar and reminders.
+      const missing = [!date && fuDate, !time && fuTime].filter(Boolean);
+      const pastTime = date && time && callDueAt(date, time).getTime() < Date.now() - 60000;
+      if(missing.length || pastTime){
+        const msg = missing.length===2 ? 'Please choose a date and a time for the follow-up call before saving.'
+          : !date ? 'Please choose a date for the follow-up call before saving.'
+          : !time ? 'Please choose a time for the follow-up call before saving.'
+          : 'That time has already passed. Please choose a later time.';
+        (missing.length ? missing : [fuTime]).forEach(el=> el.classList.add('missing'));
+        const hint = document.getElementById('fuHint'); hint.textContent = msg; hint.classList.add('bad');
+        (missing[0] || fuTime).focus();
+        toast(msg,'error');
+        return;
+      }
       const inviteTo = mode==='invite' ? clientEmails() : [];
       if(mode==='invite' && !inviteTo.length){ toast('Add the client\'s email to the case first.','error'); return; }
       // Open the tab now, while we still have the click: browsers block

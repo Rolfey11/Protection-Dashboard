@@ -5238,12 +5238,14 @@ function openSibFromLead(key){
 /* ----------------------------------------------------------------------------
    WHAT'S NEW — shown once after an update (per colleague, per device).
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
+   id: each new id must sort after every id below it (that's how "already
+   seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
-  {id:'2026-10-14b', date:'2026-10-14', items:[
+  {id:'2026-10-14b', date:'2026-10-13', items:[
     {text:"<b>Follow-ups now need a date and a time.</b> If either is missing (or the time has already passed), the box is highlighted in red and it won't save until it's filled in. This keeps My Day, the calendar and call reminders accurate.", roles:['mapa','management']},
   ]},
-  {id:'2026-10-14', date:'2026-10-14', items:[
+  {id:'2026-10-14', date:'2026-10-13', items:[
     {text:"Selecting text in a box and letting go of the mouse outside it no longer closes the box. Clicking outside still closes it as before."},
   ]},
   {id:'2026-10-13c', date:'2026-10-13', items:[

@@ -1,0 +1,536 @@
+{
+  "title": "Medical Conditions Guide",
+  "description": "How the UK market usually treats common medical conditions for life cover, critical illness and income protection, and what to ask the client.",
+  "checked": "2026-10-13",
+  "status": "For internal use only, not for clients. This is a general guide to how the UK market usually treats each condition, not any one insurer's underwriting. Every insurer is different and their approach changes, so always confirm with the insurer's underwriting team before you quote a client terms.",
+  "askEveryone": [
+    "What was the exact diagnosis, and when?",
+    "What treatment or medication now, and any changes in the last year?",
+    "When did they last have symptoms or a flare-up?",
+    "Any time off work for it? How long, and when?",
+    "Any hospital stays, surgery or specialist referrals?",
+    "Any tests, scans or referrals still waiting? Pending investigations usually mean the insurer postpones until results are back.",
+    "Height, weight, smoking or vaping, and alcohol units per week.",
+    "Family history: parents or siblings with heart disease, stroke, cancer or diabetes before age 60."
+  ],
+  "bestTerms": [
+    "Collect the details above before you quote. Vague answers lead to cautious decisions.",
+    "Run a pre-application enquiry with the underwriting helpline at 2 or 3 insurers.",
+    "Compare each product separately. The best insurer for life may not be the best for IP.",
+    "Splitting cover between insurers is fine if it gets the client better terms.",
+    "If you get a loading or exclusion, ask whether it can be reviewed after a period without symptoms.",
+    "Remind the client to answer every question fully and honestly. A wrong answer can mean a claim is reduced or not paid.",
+    "Record why you chose the insurer on the case notes."
+  ],
+  "conditions": [
+    {
+      "name": "Anxiety & depression",
+      "aka": "Stress, low mood, burnout, PTSD",
+      "keywords": "mental health anxiety depression stress ptsd sertraline citalopram fluoxetine counselling",
+      "life": {
+        "rating": "varies",
+        "note": "Mild, treated, no hospital stays: usually standard. Self-harm, suicide attempt or admission: loading, postponement or decline."
+      },
+      "ci": {
+        "rating": "standard",
+        "note": "Not a core CI condition. Severe history can still affect terms."
+      },
+      "ip": {
+        "rating": "exclusion",
+        "note": "Mental health exclusion is common, especially with recent time off work. Mild, one-off episodes may be standard."
+      },
+      "ask": [
+        "Diagnosis and when it started",
+        "Medication and any recent changes",
+        "Counselling or therapy",
+        "Time off work in the last 5 years",
+        "Any self-harm, suicidal thoughts or hospital admission",
+        "How they are now"
+      ],
+      "tip": "This is the condition where insurers differ most on IP. Shop around, and ask whether the exclusion can be reviewed after a set time without symptoms.",
+      "team": null
+    },
+    {
+      "name": "Raised blood pressure",
+      "aka": "Hypertension",
+      "keywords": "hypertension bp blood pressure amlodipine ramipril",
+      "life": {
+        "rating": "varies",
+        "note": "Treated and controlled: usually standard. High recent readings: loading."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "More sensitive than life because heart attack and stroke are core claims."
+      },
+      "ip": {
+        "rating": "standard",
+        "note": "Usually standard if controlled."
+      },
+      "ask": [
+        "Last 2 or 3 readings and their dates",
+        "Medication",
+        "When it was diagnosed",
+        "Whether it is controlled now",
+        "Other risk factors: BMI, cholesterol, diabetes, smoking"
+      ],
+      "tip": "Insurers look at combined heart risk. High blood pressure with a high BMI or cholesterol can be loaded more than each alone.",
+      "team": null
+    },
+    {
+      "name": "Raised cholesterol",
+      "aka": "Hyperlipidaemia",
+      "keywords": "cholesterol statin lipids",
+      "life": {
+        "rating": "standard",
+        "note": "Usually standard if treated or only mildly raised."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "Very high readings, or combined with other heart risks, can lead to a loading."
+      },
+      "ip": {
+        "rating": "standard",
+        "note": "Usually standard."
+      },
+      "ask": [
+        "Latest total cholesterol and HDL ratio",
+        "Statins or other medication",
+        "Any family history of early heart disease"
+      ],
+      "tip": "A reading on its own is rarely a problem. The other cardiac risk factors decide the outcome.",
+      "team": null
+    },
+    {
+      "name": "Type 2 diabetes",
+      "aka": "Diet, tablet or insulin controlled",
+      "keywords": "diabetes type 2 metformin hba1c sugar insulin",
+      "life": {
+        "rating": "varies",
+        "note": "Many insurers offer cover, often with a loading. Depends on control (HbA1c), age at diagnosis and complications."
+      },
+      "ci": {
+        "rating": "difficult",
+        "note": "Harder to place. Loadings or decline are common, especially with complications."
+      },
+      "ip": {
+        "rating": "difficult",
+        "note": "Loading or decline possible, often with exclusions."
+      },
+      "ask": [
+        "Date and age at diagnosis",
+        "Treatment: diet, tablets or insulin",
+        "Latest HbA1c",
+        "Complications: eyes, kidneys, nerves, feet",
+        "BMI, blood pressure, cholesterol, smoking"
+      ],
+      "tip": "Older age at diagnosis and good HbA1c readings help a lot. Get the actual numbers before you approach insurers.",
+      "team": null
+    },
+    {
+      "name": "Type 1 diabetes",
+      "aka": "Insulin dependent",
+      "keywords": "diabetes type 1 insulin hba1c hypo pump",
+      "life": {
+        "rating": "varies",
+        "note": "Often available with a loading if well controlled with no complications."
+      },
+      "ci": {
+        "rating": "difficult",
+        "note": "Often difficult. Decline is common."
+      },
+      "ip": {
+        "rating": "difficult",
+        "note": "Often difficult. Decline or heavy terms are common."
+      },
+      "ask": [
+        "Age at diagnosis",
+        "Latest HbA1c",
+        "Hypos needing help or hospital",
+        "Complications: eyes, kidneys, nerves",
+        "Insulin pump or injections"
+      ],
+      "tip": "Life cover is usually achievable. Set expectations early on CI and IP, and consider specialist insurers if mainstream ones decline.",
+      "team": null
+    },
+    {
+      "name": "High BMI",
+      "aka": "Overweight, obesity",
+      "keywords": "bmi weight overweight obese obesity build",
+      "life": {
+        "rating": "varies",
+        "note": "Standard up to a certain BMI at each insurer, then loadings."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "Similar, often a little stricter."
+      },
+      "ip": {
+        "rating": "varies",
+        "note": "Similar, and can combine with joint or back exclusions."
+      },
+      "ask": [
+        "Exact height and weight",
+        "Recent weight loss or gain",
+        "Linked conditions: blood pressure, diabetes, sleep apnoea, joints"
+      ],
+      "tip": "Use the real height and weight, not an estimate. Insurers' build limits differ, so a client loaded at one may be standard at another.",
+      "team": null
+    },
+    {
+      "name": "Asthma",
+      "aka": null,
+      "keywords": "asthma inhaler steroids prednisolone breathing",
+      "life": {
+        "rating": "standard",
+        "note": "Mild, inhaler controlled: standard. Hospital admissions or regular oral steroids: loading."
+      },
+      "ci": {
+        "rating": "standard",
+        "note": "Usually standard for mild asthma."
+      },
+      "ip": {
+        "rating": "varies",
+        "note": "Severe asthma or time off work can lead to a loading or exclusion."
+      },
+      "ask": [
+        "Inhalers used and how often",
+        "Steroid tablet courses in the last 2 years",
+        "Hospital or A&E visits",
+        "Time off work",
+        "Smoking"
+      ],
+      "tip": "Most asthma is standard. The questions that matter are steroid tablets and hospital visits.",
+      "team": null
+    },
+    {
+      "name": "Sleep apnoea",
+      "aka": "Obstructive sleep apnoea, OSA",
+      "keywords": "sleep apnoea apnea osa cpap snoring",
+      "life": {
+        "rating": "varies",
+        "note": "Treated with CPAP and used regularly: often standard. Untreated: loading or postponement."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "Similar to life."
+      },
+      "ip": {
+        "rating": "varies",
+        "note": "Often standard if treated. Can be affected by occupation, e.g. drivers."
+      },
+      "ask": [
+        "Severity at diagnosis",
+        "CPAP use every night?",
+        "BMI and blood pressure",
+        "Any daytime sleepiness or driving issues"
+      ],
+      "tip": "Proof the client uses CPAP regularly makes a big difference.",
+      "team": null
+    },
+    {
+      "name": "Back & neck pain",
+      "aka": "Sciatica, slipped disc, whiplash",
+      "keywords": "back neck pain sciatica disc spine whiplash physio musculoskeletal",
+      "life": {
+        "rating": "standard",
+        "note": "Usually standard."
+      },
+      "ci": {
+        "rating": "standard",
+        "note": "Usually standard."
+      },
+      "ip": {
+        "rating": "exclusion",
+        "note": "A back or spine exclusion is common, especially with recent time off, physio or surgery."
+      },
+      "ask": [
+        "Cause and diagnosis",
+        "Last time symptoms were present",
+        "Time off work",
+        "Treatment: physio, injections, surgery",
+        "Occupation and how manual it is"
+      ],
+      "tip": "A single strain years ago with no time off may be standard. Ask whether the exclusion can be reviewed after a few years without symptoms.",
+      "team": null
+    },
+    {
+      "name": "Osteoarthritis",
+      "aka": "Wear and tear of joints",
+      "keywords": "arthritis osteoarthritis joint knee hip wear tear",
+      "life": {
+        "rating": "standard",
+        "note": "Usually standard."
+      },
+      "ci": {
+        "rating": "standard",
+        "note": "Usually standard."
+      },
+      "ip": {
+        "rating": "exclusion",
+        "note": "An exclusion for the affected joint is likely, especially in manual jobs."
+      },
+      "ask": [
+        "Which joints",
+        "Pain relief or injections",
+        "Time off work",
+        "Any planned joint replacement"
+      ],
+      "tip": "Planned surgery usually means IP is postponed until after recovery.",
+      "team": null
+    },
+    {
+      "name": "Rheumatoid arthritis",
+      "aka": "Inflammatory arthritis",
+      "keywords": "rheumatoid arthritis ra methotrexate biologics inflammatory",
+      "life": {
+        "rating": "varies",
+        "note": "Mild and stable: possibly standard. Biologic drugs or organ involvement: loading."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "Loading possible depending on severity and medication."
+      },
+      "ip": {
+        "rating": "difficult",
+        "note": "Exclusion or decline is likely."
+      },
+      "ask": [
+        "Date of diagnosis",
+        "Medication, e.g. methotrexate or biologics",
+        "Flare-ups per year",
+        "Joint damage or other organs affected",
+        "Time off work"
+      ],
+      "tip": "Do not mix this up with osteoarthritis. Insurers treat them very differently, so confirm the exact diagnosis.",
+      "team": null
+    },
+    {
+      "name": "Gout",
+      "aka": null,
+      "keywords": "gout allopurinol uric acid joint",
+      "life": {
+        "rating": "standard",
+        "note": "Usually standard on its own."
+      },
+      "ci": {
+        "rating": "standard",
+        "note": "Usually standard unless kidney function is affected."
+      },
+      "ip": {
+        "rating": "exclusion",
+        "note": "A gout or joint exclusion is common. Deferral is possible with frequent attacks."
+      },
+      "ask": [
+        "Attacks per year and date of last one",
+        "Medication, e.g. allopurinol",
+        "Time off work",
+        "Any kidney problems"
+      ],
+      "tip": "Gout often comes with high BMI and blood pressure. Underwriters look at the combination.",
+      "team": null
+    },
+    {
+      "name": "Underactive thyroid",
+      "aka": "Hypothyroidism",
+      "keywords": "thyroid hypothyroidism levothyroxine underactive overactive graves",
+      "life": {
+        "rating": "standard",
+        "note": "Treated and stable: standard."
+      },
+      "ci": {
+        "rating": "standard",
+        "note": "Standard."
+      },
+      "ip": {
+        "rating": "standard",
+        "note": "Standard."
+      },
+      "ask": [
+        "Medication, e.g. levothyroxine",
+        "Cause, if known",
+        "Whether it is stable"
+      ],
+      "tip": "Overactive thyroid (Graves' disease) or thyroid cancer are different and need more detail.",
+      "team": null
+    },
+    {
+      "name": "Crohn's & ulcerative colitis",
+      "aka": "Inflammatory bowel disease, IBD",
+      "keywords": "crohns crohn colitis ulcerative ibd bowel",
+      "life": {
+        "rating": "varies",
+        "note": "Mild and in remission: may be standard. Frequent flares, steroids or surgery: loading."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "Loading possible, partly because of the link to bowel cancer."
+      },
+      "ip": {
+        "rating": "exclusion",
+        "note": "An exclusion for the bowel condition is common."
+      },
+      "ask": [
+        "Date of diagnosis",
+        "Flare-ups in the last 2 years",
+        "Medication: steroids, immunosuppressants, biologics",
+        "Surgery or hospital admissions",
+        "Time off work",
+        "Regular colonoscopy checks"
+      ],
+      "tip": "Make sure it is IBD and not IBS. They are very different for underwriting.",
+      "team": null
+    },
+    {
+      "name": "IBS",
+      "aka": "Irritable bowel syndrome",
+      "keywords": "ibs irritable bowel stomach",
+      "life": {
+        "rating": "standard",
+        "note": "Standard."
+      },
+      "ci": {
+        "rating": "standard",
+        "note": "Standard."
+      },
+      "ip": {
+        "rating": "varies",
+        "note": "Usually standard. An exclusion is possible with time off work."
+      },
+      "ask": [
+        "Was it confirmed by a doctor?",
+        "Any investigations still waiting?",
+        "Time off work"
+      ],
+      "tip": "Bowel investigations still pending will usually mean a postponement.",
+      "team": null
+    },
+    {
+      "name": "Migraine",
+      "aka": "Headaches",
+      "keywords": "migraine headache neurology",
+      "life": {
+        "rating": "standard",
+        "note": "Standard."
+      },
+      "ci": {
+        "rating": "standard",
+        "note": "Standard."
+      },
+      "ip": {
+        "rating": "varies",
+        "note": "An exclusion is possible if frequent or causing time off."
+      },
+      "ask": [
+        "How often",
+        "Medication",
+        "Time off work",
+        "Any scans or neurology referrals"
+      ],
+      "tip": "Pending scans or a neurology referral usually means a postponement.",
+      "team": null
+    },
+    {
+      "name": "Epilepsy",
+      "aka": "Seizures, fits",
+      "keywords": "epilepsy seizure fit neurology",
+      "life": {
+        "rating": "varies",
+        "note": "Well controlled with no recent seizures: standard or a small loading."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "Similar to life."
+      },
+      "ip": {
+        "rating": "difficult",
+        "note": "Loading, exclusion or decline, depending on control and occupation."
+      },
+      "ask": [
+        "Type of seizures",
+        "Date of last seizure",
+        "Number of seizures per year",
+        "Medication",
+        "Driving licence status"
+      ],
+      "tip": "Date of last seizure is the single most important answer. Get it exactly.",
+      "team": null
+    },
+    {
+      "name": "Palpitations & AF",
+      "aka": "Atrial fibrillation, irregular heartbeat",
+      "keywords": "heart af atrial fibrillation palpitations arrhythmia ecg cardiac",
+      "life": {
+        "rating": "varies",
+        "note": "Palpitations with normal tests: usually standard. AF: depends on type, treatment and other heart conditions."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "AF often leads to a loading."
+      },
+      "ip": {
+        "rating": "varies",
+        "note": "Loading or exclusion possible."
+      },
+      "ask": [
+        "Exact diagnosis",
+        "Tests done: ECG, echo, monitor",
+        "Medication, including blood thinners",
+        "Episodes and ablation",
+        "Any other heart conditions"
+      ],
+      "tip": "Get the test results. \"Palpitations, all tests normal\" is a very different case from diagnosed AF.",
+      "team": null
+    },
+    {
+      "name": "Previous cancer",
+      "aka": "Including skin cancer and abnormal smears",
+      "keywords": "cancer tumour tumor remission skin bcc melanoma cin smear oncology",
+      "life": {
+        "rating": "varies",
+        "note": "Depends on type, stage and time since treatment. Postponement then reducing loadings are common. Minor skin cancers are often standard."
+      },
+      "ci": {
+        "rating": "exclusion",
+        "note": "A cancer exclusion or postponement is common."
+      },
+      "ip": {
+        "rating": "varies",
+        "note": "Postponement or exclusion depending on type and time since treatment."
+      },
+      "ask": [
+        "Exact type, stage and grade",
+        "Date diagnosed and date treatment ended",
+        "Treatment received",
+        "Follow-up and any recurrence or spread"
+      ],
+      "tip": "Basal cell skin cancer and cervical cell changes (CIN) are usually treated very differently from other cancers. Get the exact name from the client.",
+      "team": null
+    },
+    {
+      "name": "Raised liver tests & alcohol",
+      "aka": "Fatty liver, high LFTs",
+      "keywords": "alcohol liver lft fatty drinking units",
+      "life": {
+        "rating": "varies",
+        "note": "Moderate drinking with normal tests: standard. Heavy drinking or abnormal tests: loading or decline."
+      },
+      "ci": {
+        "rating": "varies",
+        "note": "Similar to life."
+      },
+      "ip": {
+        "rating": "varies",
+        "note": "Loading, or an exclusion for alcohol-related claims."
+      },
+      "ask": [
+        "Units per week",
+        "Latest liver test results",
+        "Any advice from a doctor to cut down",
+        "Any treatment or support for alcohol",
+        "Fatty liver diagnosis"
+      ],
+      "tip": "Past alcohol dependency usually means cover is postponed until the client has been alcohol-free for a few years.",
+      "team": null
+    }
+  ]
+}

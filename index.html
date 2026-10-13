@@ -985,6 +985,10 @@ body:not(.mode-sib) .sib-only{display:none !important;}
   box-shadow:0 6px 16px -8px rgba(78,19,57,.28), 0 2px 4px rgba(46,20,38,.05);
 }
 .lead-card:active{transform:translateY(-1px);}
+.lead-card.quoted{background:color-mix(in srgb, var(--green) 9%, var(--surface)); border-color:color-mix(in srgb, var(--green) 35%, var(--border));}
+.lead-card.quoted:hover{border-color:color-mix(in srgb, var(--green) 60%, var(--border));}
+.lc-quoted{flex:none; display:grid; place-items:center; width:18px; height:18px; color:var(--green); background:var(--green-bg); border-radius:50%;}
+.lc-quoted .ico{width:12px; height:12px;}
 .lead-card.overdue{border-color:color-mix(in srgb, var(--red) 40%, var(--border)); box-shadow:inset 3px 0 0 var(--red);}
 .lead-card.overdue:hover{border-color:var(--red); box-shadow:inset 3px 0 0 var(--red), 0 10px 24px -10px color-mix(in srgb, var(--red) 45%, transparent);}
 .lead-card .lc-top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
@@ -1162,6 +1166,9 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .audit-icon.t-signup{color:var(--green); background:var(--green-bg); border-color:transparent;}
 .audit-icon.t-underwriting{color:var(--violet); background:var(--violet-bg); border-color:transparent;}
 .audit-icon.t-terms{color:var(--indigo); background:var(--indigo-bg); border-color:transparent;}
+.audit-icon.t-quotes{color:var(--green); background:var(--green-bg); border-color:transparent;}
+.quotes-done{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:13px; font-weight:700; color:var(--green);}
+.quotes-done .linkish{font-size:12.5px; font-weight:600;}
 .audit-icon.t-decline{color:var(--red); background:var(--red-bg); border-color:transparent;}
 .audit-icon.t-followup{color:var(--amber); background:var(--amber-bg); border-color:transparent;}
 .audit-icon.t-call,.audit-icon.t-text,.audit-icon.t-email,.audit-icon.t-appointment{color:var(--blue); background:var(--blue-bg); border-color:transparent;}
@@ -5242,6 +5249,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14c', date:'2026-10-13', items:[
+    {text:"<b>Quotes Sent</b>: on a case in Contacted Clients, press <b>Quotes Sent</b> once you've sent the client their quotes. The card turns pale green with a ✓, so you can see at a glance who's had quotes and who hasn't. Pressed it by mistake? Use <b>Undo</b> on the case.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-14b', date:'2026-10-13', items:[
     {text:"<b>Follow-ups now need a date and a time.</b> If either is missing (or the time has already passed), the box is highlighted in red and it won't save until it's filled in. This keeps My Day, the calendar and call reminders accurate.", roles:['mapa','management']},
   ]},
@@ -7069,10 +7079,13 @@ function leadCardHtml(lead, potKey){
     sub = `<span class="lc-money">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</span>` + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
   }
 
+  // Contacted Clients who've had their quotes show pale green, with a label so it isn't colour alone.
+  const quoted = potKey==='existing' && !!lead.quotesSentAt;
   return `
-    <div class="lead-card ${isOverdue?'overdue':''}" data-id="${esc(lead.id)}">
+    <div class="lead-card ${isOverdue?'overdue':''} ${quoted?'quoted':''}" data-id="${esc(lead.id)}">
       <div class="lc-top">
         <div class="lc-name">${esc(lead.clientName)}</div>
+        ${quoted ? `<span class="lc-quoted" title="Quotes sent ${esc(fmtDate(lead.quotesSentAt))}" aria-label="Quotes sent">${ico('check')}</span>` : ''}
         ${(potKey==='new' || potKey==='existing') ? (()=>{ const n = contactAttempts(lead); return n ? `<span class="lc-att" title="${n} contact attempt${n===1?'':'s'}">${ico('phone')}${n}</span>` : ''; })() : ''}
         ${advisor}
       </div>
@@ -7231,6 +7244,7 @@ const HELP = [
     {t:'Book a follow-up call', roles:['mapa','management'], h:`<ol><li>On the case, click <b>Call</b> (or Text, Email…), then <b>Follow Up</b>.</li><li>Choose the date and time (both are needed) and add a comment.</li><li><b>Add to Calendar – Client invite</b> sends the client an invite through Google Calendar; <b>No invite</b> puts it just in your calendar; or <b>Save without adding to Calendar</b>.</li></ol>The case moves to Contacted Clients and shows when the call is due.`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
     {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the commission.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission is filled in for you.</li></ol>`},
+    {t:'Mark quotes as sent', roles:['mapa','management'], h:`Open a case in <b>Contacted Clients</b> and press <b>Quotes Sent</b> once the client has their quotes. The card turns pale green with a ✓, and it's recorded in the case history. Pressed it by mistake? Press <b>Undo</b> on the case.`},
     {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
     {t:'Client has a medical condition', roles:['mapa','management'], h:`Open <b>Useful Info → Medical Conditions Guide</b>. Search for the condition (e.g. "diabetes" or "back") to see how insurers usually treat it for Life, CI and IP, and the questions to ask before you go to market. It's general guidance: always get an indicative decision from the insurer.`},
     {t:'Client phone and email', h:`Both show on the case. Click a phone number to dial it. Use <b>Add phone</b> / <b>Edit</b> to change them; the change is recorded in the history.`},
@@ -7520,6 +7534,14 @@ function renderLeadModal(){
         <button class="action-btn" data-act="other"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>Other</button>
       </div>
       <div id="dynamicActionArea"></div>
+      ${lead.status==='existing' ? (lead.quotesSentAt ? `
+      <div class="outcome-panel" style="border-color:var(--green); background:var(--green-bg);">
+        <div class="quotes-done"><span>${ico('checkCircle')} Quotes sent ${esc(fmtDate(lead.quotesSentAt))}${lead.quotesSentByName ? ' by '+esc(lead.quotesSentByName) : ''}</span><button type="button" class="linkish" id="quotesUndoBtn">Undo</button></div>
+      </div>` : `
+      <div class="outcome-panel" style="border-color:var(--green); background:var(--green-bg);">
+        <div class="op-title" style="color:var(--green);">${ico('send')} Sent this client their quotes? Mark it here and the case shows pale green on the dashboard.</div>
+        <button id="quotesSentBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:13px; font-weight:700;">Quotes Sent</button>
+      </div>`) : ''}
       ${lead.status==='underwriting' ? `
       <div class="outcome-panel" style="border-color:var(--violet); background:var(--violet-bg);">
         <div class="op-title" style="color:var(--violet);">${ico('clock')} This case is submitted / in underwriting. When the insurer issues terms, mark it here.</div>
@@ -7577,6 +7599,23 @@ function renderLeadModal(){
     renderDynamicArea(lead);
     const nor = document.getElementById('nowOnRiskBtn');
     if(nor) nor.addEventListener('click', ()=> openSignup(lead.id, '', 'nowonrisk', lead.commission!=null ? lead.commission : null));
+    const qsb = document.getElementById('quotesSentBtn');
+    if(qsb) qsb.addEventListener('click', function(){
+      this.disabled = true;
+      const now = Date.now();
+      logAudit(lead.id, {type:'quotes', text:`Quotes sent - ${fmtDateSlash(now)}`, byId:currentUser.id, byName:currentUser.name, at:now},
+        {quotesSentAt:now, quotesSentBy:currentUser.id, quotesSentByName:currentUser.name})
+        .then(()=>{ toast('Quotes sent. The case now shows green in Contacted Clients.','success'); refreshLeadModal(true); })
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    });
+    const qub = document.getElementById('quotesUndoBtn');
+    if(qub) qub.addEventListener('click', function(){
+      this.disabled = true;
+      logAudit(lead.id, {type:'quotes', text:'Quotes sent mark removed', byId:currentUser.id, byName:currentUser.name, at:Date.now()},
+        {quotesSentAt:null, quotesSentBy:null, quotesSentByName:null})
+        .then(()=>{ toast('Quotes sent mark removed.','success'); refreshLeadModal(true); })
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    });
     const tib = document.getElementById('termsIssuedBtn');
     if(tib) tib.addEventListener('click', ()=>{ document.getElementById('termsForm').classList.toggle('hidden'); document.getElementById('termsNote').focus(); });
     const ts = document.getElementById('termsSave');
@@ -7621,7 +7660,7 @@ function renderLeadModal(){
 function auditIcon(type){
   const map = {
     assigned:'pin', call:'phone', text:'message', email:'mail', appointment:'calendar', other:'note',
-    signup:'checkCircle', underwriting:'clock', terms:'note', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
+    signup:'checkCircle', underwriting:'clock', terms:'note', quotes:'send', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
   };
   return map[type] ? ico(map[type]) : '•';
 }

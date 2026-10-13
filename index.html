@@ -234,10 +234,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @keyframes dotPop{0%{transform:scale(.92);}60%{transform:scale(1.06);}100%{transform:scale(1);}}
 .pin-dots.ok .pin-dot{transition-delay:calc(var(--i,0) * 70ms);}
 .pin-dots.ok .pin-dot:nth-child(2){--i:1;} .pin-dots.ok .pin-dot:nth-child(3){--i:2;} .pin-dots.ok .pin-dot:nth-child(4){--i:3;}
-#loginScreen.lg-leave{pointer-events:none; animation:lgLeave .55s cubic-bezier(.4,0,.2,1) .35s forwards;}
+#loginScreen.lg-leave{pointer-events:none; animation:lgLeave .35s cubic-bezier(.4,0,.2,1) .15s forwards;}
 @keyframes lgLeave{to{opacity:0; transform:scale(1.03); filter:blur(6px);}}
-#appShell.app-enter .page-head,#appShell.app-enter .filter-row,#appShell.app-enter .kpi-row,#appShell.app-enter #myDaySection,#appShell.app-enter .pots-grid{animation:riseIn .6s cubic-bezier(.2,.8,.2,1) both;}
-#appShell.app-enter .filter-row{animation-delay:.08s;} #appShell.app-enter .kpi-row{animation-delay:.14s;} #appShell.app-enter #myDaySection{animation-delay:.2s;} #appShell.app-enter .pots-grid{animation-delay:.26s;}
+#appShell.app-enter .page-head,#appShell.app-enter .filter-row,#appShell.app-enter .kpi-row,#appShell.app-enter #myDaySection,#appShell.app-enter .pots-grid{animation:riseIn .4s cubic-bezier(.2,.8,.2,1) both;}
+#appShell.app-enter .filter-row{animation-delay:.04s;} #appShell.app-enter .kpi-row{animation-delay:.07s;} #appShell.app-enter #myDaySection{animation-delay:.1s;} #appShell.app-enter .pots-grid{animation-delay:.13s;}
 /* Streak / personal-best badges under the greeting */
 .fun-badges{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
 .fun-badges:empty{display:none;}
@@ -2983,6 +2983,46 @@ let activeLeadId = null;
 let selfDeletingLeadId = null; // case this user is deleting right now
 let lastRenderedLead = null; // JSON of the lead last drawn in the modal, to skip needless redraws
 let leadsLoaded = false; // false until the first leads download after sign-in arrives
+let leadsLive = false;   // true once the live download has arrived (not just the refresh copy below)
+
+/* Refresh copy: the colleague list, cases and notifications, kept for this
+   browser tab only (sessionStorage, which the browser deletes when the tab
+   closes; also cleared on log out), the same lifetime as the sign-in. On a
+   refresh the dashboard draws from it straight away while the live data
+   downloads, then updates. Nothing is kept once the tab is closed. */
+const BOOT_CACHE_KEY = 'plt_boot_v1';
+let bootCache = null;
+try{ const raw = sessionStorage.getItem(BOOT_CACHE_KEY); if(raw) bootCache = JSON.parse(raw); }catch(e){ bootCache = null; }
+let bootCacheTimer = null;
+function saveBootCache(){
+  clearTimeout(bootCacheTimer);
+  bootCacheTimer = setTimeout(()=>{
+    if(!currentUser || !leadsLive || !auth.currentUser) return;
+    const users = {};
+    Object.entries(USERS).forEach(([id,u])=>{ if(u && u.name) users[id] = {name:u.name, role:u.role}; }); // never keep PINs
+    try{ sessionStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({uid:auth.currentUser.uid, colleagueId:currentUser.id, at:Date.now(), users, leads:LEADS, notifs:NOTIFS})); }
+    catch(e){ try{ sessionStorage.removeItem(BOOT_CACHE_KEY); }catch(e2){} } // too big for this browser: just load normally
+  }, 1500);
+}
+function clearBootCache(){ bootCache = null; clearTimeout(bootCacheTimer); try{ sessionStorage.removeItem(BOOT_CACHE_KEY); }catch(e){} }
+/* Runs once the page has loaded: draw the dashboard from the refresh copy
+   without waiting for the sign-in check. When the check comes back, the
+   usual sign-in steps run; if this tab is no longer signed in as the same
+   person, it logs out and the copy is deleted. */
+let bootedFromCacheUid = null;
+function bootFromCache(){
+  const c = bootCache; bootCache = null;
+  if(!c || currentUser || authChecked || !c.colleagueId || !pinCheckedThisSession(c.uid)) return;
+  const u = (c.users||{})[c.colleagueId];
+  if(!u) return;
+  USERS = c.users; usersLoaded = true;
+  LEADS = c.leads || {}; leadsLoaded = true; leadsLive = false;
+  NOTIFS = c.notifs || {};
+  renderUserSelect();
+  currentUser = {id:c.colleagueId, name:u.name, role:u.role};
+  bootedFromCacheUid = c.uid;
+  enterApp();
+}
 // Drives the transient area under the action buttons. One of:
 //   null | 'call' | 'followup' | 'decline' | {kind:'text'|'email'|'other'}
 // Kept as separate state (not just DOM) so a realtime data refresh while the
@@ -3346,6 +3386,12 @@ let pendingAuthUser = null;
 auth.onAuthStateChanged(user=>{
   authChecked = true;
   pendingAuthUser = user;
+  if(bootedFromCacheUid){
+    const same = user && user.uid===bootedFromCacheUid;
+    bootedFromCacheUid = null;
+    if(!same){ logout(); return; }
+    currentUser = null; // carry on with the normal sign-in steps (links the account, starts live data)
+  }
   tryResolveSession();
 });
 
@@ -3391,6 +3437,7 @@ function tryResolveSession(){
     }
     markPinChecked(signedInAs.uid);
     linking.then(()=> recordSignIn(matchId, freshPin != null));
+    entryFromPin = freshPin != null;
     enterApp();
     if(knownLinked) startIfStillSignedIn();
     else linking.then(startIfStillSignedIn);
@@ -3420,8 +3467,9 @@ function logout(){
   document.getElementById('bellPanel').classList.remove('open');
   document.getElementById('daterangePanel').classList.remove('open');
   realtimeListenersStarted = false;
-  leadsLoaded = false;
+  leadsLoaded = false; leadsLive = false;
   LEADS = {};
+  clearBootCache();
   auth.signOut();
   currentUser = null;
   pendingAuthUser = null;
@@ -3596,18 +3644,21 @@ function celebrate(msg, big=true){
   requestAnimationFrame(step);
 }
 
+let entryFromPin = false; // the sign-in animation plays after typing a PIN, not on a refresh
 function enterApp(){
   if(forcePinActive) return;
   const ls = document.getElementById('loginScreen'), shell = document.getElementById('appShell');
   const fromLogin = !ls.classList.contains('hidden');
+  const animate = fromLogin && entryFromPin && motionOK();
+  entryFromPin = false;
   shell.classList.remove('hidden');
-  if(fromLogin && motionOK()){
+  if(animate){
     // Green tick on the PIN boxes, then the sign-in screen fades away over the dashboard.
     pinDots.classList.add('ok');
     ls.classList.add('lg-leave');
     shell.classList.add('app-enter');
     clearTimeout(loginLeaveTimer);
-    loginLeaveTimer = setTimeout(()=>{ ls.classList.add('hidden'); ls.classList.remove('lg-leave'); pinDots.classList.remove('ok'); shell.classList.remove('app-enter'); }, 950);
+    loginLeaveTimer = setTimeout(()=>{ ls.classList.add('hidden'); ls.classList.remove('lg-leave'); pinDots.classList.remove('ok'); shell.classList.remove('app-enter'); }, 600);
   } else {
     ls.classList.add('hidden');
   }
@@ -5179,6 +5230,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-13c', date:'2026-10-13', items:[
+    {text:"<b>⚡ Faster refresh</b>: refreshing the page now shows your dashboard straight away and updates it in the background, instead of going back through the sign-in screen while everything downloads. Signing in is a little quicker too."},
+  ]},
   {id:'2026-10-13b', date:'2026-10-13', items:[
     {text:"<b>🔔 New lead alerts</b>: a Windows/Chrome pop-up and a chime when a lead is added to your New Cases or reassigned to you. Click <b>Turn on alerts</b> on the dashboard (or go to <b>Settings → App, alerts &amp; reminders</b>) and choose <b>Allow</b>. Keep the tracker open, minimised is fine.", roles:['mapa']},
     {text:"Leads added with <b>Upload leads</b> now notify each advisor too, with one alert listing their new cases.", roles:['management']},
@@ -5703,6 +5757,7 @@ function refreshInsightsIfVisible(){
 db.ref('users').on('value', snap=>{
   USERS = snap.val() || {};
   usersLoaded = true;
+  saveBootCache();
   sibAdvCache.clear();
   migratePinsOutOfUsers();
   renderUserSelect();
@@ -5801,7 +5856,8 @@ function startAuthedListeners(){
 
   db.ref('leads').on('value', snap=>{
     LEADS = snap.val() || {};
-    leadsLoaded = true;
+    leadsLoaded = true; leadsLive = true;
+    saveBootCache();
     setTimeout(()=>{ openPendingLead(); checkCallReminders(); }, 0);
     setTimeout(maybeAutoBackup, 1500);
     if(currentUser){
@@ -5827,7 +5883,7 @@ function startAuthedListeners(){
 
   notifsQuery().on('value', snap=>{
     NOTIFS = snap.val() || {};
-    if(currentUser){ renderNotifs(); checkLeadAlerts(); }
+    if(currentUser){ renderNotifs(); checkLeadAlerts(); saveBootCache(); }
     refreshInsightsIfVisible();
   }, err=>{
     onListenError(()=> toast('Could not load notifications — check Firebase rules.', 'error'));
@@ -7304,6 +7360,8 @@ document.getElementById('raSubmit').addEventListener('click', function(){
    9) LEAD DETAIL MODAL
    ---------------------------------------------------------------------------- */
 function openLead(id){
+  // Showing the refresh copy: open the case once the live version has arrived (a second or two).
+  if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
   actionUIState = null;
@@ -8406,7 +8464,7 @@ function maybeAutoSibBackup(){
 
 function maybeAutoBackup(){
   maybeAutoSibBackup();
-  if(!currentUser || !leadsLoaded) return;
+  if(!currentUser || !leadsLive) return; // only ever back up the live data
   if(currentUser.role!=='management' && currentUser.role!=='admin') return;
   if(Object.keys(LEADS).length===0) return; // never overwrite a good backup with an empty one
   if(lastBackupDay() === isoDay(new Date())) return;
@@ -9353,6 +9411,7 @@ setInterval(()=>{
 
 renderPinDots();
 setLoginTitle();
+bootFromCache();
 }); // end DOMContentLoaded
 </script>
 </body>

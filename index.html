@@ -602,6 +602,44 @@ main{max-width:1680px; margin:0 auto; padding:20px 24px 20px;}
 .useful-back{border:0; background:none; padding:0; font:inherit; font-size:13px; font-weight:600; color:var(--brand); cursor:pointer; margin-bottom:10px;}
 .nml-form{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px 16px; max-width:760px;}
 .nml-form .field{margin-bottom:6px;}
+/* Medical Conditions Guide */
+.cond-bar{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; padding:10px 0; margin-top:6px;}
+.cond-bar input{flex:1 1 260px; min-width:0; font:inherit; font-size:14px; padding:9px 13px; border-radius:10px; border:1px solid var(--border-2); background:var(--surface); color:var(--text);}
+.cond-bar input:focus{outline:2px solid var(--brand-light); outline-offset:1px;}
+.cond-seg{display:flex; gap:3px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:3px;}
+.cond-seg button{font:inherit; font-size:12.5px; font-weight:600; border:0; background:transparent; color:var(--text-muted); padding:6px 12px; border-radius:7px; cursor:pointer;}
+.cond-seg button[aria-pressed="true"]{background:var(--brand); color:#fff;}
+.cond-count{font-size:12.5px; color:var(--text-muted); font-variant-numeric:tabular-nums;}
+.cond-key{display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:12.5px; color:var(--text-muted); margin:4px 0 14px;}
+.cond-pill{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:999px;}
+.cond-pill::before{content:""; width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0;}
+.cp-standard{color:var(--green); background:var(--green-bg);}
+.cp-varies{color:var(--amber); background:var(--amber-bg);}
+.cp-exclusion{color:var(--red); background:var(--red-bg);}
+.cp-difficult{color:#fff; background:var(--red);}
+.cond-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap:14px;}
+.cond-card{background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm); padding:16px 18px; display:grid; gap:11px; align-content:start; min-width:0;}
+.cond-card h3{font-size:16px; font-weight:700; margin:0;}
+.cond-aka{font-size:12.5px; color:var(--text-muted); margin-top:-8px;}
+.cond-verdicts{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px;}
+.cond-v{border:1px solid var(--border); border-radius:10px; padding:8px 10px; display:grid; gap:5px; align-content:start; min-width:0;}
+.cond-v.dim{opacity:.35;}
+.cond-v-lbl{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); font-weight:700;}
+.cond-v .cond-pill{justify-self:start;}
+.cond-v-why{font-size:12px; color:var(--text-muted); line-height:1.4;}
+.cond-lbl{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--brand); font-weight:700; margin-bottom:3px;}
+.cond-card ul,.cond-extra ul,.cond-extra ol{margin:0; padding-left:18px; font-size:13.5px; line-height:1.5;}
+.cond-tip{font-size:13px; background:var(--brand-tint); border-radius:10px; padding:9px 11px; line-height:1.45;}
+.cond-tip b{color:var(--brand-dark);}
+.cond-team{font-size:13px; border:1px dashed var(--brand-light); border-radius:10px; padding:9px 11px; line-height:1.45;}
+.cond-team b{color:var(--brand-dark);}
+.cond-extra{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap:14px; margin-top:16px;}
+.cond-extra h3{font-size:15px; margin:0 0 8px;}
+@media (max-width:560px){
+  .cond-verdicts{grid-template-columns:1fr;}
+  .cond-v{grid-template-columns:auto 1fr; align-items:center; column-gap:10px;}
+  .cond-v-why{grid-column:1 / -1;}
+}
 .nml-note{font-size:12px; color:var(--text-muted); margin:10px 0 16px; max-width:760px;}
 .ref-table td{vertical-align:top; line-height:1.45;}
 .ref-table td:not(:first-child){min-width:170px;}
@@ -1812,6 +1850,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <span class="useful-card-title">Critical Illness Comparison</span>
             <span class="useful-card-sub">Conditions covered, partial payments and children's cover by insurer.</span>
           </button>
+          <button type="button" class="useful-card" data-useful="conditions">
+            <span class="useful-card-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+            <span class="useful-card-title">Medical Conditions Guide</span>
+            <span class="useful-card-sub">How 20 common conditions are usually treated for Life, CI and IP, and what to ask the client.</span>
+          </button>
         </div>
       </div>
 
@@ -1863,6 +1906,29 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
         <div class="ci-status" id="ciStatus"></div>
         <div id="ciResults" class="ci-grid"></div>
+      </div>
+
+      <div id="condSection" class="hidden">
+        <button type="button" class="linkish useful-back" data-useful-back>&larr; Useful Info</button>
+        <div class="page-head">
+          <div>
+            <h1>Medical Conditions Guide</h1>
+            <p class="sub" id="condSub">How common conditions are usually treated for Life, CI and IP, and what to ask the client.</p>
+          </div>
+        </div>
+        <div class="ci-status" id="condStatus"></div>
+        <div class="cond-bar">
+          <input type="search" id="condSearch" placeholder="Search, e.g. diabetes, back, anxiety, steroids…" autocomplete="off" aria-label="Search conditions">
+          <div class="cond-seg" role="group" aria-label="Show product">
+            <button type="button" data-cond-p="all" aria-pressed="true">All</button>
+            <button type="button" data-cond-p="life" aria-pressed="false">Life</button>
+            <button type="button" data-cond-p="ci" aria-pressed="false">CI</button>
+            <button type="button" data-cond-p="ip" aria-pressed="false">IP</button>
+          </div>
+          <span class="cond-count" id="condCount"></span>
+        </div>
+        <div class="cond-key"><span>Key:</span><span class="cond-pill cp-standard">Usually standard</span><span class="cond-pill cp-varies">Depends on severity</span><span class="cond-pill cp-exclusion">Exclusion likely</span><span class="cond-pill cp-difficult">Often loaded or declined</span></div>
+        <div id="condResults"></div>
       </div>
 
       <div id="refSection" class="hidden">
@@ -3662,6 +3728,7 @@ const REF_DATA = {
                       sub:'Percentage of claims paid and total paid out by insurer.'},
   addedValue:        {label:'Free Add-ons', file:'data/added-value.json', generic:true,
                       sub:'Free extras with each insurer\'s policies: remote GP, second opinions, nurse support and more.'},
+  medicalConditions: {label:'Medical Conditions Guide', file:'data/medical-conditions.json'},
 };
 let refShown = null;
 function showUsefulHome(){
@@ -3669,6 +3736,7 @@ function showUsefulHome(){
   document.getElementById('nmlSection').classList.add('hidden');
   document.getElementById('ciSection').classList.add('hidden');
   document.getElementById('refSection').classList.add('hidden');
+  document.getElementById('condSection').classList.add('hidden');
 }
 /* Comparison tables that share one layout get a card each on Useful Info. */
 const REF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>';
@@ -3690,6 +3758,11 @@ document.querySelectorAll('[data-useful]').forEach(b=> b.addEventListener('click
     document.getElementById('ciSection').classList.remove('hidden');
     renderCi();
   }
+  if(b.dataset.useful==='conditions'){
+    document.getElementById('usefulHome').classList.add('hidden');
+    document.getElementById('condSection').classList.remove('hidden');
+    renderConditions();
+  }
   if(REF_DATA[b.dataset.useful] && REF_DATA[b.dataset.useful].generic){
     document.getElementById('usefulHome').classList.add('hidden');
     document.getElementById('refSection').classList.remove('hidden');
@@ -3706,6 +3779,7 @@ function resetReferenceData(){
   if(!document.getElementById('nmlSection').classList.contains('hidden')) loadNml().then(renderNml);
   if(!document.getElementById('ciSection').classList.contains('hidden')) renderCi();
   if(!document.getElementById('refSection').classList.contains('hidden')) renderRefTable();
+  if(!document.getElementById('condSection').classList.contains('hidden')) renderConditions();
 }
 function loadRefData(key){
   if(CONFIG[key]) return Promise.resolve(CONFIG[key]);
@@ -3885,6 +3959,51 @@ function renderRefTable(){
   }).catch(()=>{ out.innerHTML = '<div class="nml-empty">Could not load this table. Check your connection and try again.</div>'; });
 }
 
+/* Medical Conditions Guide: one card per condition with a verdict for Life,
+   CI and IP (standard / varies / exclusion / difficult), what to ask and a
+   tip. Management can add "team" notes per condition by downloading the
+   table in Settings, editing it and uploading it again. */
+const COND_RATINGS = {standard:'Usually standard', varies:'Depends on severity', exclusion:'Exclusion likely', difficult:'Often loaded or declined'};
+const COND_PRODUCTS = [['life','Life'],['ci','CI'],['ip','IP']];
+const condState = {product:'all'};
+const condList = v=> (Array.isArray(v) ? v : Object.values(v||{})).filter(x=> typeof x==='string' && x.trim());
+function renderConditions(){
+  const out = document.getElementById('condResults');
+  if(!out.children.length) out.innerHTML = '<div class="nml-empty">Loading…</div>';
+  loadRefData('medicalConditions').then(d=>{
+    document.getElementById('condSub').textContent = `${d.description || 'How common conditions are usually treated for Life, CI and IP, and what to ask the client.'}${d.checked ? ' Last checked '+fmtDate(d.checked)+'.' : ''}`;
+    document.getElementById('condStatus').textContent = d.status || 'Guidance only: always check with the insurer before advising.';
+    const all = Object.values(d.conditions||{}).filter(c=> c && c.name);
+    const term = document.getElementById('condSearch').value.trim().toLowerCase();
+    const list = all.filter(c=> !term || [c.name, c.aka, c.keywords, c.team].filter(Boolean).join(' ').toLowerCase().includes(term));
+    const p = condState.product;
+    const verdict = ([k, lbl], c)=>{
+      const v = c[k] || {}, rating = COND_RATINGS[v.rating] ? v.rating : 'varies';
+      return `<div class="cond-v${p!=='all' && p!==k ? ' dim' : ''}"><span class="cond-v-lbl">${lbl}</span><span class="cond-pill cp-${rating}">${COND_RATINGS[rating]}</span>${v.note ? `<span class="cond-v-why">${esc(v.note)}</span>` : ''}</div>`;
+    };
+    const ask = condList(d.askEveryone), best = condList(d.bestTerms);
+    out.innerHTML = (list.length ? `<div class="cond-grid">${list.map(c=>{ const qs = condList(c.ask); return `<article class="cond-card">
+        <h3>${esc(c.name)}</h3>${c.aka ? `<div class="cond-aka">${esc(c.aka)}</div>` : ''}
+        <div class="cond-verdicts">${COND_PRODUCTS.map(x=> verdict(x, c)).join('')}</div>
+        ${qs.length ? `<div><div class="cond-lbl">What to ask</div><ul>${qs.map(q=> `<li>${esc(q)}</li>`).join('')}</ul></div>` : ''}
+        ${c.tip ? `<div class="cond-tip"><b>Tip:</b> ${esc(c.tip)}</div>` : ''}
+        ${c.team ? `<div class="cond-team"><b>Our team's experience:</b> ${esc(c.team)}</div>` : ''}
+      </article>`; }).join('')}</div>`
+      : `<div class="nml-empty">No conditions match "${esc(term)}". Try a simpler word, like "heart" or "joint".</div>`) +
+      (ask.length || best.length ? `<div class="cond-extra">
+        ${ask.length ? `<div class="insights-card"><h3>Ask every client with a condition</h3><ul>${ask.map(q=> `<li>${esc(q)}</li>`).join('')}</ul></div>` : ''}
+        ${best.length ? `<div class="insights-card"><h3>Getting the best terms</h3><ol>${best.map(q=> `<li>${esc(q)}</li>`).join('')}</ol></div>` : ''}
+      </div>` : '');
+    document.getElementById('condCount').textContent = list.length===all.length ? `${all.length} conditions` : `${list.length} of ${all.length}`;
+  }).catch(()=>{ out.innerHTML = '<div class="nml-empty">Could not load the guide. Check your connection and try again.</div>'; });
+}
+document.getElementById('condSearch').addEventListener('input', renderConditions);
+document.querySelectorAll('[data-cond-p]').forEach(b=> b.addEventListener('click', ()=>{
+  condState.product = b.dataset.condP;
+  document.querySelectorAll('[data-cond-p]').forEach(x=> x.setAttribute('aria-pressed', String(x===b)));
+  renderConditions();
+}));
+
 /* ---- Settings: Management edits templates and reference data ---- */
 function savedTemplates(){ return CONFIG.emailTemplates ? Object.values(CONFIG.emailTemplates).filter(t=> t && t.name) : null; }
 let convoDraft = null;
@@ -4046,6 +4165,18 @@ function downloadRefData(key){
 
 /* Checks an uploaded table has the shape the pages expect; returns a problem or null. */
 function checkRefData(key, d){
+  if(key==='medicalConditions'){
+    if(!d || typeof d!=='object' || !Array.isArray(d.conditions) || !d.conditions.length) return 'it needs a "conditions" list with at least one condition';
+    for(const [i, c] of d.conditions.entries()){
+      const where = `condition ${i+1}${c && c.name ? ' ('+c.name+')' : ''}`;
+      if(!c || typeof c.name!=='string' || !c.name.trim()) return `${where} has no name`;
+      for(const [k] of COND_PRODUCTS){
+        if(!c[k] || !COND_RATINGS[c[k].rating]) return `${where}: ${k} needs a "rating" of ${Object.keys(COND_RATINGS).map(r=> '"'+r+'"').join(', ')}`;
+      }
+      if(c.ask!=null && !Array.isArray(c.ask)) return `${where}: "ask" must be a list of questions`;
+    }
+    return null;
+  }
   if(!d || typeof d!=='object' || !Array.isArray(d.insurers) || !d.insurers.length) return 'it needs an "insurers" list with at least one insurer';
   const num = v=> v==null || (typeof v==='number' && isFinite(v));
   if(REF_DATA[key].generic){
@@ -4088,7 +4219,7 @@ document.getElementById('refFileInput').addEventListener('change', function(){
     try{ d = JSON.parse(String(reader.result)); }catch(e){ toast("That file isn't valid JSON, so it wasn't used.",'error'); return; }
     const problem = checkRefData(key, d);
     if(problem){ toast(`That file wasn't used: ${problem}.`,'error'); return; }
-    if(!confirm(`Use this ${REF_DATA[key].label} table for everyone?\n\n${d.insurers.length} insurers${d.checked ? ', checked '+fmtDate(d.checked) : ''}.`)) return;
+    if(!confirm(`Use this ${REF_DATA[key].label} table for everyone?\n\n${key==='medicalConditions' ? d.conditions.length+' conditions' : d.insurers.length+' insurers'}${d.checked ? ', checked '+fmtDate(d.checked) : ''}.`)) return;
     d._uploadedBy = currentUser.name; d._uploadedAt = Date.now();
     db.ref('config/'+key).set(d)
       .then(()=> toast(`${REF_DATA[key].label} updated for everyone`,'success'))
@@ -5020,6 +5151,10 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-13', date:'2026-10-13', items:[
+    {text:"<b>New in Useful Info: Medical Conditions Guide.</b> 20 common conditions (anxiety, blood pressure, diabetes, back pain and more) with how insurers usually treat each one for Life, CI and IP, and what to ask the client. Search it by condition or medication.", roles:['mapa','management']},
+    {text:"Management can add <b>our team's experience</b> to any condition in the guide: download it in <b>Settings → Templates &amp; prompts</b>, fill in \"team\", and upload it again.", roles:['management']},
+  ]},
   {id:'2026-10-12b', date:'2026-10-12', items:[
     {text:"<b>Notes now go with an action</b>: on a protection case, press Call, Text, Appointment or Other first, then add your note in the box that opens. The separate Notes box has gone, so every note says what was done.", roles:['mapa','management']},
   ]},
@@ -6988,6 +7123,7 @@ const HELP = [
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
     {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the commission.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission is filled in for you.</li></ol>`},
     {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
+    {t:'Client has a medical condition', roles:['mapa','management'], h:`Open <b>Useful Info → Medical Conditions Guide</b>. Search for the condition (e.g. "diabetes" or "back") to see how insurers usually treat it for Life, CI and IP, and the questions to ask before you go to market. It's general guidance: always get an indicative decision from the insurer.`},
     {t:'Client phone and email', h:`Both show on the case. Click a phone number to dial it. Use <b>Add phone</b> / <b>Edit</b> to change them; the change is recorded in the history.`},
     {t:'Move a case by hand', roles:['mapa','management'], h:`Use <b>Change status</b> at the bottom of the case to put it back into a different pot (for example if something was clicked by mistake). The change is recorded.`},
   ]},

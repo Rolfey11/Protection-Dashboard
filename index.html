@@ -1204,6 +1204,12 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .insights-empty{font-size:12.5px; color:var(--text-faint); padding:10px 0;}
 
 #myDayCard{max-height:150px; overflow-y:auto; padding-top:6px; padding-bottom:6px;}
+.alert-prompt{display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--brand-tint); border:1px solid color-mix(in srgb, var(--brand) 25%, transparent); border-radius:var(--radius); padding:12px 16px; margin-bottom:16px;}
+.alert-prompt-ic{display:grid; place-items:center; width:36px; height:36px; border-radius:10px; background:var(--surface); color:var(--brand); flex-shrink:0;}
+.alert-prompt-ic svg{width:19px; height:19px;}
+.alert-prompt-text{flex:1 1 260px; min-width:0; display:grid; gap:2px; font-size:13.5px; color:var(--text);}
+.alert-prompt-text span{font-size:12.5px; color:var(--text-muted);}
+.alert-prompt-actions{display:flex; gap:8px; flex-wrap:wrap;}
 .myday-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 6px; border-bottom:1px solid var(--border); cursor:pointer; transition:.12s;}
 .myday-row:last-child{border-bottom:none;}
 .myday-row:hover{background:var(--brand-tint); margin:0 -10px; padding-left:16px; padding-right:16px; border-radius:8px;}
@@ -1666,6 +1672,15 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
       </div>
 
+      <div class="alert-prompt hidden" id="alertPrompt">
+        <div class="alert-prompt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+        <div class="alert-prompt-text"><b>Get a pop-up and a sound when a new lead is assigned to you</b><span>Works while the tracker is open, even minimised.</span></div>
+        <div class="alert-prompt-actions">
+          <button class="btn btn-primary btn-sm" id="alertPromptOn">Turn on alerts</button>
+          <button class="btn btn-ghost btn-sm" id="alertPromptLater">Not now</button>
+        </div>
+      </div>
+
       <div class="filter-row hidden" id="advisorFilterRow"></div>
 
       <div class="kpi-row" id="dashKpis"></div>
@@ -2066,7 +2081,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div id="settingsAppSection" style="margin-bottom:34px;">
         <div class="page-head" style="margin-bottom:16px;">
           <div>
-            <h1 style="font-size:19px;">App &amp; call reminders</h1>
+            <h1 style="font-size:19px;">App, alerts &amp; call reminders</h1>
             <p class="sub">Settings for this computer or phone only.</p>
           </div>
         </div>
@@ -2093,6 +2108,19 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             </div>
             <p id="remindStatus" style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin-bottom:12px;"></p>
             <button class="btn btn-secondary btn-sm" id="remindTestBtn">Send a test reminder</button>
+          </div>
+          <div class="insights-card" style="flex:1; min-width:260px; max-width:420px;">
+            <div class="section-lbl" style="margin-top:0;">New lead alerts</div>
+            <label style="display:flex; gap:10px; align-items:center; font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:10px; cursor:pointer;">
+              <input type="checkbox" id="alertOn" style="width:18px; height:18px; accent-color:var(--brand);">
+              Pop up when a lead is added or reassigned to me
+            </label>
+            <label style="display:flex; gap:10px; align-items:center; font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:14px; cursor:pointer;">
+              <input type="checkbox" id="alertSound" style="width:18px; height:18px; accent-color:var(--brand);">
+              Play a sound
+            </label>
+            <p id="alertStatus" style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin-bottom:12px;"></p>
+            <button class="btn btn-secondary btn-sm" id="alertTestBtn">Send a test alert</button>
           </div>
         </div>
       </div>
@@ -5004,7 +5032,7 @@ function createProtectionLeadFromSib(c, key, {name, email, advisorId, note, case
   updates[`sib/cases/${key}/updatedAt`] = now;
   updates[`sib/cases/${key}/audit/${db.ref().push().key}`] = {type:'assigned', text: caseText || `Referred to Protection (assigned to ${advisorName})${note ? ': '+note : ''}`, byId:currentUser.id, byName:currentUser.name, at:now};
   return db.ref().update(updates).then(()=>{
-    if(advisorId !== currentUser.id) db.ref('notifications').push({leadId, leadName:name, toUserId:advisorId, toRole:null, message:`New lead from Send in Blue assigned to you: ${name}`, at:now, readBy:{}}).catch(()=>{});
+    if(advisorId !== currentUser.id) db.ref('notifications').push({leadId, leadName:name, toUserId:advisorId, toRole:null, kind:'newLead', byId:currentUser.id, message:`New lead from Send in Blue assigned to you: ${name}`, at:now, readBy:{}}).catch(()=>{});
     db.ref('notifications').push({leadId, leadName:name, toUserId:null, toRole:'management', message:`Send in Blue client added to ${advisorName}'s protection workflow`, at:now, readBy:{}}).catch(()=>{});
     return {leadId, advisorName};
   });
@@ -5151,6 +5179,11 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-13b', date:'2026-10-13', items:[
+    {text:"<b>🔔 New lead alerts</b>: a Windows/Chrome pop-up and a chime when a lead is added to your New Cases or reassigned to you. Click <b>Turn on alerts</b> on the dashboard (or go to <b>Settings → App, alerts &amp; reminders</b>) and choose <b>Allow</b>. Keep the tracker open, minimised is fine.", roles:['mapa']},
+    {text:"Leads added with <b>Upload leads</b> now notify each advisor too, with one alert listing their new cases.", roles:['management']},
+    {text:"<b>Change status</b> on a protection case is now for Management and Admin only. MAPAs move cases with the action buttons; if something was clicked by mistake, ask Management or Admin to put it back.", roles:['mapa','management','admin']},
+  ]},
   {id:'2026-10-13', date:'2026-10-13', items:[
     {text:"<b>New in Useful Info: Medical Conditions Guide.</b> 20 common conditions (anxiety, blood pressure, diabetes, back pain and more) with how insurers usually treat each one for Life, CI and IP, and what to ask the client. Search it by condition or medication.", roles:['mapa','management']},
     {text:"Management can add <b>our team's experience</b> to any condition in the guide: download it in <b>Settings → Templates &amp; prompts</b>, fill in \"team\", and upload it again.", roles:['management']},
@@ -5257,7 +5290,7 @@ const SETTINGS_SECTIONS = [
   ['settingsMyAccountSection', 'My account', 'account', 'Change your name and PIN.'],
   ['settingsColleagueSection', 'Colleagues', 'team', 'Add colleagues, user levels and PINs, and client sources.'],
   ['settingsUploadSection', 'Upload leads', 'upload', 'Add protection leads in bulk from a spreadsheet, or restore a backup.'],
-  ['settingsAppSection', 'App & reminders', 'bell', 'Install the desktop app and turn on call reminders.'],
+  ['settingsAppSection', 'App, alerts & reminders', 'bell', 'Install the desktop app, and turn on new lead alerts and call reminders.'],
   ['settingsContentSection', 'Templates & prompts', 'mail', 'Email templates, Send in Blue protection prompts and outcome reasons, and Useful Info tables.'],
   ['settingsSibSection', 'Send in Blue data', 'sheet', 'Upload, download, back up and bulk delete Send in Blue cases.'],
   ['settingsBulkDeleteSection', 'Bulk delete', 'trash', 'Delete protection leads by Task Created date.'],
@@ -5794,7 +5827,7 @@ function startAuthedListeners(){
 
   notifsQuery().on('value', snap=>{
     NOTIFS = snap.val() || {};
-    if(currentUser) renderNotifs();
+    if(currentUser){ renderNotifs(); checkLeadAlerts(); }
     refreshInsightsIfVisible();
   }, err=>{
     onListenError(()=> toast('Could not load notifications — check Firebase rules.', 'error'));
@@ -6009,6 +6042,7 @@ function renderDashLoading(){
 }
 
 function renderDashboard(){
+  renderAlertPrompt();
   renderDateRangeLabel();
   renderAdvisorFilter();
   if(!leadsLoaded){ renderDashLoading(); return; }
@@ -7085,7 +7119,7 @@ function submitNewTask(another){
   leadRef.set(lead).then(()=>{
     // notify the MAPA
     db.ref('notifications').push({
-      leadId:leadRef.key, leadName:name, toUserId:advisorId, toRole:null,
+      leadId:leadRef.key, leadName:name, toUserId:advisorId, toRole:null, kind:'newLead', byId:currentUser.id,
       message:`New lead assigned to you: ${name}`, at:now, readBy:{}
     });
     // notify management group
@@ -7114,6 +7148,7 @@ const HELP = [
   {group:'Your day', items:[
     {t:'What is My Day?', roles:['mapa'], h:`<b>My Day</b> at the top of the dashboard lists every case that needs you today, most urgent first:<ul><li>calls overdue or due today</li><li>new cases with no contact yet</li><li>declines still waiting on their steps</li><li><b>No next call booked</b>: a Contacted Client with no follow-up date</li><li><b>Not touched for 7+ days</b></li><li><b>Terms issued 7+ days ago</b>: chase the client</li><li><b>Submitted 14+ days ago</b>: check with the insurer</li></ul>Click a row to open the case.`},
     {t:'Notifications and What\'s new', roles:['mapa','management'], h:`The <b>bell</b> shows new leads assigned to you and cases moved to you. Click one to open the case. <b>What's new</b> (inside the bell) lists recent changes to the tracker.`},
+    {t:'Pop-up and sound for new leads', roles:['mapa','management'], h:`When a lead is added to your New Cases or reassigned to you, the tracker can show a Windows/Chrome pop-up and play a chime. Turn it on with <b>Turn on alerts</b> on the dashboard, or in <b>Settings → App, alerts &amp; reminders</b>, and choose <b>Allow</b> when the browser asks. Keep the tracker open (minimised is fine). Use <b>Send a test alert</b> to check it, and untick <b>Play a sound</b> if you only want the pop-up.`},
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},
   ]},
   {group:'Protection cases', items:[
@@ -7125,7 +7160,7 @@ const HELP = [
     {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
     {t:'Client has a medical condition', roles:['mapa','management'], h:`Open <b>Useful Info → Medical Conditions Guide</b>. Search for the condition (e.g. "diabetes" or "back") to see how insurers usually treat it for Life, CI and IP, and the questions to ask before you go to market. It's general guidance: always get an indicative decision from the insurer.`},
     {t:'Client phone and email', h:`Both show on the case. Click a phone number to dial it. Use <b>Add phone</b> / <b>Edit</b> to change them; the change is recorded in the history.`},
-    {t:'Move a case by hand', roles:['mapa','management'], h:`Use <b>Change status</b> at the bottom of the case to put it back into a different pot (for example if something was clicked by mistake). The change is recorded.`},
+    {t:'Move a case by hand', roles:['admin','management'], h:`Use <b>Change status</b> at the bottom of the case to put it back into a different pot (for example if something was clicked by mistake). The change is recorded. Only Management and Admin can do this; MAPAs move cases with the action buttons and can ask you to correct a mistake.`},
   ]},
   {group:'Adding and moving leads', roles:['admin','management'], items:[
     {t:'Add a lead', roles:['admin','management'], h:`Click <b>New Task</b>, fill in the client's name, email and phone (optional), source, advisor and date, then <b>Assign lead</b>. Adding several? Use <b>Save &amp; add another</b>: it keeps the source, advisor and date and clears the client details. The advisor is notified.`},
@@ -7210,7 +7245,7 @@ document.getElementById('brSubmit').addEventListener('click', function(){
   db.ref().update(updates).then(()=>{
     const names = ids.map(id=> LEADS[id] && LEADS[id].clientName).filter(Boolean);
     const summary = names.slice(0,3).join(', ') + (names.length > 3 ? ` and ${names.length-3} more` : '');
-    db.ref('notifications').push({leadId: ids.length===1 ? ids[0] : null, leadName: summary, toUserId:toId, toRole:null, message:`${ids.length} lead${ids.length===1?' has':'s have'} been reassigned to you: ${summary}`, at:now, readBy:{}}).catch(()=>{});
+    db.ref('notifications').push({leadId: ids.length===1 ? ids[0] : null, leadName: summary, toUserId:toId, toRole:null, kind:'reassigned', byId:currentUser.id, message:`${ids.length} lead${ids.length===1?' has':'s have'} been reassigned to you: ${summary}`, at:now, readBy:{}}).catch(()=>{});
     db.ref('notifications').push({leadId:null, leadName: summary, toUserId:null, toRole:'management', message:`${currentUser.name} reassigned ${ids.length} lead${ids.length===1?'':'s'} to ${to.name}`, at:now, readBy:{}}).catch(()=>{});
     toast(`${ids.length} lead${ids.length===1?'':'s'} moved to ${to.name}`,'success');
     closeModal('bulkReassignOverlay');
@@ -7251,7 +7286,7 @@ document.getElementById('raSubmit').addEventListener('click', function(){
     byId:currentUser.id, byName:currentUser.name, at:now
   }, {advisorId:newAdvisorId, advisorName:newAdvisorName}).then(()=>{
     db.ref('notifications').push({
-      leadId, leadName:lead.clientName, toUserId:newAdvisorId, toRole:null,
+      leadId, leadName:lead.clientName, toUserId:newAdvisorId, toRole:null, kind:'reassigned', byId:currentUser.id,
       message:`A lead has been reassigned to you: ${lead.clientName}`, at:now, readBy:{}
     });
     db.ref('notifications').push({
@@ -7335,6 +7370,13 @@ function canManageLead(lead){
   if(currentUser.role==='management') return true;
   if(currentUser.role==='mapa' && lead.advisorId===currentUser.id) return true;
   return false;
+}
+
+/* "Change status" moves a case straight into any pot, skipping the action
+   buttons, so only Management and Admin can use it. MAPAs move cases with
+   the action buttons (Sign Up, Terms issued, Decline…). */
+function canChangeStatus(lead){
+  return !!lead && (currentUser.role==='management' || currentUser.role==='admin');
 }
 
 function renderLeadModal(){
@@ -7426,7 +7468,7 @@ function renderLeadModal(){
     `;
   }
 
-  const changeStatusHtml = canManageLead(lead) ? `
+  const changeStatusHtml = canChangeStatus(lead) ? `
     <div class="section-lbl">Manual override</div>
     <button id="changeStatusBtn" class="btn btn-secondary" style="width:100%; justify-content:center;">Change status</button>
   ` : '';
@@ -7443,9 +7485,11 @@ function renderLeadModal(){
     if(rb) rb.addEventListener('click', ()=> openReassign(lead));
   }
 
-  if(canManageLead(lead)){
+  if(canChangeStatus(lead)){
     const csb = document.getElementById('changeStatusBtn');
     if(csb) csb.addEventListener('click', ()=> openChangeStatus(lead));
+  }
+  if(canManageLead(lead)){
     const esb = document.getElementById('editSourceBtn');
     if(esb) esb.addEventListener('click', ()=> openEditSource(lead));
   }
@@ -7541,6 +7585,7 @@ function markDeclineFlag(lead, field, btn){
 }
 
 function openChangeStatus(lead){
+  if(!canChangeStatus(lead)) return;
   document.getElementById('csClientName').textContent = lead.clientName;
   document.getElementById('csStatus').value = lead.status || 'new';
   document.getElementById('csSubmit').dataset.leadId = lead.id;
@@ -7590,7 +7635,7 @@ const STATUS_LABELS = {new:'New Cases', existing:'Contacted Clients', underwriti
 document.getElementById('csSubmit').addEventListener('click', function(){
   const leadId = this.dataset.leadId;
   const lead = LEADS[leadId];
-  if(!lead) return;
+  if(!lead || !canChangeStatus(lead)) return;
   const newStatus = document.getElementById('csStatus').value;
   if(newStatus === (lead.status||'new')){ toast("That's already the current status.",'error'); return; }
   const btn = this;
@@ -8606,7 +8651,7 @@ document.getElementById('udImportBtn').addEventListener('click', function(){
   const btn = this;
   btn.disabled = true;
 
-  const updates = {};
+  const updates = {}, byAdvisor = {};
   udParsedRows.ready.forEach(r=>{
     const leadRef = db.ref('leads').push();
     const auditId = uidShort()+r.ts.toString(36);
@@ -8626,6 +8671,14 @@ document.getElementById('udImportBtn').addEventListener('click', function(){
       }}
     };
     updates['leads/'+leadRef.key] = lead;
+    if(r.advisorId && r.advisorId!==currentUser.id) (byAdvisor[r.advisorId] = byAdvisor[r.advisorId] || []).push({id:leadRef.key, name:r.clientName});
+  });
+  // One notification per advisor for their new cases (this is what pops up on their screen).
+  const nowTs = Date.now();
+  Object.entries(byAdvisor).forEach(([advisorId, list])=>{
+    const names = list.slice(0,3).map(x=> x.name).join(', ') + (list.length>3 ? ` and ${list.length-3} more` : '');
+    updates['notifications/'+db.ref('notifications').push().key] = {leadId: list.length===1 ? list[0].id : null, leadName:names, toUserId:advisorId, toRole:null, kind:'newLead', byId:currentUser.id,
+      message: list.length===1 ? `New lead assigned to you: ${names}` : `${list.length} new leads assigned to you: ${names}`, at:nowTs, readBy:{}};
   });
 
   db.ref().update(updates).then(()=>{
@@ -8940,6 +8993,7 @@ function renderAppSettings(){
     ? 'On. Keep the tracker open (minimised is fine) to get reminders.'
     : 'On. Reminders cover calls booked on cases assigned to you.';
   else status.textContent = 'Off on this device.';
+  renderAlertSettings();
 }
 
 document.getElementById('remindOn').addEventListener('change', function(){
@@ -9000,6 +9054,129 @@ function checkCallReminders(){
   });
   if(changed) saveReminded(done);
 }
+
+/* New lead alerts: when a lead is assigned or reassigned to the signed-in
+   colleague (a notification addressed to them), show a Windows/Chrome pop-up
+   and play a short chime. Per device, on by default once the browser allows
+   notifications. Only notifications from the last 10 minutes alert, and each
+   one only once per device, so a reload or sign-in doesn't replay old ones. */
+const ALERT_WINDOW_MS = 10*60000;
+function alertPref(key, fallback){ try{ const v = localStorage.getItem('plt_alert_'+key); return v==null ? fallback : v; }catch(e){ return fallback; } }
+function setAlertPref(key, v){ try{ localStorage.setItem('plt_alert_'+key, v); }catch(e){} }
+function alertsOn(){ return alertPref('on','1')==='1'; }
+function alertSoundOn(){ return alertPref('sound','1')==='1'; }
+
+/* Browsers only allow sound after the person has clicked or typed on the
+   page, so the audio is unlocked on the first click/key (signing in counts). */
+let alertAudio = null;
+function unlockAlertAudio(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return;
+  try{
+    if(!alertAudio) alertAudio = new AC();
+    if(alertAudio.state==='suspended') alertAudio.resume().catch(()=>{});
+  }catch(e){}
+}
+['pointerdown','keydown'].forEach(ev=> document.addEventListener(ev, unlockAlertAudio, true));
+/* A two-note chime; returns true if it could play. */
+function playAlertChime(){
+  if(!alertAudio || alertAudio.state!=='running') return false;
+  try{
+    const t0 = alertAudio.currentTime;
+    [[880, 0], [1318.5, 0.16]].forEach(([freq, at])=>{
+      const osc = alertAudio.createOscillator(), gain = alertAudio.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t0+at);
+      gain.gain.exponentialRampToValueAtTime(0.35, t0+at+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0+at+0.55);
+      osc.connect(gain).connect(alertAudio.destination);
+      osc.start(t0+at); osc.stop(t0+at+0.6);
+    });
+    return true;
+  }catch(e){ return false; }
+}
+
+const alertedMem = new Set();
+function alertedKey(){ return 'plt_alerted_' + (currentUser ? currentUser.id : ''); }
+function loadAlerted(){ try{ return new Set(JSON.parse(localStorage.getItem(alertedKey())||'[]').concat([...alertedMem])); }catch(e){ return new Set(alertedMem); } }
+function saveAlerted(set){ const list = [...set].slice(-300); list.forEach(k=> alertedMem.add(k)); try{ localStorage.setItem(alertedKey(), JSON.stringify(list)); }catch(e){} }
+
+function fireLeadAlert(title, body, tag, leadId){
+  const chimed = alertSoundOn() && playAlertChime();
+  if(canNotify()){
+    const opts = {body, tag, renotify:true, requireInteraction:true, silent:chimed, icon:'icons/icon-192.png', badge:'icons/icon-192.png', data:{leadId}};
+    if(swReg && swReg.showNotification) swReg.showNotification(title, opts).catch(()=>{});
+    else { try{ const n = new Notification(title, opts); n.onclick = ()=>{ window.focus(); n.close(); if(leadId){ pendingLeadId = leadId; openPendingLead(); } }; }catch(e){} }
+  }
+  if(document.visibilityState==='visible') toast(`${title}. ${body}`, 'info');
+}
+
+function checkLeadAlerts(){
+  if(!currentUser || currentUser.role==='admin') return;
+  const now = Date.now(), done = loadAlerted();
+  const fresh = myNotifs().filter(n=> n.toUserId===currentUser.id && n.byId!==currentUser.id && isUnread(n)
+    && n.at > now - ALERT_WINDOW_MS && !done.has(n.id)).sort((a,b)=> a.at-b.at);
+  if(!fresh.length) return;
+  fresh.forEach(n=> done.add(n.id));
+  saveAlerted(done);
+  if(!alertsOn()) return; // marked as seen, so turning alerts back on doesn't replay them
+  const reassigned = n=> n.kind==='reassigned' || /reassigned to you/i.test(n.message||'');
+  if(fresh.length===1){
+    const n = fresh[0], many = Number(((n.message||'').match(/^(\d+) /)||[])[1]) || 1;
+    fireLeadAlert(reassigned(n) ? (many>1 ? `${many} leads reassigned to you` : 'Lead reassigned to you') : (many>1 ? `${many} new leads assigned to you` : 'New lead assigned to you'), (n.message||'').replace(/^[^:]*:\s*/, '') + (n.leadId ? ' · Click to open.' : ''), 'plt-lead-'+n.id, n.leadId||null);
+  } else {
+    fireLeadAlert(`${fresh.length} leads assigned to you`, fresh.map(n=> n.leadName).filter(Boolean).slice(0,4).join(', '), 'plt-lead-batch', null);
+  }
+}
+
+function renderAlertSettings(){
+  const on = document.getElementById('alertOn');
+  if(!on) return;
+  on.checked = alertsOn() && (!('Notification' in window) || Notification.permission!=='denied');
+  document.getElementById('alertSound').checked = alertSoundOn();
+  document.getElementById('alertSound').disabled = !alertsOn();
+  const status = document.getElementById('alertStatus');
+  if(!alertsOn()) status.textContent = 'Off on this device.';
+  else if(!('Notification' in window)) status.textContent = "This browser can't show pop-ups, so you'll get the sound and a message in the tracker instead.";
+  else if(Notification.permission==='denied') status.textContent = 'Pop-ups are blocked for this site. Allow notifications in your browser\'s site settings (the padlock icon next to the address), then tick the box again.';
+  else if(Notification.permission!=='granted') status.textContent = 'Tick the box above and choose Allow when your browser asks, so the pop-up can appear.';
+  else status.textContent = 'On. Keep the tracker open (minimised is fine) to get alerts.';
+}
+function renderAlertPrompt(){
+  const el = document.getElementById('alertPrompt');
+  if(!el) return;
+  const show = !!currentUser && currentUser.role==='mapa' && alertsOn() && 'Notification' in window
+    && Notification.permission==='default' && alertPref('promptHidden','0')!=='1';
+  el.classList.toggle('hidden', !show);
+}
+function askAlertPermission(){
+  if(!('Notification' in window)) return Promise.resolve('unsupported');
+  return Notification.requestPermission().then(p=>{
+    if(p==='granted'){
+      setAlertPref('on','1');
+      toast('New lead alerts are on for this device.', 'success');
+      playAlertChime();
+    } else if(p==='denied') toast('Your browser blocked pop-ups. You can allow them later from the padlock next to the address.', 'error');
+    renderAlertSettings(); renderAlertPrompt(); renderAppSettings();
+    return p;
+  });
+}
+document.getElementById('alertPromptOn').addEventListener('click', ()=>{ unlockAlertAudio(); askAlertPermission(); });
+document.getElementById('alertPromptLater').addEventListener('click', ()=>{ setAlertPref('promptHidden','1'); renderAlertPrompt(); toast('You can turn alerts on any time in Settings → App, alerts & reminders.', 'info'); });
+document.getElementById('alertOn').addEventListener('change', function(){
+  setAlertPref('on', this.checked ? '1' : '0');
+  if(this.checked && 'Notification' in window && Notification.permission!=='granted') askAlertPermission();
+  renderAlertSettings(); renderAlertPrompt();
+});
+document.getElementById('alertSound').addEventListener('change', function(){
+  setAlertPref('sound', this.checked ? '1' : '0');
+  if(this.checked){ unlockAlertAudio(); playAlertChime(); }
+});
+document.getElementById('alertTestBtn').addEventListener('click', ()=>{
+  if(!alertsOn()){ toast('Turn on new lead alerts first.', 'error'); return; }
+  unlockAlertAudio();
+  setTimeout(()=> fireLeadAlert('New lead assigned to you', 'Test Client · This is how new lead alerts will look.', 'plt-alert-test', null), 60);
+});
 
 /* ----------------------------------------------------------------------------
    11) SETTINGS — manage colleagues

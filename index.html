@@ -3177,8 +3177,16 @@ document.addEventListener('keydown', (e)=>{
 document.querySelectorAll('[data-close]').forEach(btn=>{
   btn.addEventListener('click', ()=> closeModal(btn.dataset.close));
 });
+/* Where the last mouse/finger press started. A "click" also fires when the
+   button is pressed in one place and released in another (e.g. selecting
+   text and letting go outside the box), so clicking outside only counts
+   when the press started outside too. */
+let pressStartTarget = null;
+document.addEventListener('pointerdown', e=>{ pressStartTarget = e.target; }, true);
+function pressStartedOn(el){ return pressStartTarget===el; }
+function pressStartedInside(el){ return !!(el && pressStartTarget && el.contains(pressStartTarget)); }
 document.querySelectorAll('.modal-overlay').forEach(ov=>{
-  ov.addEventListener('click', (e)=>{ if(e.target===ov) closeModal(ov.id); });
+  ov.addEventListener('click', (e)=>{ if(e.target===ov && pressStartedOn(ov)) closeModal(ov.id); });
 });
 
 /* ----------------------------------------------------------------------------
@@ -5230,6 +5238,9 @@ function openSibFromLead(key){
    Add the newest entry at the TOP. roles: who it's relevant to (omit = all).
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14', date:'2026-10-14', items:[
+    {text:"Selecting text in a box and letting go of the mouse outside it no longer closes the box. Clicking outside still closes it as before."},
+  ]},
   {id:'2026-10-13c', date:'2026-10-13', items:[
     {text:"<b>⚡ Faster refresh</b>: refreshing the page now shows your dashboard straight away and updates it in the background, instead of going back through the sign-in screen while everything downloads. Signing in is a little quicker too."},
   ]},
@@ -6061,7 +6072,7 @@ document.getElementById('daterangeBtn').addEventListener('click', (e)=>{
 document.addEventListener('click', (e)=>{
   const panel = document.getElementById('daterangePanel');
   const wrap = document.getElementById('daterangeWrap');
-  if(panel.classList.contains('open') && wrap && !wrap.contains(e.target)){
+  if(panel.classList.contains('open') && wrap && !wrap.contains(e.target) && !pressStartedInside(wrap)){
     panel.classList.remove('open');
   }
 });
@@ -8052,7 +8063,7 @@ document.getElementById('bellBtn').addEventListener('click', (e)=>{
 });
 document.addEventListener('click', (e)=>{
   const panel = document.getElementById('bellPanel');
-  if(panel.classList.contains('open') && !panel.contains(e.target) && e.target.id!=='bellBtn'){
+  if(panel.classList.contains('open') && !panel.contains(e.target) && e.target.id!=='bellBtn' && !pressStartedInside(panel)){
     panel.classList.remove('open');
   }
 });

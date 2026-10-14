@@ -5273,6 +5273,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14e', date:'2026-10-14', items:[
+    {text:"<b>Callbacks clear when you sign up or decline.</b> Submitting a case to underwriting, marking terms issued, putting it On Risk or declining it now removes any booked callback, as you've spoken to the client. Cases already in those pots no longer show overdue calls either. You can still book a chase call on a Submitted or Terms Issued case: it shows and reminds you while it's coming up, then drops off once it's passed.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-14d', date:'2026-10-13', items:[
     {text:"<b>Policies sold</b>: when you submit a case to underwriting or put it On Risk, choose the policies (DTA, LTA, FIB, CIC, IP, WOL) and tick which client each one covers. Tick more than one client for a joint policy, and use <b>+ Add another policy</b> for the next one. Policies chosen at submission carry through to On Risk, ready to check. They show on the case and on the card.", roles:['mapa','management']},
   ]},
@@ -6008,7 +6011,19 @@ function visibleLeads(){
 
 /* Booked follow-up calls live on Contacted Clients cases and on cases being
    chased while In Underwriting. */
-function hasBookedCall(l){ const pot = potOf(l); return (pot==='existing' || pot==='underwriting' || pot==='terms') && !!l.followUpDate; }
+/* Signing a case up (submitted, terms issued, On Risk) or declining it means
+   the client has been spoken to, so any booked callback is cleared. */
+const CLEAR_CALLBACK = {followUpDate:null, followUpTime:null};
+/* A call that's booked and still counts. Only Contacted Clients can have an
+   overdue call: on Submitted / Terms Issued a chase call shows while it's
+   coming up and then drops off once its time has passed. On Risk and
+   Declined cases never have one. */
+function hasBookedCall(l){
+  const pot = potOf(l);
+  if(!l.followUpDate) return false;
+  if(pot==='existing') return true;
+  return (pot==='underwriting' || pot==='terms') && !isCallOverdue(l.followUpDate, l.followUpTime);
+}
 
 function potOf(lead){
   if(lead.status==='signedup') return 'signedup';
@@ -7659,7 +7674,7 @@ function renderLeadModal(){
       const note = document.getElementById('termsNote').value.trim();
       this.disabled = true;
       logAudit(lead.id, {type:'terms', text:`Terms issued - ${fmtDateSlash(Date.now())}${note ? ' - '+note : ''}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()},
-        {status:'terms', termsIssuedAt:Date.now(), termsNote:note||null})
+        {status:'terms', termsIssuedAt:Date.now(), termsNote:note||null, ...CLEAR_CALLBACK})
         .then(()=>{ celebrate('Terms issued ✨', false); toast('Terms issued. Moved to Terms Issued.','success'); actionUIState = null; refreshLeadModal(); })
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
     });
@@ -7794,7 +7809,7 @@ document.getElementById('csSubmit').addEventListener('click', function(){
   logAudit(leadId, {
     type:'status', text:`Status manually changed to "${STATUS_LABELS[newStatus]}" by ${currentUser.name}`,
     byId:currentUser.id, byName:currentUser.name, at:Date.now()
-  }, {status:newStatus}).then(()=>{
+  }, {status:newStatus, ...(['new','existing'].includes(newStatus) ? {} : CLEAR_CALLBACK)}).then(()=>{
     toast(`${lead.clientName||'Lead'} moved to ${STATUS_LABELS[newStatus]}`,'success');
     closeModal('changeStatusOverlay');
     actionUIState = null;
@@ -8057,7 +8072,7 @@ function renderDynamicArea(lead){
       const text = `${label} - Decline - ${fmtDateSlash(Date.now())} - ${reason}: ${detail}`;
       const newStatus = DECLINE_STEPS.every(st=> ticked[st.field]) ? 'completed' : 'decline';
       logAudit(lead.id, {type:'decline', via:actionUIState.kind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {
-        status:newStatus, declineReason:reason, declineDetail:detail, ...ticked
+        status:newStatus, declineReason:reason, declineDetail:detail, ...ticked, ...CLEAR_CALLBACK
       }).then(()=>{
         DECLINE_STEPS.forEach((st,i)=>{
           if(ticked[st.field]) logAudit(lead.id, {type:st.type, text:st.audit, byId:currentUser.id, byName:currentUser.name, at:Date.now()+1+i})
@@ -8168,7 +8183,7 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
   const m = SIGNUP_MODES[this.dataset.mode] || SIGNUP_MODES.onrisk;
   const money = `£${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
   const text = (this.dataset.mode==='nowonrisk' ? '' : `${label} - `) + `${m.what} - ${fmtDateSlash(Date.now())} - Commission ${money} - Policies: ${policiesText(policies)}`;
-  logAudit(leadId, {type:m.type, via:this.dataset.actionKind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:m.status, commission:Number(val), policies})
+  logAudit(leadId, {type:m.type, via:this.dataset.actionKind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:m.status, commission:Number(val), policies, ...CLEAR_CALLBACK})
     .then(()=>{
       if(m.status==='signedup') celebrate(`${money} on risk! 🎉`);
       toast(m.status==='underwriting' ? `Submitted to underwriting with ${money} commission pending. Moved to Submitted / In Underwriting.` : `On risk with ${money} commission. Moved to On Risk.`,'success'); closeModal('signupOverlay');

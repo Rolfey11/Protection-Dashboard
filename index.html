@@ -776,8 +776,8 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 /* Compact rows: tighter padding, one-line notes and details (full text on hover). */
 .sib-table td{padding:7px 10px; line-height:1.35;} .sib-table th{padding:8px 10px;}
 .sib-table .nml-notes{margin-top:1px; line-height:1.3;}
-.sib-table td:first-child{max-width:340px;}
-.sib-table td:first-child .nml-notes,.sib-table .sib-note-preview{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.sib-table td.sib-client{max-width:340px;}
+.sib-table td.sib-client .nml-notes,.sib-table .sib-note-preview{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .sib-table .sib-note-preview{margin-top:1px; max-width:none;}
 .sib-table .sib-letter{gap:2px;} .sib-table .sib-letter .track{height:4px;}
 .sib-prot{white-space:nowrap;} .sib-prot + .sib-prot{margin-top:3px;} .sib-prot small{font-size:11px; color:var(--text-muted);}
@@ -4656,7 +4656,7 @@ function renderSib(){
       const o = sibOutcome(c);
       return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''} ${c.chaseAnswer==='yes' ? 'chase-yes' : c.chaseAnswer==='no' ? 'chase-no' : ''} ${bulk && sibSel.has(c.key) ? 'sel' : ''}">
         ${bulk ? `<td class="sib-chk"><input type="checkbox" data-sib-sel="${esc(c.key)}" aria-label="Select ${esc(c.mailingName||'client')}" ${sibSel.has(c.key) ? 'checked' : ''}></td>` : ''}
-        <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.replace(/\s+/g,' ').slice(0,240))}</div>` : ''}</td>
+        <td class="sib-client"><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.replace(/\s+/g,' ').slice(0,240))}</div>` : ''}</td>
         <td>${sibLetterPill(c)}</td>
         ${searching ? `<td>${esc(sibMonthLabel(c.month))}</td>` : ''}
         <td>${esc(c.servicingAdviser||'—')}${c.exAdviser ? `<div class="nml-notes">ex ${esc(c.exAdviser.replace(/^X\s+/,''))}</div>` : ''}</td>

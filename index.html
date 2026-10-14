@@ -5176,10 +5176,23 @@ const SIB_HEADERS = {month:'month', exadviser:'exAdviser', ex:'exAdviser', exadv
   mailingname:'mailingName', salutation:'salutation', address1:'address', address:'address', email:'email', retentionkey:'retentionKey',
   outcomereason:'outcomeReason', emailclient:'emailClient', dateoflastcontact:'lastContact', lastcontact:'lastContact', notes:'notes',
   '6monthsibsent':'sib6', '3monthsibsent':'sib3', '0monthsibsent':'sib0', donotcontact:'doNotContact'};
+/* Dates typed day-first (01/05/2026 = 1 May) into a spreadsheet set to US
+   month-first are saved as 5 Jan while still showing 01/05/2026. A file
+   saved that way is month-first for every date, so the whole file is
+   checked: if its 6/3/0 month email dates mostly only make sense with day
+   and month swapped (each email is due n months before the product ends),
+   every swappable date saved as a real date is read the other way round.
+   Dates typed as text are already read day-first and are left alone. */
+function sibSwapDM(d){ const [y, m, day] = d.split('-').map(Number); return day <= 12 && day !== m ? `${y}-${String(day).padStart(2,'0')}-${String(m).padStart(2,'0')}` : null; }
+function sibEmailDateFits(d, month, n){
+  const [py, pm] = month.split('-').map(Number);
+  const due = new Date(py, pm - 1 - n, 1).getTime(), t = new Date(d+'T12:00:00').getTime(), DAY = 86400000;
+  return t >= due - 60*DAY && t <= due + 90*DAY;
+}
 const SIB_MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
 // Reads every month tab into case objects. Header row is found by its "CaseId" column.
 function parseSibWorkbook(X, wb){
-  const cases = {}, problems = [], tabs = [];
+  const cases = {}, problems = [], tabs = [], savedDates = [];
   const iso = (y,m,d)=> `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   wb.SheetNames.forEach(name=>{
     const ws = wb.Sheets[name]; if(!ws || !ws['!ref']) return;
@@ -5225,9 +5238,10 @@ function parseSibWorkbook(X, wb){
       const rk = get('retentionKey'); if(rk){ const hit = SIB_RETENTION.find(x=> x.toLowerCase()===String(rk).toLowerCase()); if(hit) c.retentionKey = hit; }
       const ec = get('emailClient'); if(ec){ const hit = SIB_EMAIL_CLIENT.find(x=> x.toLowerCase()===String(ec).toLowerCase()); if(hit) c.emailClient = hit; }
       const lc = get('lastContact');
-      if(lc!=null){ const d = dateVal(lc); if(d) c.lastContact = new Date(d+'T12:00:00').getTime(); else c.notes = (c.notes ? c.notes+'\n' : '') + 'Last contact: '+String(lc).slice(0,200); }
+      if(lc!=null){ const d = dateVal(lc); if(d){ c.lastContact = new Date(d+'T12:00:00').getTime(); if(typeof lc==='number' && sibSwapDM(d)) savedDates.push({c, f:'lastContact', iso:d}); } else c.notes = (c.notes ? c.notes+'\n' : '') + 'Last contact: '+String(lc).slice(0,200); }
       ['sib6','sib3','sib0'].forEach(f=>{ const v = get(f); if(v==null) return;
-        if(/unsubscribed/i.test(String(v))) c[f] = 'UNSUBSCRIBED'; else { const d = dateVal(v); if(d) c[f] = d; } });
+        if(/unsubscribed/i.test(String(v))) c[f] = 'UNSUBSCRIBED';
+        else { const d = dateVal(v); if(d){ c[f] = d; if(typeof v==='number' && sibSwapDM(d)) savedDates.push({c, f, n:Number(f.slice(3))}); } } });
       // Excel comments / notes on any cell in the row go into the case notes too.
       for(let cc = range.s.c; cc <= range.e.c; cc++){
         const x = cellAt(r, cc);
@@ -5247,7 +5261,23 @@ function parseSibWorkbook(X, wb){
     }
     tabs.push({name, count: Object.keys(cases).length - before});
   });
-  return {cases, problems, tabs};
+  // Saved month-first? Compare how many email dates only make sense as saved vs swapped.
+  let asSaved = 0, asSwapped = 0;
+  savedDates.filter(x=> x.n!=null).forEach(({c, f, n})=>{
+    const d = c[f], alt = sibSwapDM(d), a = sibEmailDateFits(d, c.month, n), b = sibEmailDateFits(alt, c.month, n);
+    if(a && !b) asSaved++; if(b && !a) asSwapped++;
+  });
+  let swapped = null;
+  if(asSwapped > asSaved){
+    const ex = savedDates.find(x=> x.n!=null);
+    swapped = {count:0, example: ex ? [ex.c[ex.f], sibSwapDM(ex.c[ex.f])] : null};
+    savedDates.forEach(x=>{
+      if(x.f==='lastContact'){ x.c.lastContact = new Date(sibSwapDM(x.iso)+'T12:00:00').getTime(); }
+      else x.c[x.f] = sibSwapDM(x.c[x.f]);
+      swapped.count++;
+    });
+  }
+  return {cases, problems, tabs, swapped};
 }
 document.getElementById('sibUploadBtn').addEventListener('click', ()=> document.getElementById('sibFileInput').click());
 document.getElementById('sibFileInput').addEventListener('change', function(){
@@ -5259,14 +5289,14 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
   // Load what's already in the dashboard first, so a re-upload only fills in blanks.
   Promise.all([loadXlsx(), file.arrayBuffer(), ensureSibLoaded()]).then(([X, buf])=>{
     const wb = X.read(buf, {type:'array', cellStyles:true});
-    const {cases, tabs} = parseSibWorkbook(X, wb);
+    const {cases, tabs, swapped} = parseSibWorkbook(X, wb);
     const read = tabs.filter(t=> !t.skipped && t.count), skipped = tabs.filter(t=> t.skipped || !t.count).map(t=> t.name.trim());
     const keys = Object.keys(cases);
     if(!keys.length){ status.textContent = `Nothing uploaded: no cases found in ${file.name}. Each month tab needs a heading row with a "Case ID" column.`; status.classList.add('sib-status-bad'); toast("No cases found. The month tabs need a header row with a Case ID column.",'error'); return; }
     const existing = keys.filter(k=> SIB[k]);
     const binned = existing.filter(k=> SIB[k].deleted);
     const months = [...new Set(keys.map(k=> cases[k].month))].sort();
-    if(!confirm(`Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\nTabs read: ${read.map(t=> t.name.trim()+' ('+t.count+')').join(', ')}${skipped.length ? '\nTabs skipped (no cases): '+skipped.join(', ') : ''}\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.${binned.length ? `\n${binned.length} of those are in the Send in Blue Recycle Bin (you'll be asked next whether to restore them).` : ''}\n\nGo ahead?`)){ status.textContent = ''; return; }
+    if(!confirm((swapped ? `Dates in this file were saved month-first (US style), so they've been read day-first: e.g. ${swapped.example ? `saved as ${fmtDate(swapped.example[0])}, read as ${fmtDate(swapped.example[1])}` : ''} (${swapped.count} date${swapped.count===1?'':'s'}).\n\n` : '') + `Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\nTabs read: ${read.map(t=> t.name.trim()+' ('+t.count+')').join(', ')}${skipped.length ? '\nTabs skipped (no cases): '+skipped.join(', ') : ''}\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.${binned.length ? `\n${binned.length} of those are in the Send in Blue Recycle Bin (you'll be asked next whether to restore them).` : ''}\n\nGo ahead?`)){ status.textContent = ''; return; }
     // The 6 / 3 / 0 month Send in Blue email dates come from the spreadsheet: where they
     // differ from the dashboard, offer to replace them (a blank in the spreadsheet clears it).
     const SIB_EMAIL_F = [['sib6','6 month'],['sib3','3 month'],['sib0','0 month']];
@@ -5678,6 +5708,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14j', date:'2026-10-14', items:[
+    {text:"<b>Send in Blue upload reads UK dates correctly</b>: if your spreadsheet saved its dates US-style (01/05/2026 saved as 5 Jan instead of 1 May), the upload now spots it from when the emails were due, tells you, and reads every date the UK way. Upload your spreadsheet again and press OK when asked about the email dates to correct the ones already in the dashboard.", roles:['management']},
+  ]},
   {id:'2026-10-14i', date:'2026-10-14', items:[
     {text:"<b>Send in Blue upload: email dates from the spreadsheet</b>. When the 6, 3 or 0 Month SIB Sent dates in your file differ from the dashboard, the upload shows examples and asks whether to use the spreadsheet's dates. Choose OK to replace them (a blank clears the dashboard's date). Other fields still only fill in blanks.", roles:['management']},
   ]},

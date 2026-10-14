@@ -914,6 +914,8 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-table .sib-chk input{width:16px; height:16px; accent-color:var(--brand); cursor:pointer;}
 .sib-table tr.sel.sel td{background:color-mix(in srgb, var(--blue) 11%, var(--surface));}
 .sib-bulk{display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--brand-tint); border:1px solid color-mix(in srgb, var(--brand) 25%, transparent); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:13.5px;}
+.sib-hidden-note{font-size:13px; color:var(--text-muted); background:var(--surface); border:1px dashed var(--border-2); border-radius:10px; padding:10px 14px; margin-bottom:12px;}
+.sib-hidden-note b{color:var(--text);}
 .sib-bulk-sep{width:1px; align-self:stretch; background:color-mix(in srgb, var(--brand) 25%, transparent);}
 .sib-bulk-email{display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap;}
 .sib-bulk .btn .ico{width:14px; height:14px;}
@@ -2045,8 +2047,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <input type="search" id="sibSearch" placeholder="Search name, address, email, case ID or notes (all months)…">
         <select id="sibAdviser"><option value="">All servicing advisers</option></select>
         <select id="sibOutcomeFilter">
+          <option value="all" selected>All outcomes</option>
           <option value="open">Open cases</option>
-          <option value="all">All outcomes</option>
           <option value="Retained">Retained</option>
           <option value="No Opportunity">No Opportunity</option>
           <option value="Not Converted">Not Converted</option>
@@ -4426,7 +4428,7 @@ let APP_MODE = 'protection';
 try{ if(localStorage.getItem('plt_mode')==='sib') APP_MODE = 'sib'; }catch(e){}
 let SIB = {}, sibListening = false, sibLoaded = false, sibOpenKey = null, sibAction = null;
 document.body.classList.toggle('mode-sib', APP_MODE==='sib');
-const sibState = {month:null, search:'', adviser:'', outcome:'open', emailClient:'', showAll:false, view:null};
+const sibState = {month:null, search:'', adviser:'', outcome:'all', emailClient:'', showAll:false, view:null};
 /* Pots for working Send in Blue clients (all follow the month picked at the top):
    Client Reviews: not spoken to yet (No answer → move on 1 or 2 weeks, drops to the bottom);
    Research: spoken to and looking at options;
@@ -4645,6 +4647,13 @@ function renderSib(){
   // Long lists (Beat the letter, searches) show the first 200; "Show all" draws the rest.
   const total = rows.length;
   if(!sibState.showAll && rows.length > 200) rows.length = 200;
+  // "Open cases" hides clients with an outcome; say so, so ended months don't look empty.
+  let hiddenNote = '';
+  if(sibState.outcome==='open' && !searching){
+    sibState.outcome = 'all'; const withAll = sibFilter(all).length; sibState.outcome = 'open';
+    const hidden = withAll - total;
+    if(hidden > 0) hiddenNote = `<div class="sib-hidden-note">${total ? 'Showing open cases only.' : `No open cases in ${esc(sibMonthLabel(sibState.month))}.`} <b>${hidden}</b> client${hidden===1?'':'s'} with an outcome ${hidden===1?'is':'are'} hidden. <button type="button" class="linkish" id="sibShowOutcomes">Show all outcomes</button></div>`;
+  }
   const emailTags = c=> sibUnsubscribed(c) ? '<span class="sib-tag no">Unsubscribed</span>' : [6,3,0].map(n=>{
     const s = sibEmailState(c, n);
     return s.sent ? `<span class="sib-tag ok" title="${n}-month email sent">${n}m ✓ ${esc(sibDay(s.sent))}</span>` : s.due ? `<span class="sib-tag due">${n}m due</span>` : `<span class="sib-tag no">${n}m</span>`;
@@ -4657,6 +4666,7 @@ function renderSib(){
       ${sibBulkEmailOpen ? `<span class="sib-bulk-email"><b>Mark sent today:</b>${[6,3,0].map(n=> `<button type="button" class="btn btn-secondary btn-sm" data-sib-bulk-email="${n}">${n} Month</button>`).join('')}<button type="button" class="linkish" id="sibBulkEmailCancel">Cancel</button></span>`
         : `<button type="button" class="btn btn-secondary btn-sm" id="sibBulkEmail">${ico('mail')} Email sent</button>`}
       <button type="button" class="linkish" id="sibBulkClear">Clear selection</button></div>` : '') +
+    hiddenNote +
     (rows.length ? `<div class="nml-table-wrap"><table class="nml-table sib-table">
     <thead><tr>${bulk ? `<th class="sib-chk"><input type="checkbox" id="sibSelAll" aria-label="Select all clients shown" ${rows.length && rows.every(c=> sibSel.has(c.key)) ? 'checked' : ''}></th>` : ''}<th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th title="Protection conversation and referral to the protection team">Protection</th><th>Outcome</th></tr></thead>
     <tbody>${rows.map(c=>{
@@ -4673,7 +4683,7 @@ function renderSib(){
         <td>${sibProtectionCell(c)}</td>
         <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}${o==='Retained' && (c.retainedProduct || c.caseValue!=null) ? `<div class="nml-notes">${esc([c.retainedProduct, c.caseValue!=null ? sibMoney(c.caseValue) : ''].filter(Boolean).join(' · '))}</div>` : ''}</td>
       </tr>`;
-    }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>') +
+    }).join('')}</tbody></table></div>` : (hiddenNote ? '' : '<div class="nml-empty">No cases match these filters.</div>')) +
     (total > rows.length ? `<div style="text-align:center; margin-top:12px;"><span class="nml-note">Showing the first ${rows.length} of ${total}.</span> <button type="button" class="btn btn-secondary btn-sm" id="sibShowAll">Show all ${total}</button></div>` : '');
   out.querySelectorAll('[data-sib-case]').forEach(tr=> tr.addEventListener('click', e=>{ if(e.target.closest('.sib-chk')) return; openSibCase(tr.dataset.sibCase); }));
   if(bulk){
@@ -4688,6 +4698,8 @@ function renderSib(){
   }
   const more = document.getElementById('sibShowAll');
   if(more) more.addEventListener('click', ()=>{ sibState.showAll = true; renderSib(); });
+  const showOut = document.getElementById('sibShowOutcomes');
+  if(showOut) showOut.addEventListener('click', ()=>{ sibState.outcome = 'all'; document.getElementById('sibOutcomeFilter').value = 'all'; sibState.showAll = false; renderSib(); });
 }
 document.querySelectorAll('[data-sib-view]').forEach(b=> b.addEventListener('click', ()=>{
   sibState.view = b.dataset.sibView; try{ localStorage.setItem('plt_sibView', sibState.view); }catch(e){}
@@ -5708,6 +5720,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14k', date:'2026-10-14', items:[
+    {text:"The Send in Blue table now shows <b>All outcomes</b> by default, so months that have ended show their clients straight away. Choose <b>Open cases</b> in the filter to see only clients still being worked on; a note tells you how many with an outcome are hidden."},
+  ]},
   {id:'2026-10-14j', date:'2026-10-14', items:[
     {text:"<b>Send in Blue upload reads UK dates correctly</b>: if your spreadsheet saved its dates US-style (01/05/2026 saved as 5 Jan instead of 1 May), the upload now spots it from when the emails were due, tells you, and reads every date the UK way. Upload your spreadsheet again and press OK when asked about the email dates to correct the ones already in the dashboard.", roles:['management']},
   ]},

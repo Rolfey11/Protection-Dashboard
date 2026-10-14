@@ -692,7 +692,23 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-tag.nop,.sib-tag.now{background:var(--red-bg); color:var(--red);}
 .sib-tag.due{background:var(--amber-bg); color:var(--amber);}
 .sib-tag.open{background:var(--blue-bg); color:var(--blue);}
-.sib-summary{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:12px; font-size:13px;}
+.sib-summary{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:10px; font-size:13px;}
+/* Compact top of the Send in Blue page, so the pots / table start higher up. */
+.sib-head{margin-bottom:12px; align-items:center;}
+.sib-head h1{font-size:20px;}
+.sib-head .sub{display:none;}
+.sib-period{display:flex; gap:10px; align-items:flex-start; margin-bottom:10px;}
+.sib-period .sib-years{flex-direction:column; flex:none; margin:0;}
+.sib-period .sib-months{flex:1 1 auto; min-width:0; margin:0; grid-template-columns:repeat(auto-fill, minmax(94px, 1fr)); gap:6px;}
+.sib-period .sib-month{display:grid; grid-template-columns:1fr auto; column-gap:4px; row-gap:0; align-items:baseline; align-content:start; padding:6px 8px;}
+.sib-period .sib-month.on{padding:5px 7px;}
+.sib-period .sib-month b{font-size:12.5px; white-space:nowrap;}
+.sib-period .sib-month .n{font-size:15px; line-height:1.15;}
+.sib-period .sib-month small{font-size:10.5px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.sib-period .sib-month small,.sib-period .sib-month .sib-bar,.sib-period .sib-month .sib-tag{grid-column:1 / -1;}
+.sib-period .sib-month .sib-bar{margin:3px 0 1px;}
+.sib-period .sib-month .sib-tag{justify-self:start; font-size:10px; padding:1px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
+@media (max-width:640px){.sib-period{flex-direction:column;} .sib-period .sib-years{flex-direction:row;}}
 .sib-filters{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
 .sib-filters input,.sib-filters select{padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; background:var(--surface); color:var(--text); font:inherit; font-size:13px;}
 .sib-filters input:focus,.sib-filters select:focus{outline:none; border-color:var(--brand-light);}
@@ -2029,15 +2045,17 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     </div>
 
     <div id="page-sib" class="hidden">
-      <div class="page-head">
+      <div class="page-head sib-head">
         <div>
           <h1>Send in Blue</h1>
           <p class="sub">Mortgage retentions. Each month is when the client's fixed rate ends.</p>
         </div>
         <button class="btn btn-secondary hidden" id="sibImportShortcut">Upload / download spreadsheet</button>
       </div>
-      <div class="sib-years" id="sibYears" role="group" aria-label="Year"></div>
-      <div class="sib-months" id="sibMonths"></div>
+      <div class="sib-period">
+        <div class="sib-years" id="sibYears" role="group" aria-label="Year"></div>
+        <div class="sib-months" id="sibMonths"></div>
+      </div>
       <div class="sib-summary" id="sibSummary"></div>
       <div class="sib-filters">
         <div class="sib-view" role="group" aria-label="View">
@@ -4500,7 +4518,7 @@ function sibMonthTag(key){
   if(d < 0) return ['no', 'Ended'];
   if(d === 0) return ['now', 'Ending now'];
   if(d <= 3) return ['now', 'Call now'];
-  if(d <= 6) return ['due', '6-month email due'];
+  if(d <= 6) return ['due', '6m email due'];
   return null;
 }
 function sibUnsubscribed(c){ return c.emailClient==='UNSUBSCRIBED' || c.sib6==='UNSUBSCRIBED' || c.sib3==='UNSUBSCRIBED' || c.sib0==='UNSUBSCRIBED'; }

@@ -897,6 +897,33 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 }
 .search-wrap input:focus{border-color:var(--brand-light); width:270px;}
 
+.sib-pots{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:start;}
+@media (max-width:900px){.sib-pots{grid-template-columns:1fr;}}
+.sib-pots .pot-body{max-height:none;}
+.sib-pots .pot-head .pot-sub{font-size:11px; color:var(--text-muted); font-weight:500; margin-top:2px;}
+.sib-card .lc-sub{display:flex; gap:6px; align-items:center; flex-wrap:nowrap;}
+.sib-card .sib-letter{font-size:10.5px;}
+.sib-card .sib-letter .track{display:none;}
+.sib-card.snoozed{opacity:.7; border-style:dashed;}
+.sib-card .snz{font-weight:700; color:var(--text-muted);}
+.sib-card.chase-pending{box-shadow:inset 3px 0 0 var(--amber);}
+.sib-view{display:flex; gap:3px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:3px;}
+.sib-view button{font:inherit; font-size:12.5px; font-weight:600; border:0; background:transparent; color:var(--text-muted); padding:6px 12px; border-radius:7px; cursor:pointer;}
+.sib-view button[aria-pressed="true"]{background:var(--brand); color:#fff;}
+.sib-table tr.chase-yes td{background:color-mix(in srgb, var(--green) 10%, var(--surface));}
+.sib-table tr.chase-no td{background:color-mix(in srgb, var(--red) 9%, var(--surface));}
+.sib-stage{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--text-muted); background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin-top:10px;}
+.sib-stage b{color:var(--text);}
+.sib-snooze-opts{display:flex; gap:8px; flex-wrap:wrap;}
+.chase-row{border:1px solid var(--border); border-radius:12px; padding:12px 14px; display:grid; gap:10px; margin-bottom:10px; background:var(--surface);}
+.chase-row .who{display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap;}
+.chase-row .who b{font-size:14px;}
+.chase-row .who small{display:block; color:var(--text-muted); font-size:12px; margin-top:2px;}
+.chase-btns{display:flex; gap:8px;}
+.chase-btns .btn{min-width:72px; justify-content:center;}
+.chase-no-form{display:grid; gap:8px; border-top:1px dashed var(--border); padding-top:10px;}
+.req-hint{font-size:11.5px; color:var(--text-muted);}
+.inline-form .missing, .chase-no-form .missing{border-color:var(--red) !important; background:var(--red-bg) !important;}
 .pots-grid{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; align-items:start;}
 @media (max-width:1100px){.pots-grid{grid-template-columns:repeat(3,1fr);}}
 @media (max-width:900px){.pots-grid{grid-template-columns:repeat(2,1fr);}}
@@ -2000,6 +2027,10 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="sib-months" id="sibMonths"></div>
       <div class="sib-summary" id="sibSummary"></div>
       <div class="sib-filters">
+        <div class="sib-view" role="group" aria-label="View">
+          <button type="button" data-sib-view="pots" aria-pressed="false">Pots</button>
+          <button type="button" data-sib-view="table" aria-pressed="false">Table</button>
+        </div>
         <input type="search" id="sibSearch" placeholder="Search name, address, email, case ID or notes (all months)…">
         <select id="sibAdviser"><option value="">All servicing advisers</option></select>
         <select id="sibOutcomeFilter">
@@ -2679,6 +2710,13 @@ table.users-table tr:hover td{background:var(--brand-tint);}
   </div>
 </div>
 
+<div class="modal-overlay" id="sibChaseOverlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head"><div><h2>Advisor Chase</h2><p class="sub" id="sibChaseSub" style="margin:4px 0 0; font-size:13px; color:var(--text-muted);"></p></div></div>
+    <div class="modal-body" id="sibChaseBody"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="sibOverlay">
   <div class="modal lead-modal">
     <div class="modal-head">
@@ -3016,7 +3054,8 @@ let activeLeadId = null;
 let selfDeletingLeadId = null; // case this user is deleting right now
 let lastRenderedLead = null; // JSON of the lead last drawn in the modal, to skip needless redraws
 let leadsLoaded = false; // false until the first leads download after sign-in arrives
-let leadsLive = false;   // true once the live download has arrived (not just the refresh copy below)
+let leadsLive = false;
+let sibChaseActive = false, sibChaseNoOpen = null; // Send in Blue Advisor Chase window (see sibCheckChase)   // true once the live download has arrived (not just the refresh copy below)
 
 /* Refresh copy: the colleague list, cases and notifications, kept for this
    browser tab only (sessionStorage, which the browser deletes when the tab
@@ -3160,6 +3199,7 @@ const ICON_PATHS = {
   briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
   trendUp:'<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
   trendDown:'<path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   pound:'<path d="M18 7c0-5.3-8-5.3-8 0v10"/><path d="M6 13h8"/><path d="M6 21h12"/><path d="M6 21c2.5 0 4-1.5 4-4"/>',
 };
 function ico(name, cls=''){
@@ -3192,6 +3232,7 @@ function toast(msg, type=''){
 function openModal(id){ document.getElementById(id).classList.add('open'); document.body.classList.add('scroll-lock'); }
 function closeModal(id){
   if(id==='forcePinOverlay' && forcePinActive) return; // must choose a new PIN or sign out
+  if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; }
@@ -3491,6 +3532,7 @@ function tryResolveSession(){
 
 function logout(){
   forcePinActive = false;
+  sibChaseActive = false; sibChaseNoOpen = null;
   if(auth.currentUser){ try{ sessionStorage.removeItem('plt_pin_checked_'+auth.currentUser.uid); }catch(e){} }
   listenRetry = 'none';
   closeAllModals();
@@ -4373,7 +4415,27 @@ let APP_MODE = 'protection';
 try{ if(localStorage.getItem('plt_mode')==='sib') APP_MODE = 'sib'; }catch(e){}
 let SIB = {}, sibListening = false, sibLoaded = false, sibOpenKey = null, sibAction = null;
 document.body.classList.toggle('mode-sib', APP_MODE==='sib');
-const sibState = {month:null, search:'', adviser:'', outcome:'open', emailClient:'', showAll:false};
+const sibState = {month:null, search:'', adviser:'', outcome:'open', emailClient:'', showAll:false, view:null};
+/* Pots for working Send in Blue clients (all follow the month picked at the top):
+   Client Reviews: not spoken to yet (No answer → move on 1 or 2 weeks, drops to the bottom);
+   Research: spoken to and looking at options;
+   Outcomes: an outcome chosen (or marked do not contact).
+   c.sibStage records Reviews/Research once a colleague has acted; before that,
+   a client with a last contact date counts as Research. */
+const SIB_POTS = [['reviews','Client Reviews','var(--blue)','Clients to contact'],['research','Research','var(--amber)','Contacted, looking at options'],['outcomes','Outcomes','var(--green)','Outcome chosen']];
+function sibPot(c){
+  if(c.retentionKey || c.doNotContact) return 'outcomes';
+  if(c.sibStage==='research' || c.sibStage==='reviews') return c.sibStage;
+  return c.lastContact ? 'research' : 'reviews';
+}
+function sibSnoozed(c){ return !!c.snoozeUntil && c.snoozeUntil > todayISO(); }
+// Fields that move a client to Research once they've been spoken to.
+function sibSpokePatch(c){ return c.retentionKey ? {} : {sibStage:'research', snoozeUntil:null}; }
+function sibViewPref(){ try{ const v = localStorage.getItem('plt_sibView'); if(v==='pots' || v==='table') return v; }catch(e){} return currentUser && currentUser.role==='mapa' ? 'pots' : 'table'; }
+// The colleague a Send in Blue case belongs to (matched on the servicing adviser's name).
+function sibOwnerId(c){ const k = sibName(c.servicingAdviser); if(!k) return null; const e = Object.entries(USERS).find(([, u])=> u && sibName(u.name)===k); return e ? e[0] : null; }
+function sibChasePending(c){ return !!c.chaseAt && !c.chaseAnswer; }
+function sibMoney(v){ return '£' + Number(v).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2}); }
 
 function setAppMode(mode, go=true){
   APP_MODE = mode==='sib' ? 'sib' : 'protection';
@@ -4555,6 +4617,13 @@ function renderSib(){
     (unalloc ? `<option value="${SIB_UNALLOCATED}">Not allocated (no servicing adviser) · ${unalloc}</option>` : '');
   advSel.value = advs.includes(sibState.adviser) || (unalloc && sibState.adviser===SIB_UNALLOCATED) ? sibState.adviser : '';
   if(advSel.value !== sibState.adviser) sibState.adviser = advSel.value;
+  if(!sibState.view) sibState.view = sibViewPref();
+  document.querySelectorAll('[data-sib-view]').forEach(b=> b.setAttribute('aria-pressed', String(b.dataset.sibView===sibState.view)));
+  const pots = sibState.view==='pots';
+  ['sibOutcomeFilter','sibEmailFilter'].forEach(id=> document.getElementById(id).classList.toggle('hidden', pots));
+  sibRenderChaseTools(all);
+  sibCheckChase();
+  if(pots){ renderSibPots(all); return; }
   // rows
   const rows = sibFilter(all).sort((a,b)=> sibState.outcome==='appt' ? sibApptMs(a) - sibApptMs(b) : sibState.outcome==='letter' ? sibLetterState(a).days - sibLetterState(b).days : (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
   const searching = !!sibState.search.trim() || sibState.outcome==='appt' || sibState.outcome==='letter';
@@ -4570,7 +4639,7 @@ function renderSib(){
     <thead><tr><th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th title="Protection conversation and referral to the protection team">Protection</th><th>Outcome</th></tr></thead>
     <tbody>${rows.map(c=>{
       const o = sibOutcome(c);
-      return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''}">
+      return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''} ${c.chaseAnswer==='yes' ? 'chase-yes' : c.chaseAnswer==='no' ? 'chase-no' : ''}">
         <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.replace(/\s+/g,' ').slice(0,240))}</div>` : ''}</td>
         <td>${sibLetterPill(c)}</td>
         ${searching ? `<td>${esc(sibMonthLabel(c.month))}</td>` : ''}
@@ -4579,13 +4648,153 @@ function renderSib(){
         <td>${c.emailClient ? `<span class="sib-tag ${c.emailClient==='YES'?'ok':'no'}">${esc(c.emailClient)}</span>` : '<span class="sib-tag no">Not set</span>'}</td>
         <td>${c.lastContact ? esc(fmtDate(c.lastContact)) : '—'}${sibApptTag(c)}</td>
         <td>${sibProtectionCell(c)}</td>
-        <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}</td>
+        <td><span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${c.outcomeReason ? `<div class="nml-notes">${esc(c.outcomeReason)}</div>` : ''}${o==='Retained' && (c.retainedProduct || c.caseValue!=null) ? `<div class="nml-notes">${esc([c.retainedProduct, c.caseValue!=null ? sibMoney(c.caseValue) : ''].filter(Boolean).join(' · '))}</div>` : ''}</td>
       </tr>`;
     }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>') +
     (total > rows.length ? `<div style="text-align:center; margin-top:12px;"><span class="nml-note">Showing the first ${rows.length} of ${total}.</span> <button type="button" class="btn btn-secondary btn-sm" id="sibShowAll">Show all ${total}</button></div>` : '');
   out.querySelectorAll('[data-sib-case]').forEach(tr=> tr.addEventListener('click', ()=> openSibCase(tr.dataset.sibCase)));
   const more = document.getElementById('sibShowAll');
   if(more) more.addEventListener('click', ()=>{ sibState.showAll = true; renderSib(); });
+}
+document.querySelectorAll('[data-sib-view]').forEach(b=> b.addEventListener('click', ()=>{
+  sibState.view = b.dataset.sibView; try{ localStorage.setItem('plt_sibView', sibState.view); }catch(e){}
+  renderSib();
+}));
+/* ---- Advisor Chase ----
+   Management picks a month and sends a chase: every open case in that month
+   with "Email client?" not set (and not do-not-contact) is flagged for its
+   servicing adviser. The adviser gets a window in Send in Blue they can't
+   close until each client has a Yes or No. Yes sets Email client? to YES;
+   No sets it to NO, needs a reason and a detailed note, and moves the client
+   to Research. In the table, answered rows show pale green (Yes) or red (No). */
+function sibChaseTargets(month){
+  return sibCases().filter(c=> c.month===month && !c.retentionKey && !c.emailClient && !c.doNotContact && !sibChasePending(c));
+}
+function sibRenderChaseTools(all){
+  const sum = document.getElementById('sibSummary');
+  if(!sum || !currentUser || currentUser.role!=='management' || !sibState.month) return;
+  const inMonth = sibCases().filter(c=> c.month===sibState.month);
+  const chased = inMonth.filter(c=> c.chaseAt), pending = chased.filter(sibChasePending);
+  const yes = chased.filter(c=> c.chaseAnswer==='yes').length, no = chased.filter(c=> c.chaseAnswer==='no').length;
+  const n = sibChaseTargets(sibState.month).filter(c=> sibOwnerId(c)).length; // only clients whose adviser is a colleague can be chased
+  sum.insertAdjacentHTML('beforeend', `<span class="sib-chase-tools" style="display:inline-flex; gap:6px; align-items:center; margin-left:auto;">
+    ${chased.length ? `<span class="sib-tag ${pending.length ? 'due' : 'ok'}" title="Advisor Chase for ${esc(sibMonthLabel(sibState.month))}">Chase: ${yes} yes · ${no} no${pending.length ? ` · ${pending.length} waiting` : ''}</span>` : ''}
+    <button type="button" class="btn btn-primary btn-sm" id="sibChaseBtn" ${n ? '' : 'disabled title="No open clients with Email client? not set (and an adviser in the tracker) this month"'}>Send Advisor Chase${n ? ` (${n})` : ''}</button></span>`);
+  const btn = document.getElementById('sibChaseBtn');
+  if(btn) btn.addEventListener('click', ()=> sibSendChase(sibState.month, btn));
+}
+function sibSendChase(month, btn){
+  const targets = sibChaseTargets(month);
+  if(!targets.length){ toast('No open clients with Email client? not set in '+sibMonthLabel(month)+'.','error'); return; }
+  const byOwner = {}, skipped = [];
+  targets.forEach(c=>{ const id = sibOwnerId(c); if(id) (byOwner[id] = byOwner[id] || []).push(c); else skipped.push(c); });
+  const lines = Object.entries(byOwner).map(([id, list])=> `• ${USERS[id].name}: ${list.length}`).join('\n');
+  const total = targets.length - skipped.length;
+  if(!total){ toast(`None of these clients' servicing advisers match a colleague, so there's no one to chase.`,'error'); return; }
+  if(!confirm(`Send Advisor Chase for ${sibMonthLabel(month)}?\n\n${total} client${total===1?'':'s'} with Email client? not set:\n${lines}${skipped.length ? `\n\n${skipped.length} skipped: their servicing adviser isn't a colleague in the tracker.` : ''}\n\nEach adviser must answer Yes or No for every client before they can use Send in Blue.`)) return;
+  btn.disabled = true;
+  const now = Date.now(), updates = {};
+  Object.entries(byOwner).forEach(([id, list])=>{
+    list.forEach(c=>{
+      const base = `sib/cases/${c.key}/`;
+      updates[base+'chaseAt'] = now; updates[base+'chaseBy'] = currentUser.id; updates[base+'chaseByName'] = currentUser.name;
+      updates[base+'chaseAnswer'] = null; updates[base+'chaseReason'] = null; updates[base+'chaseNote'] = null; updates[base+'chaseAnsweredAt'] = null;
+      updates[base+'audit/'+db.ref().push().key] = {type:'status', text:`Advisor Chase sent by ${currentUser.name}: should this client be emailed about their deal ending?`, byId:currentUser.id, byName:currentUser.name, at:now};
+    });
+    if(id !== currentUser.id) updates['notifications/'+db.ref('notifications').push().key] = {leadId:null, leadName:'', toUserId:id, toRole:null, kind:'sibChase', byId:currentUser.id,
+      message:`Advisor Chase: ${list.length} Send in Blue client${list.length===1?' needs':'s need'} a Yes or No for "Email client?" (${sibMonthLabel(month)}). Open Send in Blue to answer.`, at:now, readBy:{}};
+  });
+  db.ref().update(updates)
+    .then(()=> toast(`Advisor Chase sent: ${total} client${total===1?'':'s'} across ${Object.keys(byOwner).length} adviser${Object.keys(byOwner).length===1?'':'s'}.`,'success'))
+    .catch(err=>{ toast('Could not send: '+err.message,'error'); btn.disabled = false; });
+}
+// Clients waiting on this colleague's Advisor Chase answer.
+function sibMyChasePending(){ return currentUser ? sibCases().filter(c=> sibChasePending(c) && sibIsMine(c)) : []; }
+function sibCheckChase(){
+  const onSib = !document.getElementById('page-sib').classList.contains('hidden');
+  const list = onSib && sibLoaded ? sibMyChasePending() : [];
+  if(!list.length){
+    if(sibChaseActive){ sibChaseActive = false; sibChaseNoOpen = null; closeModal('sibChaseOverlay'); if(onSib) toast('Advisor Chase done. Thank you!','success'); }
+    return;
+  }
+  if(!sibChaseActive){ sibChaseActive = true; closeModal('sibOverlay'); openModal('sibChaseOverlay'); }
+  renderSibChase(list);
+}
+function renderSibChase(list){
+  list.sort((a,b)=> (a.month||'').localeCompare(b.month||'') || (a.mailingName||'').localeCompare(b.mailingName||''));
+  const by = [...new Set(list.map(c=> c.chaseByName).filter(Boolean))].join(', ');
+  document.getElementById('sibChaseSub').textContent = `${by || 'Management'} asked: should these clients be emailed to say their deal is coming to an end? Answer each one to carry on (${list.length} left).`;
+  const body = document.getElementById('sibChaseBody');
+  // Keep anything typed into an open "No" form across live updates.
+  const draft = sibChaseNoOpen ? {reason:(document.getElementById('chReason')||{}).value, note:(document.getElementById('chNote')||{}).value} : null;
+  body.innerHTML = list.map(c=> `<div class="chase-row" data-chase="${esc(c.key)}">
+    <div class="who"><div><b>${esc(c.mailingName||'(no name)')}</b><small>${esc([sibMonthLabel(c.month), c.caseId ? 'Case '+c.caseId : '', c.address].filter(Boolean).join(' · '))}</small></div>
+      <div class="chase-btns"><button type="button" class="btn btn-primary btn-sm" data-chase-yes="${esc(c.key)}">Yes</button><button type="button" class="btn btn-secondary btn-sm" data-chase-no="${esc(c.key)}">No</button></div></div>
+    ${sibChaseNoOpen===c.key ? `<div class="chase-no-form">
+      <div class="field" style="margin:0;"><label for="chReason">Reason</label><select id="chReason">${sibReasonOptions('Not Converted', draft && draft.reason)}</select></div>
+      <div class="field" style="margin:0;"><label for="chNote">Why not? (in detail)</label><textarea id="chNote" placeholder="e.g. Client has already agreed a product transfer with the lender direct; spoke on 12/06…">${esc(draft && draft.note || '')}</textarea><div class="req-hint">At least ${SIB_NOTE_MIN} characters. The client moves to Research.</div></div>
+      <div style="display:flex; gap:8px;"><button type="button" class="btn btn-primary btn-sm" id="chNoSave">Save: No</button><button type="button" class="btn btn-ghost btn-sm" id="chNoCancel">Cancel</button></div>
+    </div>` : ''}
+  </div>`).join('');
+  body.querySelectorAll('[data-chase-yes]').forEach(b=> b.addEventListener('click', ()=>{
+    b.disabled = true;
+    sibWriteKey(b.dataset.chaseYes, {emailClient:'YES', chaseAnswer:'yes', chaseAnsweredAt:Date.now()}, {type:'status', text:'Advisor Chase: Yes, email the client. Email client? set to YES'})
+      .then(ok=>{ if(!ok) b.disabled = false; else if(sibChaseNoOpen===b.dataset.chaseYes) sibChaseNoOpen = null; });
+  }));
+  body.querySelectorAll('[data-chase-no]').forEach(b=> b.addEventListener('click', ()=>{ sibChaseNoOpen = b.dataset.chaseNo; renderSibChase(sibMyChasePending()); const r = document.getElementById('chReason'); if(r) r.focus(); }));
+  const cancel = document.getElementById('chNoCancel');
+  if(cancel) cancel.addEventListener('click', ()=>{ sibChaseNoOpen = null; renderSibChase(sibMyChasePending()); });
+  const save = document.getElementById('chNoSave');
+  if(save) save.addEventListener('click', function(){
+    const key = sibChaseNoOpen, c = SIB[key];
+    const reasonEl = document.getElementById('chReason'), noteEl = document.getElementById('chNote');
+    const reason = reasonEl.value, note = noteEl.value.trim();
+    reasonEl.classList.toggle('missing', !reason); noteEl.classList.toggle('missing', note.length < SIB_NOTE_MIN);
+    if(!reason || note.length < SIB_NOTE_MIN){ toast(!reason ? 'Please choose a reason.' : `Please write a detailed note (at least ${SIB_NOTE_MIN} characters).`,'error'); (!reason ? reasonEl : noteEl).focus(); return; }
+    this.disabled = true;
+    sibWriteKey(key, {emailClient:'NO', chaseAnswer:'no', chaseAnsweredAt:Date.now(), chaseReason:reason, chaseNote:note, ...(c && !c.retentionKey ? {sibStage:'research', snoozeUntil:null} : {})},
+      {type:'status', text:`Advisor Chase: No, don't email the client (${reason}): ${note}. Email client? set to NO`})
+      .then(ok=>{ if(ok) sibChaseNoOpen = null; else this.disabled = false; });
+  });
+}
+function renderSibPots(all){
+  const q = sibState.search.trim().toLowerCase();
+  const list = all.filter(c=>{
+    if(sibState.adviser && sibAdvLabel(c) !== sibState.adviser) return false;
+    if(q) return [c.mailingName, c.salutation, c.address, c.email, c.caseId, c.notes].some(v=> String(v||'').toLowerCase().includes(q));
+    return c.month === sibState.month;
+  });
+  const by = {reviews:[], research:[], outcomes:[]};
+  list.forEach(c=> by[sibPot(c)].push(c));
+  const letterDays = c=>{ const st = sibLetterState(c); return st && typeof st.days==='number' ? st.days : 9999; };
+  // Client Reviews: clients moved on sit at the bottom (soonest back first); the rest by lender letter.
+  by.reviews.sort((a,b)=> (sibSnoozed(a) - sibSnoozed(b)) || (sibSnoozed(a) ? String(a.snoozeUntil).localeCompare(String(b.snoozeUntil)) : (letterDays(a) - letterDays(b))) || (a.row||0)-(b.row||0));
+  by.research.sort((a,b)=> (b.lastContact||0) - (a.lastContact||0));
+  by.outcomes.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+  const lastLine = c=>{
+    const e = c.audit ? Object.values(c.audit).filter(Boolean).sort((a,b)=> b.at-a.at)[0] : null;
+    return e ? `<span class="txt">${esc(e.text)}</span><span class="when">${timeAgo(e.at)}</span>` : `<span class="txt">${c.lastContact ? 'Last contact '+esc(fmtDate(c.lastContact)) : 'Not contacted yet'}</span>`;
+  };
+  const card = (c, pot)=>{
+    const o = sibOutcome(c);
+    let sub;
+    if(pot==='outcomes') sub = c.doNotContact && !c.retentionKey ? '<span class="sib-tag nop">Do not contact</span>'
+      : `<span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}</span>${o==='Retained' && c.caseValue!=null ? `<span class="lc-money">${sibMoney(c.caseValue)}</span>` : ''}<span style="overflow:hidden; text-overflow:ellipsis;">${esc(o==='Retained' ? (c.retainedProduct||'') : (c.outcomeReason||''))}</span>`;
+    else if(sibSnoozed(c)) sub = `<span class="snz">Moved on to ${esc(fmtDate(c.snoozeUntil))}</span>`;
+    else sub = sibLetterPill(c) + (c.emailClient ? `<span class="sib-tag ${c.emailClient==='YES'?'ok':'no'}">Email: ${esc(c.emailClient)}</span>` : '');
+    const showAdv = sibSeesAll();
+    return `<div class="lead-card sib-card ${pot==='reviews' && sibSnoozed(c) ? 'snoozed' : ''} ${sibChasePending(c) ? 'chase-pending' : ''}" data-sib-case="${esc(c.key)}">
+      <div class="lc-top"><div class="lc-name">${esc(c.mailingName||'(no name)')}</div>${q ? `<span class="sib-tag open">${esc(sibMonthLabel(c.month))}</span>` : ''}${showAdv ? `<span class="lc-avatar" style="--av:${advisorTone(sibOwnerId(c)||c.servicingAdviser||'')}" title="${esc(c.servicingAdviser||'Not allocated')}">${esc(initials(c.servicingAdviser||'?'))}</span>` : ''}</div>
+      <div class="lc-sub">${sub}</div>
+      <div class="lc-activity">${lastLine(c)}</div>
+    </div>`;
+  };
+  document.getElementById('sibResults').innerHTML = (q ? `<p class="nml-note" style="margin-top:0;">Searching every month for "${esc(sibState.search.trim())}".</p>` : '') +
+    `<div class="sib-pots">${SIB_POTS.map(([k, label, tone, sub])=> `<div class="pot" data-sib-pot="${k}" style="--pot:${tone}">
+      <div class="pot-head"><div class="pot-head-title"><h3>${label}</h3><div class="pot-sub">${sub}</div></div><span class="pot-count">${by[k].length}</span></div>
+      <div class="pot-body">${by[k].length ? by[k].map(c=> card(c, k)).join('') : '<div class="pot-empty" style="padding:18px 6px; text-align:center; font-size:12px; color:var(--text-faint);">Nothing here right now</div>'}</div>
+    </div>`).join('')}</div>`;
+  document.querySelectorAll('#sibResults [data-sib-case]').forEach(el=> el.addEventListener('click', ()=> openSibCase(el.dataset.sibCase)));
 }
 document.getElementById('sibSearch').addEventListener('input', function(){ sibState.search = this.value; sibState.showAll = false; renderSib(); });
 [['sibAdviser','adviser'],['sibOutcomeFilter','outcome'],['sibEmailFilter','emailClient']].forEach(([id, k])=>
@@ -4601,8 +4810,9 @@ function openSibCase(key){
   renderSibCase();
   openModal('sibOverlay');
 }
-function sibWrite(fields, entry){
-  const key = sibOpenKey, updates = {};
+function sibWrite(fields, entry){ return sibWriteKey(sibOpenKey, fields, entry); }
+function sibWriteKey(key, fields, entry){
+  const updates = {};
   Object.entries(fields||{}).forEach(([k, v])=> updates[`sib/cases/${key}/${k}`] = (v===undefined || v==='') ? null : v);
   updates[`sib/cases/${key}/updatedAt`] = Date.now();
   if(entry) updates[`sib/cases/${key}/audit/${db.ref().push().key}`] = {...entry, byId:currentUser.id, byName:currentUser.name, at:Date.now()};
@@ -4625,6 +4835,9 @@ function renderSibCase(){
       ${c.doNotContact ? '<span class="sib-tag nop" style="font-size:12px;">Do not contact</span>' : ''}
       ${(()=>{ const t = sibMonthTag(c.month); return t ? `<span class="sib-tag ${t[0]}" style="font-size:12px;">${t[1]}</span>` : ''; })()}
     </div>
+    ${(()=>{ const pot = sibPot(c); const lbl = SIB_POTS.find(x=> x[0]===pot)[1];
+      return `<div class="sib-stage"><span>In <b>${lbl}</b>${pot==='reviews' && sibSnoozed(c) ? ` · moved on to ${esc(fmtDate(c.snoozeUntil))}` : ''}${sibChasePending(c) ? ' · <b style="color:var(--amber);">Advisor Chase waiting</b>' : c.chaseAnswer ? ` · Advisor Chase: <b>${c.chaseAnswer==='yes' ? 'Yes' : 'No'}</b>` : ''}</span>
+        ${pot==='reviews' ? '<button type="button" class="linkish" data-sib-stage="research">Move to Research</button>' : pot==='research' ? '<button type="button" class="linkish" data-sib-stage="reviews">Back to Client Reviews</button>' : ''}</div>`; })()}
     ${sibLetterBanner(c)}
     ${sibApptBanner(c)}
     ${sibReferralBanner(c)}
@@ -4656,6 +4869,7 @@ function renderSibCase(){
       <button class="action-btn" data-sib-act="edit">${ico('pin')}Edit details</button>
       <button class="action-btn sib-refer-btn" data-sib-act="protect">${ico('message')}Protection chat</button>
       ${sibReferredLead(c) ? '' : `<button class="action-btn" data-sib-act="refer">${ico('shuffle')}Refer to Protection</button>`}
+      ${sibCanReassign() ? `<button class="action-btn" data-sib-act="reassign">${ico('users')}Reassign</button>` : ''}
     </div>
     <div id="sibActForm"></div>`;
   const f = document.getElementById('sibActForm');
@@ -4673,8 +4887,30 @@ function renderSibCase(){
   if(act==='note') f.innerHTML = `<div class="inline-form"><div class="field"><label for="sibNoteText">Note</label><textarea id="sibNoteText"></textarea></div><button class="btn btn-primary btn-sm" id="sibNoteSave">Add note</button></div>`;
   if(act==='outcome') f.innerHTML = `<div class="inline-form">
       <div class="field"><label for="sibOutKey">Outcome</label><select id="sibOutKey"><option value="">Open (still working on it)</option>${SIB_RETENTION.map(v=> `<option ${c.retentionKey===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
-      <div class="field"><label for="sibOutReason">Reason</label><select id="sibOutReason">${sibReasonOptions(c.retentionKey||'', c.outcomeReason)}</select></div>
+      <div id="sibOutRetained" class="hidden">
+        <div class="field"><label for="sibOutProduct">Product</label><select id="sibOutProduct"><option value="">Choose the product…</option>${sibProductOptions(c.retainedProduct)}</select></div>
+        <div class="field"><label for="sibOutValue">Case value</label><div class="money-wrap"><span>£</span><input type="number" id="sibOutValue" min="0" step="1" placeholder="e.g. 250000" value="${c.caseValue!=null ? esc(c.caseValue) : ''}"></div></div>
+      </div>
+      <div id="sibOutReasonWrap">
+        <div class="field"><label for="sibOutReason">Reason</label><select id="sibOutReason">${sibReasonOptions(c.retentionKey||'', c.outcomeReason)}</select></div>
+      </div>
+      <div id="sibOutNoteWrap" class="hidden">
+        <div class="field"><label for="sibOutNote">What happened? (in detail)</label><textarea id="sibOutNote" placeholder="e.g. Client went direct to Nationwide for a product transfer at 4.1% as our best option was 4.3%. Discussed broker fee and…">${esc(c.outcomeNote||'')}</textarea><div class="req-hint">At least ${SIB_NOTE_MIN} characters.</div></div>
+      </div>
+      <p class="fu-hint" id="sibOutHint"></p>
       <button class="btn btn-primary btn-sm" id="sibOutSave">Save outcome</button></div>`;
+  if(act==='snooze') f.innerHTML = `<div class="inline-form">
+      <div class="field"><label>No luck this time. When should this client come back up?</label>
+        <div class="sib-snooze-opts">
+          <button type="button" class="btn btn-secondary btn-sm" data-sib-snooze="7">Move on 1 week</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-sib-snooze="14">Move on 2 weeks</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-sib-snooze="0">Keep it where it is</button>
+        </div>
+        <div class="req-hint" style="margin-top:6px;">Moved-on clients go to the bottom of Client Reviews until then.</div></div></div>`;
+  if(act==='reassign') f.innerHTML = `<div class="inline-form">
+      <div class="field"><label for="sibReTo">Reassign this client to</label><select id="sibReTo"><option value="">Choose a colleague…</option>${Object.entries(USERS).filter(([, u])=> u && u.name && (u.role==='mapa' || u.role==='management') && sibName(u.name)!==sibName(c.servicingAdviser)).sort((a,b)=> a[1].name.localeCompare(b[1].name)).map(([id, u])=> `<option value="${esc(id)}">${esc(u.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="sibReNote">Note (optional)</label><input type="text" id="sibReNote" maxlength="200" placeholder="e.g. Covering while Biva is on leave"></div>
+      <button class="btn btn-primary btn-sm" id="sibReSave">Reassign</button></div>`;
   if(act==='refer') f.innerHTML = sibReferFormHtml(c);
   if(act==='protect') f.innerHTML = sibConvoFormHtml(c);
   if(act==='edit') f.innerHTML = `<div class="inline-form">
@@ -4703,12 +4939,15 @@ function renderSibCase(){
   const on = (id, fn)=>{ const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
   on('sibCallSave', ()=>{
     const res = document.querySelector('input[name="sibCallRes"]:checked').value, note = document.getElementById('sibCallNote').value.trim();
-    sibWrite({lastContact: Date.now()}, {type:'call', text:`Call - ${res}${note ? ': '+note : ''}`}).then(ok=>{
+    const spoke = res==='Spoke to client', inReviews = sibPot(c)==='reviews';
+    // Spoke to them: on to Research. No answer: stays in Client Reviews, with the option to move it on.
+    const stage = spoke ? sibSpokePatch(c) : (inReviews ? {sibStage:'reviews'} : {});
+    sibWrite({lastContact: Date.now(), ...stage}, {type:'call', text:`Call - ${res}${note ? ': '+note : ''}`}).then(ok=>{
       if(!ok) return;
       // Spoke to them and no protection conversation yet: open it while it's fresh.
-      const nudge = res==='Spoke to client' && !c.protectionConvo && !c.doNotContact;
-      sibAction = nudge ? 'protect' : null; renderSibCase();
-      toast(nudge ? 'Call saved. Did protection come up? Note it below while it\'s fresh.' : 'Call saved','success');
+      const nudge = spoke && !c.protectionConvo && !c.doNotContact;
+      sibAction = nudge ? 'protect' : (!spoke && inReviews ? 'snooze' : null); renderSibCase();
+      toast(nudge ? 'Call saved and moved to Research. Did protection come up? Note it below while it\'s fresh.' : spoke && inReviews ? 'Call saved. Moved to Research.' : 'Call saved','success');
     });
   });
   on('sibNoteSave', ()=>{
@@ -4717,14 +4956,75 @@ function renderSibCase(){
     sibWrite({}, {type:'note', text:`Note: ${note}`}).then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Note added','success'); } });
   });
   const outKey = document.getElementById('sibOutKey');
-  if(outKey) outKey.addEventListener('change', ()=>{
-    const sel = document.getElementById('sibOutReason'), keep = sel.value;
-    sel.innerHTML = sibReasonOptions(outKey.value, keep && sibReasonsFor(outKey.value).includes(keep) ? keep : (outKey.value===(c.retentionKey||'') ? c.outcomeReason : ''));
-  });
+  const syncOutcomeForm = ()=>{
+    const k = outKey.value;
+    document.getElementById('sibOutRetained').classList.toggle('hidden', k!=='Retained');
+    document.getElementById('sibOutReasonWrap').classList.toggle('hidden', k==='Retained');
+    document.getElementById('sibOutNoteWrap').classList.toggle('hidden', !SIB_NEEDS_NOTE.includes(k));
+    document.getElementById('sibOutHint').textContent = k==='Retained' ? 'Product and case value are needed.' : SIB_NEEDS_NOTE.includes(k) ? 'A reason and a detailed note are needed.' : '';
+  };
+  if(outKey){
+    outKey.addEventListener('change', ()=>{
+      const sel = document.getElementById('sibOutReason'), keep = sel.value;
+      sel.innerHTML = sibReasonOptions(outKey.value, keep && sibReasonsFor(outKey.value).includes(keep) ? keep : (outKey.value===(c.retentionKey||'') ? c.outcomeReason : ''));
+      syncOutcomeForm();
+    });
+    syncOutcomeForm();
+    f.querySelectorAll('select, input, textarea').forEach(el=> el.addEventListener('input', ()=> el.classList.remove('missing')));
+  }
   on('sibOutSave', ()=>{
-    const k = document.getElementById('sibOutKey').value, r = document.getElementById('sibOutReason').value;
-    sibWrite({retentionKey:k, outcomeReason:r}, {type: k==='Retained' ? 'signup' : k ? 'decline' : 'status', text:`Outcome: ${k||'Open'}${r ? ' ('+r+')' : ''}`})
-      .then(ok=>{ if(ok){ if(k==='Retained' && c.retentionKey!=='Retained') celebrate('Retained! 🎉'); sibAction = null; renderSibCase(); toast('Outcome saved','success'); } });
+    const k = document.getElementById('sibOutKey').value;
+    const reason = document.getElementById('sibOutReason').value, note = document.getElementById('sibOutNote').value.trim();
+    const product = document.getElementById('sibOutProduct').value, valRaw = document.getElementById('sibOutValue').value;
+    const bad = [];
+    if(k==='Retained'){
+      if(!product) bad.push(['sibOutProduct','the product']);
+      if(valRaw==='' || isNaN(valRaw) || Number(valRaw) <= 0) bad.push(['sibOutValue','the case value']);
+    }
+    if(SIB_NEEDS_NOTE.includes(k)){
+      if(!reason) bad.push(['sibOutReason','a reason']);
+      if(note.length < SIB_NOTE_MIN) bad.push(['sibOutNote', `a detailed note (at least ${SIB_NOTE_MIN} characters)`]);
+    }
+    if(bad.length){
+      bad.forEach(([id])=> document.getElementById(id).classList.add('missing'));
+      const msg = 'Please add ' + bad.map(b=> b[1]).join(' and ') + '.';
+      const h = document.getElementById('sibOutHint'); h.textContent = msg; h.classList.add('bad');
+      document.getElementById(bad[0][0]).focus(); toast(msg,'error'); return;
+    }
+    const fields = k==='Retained' ? {retentionKey:k, outcomeReason:null, outcomeNote:null, retainedProduct:product, caseValue:Number(valRaw)}
+      : {retentionKey:k, outcomeReason:reason, outcomeNote: SIB_NEEDS_NOTE.includes(k) ? note : null, retainedProduct:null, caseValue:null};
+    const text = `Outcome: ${k||'Open'}` + (k==='Retained' ? ` - ${product} - ${sibMoney(valRaw)}` : (reason ? ` (${reason})` : '')) + (fields.outcomeNote ? `: ${fields.outcomeNote}` : '');
+    sibWrite(fields, {type: k==='Retained' ? 'signup' : k ? 'decline' : 'status', text})
+      .then(ok=>{ if(ok){ if(k==='Retained' && c.retentionKey!=='Retained') celebrate('Retained! 🎉'); sibAction = null; renderSibCase(); toast(k ? 'Outcome saved. Moved to Outcomes.' : 'Outcome saved','success'); } });
+  });
+  document.querySelectorAll('[data-sib-snooze]').forEach(b=> b.addEventListener('click', ()=>{
+    const days = Number(b.dataset.sibSnooze);
+    if(!days){ sibAction = null; renderSibCase(); return; }
+    const d = new Date(); d.setDate(d.getDate() + days);
+    const until = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    sibWrite({snoozeUntil:until, sibStage:'reviews'}, {type:'status', text:`Moved on ${days===7 ? '1 week' : '2 weeks'}, back on ${fmtDateSlash(until)}`})
+      .then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast(`Moved on to ${fmtDate(until)}. It's at the bottom of Client Reviews until then.`,'success'); } });
+  }));
+  document.querySelectorAll('[data-sib-stage]').forEach(b=> b.addEventListener('click', ()=>{
+    const to = b.dataset.sibStage;
+    sibWrite({sibStage:to, ...(to==='research' ? {snoozeUntil:null} : {})}, {type:'status', text: to==='research' ? 'Moved to Research' : 'Moved back to Client Reviews'})
+      .then(ok=>{ if(ok){ renderSibCase(); toast(to==='research' ? 'Moved to Research' : 'Moved back to Client Reviews','success'); } });
+  }));
+  on('sibReSave', function(){
+    const toId = document.getElementById('sibReTo').value, note = document.getElementById('sibReNote').value.trim();
+    const to = USERS[toId];
+    if(!to){ toast('Please choose who to reassign this client to.','error'); return; }
+    if(currentUser.role==='mapa' && !confirm(`Reassign ${c.mailingName||'this client'} to ${to.name}? It will leave your Send in Blue list.`)) return;
+    this.disabled = true;
+    const from = c.servicingAdviser || 'Not allocated';
+    sibWrite({servicingAdviser:to.name}, {type:'status', text:`Reassigned from ${from} to ${to.name}${note ? ': '+note : ''}`}).then(ok=>{
+      if(!ok){ this.disabled = false; return; }
+      if(toId !== currentUser.id) db.ref('notifications').push({leadId:null, leadName:c.mailingName||'', toUserId:toId, toRole:null, kind:'sibReassigned', byId:currentUser.id,
+        message:`Send in Blue client reassigned to you: ${c.mailingName||'a client'} (${sibMonthLabel(c.month)})`, at:Date.now(), readBy:{}}).catch(()=>{});
+      sibAction = null;
+      if(!sibSeesAll()) closeModal('sibOverlay'); else renderSibCase();
+      toast(`Reassigned to ${to.name}`,'success');
+    });
   });
   on('sibReferSave', function(){ sibReferToProtection(c, this); });
   if(act==='appt') sibApptWire(c);
@@ -4751,8 +5051,9 @@ function renderSibCase(){
     const p = new URLSearchParams({view:'cm', fs:'1', to:c.email, su:subject, body});
     const gmail = window.open('https://mail.google.com/mail/?' + p.toString(), 'pltGmail', 'popup,width=980,height=760');
     if(!gmail){ toast('Your browser blocked the Gmail window. Allow pop-ups for this site, then try again.','error'); return; }
-    sibWrite({lastContact: Date.now()}, {type:'email', text:`Email to client - ${subject}`, emailTo:c.email, emailSubject:subject, emailBody:body})
-      .then(ok=>{ if(ok){ sibAction = null; renderSibCase(); toast('Gmail opened. Click Send there. A copy is in the history.','success'); } });
+    const inReviews = sibPot(c)==='reviews';
+    sibWrite({lastContact: Date.now(), ...(inReviews ? {sibStage:'reviews'} : {})}, {type:'email', text:`Email to client - ${subject}`, emailTo:c.email, emailSubject:subject, emailBody:body})
+      .then(ok=>{ if(ok){ sibAction = inReviews ? 'snooze' : null; renderSibCase(); toast('Gmail opened. Click Send there. A copy is in the history.','success'); } });
   });
   // history
   const entries = c.audit ? Object.values(c.audit).filter(Boolean).sort((a,b)=> b.at-a.at) : [];
@@ -4768,6 +5069,14 @@ function renderSibCase(){
       </div>
     </div>`).join('') : '<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>';
 }
+const SIB_NEEDS_NOTE = ['No Opportunity','Not Converted'];
+const SIB_NOTE_MIN = 20;
+// Retained product: the same list as the protection lead sources.
+function sibProductOptions(current){
+  const list = [...new Set([...Object.values(CLIENTSOURCES||{}).filter(v=> typeof v==='string' && v.trim()).sort(), ...(current ? [current] : [])])];
+  return list.map(v=> `<option ${current===v ? 'selected' : ''}>${esc(v)}</option>`).join('');
+}
+function sibCanReassign(){ return !!currentUser && (currentUser.role==='mapa' || currentUser.role==='management'); }
 // Reason options for an outcome; the case's saved reason stays available even if it's no longer on the list.
 function sibReasonOptions(outcome, current){
   const list = [...new Set([...sibReasonsFor(outcome), ...(current ? [current] : [])])];
@@ -5057,7 +5366,7 @@ function sibApptWire(c){
     const appt = {date, time, type, ...(withWho ? {with:withWho} : {}), ...(note ? {note} : {}), by:currentUser.name, at:Date.now()};
     const rebook = !!(c.appointment && c.appointment.date);
     btn.disabled = true;
-    sibWrite({appointment:appt, lastContact:Date.now()}, {type:'appointment', text:`${rebook ? 'Appointment rebooked' : 'Appointment booked'}: ${sibApptWhen(appt)} (${SIB_APPT_TYPES[type]})${withWho ? ' with '+withWho : ''}${note ? ': '+note : ''}`})
+    sibWrite({appointment:appt, lastContact:Date.now(), ...sibSpokePatch(c)}, {type:'appointment', text:`${rebook ? 'Appointment rebooked' : 'Appointment booked'}: ${sibApptWhen(appt)} (${SIB_APPT_TYPES[type]})${withWho ? ' with '+withWho : ''}${note ? ': '+note : ''}`})
       .then(ok=>{ btn.disabled = false; if(ok){ sibAction = null; renderSibCase(); toast(`Appointment ${rebook ? 'rebooked' : 'booked'}. Use "Add to my calendar" or "Invite client" to put it in Google Calendar.`,'success'); } });
   });
 }
@@ -5066,7 +5375,7 @@ function sibApptBannerWire(c){
   if(done) done.addEventListener('click', ()=>{
     const note = prompt('Appointment attended. Add a note about how it went (optional):', '');
     if(note===null) return;
-    sibWrite({appointment:null, lastContact:Date.now()}, {type:'appointment', text:`Appointment attended (${sibApptWhen(c.appointment)})${note.trim() ? ': '+note.trim() : ''}`})
+    sibWrite({appointment:null, lastContact:Date.now(), ...sibSpokePatch(c)}, {type:'appointment', text:`Appointment attended (${sibApptWhen(c.appointment)})${note.trim() ? ': '+note.trim() : ''}`})
       .then(ok=>{ if(ok) toast('Marked as attended. Set the outcome when you know it.','success'); });
   });
   if(cancel) cancel.addEventListener('click', ()=>{
@@ -5236,6 +5545,7 @@ function sibConvoWire(c){
     updates[`sib/cases/${key}/protectionConvo`] = {at:now, by:currentUser.name, byId:currentUser.id, outcome, ...(reason ? {reason} : {})};
     updates[`sib/cases/${key}/lastContact`] = c.lastContact && c.lastContact > now - 86400000 ? c.lastContact : now;
     updates[`sib/cases/${key}/updatedAt`] = now;
+    Object.entries(sibSpokePatch(c)).forEach(([k, v])=> updates[`sib/cases/${key}/${k}`] = v);
     updates[`sib/cases/${key}/audit/${db.ref().push().key}`] = {type:'note', text:`Protection conversation: ${label}`, ...(summary ? {convoNotes:summary} : {}), byId:currentUser.id, byName:currentUser.name, at:now};
     if(outcome==='interested' && linked) updates[`leads/${c.protectionLeadId}/audit/${uidShort()}`] = {type:'note', text:`Note: Protection conversation on Send in Blue call${summary ? ':\n'+summary : ''}`, byId:currentUser.id, byName:currentUser.name, at:now};
     db.ref().update(updates).then(()=>{
@@ -5273,6 +5583,13 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14f', date:'2026-10-14', items:[
+    {text:"<b>Send in Blue pots</b>: your clients for the month picked at the top are now in three pots. <b>Client Reviews</b> (to contact), <b>Research</b> (spoken to, looking at options) and <b>Outcomes</b>. A call where you spoke to the client moves them to Research; after a no answer you can <b>move them on 1 or 2 weeks</b> and they drop to the bottom of Client Reviews. Switch between <b>Pots</b> and <b>Table</b> next to the search box."},
+    {text:"<b>Outcomes need more detail</b>: <b>Retained</b> needs the product and the case value; <b>Not Converted</b> and <b>No Opportunity</b> need a reason and a detailed note."},
+    {text:"<b>Reassign</b> a Send in Blue client from the case window.", roles:['mapa','management']},
+    {text:"<b>Advisor Chase</b>: when Management sends one, a window opens in Send in Blue listing your clients who need a Yes or No for \"Email client?\". Answer each one to carry on. No needs a reason and a note, and moves the client to Research.", roles:['mapa']},
+    {text:"<b>Send Advisor Chase</b>: pick a month in Send in Blue and press <b>Send Advisor Chase</b>. Every open client with Email client? not set goes to their adviser, who must answer Yes or No before carrying on. Answered rows turn pale green (Yes) or pale red (No) in the table.", roles:['management']},
+  ]},
   {id:'2026-10-14e', date:'2026-10-14', items:[
     {text:"<b>Callbacks clear when you sign up or decline.</b> Submitting a case to underwriting, marking terms issued, putting it On Risk or declining it now removes any booked callback, as you've spoken to the client. Cases already in those pots no longer show overdue calls either. You can still book a chase call on a Submitted or Terms Issued case: it shows and reminds you while it's coming up, then drops off once it's passed.", roles:['mapa','management']},
   ]},
@@ -7306,6 +7623,9 @@ const HELP = [
     {t:'Deleted cases and backups', roles:['admin','management'], h:`Deleted cases go to <b>Settings → Recycle Bin</b> for 30 days and can be restored. A backup file downloads automatically each day; <b>Settings → Backup</b> to download one now.`},
   ]},
   {group:'Send in Blue', items:[
+    {t:'Send in Blue pots', h:`Pick a month at the top. Your clients sit in three pots: <b>Client Reviews</b> (to contact), <b>Research</b> (spoken to, looking at options) and <b>Outcomes</b>.<ul><li>Call and choose <b>Spoke to client</b> (or book an appointment, or log a protection chat): the client moves to Research.</li><li><b>No answer</b> or an email: choose <b>Move on 1 week</b> or <b>2 weeks</b>. The client drops to the bottom of Client Reviews until then.</li><li>Save an <b>Outcome</b>: the client moves to Outcomes. Retained needs the product and case value; Not Converted and No Opportunity need a reason and a detailed note.</li></ul>Use <b>Pots</b> / <b>Table</b> next to the search to switch views. <b>Move to Research</b> / <b>Back to Client Reviews</b> on the case moves a client by hand.`},
+    {t:'Reassign a Send in Blue client', roles:['mapa','management'], h:`Open the client and press <b>Reassign</b>, choose the colleague and add a note if you like. They become the servicing adviser and get a notification.`},
+    {t:'Advisor Chase', h:`Once a month Management sends an <b>Advisor Chase</b> for a month's clients whose "Email client?" isn't set. The adviser sees a window in Send in Blue and must answer <b>Yes</b> (email the client) or <b>No</b> (with a reason and detailed note; the client moves to Research) for each one before carrying on. Management: pick the month and press <b>Send Advisor Chase</b>. Answered rows show pale green (Yes) or pale red (No) in the table.`},
     {t:'Finding clients', h:`Use the <b>year</b> buttons and <b>month</b> cards (the month the product ends), or search by name, address, email or case ID across all months. Filters: adviser, outcome, email client.`},
     {t:'The lender letter countdown', h:`Shows how many days until the lender sends their reminder letter (6 months before the product ends unless a date is set). It turns amber, then red as it gets close. The aim is to contact the client <b>before</b> the letter. Pick <b>Beat the letter</b> in the filter for everyone not yet contacted, soonest first.`},
     {t:'Working a case', h:`Open the client and use <b>Call</b>, <b>Email</b>, <b>Appointment</b>, <b>Note</b>, <b>Outcome</b> or <b>Edit details</b>. Tick the <b>6 / 3 / 0 month</b> Send in Blue emails when sent. Everything goes in the case history.`},
@@ -8222,7 +8542,7 @@ function renderNotifs(){
     return;
   }
   list.innerHTML = notifs.map(n=> `
-    <div class="notif-item ${isUnread(n)?'unread':''}" data-id="${esc(n.id)}" data-lead="${esc(n.leadId)}">
+    <div class="notif-item ${isUnread(n)?'unread':''}" data-id="${esc(n.id)}" data-lead="${esc(n.leadId)}" data-kind="${esc(n.kind||'')}">
       <div class="notif-dot"></div>
       <div>
         <div class="notif-text">${esc(n.message)}</div>
@@ -8233,6 +8553,7 @@ function renderNotifs(){
     item.addEventListener('click', ()=>{
       db.ref(`notifications/${item.dataset.id}/readBy/${currentUser.id}`).set(true);
       document.getElementById('bellPanel').classList.remove('open');
+      if(item.dataset.kind==='sibChase' || item.dataset.kind==='sibReassigned'){ setAppMode('sib'); return; }
       if(LEADS[item.dataset.lead]) openLead(item.dataset.lead);
     });
   });
@@ -9365,12 +9686,17 @@ function fireLeadAlert(title, body, tag, leadId){
 function checkLeadAlerts(){
   if(!currentUser || currentUser.role==='admin') return;
   const now = Date.now(), done = loadAlerted();
-  const fresh = myNotifs().filter(n=> n.toUserId===currentUser.id && n.byId!==currentUser.id && isUnread(n)
+  let fresh = myNotifs().filter(n=> n.toUserId===currentUser.id && n.byId!==currentUser.id && isUnread(n)
     && n.at > now - ALERT_WINDOW_MS && !done.has(n.id)).sort((a,b)=> a.at-b.at);
   if(!fresh.length) return;
   fresh.forEach(n=> done.add(n.id));
   saveAlerted(done);
   if(!alertsOn()) return; // marked as seen, so turning alerts back on doesn't replay them
+  // Send in Blue notices get their own pop-up (an Advisor Chase can't wait).
+  fresh.filter(n=> n.kind==='sibChase' || n.kind==='sibReassigned').forEach(n=>
+    fireLeadAlert(n.kind==='sibChase' ? 'Advisor Chase' : 'Send in Blue client reassigned to you', (n.message||'').replace(/^Advisor Chase:\s*/, ''), 'plt-sib-'+n.id, null));
+  fresh = fresh.filter(n=> n.kind!=='sibChase' && n.kind!=='sibReassigned');
+  if(!fresh.length) return;
   const reassigned = n=> n.kind==='reassigned' || /reassigned to you/i.test(n.message||'');
   if(fresh.length===1){
     const n = fresh[0], many = Number(((n.message||'').match(/^(\d+) /)||[])[1]) || 1;

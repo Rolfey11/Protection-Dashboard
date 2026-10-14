@@ -910,6 +910,11 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-view{display:flex; gap:3px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:3px;}
 .sib-view button{font:inherit; font-size:12.5px; font-weight:600; border:0; background:transparent; color:var(--text-muted); padding:6px 12px; border-radius:7px; cursor:pointer;}
 .sib-view button[aria-pressed="true"]{background:var(--brand); color:#fff;}
+.sib-table .sib-chk{width:34px; padding-right:0;}
+.sib-table .sib-chk input{width:16px; height:16px; accent-color:var(--brand); cursor:pointer;}
+.sib-table tr.sel td{background:color-mix(in srgb, var(--blue) 11%, var(--surface));}
+.sib-bulk{display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--brand-tint); border:1px solid color-mix(in srgb, var(--brand) 25%, transparent); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:13.5px;}
+.sib-bulk select{padding:7px 10px; border-radius:9px; border:1px solid var(--border-2); font:inherit; font-size:13px; background:var(--surface); color:var(--text);}
 .sib-table tr.chase-yes td{background:color-mix(in srgb, var(--green) 10%, var(--surface));}
 .sib-table tr.chase-no td{background:color-mix(in srgb, var(--red) 9%, var(--surface));}
 .sib-stage{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--text-muted); background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin-top:10px;}
@@ -1093,6 +1098,9 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .fu-invite.none{background:var(--bg); color:var(--text-muted);}
 .fu-invite .ico{width:15px; height:15px; margin-top:1px;}
 .fu-invite b{font-weight:600;}
+.linkish{border:0; background:none; padding:0; font:inherit; font-weight:600; color:var(--brand); cursor:pointer;}
+.linkish:hover{text-decoration:underline;}
+.linkish:focus-visible{outline:2px solid var(--brand-light); outline-offset:2px; border-radius:4px;}
 .fu-invite .linkish{border:0; background:none; padding:0; font:inherit; font-weight:600; color:var(--brand); text-decoration:underline; cursor:pointer;}
 .label-opt{font-weight:500; color:var(--text-faint);}
 .ce-view{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
@@ -4627,6 +4635,9 @@ function renderSib(){
   // rows
   const rows = sibFilter(all).sort((a,b)=> sibState.outcome==='appt' ? sibApptMs(a) - sibApptMs(b) : sibState.outcome==='letter' ? sibLetterState(a).days - sibLetterState(b).days : (!!a.doNotContact - !!b.doNotContact) || (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
   const searching = !!sibState.search.trim() || sibState.outcome==='appt' || sibState.outcome==='letter';
+  // Management can tick clients and reassign them together. Ticks only cover clients still listed.
+  const bulk = !!currentUser && currentUser.role==='management';
+  { const listed = new Set(rows.map(c=> c.key)); [...sibSel].forEach(k=>{ if(!listed.has(k)) sibSel.delete(k); }); }
   // Long lists (Beat the letter, searches) show the first 200; "Show all" draws the rest.
   const total = rows.length;
   if(!sibState.showAll && rows.length > 200) rows.length = 200;
@@ -4635,11 +4646,16 @@ function renderSib(){
     return s.sent ? `<span class="sib-tag ok" title="${n}-month email sent">${n}m ✓ ${esc(sibDay(s.sent))}</span>` : s.due ? `<span class="sib-tag due">${n}m due</span>` : `<span class="sib-tag no">${n}m</span>`;
   }).join(' ');
   out.innerHTML = (sibState.outcome==='letter' ? `<p class="nml-note" style="margin-top:0;">Clients not contacted yet whose lender letter is due within 120 days (or has already gone), soonest first. Letters that have already gone are at the top.</p>` : sibState.outcome==='appt' ? `<p class="nml-note" style="margin-top:0;">Upcoming appointments across every month, soonest first.</p>` : searching ? `<p class="nml-note" style="margin-top:0;">Searching every month for "${esc(sibState.search.trim())}".</p>` : '') +
+    (bulk && sibSel.size ? `<div class="sib-bulk" id="sibBulkBar"><b>${sibSel.size} selected</b>
+      <select id="sibBulkTo" aria-label="Reassign to"><option value="">Reassign to…</option>${Object.entries(USERS).filter(([, u])=> u && u.name && (u.role==='mapa' || u.role==='management')).sort((a,b)=> a[1].name.localeCompare(b[1].name)).map(([id, u])=> `<option value="${esc(id)}">${esc(u.name)}</option>`).join('')}</select>
+      <button type="button" class="btn btn-primary btn-sm" id="sibBulkGo">Reassign</button>
+      <button type="button" class="linkish" id="sibBulkClear">Clear selection</button></div>` : '') +
     (rows.length ? `<div class="nml-table-wrap"><table class="nml-table sib-table">
-    <thead><tr><th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th title="Protection conversation and referral to the protection team">Protection</th><th>Outcome</th></tr></thead>
+    <thead><tr>${bulk ? `<th class="sib-chk"><input type="checkbox" id="sibSelAll" aria-label="Select all clients shown" ${rows.length && rows.every(c=> sibSel.has(c.key)) ? 'checked' : ''}></th>` : ''}<th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th title="Protection conversation and referral to the protection team">Protection</th><th>Outcome</th></tr></thead>
     <tbody>${rows.map(c=>{
       const o = sibOutcome(c);
-      return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''} ${c.chaseAnswer==='yes' ? 'chase-yes' : c.chaseAnswer==='no' ? 'chase-no' : ''}">
+      return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''} ${c.chaseAnswer==='yes' ? 'chase-yes' : c.chaseAnswer==='no' ? 'chase-no' : ''} ${bulk && sibSel.has(c.key) ? 'sel' : ''}">
+        ${bulk ? `<td class="sib-chk"><input type="checkbox" data-sib-sel="${esc(c.key)}" aria-label="Select ${esc(c.mailingName||'client')}" ${sibSel.has(c.key) ? 'checked' : ''}></td>` : ''}
         <td><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.replace(/\s+/g,' ').slice(0,240))}</div>` : ''}</td>
         <td>${sibLetterPill(c)}</td>
         ${searching ? `<td>${esc(sibMonthLabel(c.month))}</td>` : ''}
@@ -4652,7 +4668,14 @@ function renderSib(){
       </tr>`;
     }).join('')}</tbody></table></div>` : '<div class="nml-empty">No cases match these filters.</div>') +
     (total > rows.length ? `<div style="text-align:center; margin-top:12px;"><span class="nml-note">Showing the first ${rows.length} of ${total}.</span> <button type="button" class="btn btn-secondary btn-sm" id="sibShowAll">Show all ${total}</button></div>` : '');
-  out.querySelectorAll('[data-sib-case]').forEach(tr=> tr.addEventListener('click', ()=> openSibCase(tr.dataset.sibCase)));
+  out.querySelectorAll('[data-sib-case]').forEach(tr=> tr.addEventListener('click', e=>{ if(e.target.closest('.sib-chk')) return; openSibCase(tr.dataset.sibCase); }));
+  if(bulk){
+    out.querySelectorAll('[data-sib-sel]').forEach(cb=> cb.addEventListener('change', ()=>{ cb.checked ? sibSel.add(cb.dataset.sibSel) : sibSel.delete(cb.dataset.sibSel); renderSib(); }));
+    const all = document.getElementById('sibSelAll');
+    if(all) all.addEventListener('change', ()=>{ rows.forEach(c=> all.checked ? sibSel.add(c.key) : sibSel.delete(c.key)); renderSib(); });
+    const clr = document.getElementById('sibBulkClear'); if(clr) clr.addEventListener('click', ()=>{ sibSel.clear(); renderSib(); });
+    const go = document.getElementById('sibBulkGo'); if(go) go.addEventListener('click', ()=> sibBulkReassign(go));
+  }
   const more = document.getElementById('sibShowAll');
   if(more) more.addEventListener('click', ()=>{ sibState.showAll = true; renderSib(); });
 }
@@ -4756,6 +4779,28 @@ function renderSibChase(list){
       {type:'status', text:`Advisor Chase: No, don't email the client (${reason}): ${note}. Email client? set to NO`})
       .then(ok=>{ if(ok) sibChaseNoOpen = null; else this.disabled = false; });
   });
+}
+const sibSel = new Set(); // Send in Blue cases ticked in the table (Management)
+function sibBulkReassign(btn){
+  const toId = document.getElementById('sibBulkTo').value, to = USERS[toId];
+  if(!to){ toast('Please choose who to reassign them to.','error'); document.getElementById('sibBulkTo').focus(); return; }
+  const keys = [...sibSel].filter(k=> SIB[k] && !SIB[k].deleted && sibName(SIB[k].servicingAdviser)!==sibName(to.name));
+  if(!keys.length){ toast(`They're already with ${to.name}.`,'error'); return; }
+  if(!confirm(`Reassign ${keys.length} client${keys.length===1?'':'s'} to ${to.name}?`)) return;
+  btn.disabled = true;
+  const now = Date.now(), updates = {};
+  keys.forEach(k=>{
+    const c = SIB[k];
+    updates[`sib/cases/${k}/servicingAdviser`] = to.name;
+    updates[`sib/cases/${k}/updatedAt`] = now;
+    updates[`sib/cases/${k}/audit/${db.ref().push().key}`] = {type:'status', text:`Reassigned from ${c.servicingAdviser || 'Not allocated'} to ${to.name} (bulk)`, byId:currentUser.id, byName:currentUser.name, at:now};
+  });
+  const names = keys.slice(0,3).map(k=> SIB[k].mailingName || 'a client').join(', ') + (keys.length>3 ? ` and ${keys.length-3} more` : '');
+  if(toId !== currentUser.id) updates['notifications/'+db.ref('notifications').push().key] = {leadId:null, leadName:names, toUserId:toId, toRole:null, kind:'sibReassigned', byId:currentUser.id,
+    message:`${keys.length} Send in Blue client${keys.length===1?'':'s'} reassigned to you: ${names}`, at:now, readBy:{}};
+  db.ref().update(updates)
+    .then(()=>{ sibSel.clear(); toast(`${keys.length} client${keys.length===1?'':'s'} reassigned to ${to.name}`,'success'); renderSib(); })
+    .catch(err=>{ toast('Could not reassign: '+err.message,'error'); btn.disabled = false; });
 }
 function renderSibPots(all){
   const q = sibState.search.trim().toLowerCase();
@@ -5583,6 +5628,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14g', date:'2026-10-14', items:[
+    {text:"<b>Reassign several Send in Blue clients at once</b>: in the table view, tick the boxes next to the clients (or the box at the top for everyone shown), choose who to reassign them to and press <b>Reassign</b>.", roles:['management']},
+  ]},
   {id:'2026-10-14f', date:'2026-10-14', items:[
     {text:"<b>Send in Blue pots</b>: your clients for the month picked at the top are now in three pots. <b>Client Reviews</b> (to contact), <b>Research</b> (spoken to, looking at options) and <b>Outcomes</b>. A call where you spoke to the client moves them to Research; after a no answer you can <b>move them on 1 or 2 weeks</b> and they drop to the bottom of Client Reviews. Switch between <b>Pots</b> and <b>Table</b> next to the search box."},
     {text:"<b>Outcomes need more detail</b>: <b>Retained</b> needs the product and the case value; <b>Not Converted</b> and <b>No Opportunity</b> need a reason and a detailed note."},
@@ -6522,7 +6570,8 @@ function renderDashboard(){
     body.innerHTML = buckets[potKey].map(l=> leadCardHtml(l, potKey)).join('');
   });
 
-  document.querySelectorAll('.lead-card').forEach(card=>{
+  // Protection cards only (Send in Blue cards share the look but open their own case window).
+  document.querySelectorAll('.lead-card[data-id]').forEach(card=>{
     card.addEventListener('click', ()=> openLead(card.dataset.id));
   });
   sizePots();

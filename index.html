@@ -912,8 +912,11 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-view button[aria-pressed="true"]{background:var(--brand); color:#fff;}
 .sib-table .sib-chk{width:34px; padding-right:0;}
 .sib-table .sib-chk input{width:16px; height:16px; accent-color:var(--brand); cursor:pointer;}
-.sib-table tr.sel td{background:color-mix(in srgb, var(--blue) 11%, var(--surface));}
+.sib-table tr.sel.sel td{background:color-mix(in srgb, var(--blue) 11%, var(--surface));}
 .sib-bulk{display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--brand-tint); border:1px solid color-mix(in srgb, var(--brand) 25%, transparent); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:13.5px;}
+.sib-bulk-sep{width:1px; align-self:stretch; background:color-mix(in srgb, var(--brand) 25%, transparent);}
+.sib-bulk-email{display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap;}
+.sib-bulk .btn .ico{width:14px; height:14px;}
 .sib-bulk select{padding:7px 10px; border-radius:9px; border:1px solid var(--border-2); font:inherit; font-size:13px; background:var(--surface); color:var(--text);}
 .sib-table tr.chase-yes td{background:color-mix(in srgb, var(--green) 10%, var(--surface));}
 .sib-table tr.chase-no td{background:color-mix(in srgb, var(--red) 9%, var(--surface));}
@@ -4638,6 +4641,7 @@ function renderSib(){
   // Management can tick clients and reassign them together. Ticks only cover clients still listed.
   const bulk = !!currentUser && currentUser.role==='management';
   { const listed = new Set(rows.map(c=> c.key)); [...sibSel].forEach(k=>{ if(!listed.has(k)) sibSel.delete(k); }); }
+  if(!sibSel.size) sibBulkEmailOpen = false;
   // Long lists (Beat the letter, searches) show the first 200; "Show all" draws the rest.
   const total = rows.length;
   if(!sibState.showAll && rows.length > 200) rows.length = 200;
@@ -4649,6 +4653,9 @@ function renderSib(){
     (bulk && sibSel.size ? `<div class="sib-bulk" id="sibBulkBar"><b>${sibSel.size} selected</b>
       <select id="sibBulkTo" aria-label="Reassign to"><option value="">Reassign to…</option>${Object.entries(USERS).filter(([, u])=> u && u.name && (u.role==='mapa' || u.role==='management')).sort((a,b)=> a[1].name.localeCompare(b[1].name)).map(([id, u])=> `<option value="${esc(id)}">${esc(u.name)}</option>`).join('')}</select>
       <button type="button" class="btn btn-primary btn-sm" id="sibBulkGo">Reassign</button>
+      <span class="sib-bulk-sep"></span>
+      ${sibBulkEmailOpen ? `<span class="sib-bulk-email"><b>Mark sent today:</b>${[6,3,0].map(n=> `<button type="button" class="btn btn-secondary btn-sm" data-sib-bulk-email="${n}">${n} Month</button>`).join('')}<button type="button" class="linkish" id="sibBulkEmailCancel">Cancel</button></span>`
+        : `<button type="button" class="btn btn-secondary btn-sm" id="sibBulkEmail">${ico('mail')} Email sent</button>`}
       <button type="button" class="linkish" id="sibBulkClear">Clear selection</button></div>` : '') +
     (rows.length ? `<div class="nml-table-wrap"><table class="nml-table sib-table">
     <thead><tr>${bulk ? `<th class="sib-chk"><input type="checkbox" id="sibSelAll" aria-label="Select all clients shown" ${rows.length && rows.every(c=> sibSel.has(c.key)) ? 'checked' : ''}></th>` : ''}<th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th title="Protection conversation and referral to the protection team">Protection</th><th>Outcome</th></tr></thead>
@@ -4673,7 +4680,10 @@ function renderSib(){
     out.querySelectorAll('[data-sib-sel]').forEach(cb=> cb.addEventListener('change', ()=>{ cb.checked ? sibSel.add(cb.dataset.sibSel) : sibSel.delete(cb.dataset.sibSel); renderSib(); }));
     const all = document.getElementById('sibSelAll');
     if(all) all.addEventListener('change', ()=>{ rows.forEach(c=> all.checked ? sibSel.add(c.key) : sibSel.delete(c.key)); renderSib(); });
-    const clr = document.getElementById('sibBulkClear'); if(clr) clr.addEventListener('click', ()=>{ sibSel.clear(); renderSib(); });
+    const clr = document.getElementById('sibBulkClear'); if(clr) clr.addEventListener('click', ()=>{ sibSel.clear(); sibBulkEmailOpen = false; renderSib(); });
+    const em = document.getElementById('sibBulkEmail'); if(em) em.addEventListener('click', ()=>{ sibBulkEmailOpen = true; renderSib(); });
+    const emc = document.getElementById('sibBulkEmailCancel'); if(emc) emc.addEventListener('click', ()=>{ sibBulkEmailOpen = false; renderSib(); });
+    out.querySelectorAll('[data-sib-bulk-email]').forEach(b=> b.addEventListener('click', ()=> sibBulkEmailSent(Number(b.dataset.sibBulkEmail), b)));
     const go = document.getElementById('sibBulkGo'); if(go) go.addEventListener('click', ()=> sibBulkReassign(go));
   }
   const more = document.getElementById('sibShowAll');
@@ -4781,6 +4791,27 @@ function renderSibChase(list){
   });
 }
 const sibSel = new Set(); // Send in Blue cases ticked in the table (Management)
+let sibBulkEmailOpen = false; // showing the 6 / 3 / 0 month choice in the selection bar
+// Mark the 6, 3 or 0 month Send in Blue email as sent today for every ticked client.
+function sibBulkEmailSent(n, btn){
+  const all = [...sibSel].map(k=> SIB[k] ? {...SIB[k], key:k} : null).filter(c=> c && !c.deleted);
+  const skip = all.filter(c=> c.doNotContact || sibUnsubscribed(c));
+  const already = all.filter(c=> !skip.includes(c) && sibEmailState(c, n).sent);
+  const todo = all.filter(c=> !skip.includes(c) && !already.includes(c));
+  if(!todo.length){ toast(`Nothing to update: ${already.length ? already.length+' already had the '+n+' month email marked' : ''}${already.length && skip.length ? ', ' : ''}${skip.length ? skip.length+' unsubscribed or do not contact' : ''}.`,'error'); return; }
+  if(!confirm(`Mark the ${n} month Send in Blue email as sent today for ${todo.length} client${todo.length===1?'':'s'}?` +
+    (already.length ? `\n\n${already.length} already marked, left as they are.` : '') + (skip.length ? `\n${skip.length} skipped: unsubscribed or do not contact.` : ''))) return;
+  btn.disabled = true;
+  const now = Date.now(), today = todayISO(), updates = {};
+  todo.forEach(c=>{
+    updates[`sib/cases/${c.key}/sib${n}`] = today;
+    updates[`sib/cases/${c.key}/updatedAt`] = now;
+    updates[`sib/cases/${c.key}/audit/${db.ref().push().key}`] = {type:'sent', text:`${n} month Send in Blue email sent (marked in bulk)`, byId:currentUser.id, byName:currentUser.name, at:now};
+  });
+  db.ref().update(updates)
+    .then(()=>{ sibBulkEmailOpen = false; sibSel.clear(); toast(`${n} month email marked as sent for ${todo.length} client${todo.length===1?'':'s'}`,'success'); renderSib(); })
+    .catch(err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; });
+}
 function sibBulkReassign(btn){
   const toId = document.getElementById('sibBulkTo').value, to = USERS[toId];
   if(!to){ toast('Please choose who to reassign them to.','error'); document.getElementById('sibBulkTo').focus(); return; }
@@ -4799,7 +4830,7 @@ function sibBulkReassign(btn){
   if(toId !== currentUser.id) updates['notifications/'+db.ref('notifications').push().key] = {leadId:null, leadName:names, toUserId:toId, toRole:null, kind:'sibReassigned', byId:currentUser.id,
     message:`${keys.length} Send in Blue client${keys.length===1?'':'s'} reassigned to you: ${names}`, at:now, readBy:{}};
   db.ref().update(updates)
-    .then(()=>{ sibSel.clear(); toast(`${keys.length} client${keys.length===1?'':'s'} reassigned to ${to.name}`,'success'); renderSib(); })
+    .then(()=>{ sibSel.clear(); sibBulkEmailOpen = false; toast(`${keys.length} client${keys.length===1?'':'s'} reassigned to ${to.name}`,'success'); renderSib(); })
     .catch(err=>{ toast('Could not reassign: '+err.message,'error'); btn.disabled = false; });
 }
 function renderSibPots(all){
@@ -5628,6 +5659,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14h', date:'2026-10-14', items:[
+    {text:"<b>Mark Send in Blue emails as sent in bulk</b>: in the table view, tick the clients, press <b>Email sent</b> and choose <b>6 Month</b>, <b>3 Month</b> or <b>0 Month</b>. It's marked as sent today for every ticked client (unsubscribed and do-not-contact clients are skipped).", roles:['management']},
+  ]},
   {id:'2026-10-14g', date:'2026-10-14', items:[
     {text:"<b>Reassign several Send in Blue clients at once</b>: in the table view, tick the boxes next to the clients (or the box at the top for everyone shown), choose who to reassign them to and press <b>Reassign</b>.", roles:['management']},
   ]},

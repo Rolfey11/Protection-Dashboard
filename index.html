@@ -2236,7 +2236,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <div class="page-head" style="margin-bottom:16px;">
           <div>
             <h1 style="font-size:19px;">Send in Blue spreadsheet</h1>
-            <p class="sub">Upload the Send in Blue Excel file to add cases. Every month tab is read. Uploading again adds new cases and only fills in empty fields on existing ones, so work done in the dashboard is never overwritten.</p>
+            <p class="sub">Upload the Send in Blue Excel file to add cases. Every month tab is read. Uploading again adds new cases and only fills in empty fields on existing ones, so work done in the dashboard is never overwritten. The one exception: if the 6, 3 or 0 month email dates differ from the dashboard, you're asked whether to use the spreadsheet's dates.</p>
           </div>
         </div>
         <div class="insights-card" style="max-width:620px;">
@@ -5267,16 +5267,35 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
     const binned = existing.filter(k=> SIB[k].deleted);
     const months = [...new Set(keys.map(k=> cases[k].month))].sort();
     if(!confirm(`Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\nTabs read: ${read.map(t=> t.name.trim()+' ('+t.count+')').join(', ')}${skipped.length ? '\nTabs skipped (no cases): '+skipped.join(', ') : ''}\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.${binned.length ? `\n${binned.length} of those are in the Send in Blue Recycle Bin (you'll be asked next whether to restore them).` : ''}\n\nGo ahead?`)){ status.textContent = ''; return; }
+    // The 6 / 3 / 0 month Send in Blue email dates come from the spreadsheet: where they
+    // differ from the dashboard, offer to replace them (a blank in the spreadsheet clears it).
+    const SIB_EMAIL_F = [['sib6','6 month'],['sib3','3 month'],['sib0','0 month']];
+    const emailTxt = v=> !v ? 'blank' : v==='UNSUBSCRIBED' ? 'Unsubscribed' : fmtDate(v);
+    const emailDiffs = existing.filter(k=> !SIB[k].deleted || binned.includes(k)).map(k=>{
+      const ch = SIB_EMAIL_F.filter(([f])=> (cases[k][f]||'') !== (SIB[k][f]||''));
+      return ch.length ? {k, ch} : null;
+    }).filter(Boolean);
+    let useSheetEmails = false;
+    if(emailDiffs.length){
+      const eg = emailDiffs.slice(0, 3).map(({k, ch})=> `• ${SIB[k].mailingName || cases[k].mailingName || k}: ` + ch.map(([f, lbl])=> `${lbl} ${emailTxt(cases[k][f])} (dashboard: ${emailTxt(SIB[k][f])})`).join(', ')).join('\n');
+      useSheetEmails = confirm(`The 6, 3 and 0 month Send in Blue email dates in this file differ from the dashboard for ${emailDiffs.length} client${emailDiffs.length===1?'':'s'}, for example:\n${eg}\n\nUse the spreadsheet's dates?\n\nOK = use the spreadsheet (a blank in the spreadsheet clears the dashboard's date)\nCancel = keep the dashboard's dates`);
+    }
     // Cases matched in the Recycle Bin stay hidden unless they're restored.
     const restore = binned.length > 0 && confirm(`${binned.length} of the cases in this file were deleted and are in the Send in Blue Recycle Bin, so they're hidden.\n\nRestore them now?\n\nOK = restore them\nCancel = leave them in the Recycle Bin`);
     const now = Date.now(), batches = [];
-    let updates = {}, n = 0, filled = 0;
+    let updates = {}, n = 0, filled = 0, emailsSet = 0;
+    const diffByKey = Object.fromEntries(emailDiffs.map(d=> [d.k, d.ch]));
     keys.forEach(k=>{
       const c = cases[k], cur = SIB[k];
       if(!cur){
         updates[`sib/cases/${k}`] = {...c, importedAt:now, audit:{[db.ref().push().key]: {type:'assigned', text:`Imported from spreadsheet (${sibMonthLabel(c.month)})`, byId:currentUser.id, byName:currentUser.name, at:now}}};
       } else {
-        Object.entries(c).forEach(([f, v])=>{ if(f!=='row' && (cur[f]==null || cur[f]==='')){ updates[`sib/cases/${k}/${f}`] = v; filled++; } });
+        Object.entries(c).forEach(([f, v])=>{ if(f!=='row' && !(useSheetEmails && /^sib[630]$/.test(f)) && (cur[f]==null || cur[f]==='')){ updates[`sib/cases/${k}/${f}`] = v; filled++; } });
+        if(useSheetEmails && diffByKey[k]){
+          diffByKey[k].forEach(([f])=> updates[`sib/cases/${k}/${f}`] = c[f] || null);
+          updates[`sib/cases/${k}/audit/${db.ref().push().key}`] = {type:'sent', text:`Send in Blue email dates updated from spreadsheet: ${diffByKey[k].map(([f, lbl])=> `${lbl} ${emailTxt(c[f])} (was ${emailTxt(cur[f])})`).join(', ')}`, byId:currentUser.id, byName:currentUser.name, at:now};
+          emailsSet++;
+        }
         if(restore && cur.deleted) Object.assign(updates, {[`sib/cases/${k}/deleted`]:null, [`sib/cases/${k}/deletedAt`]:null, [`sib/cases/${k}/deletedBy`]:null});
       }
       if(++n % 150 === 0){ batches.push(updates); updates = {}; }
@@ -5286,7 +5305,7 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
     status.textContent = `Saving… 0 of ${batches.length}`;
     return batches.reduce((p, u)=> p.then(()=> db.ref().update(u)).then(()=>{ status.textContent = `Saving… ${++done} of ${batches.length}`; }), Promise.resolve())
       .then(()=>{
-        status.textContent = `Last upload (${file.name}): ${keys.length-existing.length} new, ${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in)${binned.length ? (restore ? `, ${binned.length} restored from the Recycle Bin` : `, ${binned.length} left in the Recycle Bin`) : ''}. Saved.`;
+        status.textContent = `Last upload (${file.name}): ${keys.length-existing.length} new, ${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in${emailsSet ? `, email dates updated for ${emailsSet} client${emailsSet===1?'':'s'}` : ''})${binned.length ? (restore ? `, ${binned.length} restored from the Recycle Bin` : `, ${binned.length} left in the Recycle Bin`) : ''}. Saved.`;
         toast(`Send in Blue updated: ${keys.length-existing.length} new cases`,'success');
       });
   }).catch(err=>{
@@ -5659,6 +5678,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-14i', date:'2026-10-14', items:[
+    {text:"<b>Send in Blue upload: email dates from the spreadsheet</b>. When the 6, 3 or 0 Month SIB Sent dates in your file differ from the dashboard, the upload shows examples and asks whether to use the spreadsheet's dates. Choose OK to replace them (a blank clears the dashboard's date). Other fields still only fill in blanks.", roles:['management']},
+  ]},
   {id:'2026-10-14h', date:'2026-10-14', items:[
     {text:"<b>Mark Send in Blue emails as sent in bulk</b>: in the table view, tick the clients, press <b>Email sent</b> and choose <b>6 Month</b>, <b>3 Month</b> or <b>0 Month</b>. It's marked as sent today for every ticked client (unsubscribed and do-not-contact clients are skipped).", roles:['management']},
   ]},

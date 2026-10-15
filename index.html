@@ -5206,14 +5206,14 @@ function renderSibCase(){
         <div class="field"><label for="sibOutReason">Reason</label><select id="sibOutReason">${sibReasonOptions(c.retentionKey||'', c.outcomeReason)}</select></div>
       </div>
       <div id="sibOutLostWrap" class="hidden sib-lost">
-        <div class="op-title" style="font-weight:700; margin-bottom:8px;">Where did they go?</div>
+        <div class="op-title" style="font-weight:700; margin-bottom:8px;">Where did they go? <span style="font-weight:500; color:var(--text-muted);">(optional)</span></div>
         <div class="field"><label for="sibOutProvider">Provider (lender)</label><input type="text" id="sibOutProvider" list="sibLenderList" maxlength="80" placeholder="e.g. Nationwide" value="${esc(c.lostTo && c.lostTo.provider || '')}"><datalist id="sibLenderList">${SIB_LENDERS.map(l=> `<option value="${esc(l)}">`).join('')}</datalist></div>
         <div class="sib-appt-grid">
           <div class="field"><label for="sibOutTerm">Term of their new deal</label><select id="sibOutTerm"><option value="">Choose…</option>${SIB_LOST_TERMS.map(n=> `<option value="${n}" ${c.lostTo && Number(c.lostTo.termYears)===n ? 'selected' : ''}>${n} years</option>`).join('')}<option value="other" ${c.lostTo && !SIB_LOST_TERMS.includes(Number(c.lostTo.termYears)) ? 'selected' : ''}>Other…</option></select></div>
           <div class="field ${c.lostTo && !SIB_LOST_TERMS.includes(Number(c.lostTo.termYears)) ? '' : 'hidden'}" id="sibOutTermOtherWrap"><label for="sibOutTermOther">Years</label><input type="number" id="sibOutTermOther" min="1" max="40" step="1" value="${c.lostTo && !SIB_LOST_TERMS.includes(Number(c.lostTo.termYears)) ? esc(c.lostTo.termYears) : ''}"></div>
           <div class="field"><label for="sibOutBack">New deal ends</label><input type="month" id="sibOutBack" value="${esc(c.lostTo && c.lostTo.backMonth || '')}"></div>
         </div>
-        <div class="field-hint">We'll add ${esc(c.salutation || c.mailingName || 'the client')} back into Send in Blue for the month their new deal ends, so they come up again in time. Worked out from the term (their deal starting when this one ends); change it if you know better.</div>
+        <div class="field-hint">Fill this in and we'll add ${esc(c.salutation || c.mailingName || 'the client')} back into Send in Blue for the month their new deal ends, so they come up again in time (worked out from the term; change it if you know better). Leave it blank if you don't know, and nothing is added.</div>
       </div>
       <div id="sibOutNoteWrap" class="hidden">
         <div class="field"><label for="sibOutNote">What happened? (in detail)</label><textarea id="sibOutNote" placeholder="e.g. Client went direct to Nationwide for a product transfer at 4.1% as our best option was 4.3%. Discussed broker fee and…">${esc(c.outcomeNote||'')}</textarea><div class="req-hint">At least ${SIB_NOTE_MIN} characters.</div></div>
@@ -5322,10 +5322,11 @@ function renderSibCase(){
       if(!reason) bad.push(['sibOutReason','a reason']);
       if(note.length < SIB_NOTE_MIN) bad.push(['sibOutNote', `a detailed note (at least ${SIB_NOTE_MIN} characters)`]);
     }
-    const lost = SIB_NEEDS_NOTE.includes(k) && SIB_LOST_RE.test(reason);
     const provider = document.getElementById('sibOutProvider').value.trim();
     const termSel = document.getElementById('sibOutTerm').value, term = termSel==='other' ? Number(document.getElementById('sibOutTermOther').value) : Number(termSel);
     const back = document.getElementById('sibOutBack').value;
+    // "Where did they go?" is optional: left blank, nothing is added; started, it needs all three.
+    const lost = SIB_NEEDS_NOTE.includes(k) && SIB_LOST_RE.test(reason) && !!(provider || termSel || back);
     if(lost){
       if(!provider) bad.push(['sibOutProvider','the provider they went to']);
       if(!(term >= 1 && term <= 40 && Number.isInteger(term))) bad.push([termSel==='other' ? 'sibOutTermOther' : 'sibOutTerm','the term of their new deal']);
@@ -5333,7 +5334,8 @@ function renderSibCase(){
     }
     if(bad.length){
       bad.forEach(([id])=> document.getElementById(id).classList.add('missing'));
-      const msg = 'Please add ' + bad.map(b=> b[1]).join(' and ') + '.';
+      const lostGap = bad.some(b=> ['sibOutProvider','sibOutTerm','sibOutTermOther','sibOutBack'].includes(b[0]));
+      const msg = 'Please add ' + bad.map(b=> b[1]).join(' and ') + '.' + (lostGap ? ' Or clear "Where did they go?" to skip it.' : '');
       const h = document.getElementById('sibOutHint'); h.textContent = msg; h.classList.add('bad');
       document.getElementById(bad[0][0]).focus(); toast(msg,'error'); return;
     }
@@ -6054,6 +6056,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15i', date:'2026-10-15', items:[
+    {text:"<b>\"Where did they go?\" is now optional</b>: on a Send in Blue client who went direct or online, leave the provider and term blank if you don't know them and the outcome saves as normal. Fill them in and the client is added back for when their new deal ends, as before."},
+  ]},
   {id:'2026-10-15h', date:'2026-10-15', items:[
     {text:"<b>Clients who went direct or online come back round</b>: when you save a Send in Blue outcome of Not Converted or No Opportunity with a reason like \"Client/s went direct\" or \"Client/s went online\", a box asks which provider they went to and the term of their new deal (2, 3, 5, 10 years or other). The tracker then adds them back into Send in Blue for the month that deal ends, with their details and a note of where they went, so they come up again in time. The case shows a link to it, and the new one carries a purple <b>↺ Previously lost</b> badge (on the card, in the table and on the case). Pick <b>Previously lost</b> in the outcomes filter to see them all. There's also a new standard reason, \"Client/s went online\", and the Send in Blue export has a \"Went to\" column."},
   ]},
@@ -8213,7 +8218,7 @@ const HELP = [
     {t:'Advisor Chase', h:`Once a month Management sends an <b>Advisor Chase</b> for a month's clients whose "Email client?" isn't set. The adviser sees a window in Send in Blue and must answer <b>Yes</b> (email the client) or <b>No</b> (with a reason and detailed note; the client moves to Research) for each one before carrying on. Management: pick the month and press <b>Send Advisor Chase</b>; press it again any time to send a reminder.`},
     {t:'Finding clients', h:`Use the <b>year</b> buttons and <b>month</b> cards (the month the product ends), or search by name, address, email or case ID across all months. Filters: adviser, outcome, email client.`},
     {t:'The lender letter countdown', h:`Shows how many days until the lender sends their reminder letter (6 months before the product ends unless a date is set). It turns amber, then red as it gets close. The aim is to contact the client <b>before</b> the letter. Pick <b>Beat the letter</b> in the filter for everyone not yet contacted, soonest first.`},
-    {t:'Went direct or online', h:`Saving an outcome of <b>Not Converted</b> or <b>No Opportunity</b> with a reason mentioning <b>direct</b> or <b>online</b> asks which provider they went to and the term of their new deal. The client is then added back into Send in Blue for the month that deal ends (worked out from the term, and you can change it), so they come up again before it finishes. If you change the outcome afterwards, the future case is removed as long as nobody has worked on it.`},
+    {t:'Went direct or online', h:`Saving an outcome of <b>Not Converted</b> or <b>No Opportunity</b> with a reason mentioning <b>direct</b> or <b>online</b> shows an optional <b>Where did they go?</b> box for the provider and the term of their new deal. Fill it in and the client is added back into Send in Blue for the month that deal ends (worked out from the term, and you can change it), so they come up again before it finishes. If you change the outcome afterwards, the future case is removed as long as nobody has worked on it.`},
     {t:'Working a case', h:`Open the client. The buttons along the top are <b>Call</b>, <b>Email</b>, <b>Note</b>, <b>Outcome</b> and the red <b>Start protection chat</b>; <b>More</b> has <b>Appointment</b>, <b>Edit details</b>, <b>Refer to Protection</b> and <b>Reassign</b>. The line under the client's name shows the product end month, pot, adviser, last contact and Email client?. Click a <b>6 / 3 / 0 month</b> dot to tick that Send in Blue email as sent. Everything goes in the case history.`},
     {t:'Protection chat and referrals', h:`The red <b>Start protection chat</b> button gives a few open questions to get the client talking; note what they say and how it went. <b>Interested</b> adds them to the protection pipeline. <b>Refer to Protection</b> creates a protection lead for a MAPA. The <b>Protection</b> column shows where each client is.`},
   ]},

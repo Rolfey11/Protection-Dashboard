@@ -788,6 +788,20 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-ins-wrap{overflow-x:auto;}
 .sib-oi-table th.sib-oi-grp{text-align:center; border-bottom:1px solid var(--border); color:var(--text-muted);}
 .sib-oi-table td.sib-oi-pct{font-weight:700;}
+.sib-score-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap:14px;}
+.sib-score{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow-sm); min-width:0;}
+.sib-score-hd{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:6px;}
+.sib-score-hd b{font-size:15px;}
+.sib-score-hd span{font-size:12px; color:var(--text-muted); white-space:nowrap;}
+.sib-score-big{display:flex; align-items:baseline; gap:8px; margin:2px 0 10px;}
+.sib-score-big .v{font-size:30px; font-weight:800; letter-spacing:-.02em;}
+.sib-score-big .l{font-size:12.5px; color:var(--text-muted);}
+.sib-score-row{display:grid; grid-template-columns:1fr auto; gap:2px 12px; align-items:baseline; padding:7px 0; border-top:1px solid var(--border); font-size:13px;}
+.sib-score-row .lbl{color:var(--text-muted); min-width:0;}
+.sib-score-row .val{font-weight:700; text-align:right; white-space:nowrap;}
+.sib-score-row .team{grid-column:1 / -1; font-size:11.5px; color:var(--text-faint);}
+.sib-score .good{color:var(--green);} .sib-score .warn{color:var(--amber);}
+.sib-score .mark{font-size:11px; font-weight:700; margin-left:4px;}
 .sib-ins-tabs{display:flex; gap:2px; margin:20px 0 16px; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none;}
 .sib-ins-tabs::-webkit-scrollbar{display:none;}
 .sib-ins-tabs button{flex:none; border:none; background:none; padding:9px 14px; margin-bottom:-1px; border-bottom:2.5px solid transparent; border-radius:8px 8px 0 0; font:inherit; font-size:13.5px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap;}
@@ -4819,9 +4833,12 @@ function sibSendChase(month, btn){
   Object.entries(byOwner).forEach(([id, list])=>{
     list.forEach(c=>{
       const base = `sib/cases/${c.key}/`;
-      updates[base+'chaseAt'] = now; updates[base+'chaseBy'] = currentUser.id; updates[base+'chaseByName'] = currentUser.name;
-      updates[base+'chaseAnswer'] = null; updates[base+'chaseReason'] = null; updates[base+'chaseNote'] = null; updates[base+'chaseAnsweredAt'] = null;
-      updates[base+'audit/'+db.ref().push().key] = {type:'status', text:`Advisor Chase sent by ${currentUser.name}: should this client be emailed about their deal ending?`, byId:currentUser.id, byName:currentUser.name, at:now};
+      if(sibChasePending(c)) updates[base+'chaseRemindedAt'] = now; // a reminder keeps the first chase time, so answer times count from the first ask
+      else {
+        updates[base+'chaseAt'] = now; updates[base+'chaseBy'] = currentUser.id; updates[base+'chaseByName'] = currentUser.name; updates[base+'chaseRemindedAt'] = null;
+        updates[base+'chaseAnswer'] = null; updates[base+'chaseReason'] = null; updates[base+'chaseNote'] = null; updates[base+'chaseAnsweredAt'] = null;
+      }
+      updates[base+'audit/'+db.ref().push().key] = {type:'status', text:`Advisor Chase ${sibChasePending(c) ? 'reminder ' : ''}sent by ${currentUser.name}: should this client be emailed about their deal ending?`, byId:currentUser.id, byName:currentUser.name, at:now};
     });
     if(id !== currentUser.id) updates['notifications/'+db.ref('notifications').push().key] = {leadId:null, leadName:'', toUserId:id, toRole:null, kind:'sibChase', byId:currentUser.id,
       message:`Advisor Chase: ${list.length} Send in Blue client${list.length===1?' needs':'s need'} a Yes or No for "Email client?" (${sibMonthLabel(month)}). Open Send in Blue to answer.`, at:now, readBy:{}};
@@ -5857,6 +5874,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15d', date:'2026-10-15', items:[
+    {text:"<b>Adviser scorecard</b>: Send in Blue <b>Insights</b> has a new <b>Adviser scorecard</b> tab. There's one card per adviser for the months you pick: retained %, value retained, contact rates, lender-letter timing, clients at risk, Not Converted and the top reason, days to an outcome, Advisor Chase answers and speed, protection conversations and recent activity. Each figure sits next to the team's, with ▲ ahead or ▼ behind.", roles:['management','admin']},
+    {text:"<b>My scorecard</b>: Send in Blue <b>Insights</b> has a new <b>My scorecard</b> tab showing how your clients are going next to the whole team: retained %, contact rates, clients at risk, days to an outcome and more, with ▲ where you're ahead and ▼ where you're behind.", roles:['mapa']},
+  ]},
   {id:'2026-10-15c', date:'2026-10-15', items:[
     {text:"<b>Send in Blue pots read more of the notes</b>: \"In contact\" (even misspelt), illustrations, KFI / ESIS, DIP, quotes sent, applications and product transfers now put a client in <b>Research</b>. \"Tried to contact\", \"not in contact\", voicemails and emails alone still keep them in <b>Client Reviews</b>."},
     {text:"<b>Outcome colours</b>: in Send in Blue, <b>Retained</b> clients show pale green, <b>Not Converted</b> pale red and <b>No Opportunity</b> pale amber, in the table and in the pots. Advisor Chase answers no longer colour the rows."},
@@ -6067,6 +6088,60 @@ function sibHBars(entries, total){
   const max = Math.max(...entries.map(e=> e[1]));
   return entries.map(([lbl, n])=> `<div class="sib-hbar" title="${esc(lbl)}: ${n}${total ? ' ('+pctTxt(n,total)+')' : ''}"><span>${esc(lbl)}</span><span class="t"><i style="width:${max ? n/max*100 : 0}%"></i></span><b>${n}</b></div>`).join('');
 }
+/* Adviser scorecard: one card per servicing adviser for the months picked,
+   each figure next to the team's so it's clear where someone is ahead or behind. */
+const SIB_SCORE_MIN = 5; // fewer opportunities than this and the comparison isn't meaningful
+function sibOutcomeAt(c){
+  let t = 0;
+  Object.values(c.audit||{}).forEach(a=>{ if(a && a.at && /^Outcome: (Retained|Not Converted|No Opportunity)/.test(a.text||'')) t = Math.max(t, a.at); });
+  return t || null;
+}
+function sibScore(cases, actions){
+  const o = sibOutcomeCounts(cases), opp = o.cases - o.noOpp, now = new Date();
+  const value = cases.reduce((t, c)=> t + (c.retentionKey==='Retained' && Number(c.caseValue) > 0 ? Number(c.caseValue) : 0), 0);
+  const nc = cases.filter(c=> c.retentionKey==='Not Converted');
+  const reasons = nc.reduce((m, c)=>{ const r = c.outcomeReason || 'No reason recorded'; m[r] = (m[r]||0)+1; return m; }, {});
+  const topReason = Object.entries(reasons).sort((a,b)=> b[1]-a[1])[0] || null;
+  const letters = cases.filter(c=>{ const d = sibLetterDate(c); return d && d <= now && !c.doNotContact && c.retentionKey!=='No Opportunity'; });
+  const beat = letters.filter(c=> sibLetterState(c)?.kind==='done').length;
+  const open = cases.filter(c=> !c.retentionKey && !c.doNotContact);
+  const atRisk = open.filter(c=> sibMonthsAway(c.month) >= 0 && sibMonthsAway(c.month) <= 3 && !sibContacted(c)).length;
+  const days = cases.map(c=>{ if(!c.retentionKey) return null; const out = sibOutcomeAt(c), first = sibFirstContact(c); return out && first && out >= first ? (out-first)/86400000 : null; }).filter(d=> d!=null);
+  const chased = cases.filter(c=> c.chaseAt), answered = chased.filter(c=> c.chaseAnswer);
+  const resp = answered.filter(c=> c.chaseAnsweredAt && c.chaseAnsweredAt >= c.chaseAt).map(c=> (c.chaseAnsweredAt - c.chaseAt)/86400000);
+  const convo = cases.filter(c=> c.protectionConvo).length;
+  const avg = a=> a.length ? a.reduce((t, x)=> t + x, 0) / a.length : null;
+  return {o, opp, value, nc:nc.length, topReason, letters:letters.length, beat, open:open.length, atRisk, avgDays:avg(days), daysN:days.length,
+    chased:chased.length, answered:answered.length, avgResp:avg(resp), convo, actions};
+}
+function sibScoreCards(list, team, advisers){
+  const ret = x=> pct(x.o.retained, x.opp), dayTxt = d=> d==null ? '—' : d < 1 ? 'under a day' : `${d < 10 ? d.toFixed(1) : Math.round(d)} days`;
+  // [label, value shown, number compared, team shown, team number, higher is better]
+  const rows = (x, t)=> [
+    ['Value retained', sibMoney(x.value), x.value, `team average ${sibMoney(Math.round(t.value / Math.max(1, advisers.length)))} per adviser`, t.value / Math.max(1, advisers.length), true],
+    ['Contacted', `${pctTxt(x.o.contacted, x.o.cases)} (${x.o.contacted} of ${x.o.cases})`, pct(x.o.contacted, x.o.cases), `team ${pctTxt(t.o.contacted, t.o.cases)}`, pct(t.o.contacted, t.o.cases), true],
+    ['Contacted before the lender letter', x.letters ? `${pctTxt(x.beat, x.letters)} (${x.beat} of ${x.letters})` : '—', pct(x.beat, x.letters), `team ${pctTxt(t.beat, t.letters)}`, pct(t.beat, t.letters), true],
+    ['Ending in 3 months, not contacted', `${x.atRisk}${x.open ? ` (${pctTxt(x.atRisk, x.open)} of open)` : ''}`, pct(x.atRisk, x.open), `team ${pctTxt(t.atRisk, t.open)} of open`, pct(t.atRisk, t.open), false],
+    ['Not converted', `${x.nc}${x.opp ? ` (${pctTxt(x.nc, x.opp)})` : ''}`, pct(x.nc, x.opp), `team ${pctTxt(t.nc, t.opp)} of opportunities${x.topReason ? ` · top reason: "${x.topReason[0]}"` : ''}`, pct(t.nc, t.opp), false],
+    ['First contact to outcome', dayTxt(x.avgDays), x.avgDays, `team ${dayTxt(t.avgDays)}${x.daysN ? ` · from ${x.daysN} outcome${x.daysN===1?'':'s'} logged here` : ''}`, t.avgDays, false],
+    ['Advisor Chase answered', x.chased ? `${x.answered} of ${x.chased}${x.chased - x.answered ? ` · ${x.chased - x.answered} waiting` : ''}` : 'None sent', pct(x.answered, x.chased), `team ${pctTxt(t.answered, t.chased)} answered`, pct(t.answered, t.chased), true],
+    ['Advisor Chase answer time', dayTxt(x.avgResp), x.avgResp, `team ${dayTxt(t.avgResp)}`, t.avgResp, false],
+    ['Protection conversations', `${x.convo}${x.o.contacted ? ` (${pctTxt(x.convo, x.o.contacted)} of contacted)` : ''}`, pct(x.convo, x.o.contacted), `team ${pctTxt(t.convo, t.o.contacted)} of contacted`, pct(t.convo, t.o.contacted), true],
+    ['Actions logged, last 30 days', String(x.actions), x.actions, `team average ${Math.round(t.actions / Math.max(1, advisers.length))}`, t.actions / Math.max(1, advisers.length), true],
+  ];
+  const tone = (v, tv, higher, enough)=> !enough || v==null || tv==null || v===tv ? '' : (higher ? v > tv : v < tv) ? 'good' : 'warn';
+  const cards = advisers.map(a=> [a, sibScore(list.filter(c=> sibAdvLabel(c)===a), team.actionsBy[a] || 0)])
+    .sort((x, y)=> (ret(y[1]) ?? -1) - (ret(x[1]) ?? -1) || y[1].opp - x[1].opp || x[0].localeCompare(y[0]));
+  return cards.map(([a, x])=>{
+    const enough = x.opp >= SIB_SCORE_MIN, r = ret(x), tr = ret(team.score), rt = tone(r, tr, true, enough);
+    return `<div class="sib-score" data-score="${esc(a)}">
+      <div class="sib-score-hd"><b>${esc(a)}</b><span>${x.o.cases} case${x.o.cases===1?'':'s'} · ${x.o.open} open</span></div>
+      <div class="sib-score-big"><span class="v ${rt}">${r==null ? '—' : r+'%'}</span><span class="l">retained (${x.o.retained} of ${x.opp} opportunit${x.opp===1?'y':'ies'})<br>team ${tr==null ? '—' : tr+'%'}${enough ? '' : ' · too few to compare yet'}</span></div>
+      ${rows(x, team.score).map(([lbl, val, v, teamTxt, tv, higher])=>{ const t = tone(v, tv, higher, enough);
+        return `<div class="sib-score-row"><span class="lbl">${esc(lbl)}</span><span class="val ${t}">${esc(val)}${t ? `<span class="mark" aria-label="${t==='good' ? 'better than the team' : 'behind the team'}">${t==='good' ? '▲' : '▼'}</span>` : ''}</span><span class="team">${esc(teamTxt)}</span></div>`; }).join('')}
+    </div>`;
+  }).join('');
+}
 function renderSibInsights(){
   const page = document.getElementById('page-sibInsights');
   if(!page || page.classList.contains('hidden') || !currentUser) return;
@@ -6168,12 +6243,25 @@ function renderSibInsights(){
     ['No contact logged', c=> !['done','after'].includes(sibLetterState(c)?.kind)]];
   const letterRows = byLetter.map(([lbl, fn])=>{ const x = sibOutcomeCounts(list.filter(fn));
     return `<tr><td style="font-weight:600;">${lbl}</td><td class="num" title="${x.cases} cases − ${x.noOpp} no opportunity">${x.cases - x.noOpp}</td><td class="num">${x.retained}</td><td class="num">${x.notConverted}</td><td class="num">${x.open}</td><td class="num sib-oi-pct" title="${sibRetTitle(x)}">${sibRetPct(x)}</td></tr>`; }).join('');
+  // Scorecard (worked out only while its tab is open): the team figures cover every adviser in the months picked, whatever the adviser filter.
+  const scoreHtml = sibIns.tab!=='scorecard' ? '' : (()=>{
+  const teamList = sibCases().filter(c=> c.month >= lo && c.month <= hi && sibAdvLabel(c)!==SIB_UNALLOCATED);
+  const scoreAdvisers = sibSeesAll() ? [...new Set(list.map(sibAdvLabel))].filter(a=> a!==SIB_UNALLOCATED).sort() : [currentUser.name];
+  const since30 = Date.now() - 30*86400000, actionsBy = {};
+  const teamNames = new Set(teamList.map(sibAdvLabel));
+  teamList.forEach(c=> Object.values(c.audit||{}).forEach(a=>{ if(a && a.at >= since30 && a.type!=='assigned' && teamNames.has(a.byName)) actionsBy[a.byName] = (actionsBy[a.byName]||0) + 1; }));
+  const teamScore = sibScore(teamList, Object.values(actionsBy).reduce((t, n)=> t + n, 0));
+  return sibScoreCards(sibSeesAll() ? list : list.filter(sibIsMine), {score:teamScore, actionsBy}, scoreAdvisers);
+  })();
   const table = (head, rows, empty)=> rows ? `<div class="sib-ins-wrap"><table class="mini-table sib-ins-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="insights-empty">${empty}</div>`;
   // Detail tables sit behind tabs; the headline figures above stay visible.
   const sections = [
     ['months', 'By month', `
     <div class="insights-card" style="margin-bottom:20px;"><h4>Retention by month (when the product ends)</h4>${legend}
       ${table('<th>Month</th><th class="num">Cases</th><th class="num">Contacted</th><th class="num">Retained</th><th class="num">Not conv.</th><th class="num">No opp.</th><th class="num">Open</th><th class="num" title="Retained ÷ (cases − no opportunity)">Retained %</th><th>Outcomes</th>', monthRows, 'No cases.')}</div>`],
+    ['scorecard', sibSeesAll() ? 'Adviser scorecard' : 'My scorecard', `
+    <p class="nml-note" style="margin-top:-4px;">${sibSeesAll() ? 'One card per servicing adviser' : 'Your figures'} for ${esc(lo===hi ? sibMonthLabel(lo) : sibMonthLabel(lo)+' to '+sibMonthLabel(hi))}, next to the whole team's. <span class="good" style="color:var(--green); font-weight:700;">▲</span> ahead of the team, <span style="color:var(--amber); font-weight:700;">▼</span> behind. Comparisons start once there are ${SIB_SCORE_MIN} opportunities (cases that weren't "No opportunity"). "First contact to outcome" only counts outcomes saved in the dashboard.</p>
+    ${scoreHtml ? `<div class="sib-score-grid">${scoreHtml}</div>` : '<div class="insights-empty">No cases for these advisers in this range.</div>'}`],
     ['advisers', sibSeesAll() ? 'Advisers' : 'Own vs inherited', `
     <div class="insights-card" style="margin-bottom:20px;"><h4>Own vs inherited clients</h4>
       <p class="nml-note" style="margin-top:-6px;">Inherited = the client came from another adviser (the Ex Adviser column). Cases and retained % both leave out "No opportunity" cases (sold, moved, cleared the mortgage).</p>
@@ -6220,6 +6308,7 @@ function renderSibInsights(){
     ${sections.map(([k, , html])=> `<div class="sib-ins-sec${k===sibIns.tab?'':' hidden'}" data-ins-sec="${k}" role="tabpanel">${html}</div>`).join('')}`;
   body.querySelectorAll('[data-ins-tab]').forEach(b=> b.addEventListener('click', ()=>{
     sibIns.tab = b.dataset.insTab;
+    if(sibIns.tab==='scorecard'){ renderSibInsights(); return; }
     body.querySelectorAll('[data-ins-tab]').forEach(x=>{ const on = x===b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
     body.querySelectorAll('[data-ins-sec]').forEach(x=> x.classList.toggle('hidden', x.dataset.insSec!==sibIns.tab));
   }));
@@ -7935,7 +8024,7 @@ const HELP = [
   ]},
   {group:'Management', roles:['management'], items:[
     {t:'Settings', roles:['management'], h:`Colleagues and PINs, client sources, email templates and protection prompts, Useful Info tables, Send in Blue upload/download and the lender letter timing, bulk delete, Recycle Bin and backups. Each has its own button on the Settings page.`},
-    {t:'Insights and Log in Data', roles:['management'], h:`<b>Insights</b> shows the funnel, commission, underwriting and decline figures (it follows the advisor and date filters). Send in Blue has its own Insights with tabs. <b>Log in Data</b> shows when each MAPA and Admin last signed in and worked on a lead.`},
+    {t:'Insights and Log in Data', roles:['management'], h:`<b>Insights</b> shows the funnel, commission, underwriting and decline figures (it follows the advisor and date filters). Send in Blue has its own Insights with tabs, including an <b>Adviser scorecard</b> comparing each adviser with the team. <b>Log in Data</b> shows when each MAPA and Admin last signed in and worked on a lead.`},
   ]},
 ];
 function renderHelp(){

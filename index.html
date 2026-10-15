@@ -1225,6 +1225,28 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .lead-right{background:var(--bg); display:flex; flex-direction:column; min-height:0;}
 @media (max-width:800px){.lead-left{border-right:none; border-bottom:1px solid var(--border);}}
 
+#leadOverlay .lead-modal{max-width:1240px;}
+.sib-sum .status-pill{padding:3px 9px; font-size:10.5px; vertical-align:1px; margin-right:4px;}
+.ld-track{border:1px solid var(--border); border-radius:12px; padding:12px 14px 12px; margin-bottom:12px; background:var(--surface);}
+.ld-steps{display:flex; list-style:none; margin:0; padding:0;}
+.ld-steps li{flex:1; text-align:center; font-size:11.5px; font-weight:700; color:var(--text-faint); position:relative; padding-top:20px; min-width:0;}
+.ld-steps li::before{content:''; position:absolute; top:4px; left:50%; transform:translateX(-50%); width:12px; height:12px; border-radius:50%; background:var(--border-2); z-index:1;}
+.ld-steps li::after{content:''; position:absolute; top:9px; left:-50%; width:100%; height:2px; background:var(--border-2);}
+.ld-steps li:first-child::after{display:none;}
+.ld-steps li.done{color:var(--green);} .ld-steps li.done::before,.ld-steps li.done::after{background:var(--green);}
+.ld-steps li.now{color:var(--brand);} .ld-steps li.now::before{background:var(--brand); box-shadow:0 0 0 4px var(--brand-tint);} .ld-steps li.now::after{background:var(--green);}
+.ld-steps li.bad{color:var(--red);} .ld-steps li.bad::before{background:var(--red); box-shadow:0 0 0 4px var(--red-bg);}
+.ld-next{display:flex; align-items:center; gap:10px; flex-wrap:wrap; border-top:1px solid var(--border); margin-top:12px; padding-top:10px; font-size:13px; color:var(--text-muted);}
+.ld-next > span{flex:1; min-width:200px;}
+.ld-next b{color:var(--text);}
+.ld-next .stage-btn{border:none; border-radius:10px; padding:9px 15px; font:inherit; font-size:13px; font-weight:700; color:#fff; cursor:pointer;}
+.ld-next .stage-btn:disabled{background:var(--border-2) !important; color:var(--text-muted); cursor:default;}
+.ld-next .ld-decl{display:flex; flex-direction:column; gap:8px; width:100%;}
+.ld-contact{display:grid; grid-template-columns:1fr 1fr; gap:0 14px;}
+.ld-contact .info-cell{background:none; padding:2px 0; grid-column:auto !important;}
+@media (max-width:640px){ .ld-contact{grid-template-columns:1fr;} .ld-steps li:not(.now):not(.bad){font-size:0;} .ld-steps li{font-size:11px;} }
+#leadLeftPane .sib-next{flex-direction:row; align-items:center; flex-wrap:wrap; margin:12px 0 0;}
+#leadLeftPane .sib-next .cal-btns, #leadLeftPane .sib-next > div:last-child{margin-left:auto;}
 .status-pill{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:99px; text-transform:uppercase; letter-spacing:.3px;}
 .status-pill.new{background:var(--blue-bg); color:var(--blue);}
 .status-pill.existing{background:var(--amber-bg); color:var(--amber);}
@@ -2849,8 +2871,9 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 <div class="modal-overlay" id="leadOverlay">
   <div class="modal lead-modal">
     <div class="modal-head">
-      <div>
+      <div style="min-width:0;">
         <h2 id="ldClientName">Client name</h2>
+        <div class="sib-sum" id="ldSum"></div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="icon-btn del hidden" id="leadDeleteBtn" title="Delete this case">
@@ -3291,6 +3314,7 @@ function esc(str){ return (str==null ? '' : String(str)).replace(/[&<>"']/g, ch=
    ICONS — one consistent line-icon set used across the app instead of emoji
    ---------------------------------------------------------------------------- */
 const ICON_PATHS = {
+  dots:'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
   alert:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
   check:'<path d="M20 6 9 17l-5-5"/>',
   checkCircle:'<circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/>',
@@ -3347,7 +3371,7 @@ function closeModal(id){
   if(id==='forcePinOverlay' && forcePinActive) return; // must choose a new PIN or sign out
   if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
-  if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; }
+  if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
   if(!document.querySelector('.modal-overlay.open')){
     document.body.classList.remove('scroll-lock');
@@ -5954,6 +5978,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15g', date:'2026-10-15', items:[
+    {text:"<b>Tidier protection case window</b>: a <b>stage tracker</b> at the top shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk), with the next-step button underneath (Quotes Sent, Terms issued, On Risk or the decline steps). The action buttons come next: <b>Call</b>, <b>Text</b>, <b>Email</b>, <b>Appointment</b> and <b>More</b> (Other, Reassign, Edit client source, Change status). Signing up and declining are still done through an action. The <b>No answer</b> button has gone: log the call and choose <b>Follow Up</b> to book the next try. The next call, policies and commission, contact details and case details sit in tidy boxes below, and the client's status, advisor, source and contact attempts are on one line under their name."},
+  ]},
   {id:'2026-10-15f', date:'2026-10-15', items:[
     {text:"<b>Tidier Send in Blue case window</b>: <b>Call</b>, <b>Email</b>, <b>Note</b>, <b>Outcome</b> and a red <b>Start protection chat</b> button now sit at the top, with the rest under <b>More</b>, and their forms open right underneath. One line under the name shows the end month, pot, adviser, last contact and Email client?. A single lender-letter box replaces the stacked banners, the case notes come next, then the client details in a compact list and the 6 / 3 / 0 month emails as coloured dots."},
   ]},
@@ -8082,8 +8109,9 @@ const HELP = [
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},
   ]},
   {group:'Protection cases', items:[
+    {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). Below it are the action buttons: <b>Call</b>, <b>Text</b>, <b>Email</b>, <b>Appointment</b>, and <b>More</b> for Other, Reassign, Edit client source and Change status. Signing up and declining are done through an action's outcome.`},
     {t:'Log a call', roles:['mapa','management'], h:`<ol><li>Open the case and click <b>Call</b>.</li><li>Choose what happened: <b>Sign Up</b>, <b>Follow Up</b> or <b>Decline</b>, and/or add a note about the call.</li></ol>Notes are always added through an action like this, so each note says what was done.The client's phone number shows at the top of the Call box. Click it to dial.`},
-    {t:'No answer', roles:['mapa','management'], h:`Click <b>No answer</b> on the case. That's it: the attempt is logged and counted (you'll see "Contact attempts" on the case, and the count on the card). The follow-up box then opens so you can book when to try again; close the case if you don't want to.`},
+    {t:'No answer', roles:['mapa','management'], h:`Click <b>Call</b> on the case and choose <b>Follow Up</b> to book when to try again, with a note such as "No answer". Every call, text, email and appointment you log counts as a contact attempt (shown under the client's name and on the card).`},
     {t:'Book a follow-up call', roles:['mapa','management'], h:`<ol><li>On the case, click <b>Call</b> (or Text, Email…), then <b>Follow Up</b>.</li><li>Choose the date and time (both are needed) and add a comment.</li><li><b>Add to Calendar – Client invite</b> sends the client an invite through Google Calendar; <b>No invite</b> puts it just in your calendar; or <b>Save without adding to Calendar</b>.</li></ol>The case moves to Contacted Clients and shows when the call is due.`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
     {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the total commission, choose each policy sold (DTA, LTA, FIB, CIC, IP, WOL) and tick which client it covers. Tick more than one client for a joint policy; use <b>+ Add another policy</b> for more.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission and policies are filled in for you: check them and change anything that's different.</li></ol>`},
@@ -8091,7 +8119,7 @@ const HELP = [
     {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
     {t:'Client has a medical condition', roles:['mapa','management'], h:`Open <b>Useful Info → Medical Conditions Guide</b>. Search for the condition (e.g. "diabetes" or "back") to see how insurers usually treat it for Life, CI and IP, and the questions to ask before you go to market. It's general guidance: always get an indicative decision from the insurer.`},
     {t:'Client phone and email', h:`Both show on the case. Click a phone number to dial it. Use <b>Add phone</b> / <b>Edit</b> to change them; the change is recorded in the history.`},
-    {t:'Move a case by hand', roles:['admin','management'], h:`Use <b>Change status</b> at the bottom of the case to put it back into a different pot (for example if something was clicked by mistake). The change is recorded. Only Management and Admin can do this; MAPAs move cases with the action buttons and can ask you to correct a mistake.`},
+    {t:'Move a case by hand', roles:['admin','management'], h:`Use <b>More</b> → <b>Change status</b> on the case to put it back into a different pot (for example if something was clicked by mistake). The change is recorded. Only Management and Admin can do this; MAPAs move cases with the action buttons and can ask you to correct a mistake.`},
   ]},
   {group:'Adding and moving leads', roles:['admin','management'], items:[
     {t:'Add a lead', roles:['admin','management'], h:`Click <b>New Task</b>, fill in the client's name, email and phone (optional), source, advisor and date, then <b>Assign lead</b>. Adding several? Use <b>Save &amp; add another</b>: it keeps the source, advisor and date and clears the client details. The advisor is notified.`},
@@ -8242,7 +8270,7 @@ function openLead(id){
   if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
-  actionUIState = null;
+  actionUIState = null; ldMoreOpen = false;
   renderLeadModal();
   document.getElementById('leadDeleteBtn').classList.toggle('hidden', currentUser.role!=='management');
   openModal('leadOverlay');
@@ -8315,6 +8343,7 @@ function canChangeStatus(lead){
   return !!lead && (currentUser.role==='management' || currentUser.role==='admin');
 }
 
+let ldMoreOpen = false; // the lead window's "More" row of buttons
 function renderLeadModal(){
   const raw = LEADS[activeLeadId];
   if(!raw){ closeModal('leadOverlay'); return; }
@@ -8326,35 +8355,66 @@ function renderLeadModal(){
   const statusMap = {new:['new','New'],existing:['existing','In progress'],decline:['decline','Decline pending'],underwriting:['underwriting','Submitted / In underwriting'],terms:['terms','Terms issued'],signedup:['signedup','On risk'],completed:['completed','Fully declined']};
   const [statusClass, statusLabel] = statusMap[potKey] || ['new','New'];
 
-  let infoHtml = `
-    <span class="status-pill ${statusClass}">${statusLabel}</span>
-    <div class="info-grid">
-      <div class="info-cell"><div class="lbl">Advisor</div><div class="val">${esc(lead.advisorName)}</div>${canReassign() ? `<button id="reassignBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Reassign</button>` : ''}</div>
-      <div class="info-cell"><div class="lbl">Task Created</div><div class="val">${fmtDate(lead.appDate)}</div></div>
-      <div class="info-cell"><div class="lbl">Client source</div><div class="val">${esc(lead.clientSource||'—')}</div>${canManageLead(lead) ? `<button id="editSourceBtn" class="btn btn-secondary btn-sm" style="margin-top:8px; width:100%; justify-content:center;">Edit</button>` : ''}</div>
-      <div class="info-cell"><div class="lbl">Created by</div><div class="val">${esc(lead.createdByName)}</div></div>
-      ${lead.sibKey ? `<div class="info-cell full"><div class="lbl">Referred from Send in Blue</div><div class="val">Mortgage product ends ${esc(lead.sibMonthLabel||'')}</div><button type="button" class="btn btn-secondary btn-sm" id="openSibFromLead" style="margin-top:8px;">Open Send in Blue case</button></div>` : ''}
-      <div class="info-cell"><div class="lbl">Assigned</div><div class="val">${fmtDate(lead.createdAt)}</div></div>
-      <div class="info-cell"><div class="lbl">Contact attempts</div><div class="val">${(()=>{ const att = Object.values(lead.audit||{}).filter(isContactAttempt).sort((a,b)=> b.at-a.at); return att.length ? `${att.length} <span style="font-weight:500; font-size:12px; color:var(--text-muted);">· last ${esc(timeAgo(att[0].at))}</span>` : '0'; })()}</div></div>
-      ${clientPhoneCellHtml(lead)}
-      ${clientEmailCellHtml(lead)}
-      ${hasBookedCall(lead) ? `
-      <div class="info-cell full" style="background:var(--amber-bg);">
-        <div class="lbl" style="color:var(--amber);">Next call due</div>
-        <div class="val" style="color:var(--amber);">${followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim()}</div>
-        ${calButtonsHtml(lead, true)}
-      </div>` : ''}
-      ${potKey==='terms' ? `
-      <div class="info-cell full" style="background:var(--indigo-bg);"><div class="lbl" style="color:var(--indigo);">Terms issued${lead.termsIssuedAt ? ' '+esc(fmtDate(lead.termsIssuedAt)) : ''}</div><div class="val" style="color:var(--indigo); font-weight:600;">${esc(lead.termsNote||'No details added')}</div></div>` : ''}
-      ${['underwriting','terms','signedup'].includes(potKey) && leadPolicies(lead).length ? `
-      <div class="info-cell full"><div class="lbl">${potKey==='signedup' ? 'Policies on risk' : potKey==='terms' ? 'Policies (terms issued)' : 'Policies submitted'}</div>
-        <div class="pol-pills">${leadPolicies(lead).map(p=> `<span class="pol-pill">${esc(p.type)} · ${esc(policyWho(p))}${p.who.length>1 ? ' (joint)' : ''}</span>`).join('')}</div></div>` : ''}
-      ${(potKey==='underwriting' || potKey==='terms') && lead.commission!=null ? `
-      <div class="info-cell commission full"><div class="lbl">Commission (pending${potKey==='terms' ? ', terms issued' : ' underwriting'})</div><div class="val">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
-      ${potKey==='signedup' && lead.commission!=null ? `
-      <div class="info-cell commission full"><div class="lbl">Commission</div><div class="val">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div></div>` : ''}
-      ${lead.declineReason ? `
-      <div class="info-cell decline-box full">
+  const attempts = Object.values(lead.audit||{}).filter(isContactAttempt).sort((x,y)=> y.at-x.at);
+  document.getElementById('ldSum').innerHTML = `<span class="status-pill ${statusClass}">${statusLabel}</span>` + [
+    esc(lead.advisorName||'Unassigned'), esc(lead.clientSource||'No source'), `Assigned <b>${esc(fmtDate(lead.createdAt))}</b>`,
+    `<b>${attempts.length}</b> contact attempt${attempts.length===1?'':'s'}${attempts.length ? ', last '+esc(timeAgo(attempts[0].at)) : ''}`,
+  ].join(' · ');
+
+  // Stage tracker: where the case is, plus the button for the next stage of the workflow.
+  // Signing up and declining are only done through the action buttons below.
+  const STEPS = [['new','New'],['existing','In progress'],['quotes','Quotes sent'],['underwriting','Submitted'],['terms','Terms issued'],['signedup','On risk']];
+  const declined = potKey==='decline' || potKey==='completed';
+  const at = potKey==='new' ? 0 : potKey==='existing' ? (lead.quotesSentAt ? 2 : 1) : potKey==='underwriting' ? 3 : potKey==='terms' ? 4 : potKey==='signedup' ? 6 : (lead.quotesSentAt ? 2 : 1);
+  // A declined case shows how far it got, then the decline.
+  const stepsHtml = declined
+    ? STEPS.slice(0, at + 1).map(([, lbl])=> `<li class="done">${lbl}</li>`).join('') + `<li class="bad">${potKey==='completed' ? 'Fully declined' : 'Decline pending'}</li>`
+    : STEPS.map(([, lbl], i)=> `<li class="${i < at ? 'done' : i===at ? 'now' : ''}">${lbl}</li>`).join('');
+  let nextHtml = '';
+  if(canAction(lead) || lead.status==='decline'){
+    if(lead.status==='new') nextHtml = `<span>Next: log your first contact with an action below (Call, Text, Email…).</span>`;
+    if(lead.status==='existing') nextHtml = lead.quotesSentAt
+      ? `<span class="quotes-done">${ico('checkCircle')} <b>Quotes sent ${esc(fmtDate(lead.quotesSentAt))}</b>${lead.quotesSentByName ? ' by '+esc(lead.quotesSentByName) : ''} · the case shows pale green on the dashboard</span><button type="button" class="linkish" id="quotesUndoBtn">Undo</button>`
+      : `<span>Next stage: <b>Quotes sent</b>. Mark it once the client has their quotes (the case shows pale green on the dashboard).</span><button type="button" class="stage-btn" id="quotesSentBtn" style="background:var(--green);">✓ Quotes Sent</button>`;
+    if(lead.status==='underwriting') nextHtml = `<span>Submitted / in underwriting. When the insurer issues terms, mark it here.</span><button type="button" class="stage-btn" id="termsIssuedBtn" style="background:var(--indigo);">Terms issued</button>
+      <div id="termsForm" class="hidden" style="width:100%;">
+        <div class="field" style="margin-bottom:8px;"><label for="termsNote">Terms (optional)</label><input type="text" id="termsNote" maxlength="200" placeholder="e.g. Standard terms, or +50% loading on CI"></div>
+        <button class="btn btn-primary btn-sm" id="termsSave">Save: terms issued</button>
+      </div>`;
+    if(lead.status==='terms') nextHtml = `<span>Terms issued${lead.termsNote ? ': <b>'+esc(lead.termsNote)+'</b>' : ''}. If the client goes ahead and the policy goes on risk, mark it here. If they don't, use an action below and choose Decline.</span><button type="button" class="stage-btn" id="nowOnRiskBtn" style="background:var(--green);">On Risk</button>`;
+    if(lead.status==='decline' && canAction(lead)) nextHtml = `<span>This case stays in Decline Workflow until all of these are done: the decline reasoning is sent to the client, the decline email is added to the HLP Portal, and the lead is NPW'd in the HLP Swim lane.</span>
+      <div class="ld-decl">${DECLINE_STEPS.map(st=> `<button type="button" class="stage-btn" data-decline-step="${st.field}" ${lead[st.field]?'disabled':''} style="background:var(--green);">${lead[st.field] ? ico('check')+' '+st.btnDone : st.btn}</button>`).join('')}</div>`;
+  }
+  const trackerHtml = `<div class="ld-track"><ol class="ld-steps" aria-label="Case stage">${stepsHtml}</ol>${nextHtml ? `<div class="ld-next">${nextHtml}</div>` : ''}</div>`;
+
+  // Action buttons: the only way to log contact, sign up or decline.
+  const moreItems = [
+    ...(canAction(lead) ? [`<button type="button" class="action-btn" data-act="other">${ico('dots')}Other</button>`] : []),
+    ...(canReassign() ? [`<button type="button" class="action-btn" id="reassignBtn">${ico('users')}Reassign</button>`] : []),
+    ...(canManageLead(lead) ? [`<button type="button" class="action-btn" id="editSourceBtn">${ico('pin')}Edit client source</button>`] : []),
+    ...(canChangeStatus(lead) ? [`<button type="button" class="action-btn" id="changeStatusBtn" title="Manual override: move the case to any pot">${ico('shuffle')}Change status</button>`] : []),
+  ];
+  const actionHtml = (canAction(lead) || moreItems.length) ? `
+    <div class="sib-acts" id="actionBar">
+      ${canAction(lead) ? `<button type="button" class="action-btn primary" data-act="call">${ico('phone')}Call</button>
+      <button type="button" class="action-btn" data-act="text">${ico('message')}Text</button>
+      <button type="button" class="action-btn" data-act="email">${ico('mail')}Email</button>
+      <button type="button" class="action-btn" data-act="appointment">${ico('calendar')}Appointment</button>` : ''}
+      ${moreItems.length ? `<button type="button" class="action-btn" id="ldMoreBtn" aria-expanded="${ldMoreOpen}" aria-controls="ldMoreRow">${ldMoreOpen ? 'Less ▴' : 'More ▾'}</button>` : ''}
+    </div>
+    ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
+    <div id="dynamicActionArea"></div>` : '';
+
+  const nextCallHtml = hasBookedCall(lead) ? `<div class="sib-next warn"><span class="ic" aria-hidden="true">⏰</span><div><b>${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>Next call due</small></div>${calButtonsHtml(lead, true)}</div>` : '';
+
+  // Outcome details (terms, policies, commission, decline reason) in one box.
+  const pols = ['underwriting','terms','signedup'].includes(potKey) ? leadPolicies(lead) : [];
+  const comm = ['underwriting','terms','signedup'].includes(potKey) && lead.commission!=null;
+  const outcomeHtml = (pols.length || comm || lead.declineReason) ? `<div class="sib-box">
+      <div class="sib-box-hd">${lead.declineReason ? 'Decline' : 'Case outcome'}</div>
+      ${pols.length ? `<div style="font-size:12.5px; color:var(--text-muted); margin-bottom:4px;">${potKey==='signedup' ? 'Policies on risk' : potKey==='terms' ? 'Policies (terms issued)' : 'Policies submitted'}</div><div class="pol-pills">${pols.map(p=> `<span class="pol-pill">${esc(p.type)} · ${esc(policyWho(p))}${p.who.length>1 ? ' (joint)' : ''}</span>`).join('')}</div>` : ''}
+      ${comm ? `<div style="margin-top:${pols.length ? 10 : 0}px; font-size:13px;">Commission${potKey==='signedup' ? '' : ` (pending${potKey==='terms' ? ', terms issued' : ' underwriting'})`}: <b style="color:var(--green); font-size:15px;">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</b></div>` : ''}
+      ${lead.declineReason ? `<div class="info-cell decline-box full" style="margin-top:${pols.length || comm ? 10 : 0}px;">
         <div class="lbl">Decline reason: ${esc(lead.declineReason)}</div>
         <div class="val" style="font-weight:500;font-size:13px;margin-top:4px;">${esc(lead.declineDetail||'')}</div>
         ${DECLINE_STEPS.filter(st=> !isLegacyClosedStep(lead, st)).map((st,i)=> `
@@ -8362,65 +8422,21 @@ function renderLeadModal(){
           ${lead[st.field] ? ico('check')+' '+st.done : ico('alert')+' '+st.todo}
         </div>`).join('')}
       </div>` : ''}
-    </div>
-  `;
+    </div>` : '';
 
-  // Notes are added through an action (Call, Text, Email, Appointment, Other),
-  // so every note is tied to something that was actually done.
-  const notesHtml = '';
-
-  let actionHtml = '';
-  if(canAction(lead)){
-    actionHtml = `
-      <div class="section-lbl">Action</div>
-      <p class="action-hint">Press an action to log what you did. You can add a note once you've chosen one.</p>
-      <div class="action-bar" id="actionBar">
-        <button class="action-btn" data-act="call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Call</button>
-        <button class="action-btn" data-act="noanswer" title="Tried to call, no answer: log the attempt in one click"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 13.3a16 16 0 0 0 3.4 2.6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-3.3-2.6M5.2 13.4A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9"/><path d="M22 2 2 22"/></svg>No answer</button>
-        <button class="action-btn" data-act="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Text</button>
-        <button class="action-btn" data-act="email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>Email</button>
-        <button class="action-btn" data-act="appointment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Appointment</button>
-        <button class="action-btn" data-act="other"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>Other</button>
+  const kv = (lbl, val)=> `<span>${lbl}</span><b>${val}</b>`;
+  const infoHtml = `
+    <div class="sib-box"><div class="sib-box-hd">Contact</div><div class="ld-contact">${clientPhoneCellHtml(lead)}${clientEmailCellHtml(lead)}</div></div>
+    <div class="sib-box"><div class="sib-box-hd">Case details</div>
+      <div class="sib-kv">
+        ${kv('Advisor', esc(lead.advisorName||'—'))}${kv('Client source', esc(lead.clientSource||'—'))}
+        ${kv('Task created', esc(fmtDate(lead.appDate)))}${kv('Created by', esc(lead.createdByName||'—'))}
+        ${kv('Assigned', esc(fmtDate(lead.createdAt)))}${kv('Contact attempts', attempts.length ? `${attempts.length} · last ${esc(timeAgo(attempts[0].at))}` : '0')}
       </div>
-      <div id="dynamicActionArea"></div>
-      ${lead.status==='existing' ? (lead.quotesSentAt ? `
-      <div class="outcome-panel" style="border-color:var(--green); background:var(--green-bg);">
-        <div class="quotes-done"><span>${ico('checkCircle')} Quotes sent ${esc(fmtDate(lead.quotesSentAt))}${lead.quotesSentByName ? ' by '+esc(lead.quotesSentByName) : ''}</span><button type="button" class="linkish" id="quotesUndoBtn">Undo</button></div>
-      </div>` : `
-      <div class="outcome-panel" style="border-color:var(--green); background:var(--green-bg);">
-        <div class="op-title" style="color:var(--green);">${ico('send')} Sent this client their quotes? Mark it here and the case shows pale green on the dashboard.</div>
-        <button id="quotesSentBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:13px; font-weight:700;">Quotes Sent</button>
-      </div>`) : ''}
-      ${lead.status==='underwriting' ? `
-      <div class="outcome-panel" style="border-color:var(--violet); background:var(--violet-bg);">
-        <div class="op-title" style="color:var(--violet);">${ico('clock')} This case is submitted / in underwriting. When the insurer issues terms, mark it here.</div>
-        <button id="termsIssuedBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--indigo); color:#fff; font-size:13px; font-weight:700;">Terms issued</button>
-        <div id="termsForm" class="hidden" style="margin-top:10px;">
-          <div class="field" style="margin-bottom:8px;"><label for="termsNote">Terms (optional)</label><input type="text" id="termsNote" maxlength="200" placeholder="e.g. Standard terms, or +50% loading on CI"></div>
-          <button class="btn btn-primary btn-sm" id="termsSave">Save: terms issued</button>
-        </div>
-      </div>` : ''}
-      ${lead.status==='terms' ? `
-      <div class="outcome-panel" style="border-color:var(--indigo); background:var(--indigo-bg);">
-        <div class="op-title" style="color:var(--indigo);">${ico('checkCircle')} Terms have been issued. If the client goes ahead and the policy goes on risk, mark it here. If they don't, use Decline above.</div>
-        <button id="nowOnRiskBtn" style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:13px; font-weight:700;">On Risk</button>
-      </div>` : ''}
-      ${lead.status==='decline' ? `
-      <div class="outcome-panel" style="border-color:var(--red); background:var(--red-bg);">
-        <div class="op-title" style="color:var(--red);">${ico('alert')} This case stays in Decline Workflow until all of these are done: the decline reasoning is sent to the client, the decline email is added to the HLP Portal, and the lead is NPW'd in the HLP Swim lane.</div>
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          ${DECLINE_STEPS.map(st=> `<button data-decline-step="${st.field}" ${lead[st.field]?'disabled':''} style="width:100%; padding:12px 8px; border:none; border-radius:9px; background:${lead[st.field]?'var(--border-2)':'var(--green)'}; color:${lead[st.field]?'var(--text-muted)':'#fff'}; font-size:13px; font-weight:700;">${lead[st.field] ? ico('check')+' '+st.btnDone : st.btn}</button>`).join('')}
-        </div>
-      </div>` : ''}
-    `;
-  }
+      ${lead.sibKey ? `<div style="margin-top:10px; font-size:13px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><span>Referred from Send in Blue: mortgage product ends <b>${esc(lead.sibMonthLabel||'')}</b></span><button type="button" class="btn btn-secondary btn-sm" id="openSibFromLead">Open Send in Blue case</button></div>` : ''}
+    </div>`;
 
-  const changeStatusHtml = canChangeStatus(lead) ? `
-    <div class="section-lbl">Manual override</div>
-    <button id="changeStatusBtn" class="btn btn-secondary" style="width:100%; justify-content:center;">Change status</button>
-  ` : '';
-
-  document.getElementById('leadLeftPane').innerHTML = infoHtml + notesHtml + actionHtml + changeStatusHtml;
+  document.getElementById('leadLeftPane').innerHTML = trackerHtml + actionHtml + nextCallHtml + outcomeHtml + infoHtml;
 
   bindClientEmailCell(lead);
   bindClientPhoneCell(lead);
@@ -8441,8 +8457,10 @@ function renderLeadModal(){
     if(esb) esb.addEventListener('click', ()=> openEditSource(lead));
   }
 
+  const lmb = document.getElementById('ldMoreBtn');
+  if(lmb) lmb.addEventListener('click', ()=>{ ldMoreOpen = !ldMoreOpen; refreshLeadModal(true); });
   if(canAction(lead)){
-    document.querySelectorAll('#actionBar .action-btn').forEach(btn=>{
+    document.querySelectorAll('#actionBar .action-btn[data-act], #ldMoreRow .action-btn[data-act]').forEach(btn=>{
       btn.addEventListener('click', ()=> handleActionClick(lead, btn.dataset.act));
     });
     renderDynamicArea(lead);
@@ -8635,20 +8653,6 @@ function isContactAttempt(a){
   return false;
 }
 function contactAttempts(lead){ return Object.values((lead && lead.audit)||{}).filter(isContactAttempt).length; }
-let noAnswerBusy = false;
-function logNoAnswer(lead){
-  if(noAnswerBusy) return;
-  noAnswerBusy = true;
-  const n = contactAttempts(LEADS[lead.id] || lead) + 1;
-  logAudit(lead.id, {type:'call', via:'call', noAnswer:true, text:`Call - No answer (attempt ${n})`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
-    .then(()=>{
-      actionUIState = {kind:'call', stage:'followup'};
-      refreshLeadModal();
-      toast(`No answer logged (attempt ${n}). Book when to try again below, or close the case.`,'success');
-    })
-    .catch(err=> toast('Could not save: '+err.message,'error'))
-    .finally(()=>{ noAnswerBusy = false; });
-}
 
 /* ---- Action button click handling ----
    actionUIState drives what's shown below the action buttons. Every action
@@ -8664,7 +8668,6 @@ const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'App
 function handleActionClick(lead, type){
   // Email: write it first; the outcome buttons appear once it's sent.
   if(type==='email'){ openEmailCompose(lead.id, true); return; }
-  if(type==='noanswer'){ logNoAnswer(lead); return; }
   actionUIState = {kind:type};
   renderDynamicArea(lead);
 }

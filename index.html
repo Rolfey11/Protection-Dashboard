@@ -765,7 +765,6 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-convo-outcomes{display:flex; flex-direction:column; gap:6px;}
 .sib-convo-outcomes label{display:flex; align-items:flex-start; gap:8px; font-size:13px; font-weight:400; text-transform:none; letter-spacing:0; color:var(--text); cursor:pointer; margin:0;}
 .sib-convo-outcomes input{margin-top:3px;}
-.sib-convo-nudge{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:12px 0 0; padding:10px 12px; border-radius:10px; background:var(--brand-tint); border:1px dashed var(--brand-light); font-size:13px;}
 .sib-convo-done{margin:12px 0 0; padding:9px 12px; border-radius:10px; background:var(--green-bg); font-size:13px;}
 .sib-refer-banner{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:12px 0 0; padding:10px 12px; border-radius:10px; background:var(--amber-bg); color:var(--text); font-size:13px;}
 .sib-refer-warn{margin-bottom:12px; padding:10px 12px; border-radius:10px; background:var(--amber-bg); font-size:12.5px; line-height:1.5;}
@@ -965,6 +964,53 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-card.out-ret{background:color-mix(in srgb, var(--green) 10%, var(--surface)); border-color:color-mix(in srgb, var(--green) 35%, var(--border));}
 .sib-card.out-nc{background:color-mix(in srgb, var(--red) 9%, var(--surface)); border-color:color-mix(in srgb, var(--red) 30%, var(--border));}
 .sib-card.out-no{background:color-mix(in srgb, var(--amber) 11%, var(--surface)); border-color:color-mix(in srgb, var(--amber) 35%, var(--border));}
+.sib-sum{margin-top:4px; font-size:13px; color:var(--text-muted); line-height:1.7;}
+.sib-sum b{color:var(--text);}
+.sib-sum .sib-tag{font-size:11.5px; margin-left:2px; vertical-align:1px;}
+.sib-acts{display:flex; gap:7px; flex-wrap:wrap; align-items:center;}
+#sibOverlay .lead-modal{max-width:1240px;}
+.sib-acts .sib-stage-link{margin-left:auto; font-size:13px; padding:0 4px;}
+.sib-next{display:flex; gap:12px; align-items:flex-start; margin-top:12px; padding:11px 14px; border-radius:12px; border:1px solid transparent; font-size:13px;}
+.sib-next .ic{font-size:19px; line-height:1.2;}
+.sib-next b{display:block; font-size:13.5px;}
+.sib-next small{display:block; color:var(--text-muted); font-size:12px; margin-top:2px;}
+#sibLeft .sib-next{flex-direction:row; align-items:flex-start; margin:12px 0 0; line-height:1.4;}
+.sib-next.good{background:var(--green-bg);} .sib-next.warn{background:var(--amber-bg); border-color:color-mix(in srgb, var(--amber) 25%, transparent);}
+.sib-next.bad{background:var(--red-bg); border-color:color-mix(in srgb, var(--red) 25%, transparent);} .sib-next.info{background:var(--blue-bg);}
+.sib-acts .action-btn{flex:none; min-width:0; flex-direction:row; gap:6px; padding:8px 12px; font-size:13px; border-radius:10px; cursor:pointer;}
+.sib-acts .action-btn svg{width:16px; height:16px;}
+.sib-acts .action-btn.on{border-color:var(--brand); background:var(--brand-tint); color:var(--brand);}
+.sib-acts .action-btn.on svg{stroke:var(--brand);}
+.sib-acts .action-btn.primary{background:var(--brand); border-color:var(--brand); color:#fff;}
+.sib-acts .action-btn.primary svg{stroke:#fff;}
+.sib-acts .action-btn.sib-protect-btn{background:var(--red-bg); border-color:var(--red); color:var(--red);}
+.sib-acts .action-btn.sib-protect-btn svg{stroke:var(--red);}
+.sib-acts .action-btn.sib-protect-btn:hover,.sib-acts .action-btn.sib-protect-btn.on{background:var(--red); color:#fff;}
+.sib-acts .action-btn.sib-protect-btn:hover svg,.sib-acts .action-btn.sib-protect-btn.on svg{stroke:#fff;}
+.sib-acts.sib-more-row{margin-top:8px; padding:8px; border-radius:12px; background:var(--bg);}
+.sib-chips{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px; font-size:12.5px;}
+.sib-chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--bg); border:1px solid var(--border); color:var(--text-muted);}
+.sib-chip b{color:var(--text);}
+.sib-chip.good{background:var(--green-bg); border-color:transparent;}
+.sib-chip.warn{background:var(--amber-bg); border-color:transparent;}
+.sib-chip .linkish{font-size:12.5px;}
+.sib-box{border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-top:12px; background:var(--surface);}
+.sib-box-hd{display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin-bottom:8px;}
+.sib-box-hd .linkish{text-transform:none; letter-spacing:0; font-size:12.5px;}
+.sib-box .note-quote{margin:0; max-height:200px; background:none; padding:0; color:var(--text); font-size:13.5px; line-height:1.5;}
+.sib-kv{display:grid; grid-template-columns:auto 1fr auto 1fr; gap:6px 14px; font-size:13px; align-items:baseline;}
+.sib-kv > span{color:var(--text-muted); white-space:nowrap;}
+.sib-kv > b{font-weight:600; min-width:0; overflow-wrap:anywhere;}
+.sib-kv .wide{grid-column:2 / -1;}
+.sib-kv select{padding:3px 6px; font-size:13px;}
+@media (max-width:640px){ .sib-kv{grid-template-columns:auto 1fr;} .sib-kv .wide{grid-column:auto;} }
+.sib-dots{display:flex; gap:8px; flex-wrap:wrap;}
+.sib-dots{gap:4px 16px;}
+.sib-dots .sib-email-btn,.sib-dots .sib-email-btn.sent,.sib-dots .sib-email-btn.due{display:inline-flex; align-items:center; gap:7px; padding:2px 0; border:none; background:none; font-size:13px; font-weight:700; color:var(--text); border-radius:6px;}
+.sib-dots .sib-email-btn:hover{color:var(--brand);}
+.sib-dots .sib-email-btn i{width:10px; height:10px; border-radius:50%; background:var(--border-2); flex:none;}
+.sib-dots .sib-email-btn.sent i{background:var(--green);}
+.sib-dots .sib-email-btn.due i{background:var(--amber);}
 .sib-stage{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--text-muted); background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin-top:10px;}
 .sib-stage b{color:var(--text);}
 .sib-snooze-opts{display:flex; gap:8px; flex-wrap:wrap;}
@@ -2787,7 +2833,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 <div class="modal-overlay" id="sibOverlay">
   <div class="modal lead-modal">
     <div class="modal-head">
-      <div><h2 id="sibCaseName">Client</h2></div>
+      <div style="min-width:0;"><h2 id="sibCaseName">Client</h2><div class="sib-sum" id="sibCaseSum"></div></div>
       <button class="modal-close" data-close="sibOverlay">✕</button>
     </div>
     <div class="lead-detail-grid">
@@ -3302,7 +3348,7 @@ function closeModal(id){
   if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; }
-  if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; }
+  if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
   if(!document.querySelector('.modal-overlay.open')){
     document.body.classList.remove('scroll-lock');
     if(sibChaseSwitch){ sibChaseSwitch = false; setTimeout(()=> setAppMode('sib'), 0); } // Advisor Chase arrived while a lead was open elsewhere
@@ -4484,7 +4530,8 @@ function sibReasonsFor(outcome){
 const SIB_REASONS = ['Resi Product Transfer','Resi Remortgage','Mortgage NTU','BTL Remortgage','BTL Product Transfer','Discussing Options','Client/s went direct','Client/s have moved','Client/s have cleared mortgage','Not Due yet','Clients separated','Unsubscribed from SIB'];
 let APP_MODE = 'protection';
 try{ if(localStorage.getItem('plt_mode')==='sib') APP_MODE = 'sib'; }catch(e){}
-let SIB = {}, sibListening = false, sibLoaded = false, sibOpenKey = null, sibAction = null;
+let SIB = {}, sibListening = false, sibLoaded = false, sibOpenKey = null, sibAction = null, sibMoreOpen = false;
+
 document.body.classList.toggle('mode-sib', APP_MODE==='sib');
 const sibState = {month:null, search:'', adviser:'', outcome:'all', emailClient:'', showAll:false, view:null};
 /* Pots for working Send in Blue clients (all follow the month picked at the top):
@@ -5047,57 +5094,63 @@ function sibWriteKey(key, fields, entry){
 function renderSibCase(){
   const c = SIB[sibOpenKey]; if(!c || c.deleted) { closeModal('sibOverlay'); return; }
   document.getElementById('sibCaseName').textContent = c.mailingName || '(no name)';
-  const o = sibOutcome(c);
-  const cell = (lbl, val, full)=> `<div class="info-cell${full?' full':''}"><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;
+  const o = sibOutcome(c), pot = sibPot(c), potLbl = SIB_POTS.find(x=> x[0]===pot)[1];
+  // One summary line: the facts people look for first, then status chips.
+  const mt = sibMonthTag(c.month);
+  document.getElementById('sibCaseSum').innerHTML = [
+    `Ends <b>${esc(sibMonthLabel(c.month))}</b>`,
+    `<b>${esc(potLbl)}</b>`,
+    esc(c.servicingAdviser || 'Not allocated'),
+    `Last contact <b>${c.lastContact ? esc(fmtDate(c.lastContact)) : 'none'}</b>`,
+    `Email client <b>${esc(c.emailClient || 'not set')}</b>`,
+  ].join(' · ') + ` <span class="sib-tag ${sibOutcomeClass(o)}">${esc(o)}${c.outcomeReason ? ' · '+esc(c.outcomeReason) : ''}</span>`
+    + (c.doNotContact ? ' <span class="sib-tag nop">Do not contact</span>' : '')
+    + (mt ? ` <span class="sib-tag ${mt[0]}">${mt[1]}</span>` : '')
+    + (pot==='reviews' && sibSnoozed(c) ? ` <span class="sib-tag">Moved on to ${esc(fmtDate(c.snoozeUntil))}</span>` : '')
+    + (sibChasePending(c) ? ' <span class="sib-tag due">Advisor Chase waiting</span>' : c.chaseAnswer ? ` <span class="sib-tag">Advisor Chase: ${c.chaseAnswer==='yes' ? 'Yes' : 'No'}</span>` : '');
   const emailBtns = [6,3,0].map(n=>{
     const s = sibEmailState(c, n);
-    return s.sent ? `<button type="button" class="sib-email-btn sent" data-sib-email="${n}">${n} month ✓ ${esc(fmtDate(s.sent))}</button>`
-      : `<button type="button" class="sib-email-btn ${s.due?'due':''}" data-sib-email="${n}">${s.due ? n+' month due: mark sent' : 'Mark '+n+' month sent'}</button>`;
+    return `<button type="button" class="sib-email-btn ${s.sent ? 'sent' : s.due ? 'due' : ''}" data-sib-email="${n}" title="${s.sent ? 'Sent. Click to untick' : 'Click to mark sent today'}"><i></i>${n} month${s.sent ? ' · '+esc(fmtDate(s.sent)) : s.due ? ' · due' : ''}</button>`;
   }).join('');
   const act = sibAction;
+  const MORE = [['appt','calendar','Appointment'], ['edit','pin','Edit details'], ...(sibReferredLead(c) ? [] : [['refer','shuffle','Refer to Protection']]), ...(sibCanReassign() ? [['reassign','users','Reassign']] : [])];
+  const actBtn = (k, icon, lbl, cls='')=> `<button type="button" class="action-btn ${cls} ${act===k ? 'on' : ''}" data-sib-act="${k}" ${k==='email' && !c.email ? 'disabled title="No email address on file"' : ''}>${ico(icon)}${lbl}</button>`;
+  // The "next step" box: an appointment if there is one, otherwise the lender letter. Everything else is a small chip.
+  const appt = sibApptBanner(c);
+  const letterSt = sibLetterState(c);
+  const ref = c.protectionLeadId ? sibReferredLead(c) : null;
+  const chips = [
+    appt && letterSt && letterSt.kind!=='closed' ? `<span class="sib-chip">⏰ Lender letter around ${esc(letterSt.when)}</span>` : '',
+    c.protectionLeadId ? (ref ? `<span class="sib-chip warn">Referred to Protection ${esc(fmtDate(c.protectionReferredAt))} · ${esc(ref.advisorName||'')} · ${esc(STATUS_LABELS[ref.status]||potOf(ref))} <button type="button" class="linkish" data-open-lead="${esc(c.protectionLeadId)}">Open lead</button></span>`
+      : `<span class="sib-chip">Referred to Protection ${esc(fmtDate(c.protectionReferredAt))} (that lead has been deleted)</span>`) : '',
+    !appt && letterSt && letterSt.kind!=='closed' ? '' : c.protectionConvo ? `<span class="sib-chip good">Protection chat ${esc(fmtDate(c.protectionConvo.at))}: <b>${esc(SIB_CONVO_OUTCOMES[c.protectionConvo.outcome]||c.protectionConvo.outcome)}</b>${c.protectionConvo.reason ? ' ('+esc(c.protectionConvo.reason)+')' : ''}</span>`
+      : !c.doNotContact ? '<span class="sib-chip">Protection chat not had yet</span>' : '',
+  ].filter(Boolean);
+  const kv = (lbl, val, wide)=> `<span>${lbl}</span><b${wide ? ' class="wide"' : ''}>${val}</b>`;
   document.getElementById('sibLeft').innerHTML = `
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      <span class="sib-tag ${sibOutcomeClass(o)}" style="font-size:12px;">${esc(o)}${c.outcomeReason ? ' · '+esc(c.outcomeReason) : ''}</span>
-      ${c.doNotContact ? '<span class="sib-tag nop" style="font-size:12px;">Do not contact</span>' : ''}
-      ${(()=>{ const t = sibMonthTag(c.month); return t ? `<span class="sib-tag ${t[0]}" style="font-size:12px;">${t[1]}</span>` : ''; })()}
+    <div class="sib-acts">
+      ${actBtn('call','phone','Call','primary')}${actBtn('email','mail','Email')}${actBtn('note','note','Note')}${actBtn('outcome','checkCircle','Outcome')}
+      ${actBtn('protect','message', c.protectionConvo ? 'Protection chat' : 'Start protection chat', 'sib-protect-btn')}
+      <button type="button" class="action-btn ${MORE.some(m=> m[0]===act) && !sibMoreOpen ? 'on' : ''}" id="sibMoreBtn" aria-expanded="${sibMoreOpen}" aria-controls="sibMoreRow">${sibMoreOpen ? 'Less ▴' : 'More ▾'}</button>
+      ${pot==='reviews' ? '<button type="button" class="linkish sib-stage-link" data-sib-stage="research">Move to Research</button>' : pot==='research' ? '<button type="button" class="linkish sib-stage-link" data-sib-stage="reviews">Back to Client Reviews</button>' : ''}
     </div>
-    ${(()=>{ const pot = sibPot(c); const lbl = SIB_POTS.find(x=> x[0]===pot)[1];
-      return `<div class="sib-stage"><span>In <b>${lbl}</b>${pot==='reviews' && sibSnoozed(c) ? ` · moved on to ${esc(fmtDate(c.snoozeUntil))}` : ''}${sibChasePending(c) ? ' · <b style="color:var(--amber);">Advisor Chase waiting</b>' : c.chaseAnswer ? ` · Advisor Chase: <b>${c.chaseAnswer==='yes' ? 'Yes' : 'No'}</b>` : ''}</span>
-        ${pot==='reviews' ? '<button type="button" class="linkish" data-sib-stage="research">Move to Research</button>' : pot==='research' ? '<button type="button" class="linkish" data-sib-stage="reviews">Back to Client Reviews</button>' : ''}</div>`; })()}
-    ${sibLetterBanner(c)}
-    ${sibApptBanner(c)}
-    ${sibReferralBanner(c)}
-    ${sibConvoLine(c)}
-    ${!c.protectionConvo && !c.doNotContact && act!=='protect' ? `<div class="sib-convo-nudge"><span><b>Protection conversation</b> not had yet. A few open questions on your next call.</span><button type="button" class="btn btn-secondary btn-sm" data-sib-act="protect">Start</button></div>` : ''}
-    <div class="info-grid">
-      ${cell('Product ends', esc(sibMonthLabel(c.month)))}
-      ${cell('Case ID', esc(c.caseId||'—'))}
-      ${cell('Salutation', esc(c.salutation||'—'))}
-      ${cell('Email', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '—')}
-      ${cell('Address', esc(c.address||'—'), true)}
-      ${cell('Servicing adviser', esc(c.servicingAdviser||'—'))}
-      ${cell('Ex adviser', esc(c.exAdviser||'—'))}
-      ${cell('Last contact', c.lastContact ? esc(fmtDate(c.lastContact)) : '—')}
-      <div class="info-cell"><div class="lbl">Email client?</div>
-        <select id="sibEmailClient" class="sib-inline-select"><option value="">Not set</option>${SIB_EMAIL_CLIENT.map(v=> `<option ${c.emailClient===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
-    </div>
-    <div class="section-lbl" style="margin-top:0;">Case notes</div>
-    <div class="note-quote" style="max-height:220px; margin-top:0;">${c.notes ? esc(c.notes) : '<span style="color:var(--text-faint)">No case notes. Use Edit details to add some.</span>'}</div>
-    <div class="section-lbl">Send in Blue emails</div>
-    <div class="sib-email-row">${emailBtns}</div>
-    <div class="section-lbl">Action</div>
-    <div class="action-bar">
-      <button class="action-btn" data-sib-act="call">${ico('phone')}Call</button>
-      <button class="action-btn" data-sib-act="email" ${c.email?'':'disabled title="No email address on file"'}>${ico('mail')}Email</button>
-      <button class="action-btn" data-sib-act="appt">${ico('calendar')}Appointment</button>
-      <button class="action-btn" data-sib-act="note">${ico('note')}Note</button>
-      <button class="action-btn" data-sib-act="outcome">${ico('checkCircle')}Outcome</button>
-      <button class="action-btn" data-sib-act="edit">${ico('pin')}Edit details</button>
-      <button class="action-btn sib-refer-btn" data-sib-act="protect">${ico('message')}Protection chat</button>
-      ${sibReferredLead(c) ? '' : `<button class="action-btn" data-sib-act="refer">${ico('shuffle')}Refer to Protection</button>`}
-      ${sibCanReassign() ? `<button class="action-btn" data-sib-act="reassign">${ico('users')}Reassign</button>` : ''}
-    </div>
-    <div id="sibActForm"></div>`;
+    ${sibMoreOpen ? `<div class="sib-acts sib-more-row" id="sibMoreRow">${MORE.map(([k, icon, lbl])=> actBtn(k, icon, lbl)).join('')}</div>` : ''}
+    <div id="sibActForm"></div>
+    ${appt || sibNextBox(c, letterSt)}
+    ${chips.length ? `<div class="sib-chips">${chips.join('')}</div>` : ''}
+    <div class="sib-box"><div class="sib-box-hd">Case notes</div>
+      <div class="note-quote">${c.notes ? esc(c.notes) : '<span style="color:var(--text-faint)">No case notes yet.</span>'}</div></div>
+    <div class="sib-box"><div class="sib-box-hd">Client details <button type="button" class="linkish" data-sib-act="edit">✎ Edit</button></div>
+      <div class="sib-kv">
+        ${kv('Email', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '—')}
+        ${kv('Salutation', esc(c.salutation||'—'))}
+        ${kv('Address', esc(c.address||'—'))}
+        ${kv('Case ID', esc(c.caseId||'—'))}
+        ${kv('Ex adviser', esc(c.exAdviser||'—'))}
+        ${kv('Product ends', esc(sibMonthLabel(c.month)))}
+        <span>Email client?</span><b><select id="sibEmailClient" class="sib-inline-select"><option value="">Not set</option>${SIB_EMAIL_CLIENT.map(v=> `<option ${c.emailClient===v?'selected':''}>${esc(v)}</option>`).join('')}</select></b>
+      </div></div>
+    <div class="sib-box"><div class="sib-box-hd">Send in Blue emails</div><div class="sib-dots">${emailBtns}</div></div>`;
   const f = document.getElementById('sibActForm');
   if(act==='call') f.innerHTML = `<div class="inline-form">
       <div class="field"><label>How did the call go?</label>
@@ -5149,7 +5202,13 @@ function renderSibCase(){
       <div class="field"><label for="sibEdNotes">Case notes</label><textarea id="sibEdNotes" maxlength="4000">${esc(c.notes||'')}</textarea></div>
       <label class="checkbox-row" style="margin-top:0;"><input type="checkbox" id="sibEdDnc" ${c.doNotContact?'checked':''}> Do not contact this client</label>
       <button class="btn btn-primary btn-sm" id="sibEdSave">Save details</button></div>`;
-  document.querySelectorAll('[data-sib-act]').forEach(b=> b.addEventListener('click', ()=>{ sibAction = sibAction===b.dataset.sibAct ? null : b.dataset.sibAct; renderSibCase(); }));
+  document.querySelectorAll('[data-sib-act]').forEach(b=> b.addEventListener('click', ()=>{
+    sibAction = sibAction===b.dataset.sibAct ? null : b.dataset.sibAct;
+    if(!b.closest('.sib-more-row')) sibMoreOpen = false; // the extra row stays open while one of its forms is in use
+    renderSibCase();
+    if(sibAction){ const f = document.getElementById('sibActForm'); if(f && f.firstElementChild) f.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+  }));
+  document.getElementById('sibMoreBtn').addEventListener('click', ()=>{ sibMoreOpen = !sibMoreOpen; renderSibCase(); });
   document.getElementById('sibEmailClient').addEventListener('change', function(){
     sibWrite({emailClient:this.value}, {type:'status', text:`Email client? set to ${this.value||'Not set'}`});
   });
@@ -5607,13 +5666,19 @@ function sibLetterPill(c, big){
     ${!['done','closed','after'].includes(st.kind) ? `<span class="track"><i style="width:${pct}%"></i></span>` : ''}
   </span>`;
 }
-function sibLetterBanner(c){
-  const st = sibLetterState(c); if(!st || st.kind==='closed') return '';
-  const msg = st.kind==='done' ? `Contacted before the lender's letter (due around ${st.when}). Nice work.`
-    : st.kind==='after' ? `The lender's reminder letter went out around ${esc(st.when)}; the first contact was on ${esc(fmtDate(sibFirstContact(c)))}.`
-    : st.kind==='late' ? `The lender's reminder letter went out around <b>${esc(st.when)}</b> and this client hasn't been contacted yet. Call them today.`
-    : `<b>${st.days===0 ? 'The lender letter is due today' : `${st.days} day${st.days===1?'':'s'} until the lender's reminder letter`}</b> (around ${esc(st.when)}). Get in touch before it lands.`;
-  return `<div class="sib-letter-banner ${st.kind}">${sibLetterPill(c, true)}<div>${msg}${c.letterDate ? '' : `<div class="nml-notes">Estimated: ${sibLetterMonths()} month${sibLetterMonths()===1?'':'s'} before the product end month. Set the exact date in Edit details if you know it.</div>`}</div></div>`;
+// The one "next step" box on the case: where things stand with the lender's letter,
+// plus the protection chat status underneath (shown on its own line, so nothing is colour alone).
+function sibNextBox(c, st){
+  if(!st || st.kind==='closed') return '';
+  const first = sibFirstContact(c);
+  const [tone, title] = st.kind==='done' ? ['good', `Contacted before the lender letter (around ${st.when})`]
+    : st.kind==='after' ? ['warn', `Lender letter went out around ${st.when}, first contact ${fmtDate(first)}`]
+    : st.kind==='late' ? ['bad', `Lender letter went out around ${st.when} and the client hasn't been contacted yet. Call today.`]
+    : st.kind==='urgent' || st.kind==='soon' ? ['bad', `${st.days===0 ? 'Lender letter due today' : `${st.days} day${st.days===1?'':'s'} until the lender letter`} (around ${st.when}). Get in touch before it lands.`]
+    : ['info', `${st.days} days until the lender letter (around ${st.when})`];
+  const convo = c.protectionConvo ? `Protection chat ${fmtDate(c.protectionConvo.at)}: ${SIB_CONVO_OUTCOMES[c.protectionConvo.outcome]||c.protectionConvo.outcome}${c.protectionConvo.reason ? ' ('+c.protectionConvo.reason+')' : ''}` : c.doNotContact ? '' : 'Protection chat not had yet';
+  const est = c.letterDate ? '' : 'Letter date estimated, set it in Edit details if you know it';
+  return `<div class="sib-next sib-letter-banner ${st.kind} ${tone}"><span class="ic" aria-hidden="true">⏰</span><div><b>${esc(title)}</b><small>${esc([convo, est].filter(Boolean).join(' · '))}</small></div></div>`;
 }
 
 /* ---- Send in Blue appointments ----
@@ -5707,13 +5772,6 @@ function sibApptBannerWire(c){
    Creates a protection lead (source "Send in Blue") linked both ways:
    lead.sibKey -> the Send in Blue case, case.protectionLeadId -> the lead. */
 function sibReferredLead(c){ const l = c.protectionLeadId && LEADS[c.protectionLeadId]; return l && !l.deleted ? l : null; }
-function sibReferralBanner(c){
-  if(!c.protectionLeadId) return '';
-  const l = sibReferredLead(c);
-  if(!l) return `<div class="sib-refer-banner">Referred to Protection on ${esc(fmtDate(c.protectionReferredAt))}${c.protectionReferredBy ? ' by '+esc(c.protectionReferredBy) : ''}. That protection lead has since been deleted.</div>`;
-  return `<div class="sib-refer-banner"><div><b>Referred to Protection</b> on ${esc(fmtDate(c.protectionReferredAt))}${c.protectionReferredBy ? ' by '+esc(c.protectionReferredBy) : ''} · ${esc(l.advisorName||'')} · ${esc(STATUS_LABELS[l.status]||potOf(l))}</div>
-    <button type="button" class="btn btn-secondary btn-sm" data-open-lead="${esc(c.protectionLeadId)}">Open protection lead</button></div>`;
-}
 function sibReferFormHtml(c){
   const mapas = Object.entries(USERS).filter(([, u])=> u.role==='mapa').sort((a,b)=> a[1].name.localeCompare(b[1].name));
   const mine = currentUser.role==='mapa' ? currentUser.id : '';
@@ -5804,10 +5862,6 @@ function sibProtectionCell(c){
     out.push(`<div class="sib-prot" title="${esc(['Referred '+fmtDate(c.protectionReferredAt), l && l.advisorName].filter(Boolean).join(' · '))}"><span class="sib-tag ${cls}">${esc(lbl)}</span> <small>${esc(l && l.advisorName ? l.advisorName.split(' ')[0] : '')}</small></div>`);
   }
   return out.length ? out.join('') : c.doNotContact ? '—' : '<span class="sib-tag no">Not had yet</span>';
-}
-function sibConvoLine(c){
-  const v = c.protectionConvo; if(!v) return '';
-  return `<div class="sib-convo-done"><b>Protection conversation</b> on ${esc(fmtDate(v.at))}${v.by ? ' by '+esc(v.by) : ''}: ${esc(SIB_CONVO_OUTCOMES[v.outcome]||v.outcome)}${v.reason ? ' ('+esc(v.reason)+')' : ''}</div>`;
 }
 function sibConvoFormHtml(c){
   const prompts = sibConvoPrompts();
@@ -5900,6 +5954,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15f', date:'2026-10-15', items:[
+    {text:"<b>Tidier Send in Blue case window</b>: <b>Call</b>, <b>Email</b>, <b>Note</b>, <b>Outcome</b> and a red <b>Start protection chat</b> button now sit at the top, with the rest under <b>More</b>, and their forms open right underneath. One line under the name shows the end month, pot, adviser, last contact and Email client?. A single lender-letter box replaces the stacked banners, the case notes come next, then the client details in a compact list and the 6 / 3 / 0 month emails as coloured dots."},
+  ]},
   {id:'2026-10-15e', date:'2026-10-15', items:[
     {text:"<b>Advisor Chase waits for you to finish</b>: if you're in the middle of a Send in Blue case or a protection lead when Management sends an Advisor Chase, it no longer interrupts you. A message says it's waiting. As soon as you close the case or lead, the tracker switches to Send in Blue (if you're on the Protection side) and opens the chase window.", roles:['mapa']},
     {text:"<b>Advisor Chase waits for the adviser to finish</b>: if an adviser has a Send in Blue case or protection lead open when you send an Advisor Chase, it waits until they close it. Then the tracker takes them to Send in Blue (from the Protection side too) and opens the chase window.", roles:['management','admin']},
@@ -8049,8 +8106,8 @@ const HELP = [
     {t:'Advisor Chase', h:`Once a month Management sends an <b>Advisor Chase</b> for a month's clients whose "Email client?" isn't set. The adviser sees a window in Send in Blue and must answer <b>Yes</b> (email the client) or <b>No</b> (with a reason and detailed note; the client moves to Research) for each one before carrying on. Management: pick the month and press <b>Send Advisor Chase</b>; press it again any time to send a reminder.`},
     {t:'Finding clients', h:`Use the <b>year</b> buttons and <b>month</b> cards (the month the product ends), or search by name, address, email or case ID across all months. Filters: adviser, outcome, email client.`},
     {t:'The lender letter countdown', h:`Shows how many days until the lender sends their reminder letter (6 months before the product ends unless a date is set). It turns amber, then red as it gets close. The aim is to contact the client <b>before</b> the letter. Pick <b>Beat the letter</b> in the filter for everyone not yet contacted, soonest first.`},
-    {t:'Working a case', h:`Open the client and use <b>Call</b>, <b>Email</b>, <b>Appointment</b>, <b>Note</b>, <b>Outcome</b> or <b>Edit details</b>. Tick the <b>6 / 3 / 0 month</b> Send in Blue emails when sent. Everything goes in the case history.`},
-    {t:'Protection chat and referrals', h:`<b>Protection chat</b> gives a few open questions to get the client talking; note what they say and how it went. <b>Interested</b> adds them to the protection pipeline. <b>Refer to Protection</b> creates a protection lead for a MAPA. The <b>Protection</b> column shows where each client is.`},
+    {t:'Working a case', h:`Open the client. The buttons along the top are <b>Call</b>, <b>Email</b>, <b>Note</b>, <b>Outcome</b> and the red <b>Start protection chat</b>; <b>More</b> has <b>Appointment</b>, <b>Edit details</b>, <b>Refer to Protection</b> and <b>Reassign</b>. The line under the client's name shows the product end month, pot, adviser, last contact and Email client?. Click a <b>6 / 3 / 0 month</b> dot to tick that Send in Blue email as sent. Everything goes in the case history.`},
+    {t:'Protection chat and referrals', h:`The red <b>Start protection chat</b> button gives a few open questions to get the client talking; note what they say and how it went. <b>Interested</b> adds them to the protection pipeline. <b>Refer to Protection</b> creates a protection lead for a MAPA. The <b>Protection</b> column shows where each client is.`},
   ]},
   {group:'Management', roles:['management'], items:[
     {t:'Settings', roles:['management'], h:`Colleagues and PINs, client sources, email templates and protection prompts, Useful Info tables, Send in Blue upload/download and the lender letter timing, bulk delete, Recycle Bin and backups. Each has its own button on the Settings page.`},

@@ -5978,6 +5978,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15g', date:'2026-10-15', items:[
+    {text:"<b>Tidier protection case window</b>: a <b>stage tracker</b> at the top shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk), with the next-step button underneath (Quotes Sent, Terms issued, On Risk or the decline steps). The action buttons come next: <b>Call</b>, <b>Text</b>, <b>Email</b>, <b>Appointment</b> and <b>More</b> (Other, Reassign, Edit client source, Change status). Signing up and declining are still done through an action. The <b>No answer</b> button has gone: log the call and choose <b>Follow Up</b> to book the next try. The next call, policies and commission, contact details and case details sit in tidy boxes below, and the client's status, advisor, source and contact attempts are on one line under their name."},
+  ]},
   {id:'2026-10-15f', date:'2026-10-15', items:[
     {text:"<b>Tidier Send in Blue case window</b>: <b>Call</b>, <b>Email</b>, <b>Note</b>, <b>Outcome</b> and a red <b>Start protection chat</b> button now sit at the top, with the rest under <b>More</b>, and their forms open right underneath. One line under the name shows the end month, pot, adviser, last contact and Email client?. A single lender-letter box replaces the stacked banners, the case notes come next, then the client details in a compact list and the 6 / 3 / 0 month emails as coloured dots."},
   ]},
@@ -8106,6 +8109,7 @@ const HELP = [
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},
   ]},
   {group:'Protection cases', items:[
+    {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). Below it are the action buttons: <b>Call</b>, <b>Text</b>, <b>Email</b>, <b>Appointment</b>, and <b>More</b> for Other, Reassign, Edit client source and Change status. Signing up and declining are done through an action's outcome.`},
     {t:'Log a call', roles:['mapa','management'], h:`<ol><li>Open the case and click <b>Call</b>.</li><li>Choose what happened: <b>Sign Up</b>, <b>Follow Up</b> or <b>Decline</b>, and/or add a note about the call.</li></ol>Notes are always added through an action like this, so each note says what was done.The client's phone number shows at the top of the Call box. Click it to dial.`},
     {t:'No answer', roles:['mapa','management'], h:`Click <b>Call</b> on the case and choose <b>Follow Up</b> to book when to try again, with a note such as "No answer". Every call, text, email and appointment you log counts as a contact attempt (shown under the client's name and on the card).`},
     {t:'Book a follow-up call', roles:['mapa','management'], h:`<ol><li>On the case, click <b>Call</b> (or Text, Email…), then <b>Follow Up</b>.</li><li>Choose the date and time (both are needed) and add a comment.</li><li><b>Add to Calendar – Client invite</b> sends the client an invite through Google Calendar; <b>No invite</b> puts it just in your calendar; or <b>Save without adding to Calendar</b>.</li></ol>The case moves to Contacted Clients and shows when the call is due.`},
@@ -8401,7 +8405,7 @@ function renderLeadModal(){
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
     <div id="dynamicActionArea"></div>` : '';
 
-  const nextCallHtml = hasBookedCall(lead) ? `<div class="sib-next warn"><span class="ic" aria-hidden="true">⏰</span><div><b>${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>Next call booked</small></div>${calButtonsHtml(lead, true)}</div>` : '';
+  const nextCallHtml = hasBookedCall(lead) ? `<div class="sib-next warn"><span class="ic" aria-hidden="true">⏰</span><div><b>${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>Next call due</small></div>${calButtonsHtml(lead, true)}</div>` : '';
 
   // Outcome details (terms, policies, commission, decline reason) in one box.
   const pols = ['underwriting','terms','signedup'].includes(potKey) ? leadPolicies(lead) : [];

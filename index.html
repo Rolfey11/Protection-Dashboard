@@ -695,6 +695,14 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-summary{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:10px; font-size:13px;}
 /* Compact top of the Send in Blue page, so the pots / table start higher up. */
 .sib-head{margin-bottom:12px; align-items:center;}
+.sib-head-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+.sib-export{position:relative;}
+.sib-export-menu{position:absolute; right:0; top:calc(100% + 6px); z-index:30; min-width:290px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); padding:6px; display:grid; gap:4px;}
+.sib-export-menu[hidden]{display:none;}
+.sib-export-menu button{display:grid; gap:2px; text-align:left; border:0; background:transparent; border-radius:9px; padding:9px 11px; font:inherit; color:var(--text); cursor:pointer;}
+.sib-export-menu button:hover,.sib-export-menu button:focus-visible{background:var(--brand-tint); outline:none;}
+.sib-export-menu button b{font-size:13.5px;}
+.sib-export-menu button span{font-size:12px; color:var(--text-muted);}
 .sib-head h1{font-size:20px;}
 .sib-head .sub{display:none;}
 .sib-period{display:flex; gap:10px; align-items:flex-start; margin-bottom:10px;}
@@ -2050,7 +2058,16 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <h1>Send in Blue</h1>
           <p class="sub">Mortgage retentions. Each month is when the client's fixed rate ends.</p>
         </div>
-        <button class="btn btn-secondary hidden" id="sibImportShortcut">Upload / download spreadsheet</button>
+        <div class="sib-head-actions">
+          <div class="sib-export hidden" id="sibExportWrap">
+            <button type="button" class="btn btn-secondary" id="sibExportBtn" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> Export</button>
+            <div class="sib-export-menu" id="sibExportMenu" hidden>
+              <button type="button" data-sib-export="view"><b>This view</b><span id="sibExportViewTxt"></span></button>
+              <button type="button" data-sib-export="all"><b>Everything</b><span id="sibExportAllTxt"></span></button>
+            </div>
+          </div>
+          <button class="btn btn-secondary hidden" id="sibImportShortcut">Upload / download spreadsheet</button>
+        </div>
       </div>
       <div class="sib-period">
         <div class="sib-years" id="sibYears" role="group" aria-label="Year"></div>
@@ -4591,6 +4608,7 @@ function renderSib(){
   sibLetterMemo.clear();
   const isMg = currentUser && currentUser.role==='management';
   document.getElementById('sibImportShortcut').classList.toggle('hidden', !isMg);
+  document.getElementById('sibExportWrap').classList.toggle('hidden', !isMg);
   const all = sibVisibleCases();
   document.getElementById('sibAdviser').classList.toggle('hidden', !sibSeesAll());
   const out = document.getElementById('sibResults');
@@ -4664,6 +4682,7 @@ function renderSib(){
   if(!sibSel.size) sibBulkEmailOpen = false;
   // Long lists (Beat the letter, searches) show the first 200; "Show all" draws the rest.
   const total = rows.length;
+  sibViewList = rows.slice();
   if(!sibState.showAll && rows.length > 200) rows.length = 200;
   // "Open cases" hides clients with an outcome; say so, so ended months don't look empty.
   let hiddenNote = '';
@@ -4820,6 +4839,22 @@ function renderSibChase(list){
       .then(ok=>{ if(ok) sibChaseNoOpen = null; else this.disabled = false; });
   });
 }
+let sibViewList = []; // the clients the Send in Blue page is showing right now (for "Export this view")
+// Describes the current view for the export menu and file name, e.g. "Jun 27 · Open cases · Biva Gurung".
+function sibViewLabel(){
+  const parts = [];
+  const q = sibState.search.trim();
+  const tableOnly = sibState.view==='table';
+  if(q) parts.push(`search "${q}"`);
+  else if(!(tableOnly && (sibState.outcome==='appt' || sibState.outcome==='letter'))) parts.push(sibMonthLabel(sibState.month));
+  if(tableOnly){
+    const o = document.getElementById('sibOutcomeFilter'), e = document.getElementById('sibEmailFilter');
+    if(sibState.outcome && sibState.outcome!=='all') parts.push(o.options[o.selectedIndex].text.replace(/:.*$/, '').replace(/\s*\(all months\)/, ''));
+    if(sibState.emailClient) parts.push('Email client? ' + e.options[e.selectedIndex].text);
+  } else parts.push('pots');
+  if(sibState.adviser) parts.push(sibState.adviser);
+  return parts.join(' · ');
+}
 const sibSel = new Set(); // Send in Blue cases ticked in the table (Management)
 let sibBulkEmailOpen = false; // showing the 6 / 3 / 0 month choice in the selection bar
 // Mark the 6, 3 or 0 month Send in Blue email as sent today for every ticked client.
@@ -4872,6 +4907,7 @@ function renderSibPots(all){
   });
   const by = {reviews:[], research:[], outcomes:[]};
   list.forEach(c=> by[sibPot(c)].push(c));
+  sibViewList = list.slice().sort((a,b)=> (a.month||'').localeCompare(b.month||'') || (a.row||0)-(b.row||0));
   const letterDays = c=>{ const st = sibLetterState(c); return st && typeof st.days==='number' ? st.days : 9999; };
   // Client Reviews: clients moved on sit at the bottom (soonest back first); the rest by lender letter.
   by.reviews.sort((a,b)=> (sibSnoozed(a) - sibSnoozed(b)) || (sibSnoozed(a) ? String(a.snoozeUntil).localeCompare(String(b.snoozeUntil)) : (letterDays(a) - letterDays(b))) || (a.row||0)-(b.row||0));
@@ -5373,24 +5409,63 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
     toast('Upload failed: '+err.message+(String(err.code||err.message).toUpperCase().includes('PERMISSION') ? ' Publish the updated Firebase rules first.' : ''),'error');
   });
 });
-document.getElementById('sibDownloadBtn').addEventListener('click', ()=>{
-  startSibListener();
-  const go = ()=> loadXlsx().then(X=>{
-    const all = sibCases();
-    if(!all.length){ toast('There are no Send in Blue cases to download yet.','error'); return; }
+/* ---- Send in Blue export ----
+   One layout for every download: the columns match the upload (so a file can
+   go back in), plus what's been added in the dashboard. "byMonth" gives one
+   sheet per month (like the original spreadsheet); otherwise one sheet. */
+const SIB_EXPORT_HEAD = ['Month','Ex Adviser','ServicingAdvisor','CaseId','MailingName','Salutation','Address1','Email','Retention Key','Outcome reason','Email Client?','Date of LAST contact','NOTES','6 Month SIB Sent','3 Month SIB Sent','0 Month SIB Sent','Do not contact',
+  'Pot','Outcome note','Retained product','Case value','Advisor Chase','Protection conversation','History'];
+function sibExportRow(c){
+  const d = v=> v==='UNSUBSCRIBED' ? v : v ? fmtDateSlash(v) : '';
+  const pot = (SIB_POTS.find(x=> x[0]===sibPot(c))||[])[1] || '';
+  const convo = c.protectionConvo ? `${fmtDateSlash(c.protectionConvo.at)} ${SIB_CONVO_OUTCOMES[c.protectionConvo.outcome] || c.protectionConvo.outcome || ''}${c.protectionConvo.reason ? ': '+c.protectionConvo.reason : ''}` : '';
+  const chase = c.chaseAnswer ? `${c.chaseAnswer==='yes' ? 'Yes' : 'No'}${c.chaseReason ? ' ('+c.chaseReason+')' : ''}${c.chaseNote ? ': '+c.chaseNote : ''}` : c.chaseAt ? 'Waiting' : '';
+  return [sibMonthLabel(c.month), c.exAdviser||'', c.servicingAdviser||'', c.caseId||'', c.mailingName||'', c.salutation||'', c.address||'', c.email||'',
+    c.retentionKey||'', c.outcomeReason||'', c.emailClient||'', c.lastContact ? fmtDateSlash(c.lastContact) : '', c.notes||'', d(c.sib6), d(c.sib3), d(c.sib0), c.doNotContact ? 'YES' : '',
+    pot, c.outcomeNote||'', c.retainedProduct||'', c.caseValue!=null ? Number(c.caseValue) : '', chase, convo,
+    Object.values(c.audit||{}).filter(Boolean).sort((a,b)=> a.at-b.at).map(e=> `${fmtDateSlash(e.at)} ${e.byName||''}: ${e.text}`).join('\n').slice(0, 30000)];
+}
+function sibDownload(list, fileName, byMonth){
+  if(!list.length){ toast('There are no Send in Blue cases to download.','error'); return Promise.resolve(); }
+  return loadXlsx().then(X=>{
     const wb = X.utils.book_new();
-    const head = ['Month','Ex Adviser','ServicingAdvisor','CaseId','MailingName','Salutation','Address1','Email','Retention Key','Outcome reason','Email Client?','Date of LAST contact','NOTES','6 Month SIB Sent','3 Month SIB Sent','0 Month SIB Sent','Do not contact','History'];
-    const d = v=> v==='UNSUBSCRIBED' ? v : v ? fmtDateSlash(v) : '';
-    [...new Set(all.map(c=> c.month))].sort().forEach(m=>{
-      const rows = all.filter(c=> c.month===m).sort((a,b)=> (a.row||0)-(b.row||0)).map(c=> [sibMonthLabel(m), c.exAdviser||'', c.servicingAdviser||'', c.caseId||'', c.mailingName||'', c.salutation||'', c.address||'', c.email||'',
-        c.retentionKey||'', c.outcomeReason||'', c.emailClient||'', c.lastContact ? fmtDateSlash(c.lastContact) : '', c.notes||'', d(c.sib6), d(c.sib3), d(c.sib0), c.doNotContact ? 'YES' : '',
-        Object.values(c.audit||{}).filter(Boolean).sort((a,b)=> a.at-b.at).map(e=> `${fmtDateSlash(e.at)} ${e.byName||''}: ${e.text}`).join('\n').slice(0, 30000)]);
-      X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([head, ...rows]), sibMonthLabel(m).slice(0, 31));
-    });
-    X.writeFile(wb, `Send in Blue ${todayISO()}.xlsx`);
+    if(byMonth){
+      [...new Set(list.map(c=> c.month))].sort().forEach(m=>{
+        const rows = list.filter(c=> c.month===m).sort((a,b)=> (a.row||0)-(b.row||0)).map(sibExportRow);
+        X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([SIB_EXPORT_HEAD, ...rows]), sibMonthLabel(m).slice(0, 31));
+      });
+    } else X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([SIB_EXPORT_HEAD, ...list.map(sibExportRow)]), 'Send in Blue');
+    X.writeFile(wb, fileName.replace(/[\\/:*?"<>|]+/g, '-'));
+    toast(`Downloaded ${list.length} client${list.length===1?'':'s'}`,'success');
   }).catch(err=> toast(err.message,'error'));
-  ensureSibLoaded().then(go).catch(err=> toast('Could not load Send in Blue cases: '+err.message,'error'));
-});
+}
+function sibDownloadAll(){
+  startSibListener();
+  return ensureSibLoaded().then(()=> sibDownload(sibCases(), `Send in Blue - all months - ${todayISO()}.xlsx`, true))
+    .catch(err=> toast('Could not load Send in Blue cases: '+err.message,'error'));
+}
+document.getElementById('sibDownloadBtn').addEventListener('click', sibDownloadAll);
+// Export on the Send in Blue page (Management): what's on screen, or everything.
+(function(){
+  const btn = document.getElementById('sibExportBtn'), menu = document.getElementById('sibExportMenu');
+  const close = ()=>{ menu.hidden = true; btn.setAttribute('aria-expanded','false'); };
+  btn.addEventListener('click', ()=>{
+    if(!menu.hidden){ close(); return; }
+    const n = sibViewList.length, all = sibCases().length;
+    document.getElementById('sibExportViewTxt').textContent = `${sibViewLabel()} · ${n} client${n===1?'':'s'}`;
+    document.getElementById('sibExportAllTxt').textContent = `All months, one sheet per month · ${all} client${all===1?'':'s'}`;
+    menu.querySelector('[data-sib-export="view"]').disabled = !n;
+    menu.hidden = false; btn.setAttribute('aria-expanded','true');
+    menu.querySelector('button:not(:disabled)').focus();
+  });
+  menu.querySelector('[data-sib-export="view"]').addEventListener('click', ()=>{
+    close();
+    sibDownload(sibViewList.slice(), `Send in Blue - ${sibViewLabel().replace(/ · /g, ' - ')} - ${todayISO()}.xlsx`, false);
+  });
+  menu.querySelector('[data-sib-export="all"]').addEventListener('click', ()=>{ close(); sibDownloadAll(); });
+  document.addEventListener('click', e=>{ if(!menu.hidden && !e.target.closest('#sibExportWrap') && !pressStartedInside(document.getElementById('sibExportWrap'))) close(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !menu.hidden){ close(); btn.focus(); } });
+})();
 
 
 
@@ -5738,6 +5813,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15', date:'2026-10-15', items:[
+    {text:"<b>Export from Send in Blue</b>: press <b>Export</b> at the top of the page. <b>This view</b> downloads exactly what you're looking at (the month, filters, adviser and search); <b>Everything</b> downloads every month, one sheet per month. Both include outcome notes, retained product and case value, Advisor Chase answers and the history.", roles:['management']},
+  ]},
   {id:'2026-10-14k', date:'2026-10-14', items:[
     {text:"The Send in Blue table now shows <b>All outcomes</b> by default, so months that have ended show their clients straight away. Choose <b>Open cases</b> in the filter to see only clients still being worked on; a note tells you how many with an outcome are hidden."},
   ]},

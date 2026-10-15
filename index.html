@@ -4474,7 +4474,25 @@ const SIB_POTS = [['reviews','Client Reviews','var(--blue)','Clients to contact'
 function sibPot(c){
   if(c.retentionKey || c.doNotContact) return 'outcomes';
   if(c.sibStage==='research' || c.sibStage==='reviews') return c.sibStage;
-  return c.lastContact ? 'research' : 'reviews';
+  return sibSpokeToClient(c) ? 'research' : 'reviews';
+}
+/* Before anyone has moved a client in the dashboard, its pot comes from what
+   the notes and history say: Research only if someone actually spoke to the
+   client ("Spoke to client, he said…", "discussed", "happy to", "appointment").
+   Voicemails, no answers and emails alone keep it in Client Reviews. A last
+   contact date on its own isn't enough (it's often just a voicemail). */
+const SIB_NOT_SPOKE_RE = /\b(?:not|never|haven'?t|hasn'?t|havent|hasnt|didn'?t|didnt|unable to|couldn'?t|could not|can'?t|cant|yet to|no)\s+(?:yet\s+|been\s+|able\s+to\s+)*(?:spoke|spoken|speak|talk|talked|discussed|contact)\w*/gi;
+const SIB_SPOKE_RE = /\b(?:spoke|spoken|speaking|talked|discussed|discussion|conversation|meeting|met with|appointment|appt|said|says|confirmed|agreed|explained|happy (?:to|with)|wants?|wanted|interested|decided|booked|going ahead|proceed(?:ing)?|staying with|went direct|going direct)\b/i;
+const sibSpokeMemo = new Map();
+function sibSpokeToClient(c){
+  const audit = Object.values(c.audit||{}).filter(a=> a && a.type!=='email' && a.type!=='assigned' && a.type!=='status' && a.type!=='sent' && a.type!=='detail');
+  const memoKey = (c.key||'') + '|' + (c.notes||'').length + '|' + audit.length;
+  if(sibSpokeMemo.has(memoKey)) return sibSpokeMemo.get(memoKey);
+  const text = [c.notes||'', ...audit.map(a=> a.text||'')].join('\n').replace(SIB_NOT_SPOKE_RE, ' ');
+  const v = SIB_SPOKE_RE.test(text);
+  if(sibSpokeMemo.size > 20000) sibSpokeMemo.clear();
+  sibSpokeMemo.set(memoKey, v);
+  return v;
 }
 function sibSnoozed(c){ return !!c.snoozeUntil && c.snoozeUntil > todayISO(); }
 // Fields that move a client to Research once they've been spoken to.
@@ -5813,6 +5831,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15b', date:'2026-10-15', items:[
+    {text:"<b>Send in Blue pots read the notes</b>: a client only starts in <b>Research</b> if the notes show someone spoke to them (\"Spoke to client, he said…\", \"discussed\", \"happy to\", \"appointment\"). Voicemails, no answers and emails alone keep them in <b>Client Reviews</b>. Anything moved by hand or worked in the dashboard stays where it is; use <b>Move to Research</b> on the case if one is in the wrong pot."},
+  ]},
   {id:'2026-10-15', date:'2026-10-15', items:[
     {text:"<b>Export from Send in Blue</b>: press <b>Export</b> at the top of the page. <b>This view</b> downloads exactly what you're looking at (the month, filters, adviser and search); <b>Everything</b> downloads every month, one sheet per month. Both include outcome notes, retained product and case value, Advisor Chase answers and the history.", roles:['management']},
   ]},

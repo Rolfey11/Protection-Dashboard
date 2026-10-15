@@ -944,8 +944,13 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-bulk-email{display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap;}
 .sib-bulk .btn .ico{width:14px; height:14px;}
 .sib-bulk select{padding:7px 10px; border-radius:9px; border:1px solid var(--border-2); font:inherit; font-size:13px; background:var(--surface); color:var(--text);}
-.sib-table tr.chase-yes td{background:color-mix(in srgb, var(--green) 10%, var(--surface));}
-.sib-table tr.chase-no td{background:color-mix(in srgb, var(--red) 9%, var(--surface));}
+/* Outcome colours: Retained green, Not Converted red, No Opportunity amber */
+.sib-table tr.out-ret td{background:color-mix(in srgb, var(--green) 10%, var(--surface));}
+.sib-table tr.out-nc td{background:color-mix(in srgb, var(--red) 9%, var(--surface));}
+.sib-table tr.out-no td{background:color-mix(in srgb, var(--amber) 11%, var(--surface));}
+.sib-card.out-ret{background:color-mix(in srgb, var(--green) 10%, var(--surface)); border-color:color-mix(in srgb, var(--green) 35%, var(--border));}
+.sib-card.out-nc{background:color-mix(in srgb, var(--red) 9%, var(--surface)); border-color:color-mix(in srgb, var(--red) 30%, var(--border));}
+.sib-card.out-no{background:color-mix(in srgb, var(--amber) 11%, var(--surface)); border-color:color-mix(in srgb, var(--amber) 35%, var(--border));}
 .sib-stage{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--text-muted); background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin-top:10px;}
 .sib-stage b{color:var(--text);}
 .sib-snooze-opts{display:flex; gap:8px; flex-wrap:wrap;}
@@ -4478,11 +4483,24 @@ function sibPot(c){
 }
 /* Before anyone has moved a client in the dashboard, its pot comes from what
    the notes and history say: Research only if someone actually spoke to the
-   client ("Spoke to client, he said…", "discussed", "happy to", "appointment").
-   Voicemails, no answers and emails alone keep it in Client Reviews. A last
+   client ("Spoke to client, he said…", "discussed", "happy to", "appointment",
+   "in contact") or the case has moved on (illustrations, KFI/ESIS, DIP, quotes
+   sent, application, product transfer). Voicemails, no answers, "tried to
+   contact" and emails alone keep it in Client Reviews. A last
    contact date on its own isn't enough (it's often just a voicemail). */
-const SIB_NOT_SPOKE_RE = /\b(?:not|never|haven'?t|hasn'?t|havent|hasnt|didn'?t|didnt|unable to|couldn'?t|could not|can'?t|cant|yet to|no)\s+(?:yet\s+|been\s+|able\s+to\s+)*(?:spoke|spoken|speak|talk|talked|discussed|contact)\w*/gi;
-const SIB_SPOKE_RE = /\b(?:spoke|spoken|speaking|talked|discussed|discussion|conversation|meeting|met with|appointment|appt|said|says|confirmed|agreed|explained|happy (?:to|with)|wants?|wanted|interested|decided|booked|going ahead|proceed(?:ing)?|staying with|went direct|going direct)\b/i;
+const SIB_CONTACT = String.raw`(?:contact|conact|contat|contct|cotact|conatct|contacy)`; // "contact", typos included
+const SIB_NOT_SPOKE_RE = new RegExp(String.raw`\b(?:` + [
+  String.raw`(?:not|never|haven'?t|hasn'?t|havent|hasnt|didn'?t|didnt|unable to|couldn'?t|could not|can'?t|cant|yet to|no)\s+(?:yet\s+|been\s+|able\s+to\s+|in\s+|made\s+|had\s+|any\s+|received\s+|got\s+)*(?:spoke|spoken|speak|talk|talked|discussed|replied|responded|reply|respond|${SIB_CONTACT})\w*`,
+  String.raw`(?:tried|trying|try|attempted|attempting|attempts?)\s+to\s+(?:get\s+in\s+touch|${SIB_CONTACT}|call|reach|speak|phone|ring)\w*`,
+  String.raw`(?:lost|out\s+of)\s+${SIB_CONTACT}`,
+].join('|') + ')', 'gi');
+const SIB_SPOKE_RE = new RegExp(String.raw`\b(?:` + [
+  // spoke to the client
+  String.raw`spoke|spoken|speaking|talked|discussed|discussion|conversation|meeting|met with|appointment|appt|said|says|confirmed|agreed|explained|happy (?:to|with)|wants?|wanted|interested|decided|booked|going ahead|proceed(?:ing)?|staying with|went direct|going direct`,
+  String.raw`in\s+${SIB_CONTACT}|made\s+${SIB_CONTACT}|${SIB_CONTACT}(?:ed)?\s+made|(?:been|got)\s+in\s+touch|replied|responded|(?:rang|called|phoned)\s+(?:in|us)|returned\s+(?:my\s+|our\s+|the\s+)?call`,
+  // the case has moved on, so they must have spoken
+  String.raw`il+[iu]s?t?rations?|illus|kfi|esis|dip|aip|(?:mortgage|decision|agreement)\s+in\s+principle|(?:quotes?|options?|figures|rates?)\s+(?:sent|issued|provided|given|emailed|discussed)|recommendation|product\s+transfer|pt\s+(?:done|booked|submitted|completed|applied|app|in)|application|applied|submitted|offer\s+(?:issued|received|out|sent)|fact\s?find|docs?\s+(?:received|requested)|documents?\s+(?:received|requested)`,
+].join('|') + String.raw`)\b`, 'i');
 const sibSpokeMemo = new Map();
 function sibSpokeToClient(c){
   const audit = Object.values(c.audit||{}).filter(a=> a && a.type!=='email' && a.type!=='assigned' && a.type!=='status' && a.type!=='sent' && a.type!=='detail');
@@ -4500,6 +4518,8 @@ function sibSpokePatch(c){ return c.retentionKey ? {} : {sibStage:'research', sn
 function sibViewPref(){ try{ const v = localStorage.getItem('plt_sibView'); if(v==='pots' || v==='table') return v; }catch(e){} return currentUser && currentUser.role==='mapa' ? 'pots' : 'table'; }
 // The colleague a Send in Blue case belongs to (matched on the servicing adviser's name).
 function sibOwnerId(c){ const k = sibName(c.servicingAdviser); if(!k) return null; const e = Object.entries(USERS).find(([, u])=> u && sibName(u.name)===k); return e ? e[0] : null; }
+// Row / card colour for the outcome: Retained green, Not Converted red, No Opportunity amber.
+function sibOutcomeCls(c){ return c.retentionKey==='Retained' ? 'out-ret' : c.retentionKey==='Not Converted' ? 'out-nc' : c.retentionKey==='No Opportunity' ? 'out-no' : ''; }
 function sibChasePending(c){ return !!c.chaseAt && !c.chaseAnswer; }
 function sibMoney(v){ return '£' + Number(v).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2}); }
 
@@ -4726,7 +4746,7 @@ function renderSib(){
     <thead><tr>${bulk ? `<th class="sib-chk"><input type="checkbox" id="sibSelAll" aria-label="Select all clients shown" ${rows.length && rows.every(c=> sibSel.has(c.key)) ? 'checked' : ''}></th>` : ''}<th>Client</th><th title="Days until the lender's reminder letter">Lender letter</th>${searching ? '<th>Product ends</th>' : ''}<th>Servicing adviser</th><th>Send in Blue emails</th><th>Email client?</th><th>Last contact</th><th title="Protection conversation and referral to the protection team">Protection</th><th>Outcome</th></tr></thead>
     <tbody>${rows.map(c=>{
       const o = sibOutcome(c);
-      return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''} ${c.chaseAnswer==='yes' ? 'chase-yes' : c.chaseAnswer==='no' ? 'chase-no' : ''} ${bulk && sibSel.has(c.key) ? 'sel' : ''}">
+      return `<tr data-sib-case="${esc(c.key)}" class="${c.doNotContact?'dnc':''} ${sibOutcomeCls(c)} ${bulk && sibSel.has(c.key) ? 'sel' : ''}">
         ${bulk ? `<td class="sib-chk"><input type="checkbox" data-sib-sel="${esc(c.key)}" aria-label="Select ${esc(c.mailingName||'client')}" ${sibSel.has(c.key) ? 'checked' : ''}></td>` : ''}
         <td class="sib-client"><div class="nml-ins">${esc(c.mailingName||'(no name)')}</div><div class="nml-notes">${esc([c.address, c.caseId ? 'Case '+c.caseId : ''].filter(Boolean).join(' · '))}</div>${c.notes ? `<div class="sib-note-preview" title="${esc(c.notes)}">🗒 ${esc(c.notes.replace(/\s+/g,' ').slice(0,240))}</div>` : ''}</td>
         <td>${sibLetterPill(c)}</td>
@@ -4766,9 +4786,10 @@ document.querySelectorAll('[data-sib-view]').forEach(b=> b.addEventListener('cli
    servicing adviser. The adviser gets a window in Send in Blue they can't
    close until each client has a Yes or No. Yes sets Email client? to YES;
    No sets it to NO, needs a reason and a detailed note, and moves the client
-   to Research. In the table, answered rows show pale green (Yes) or red (No). */
+   to Research. Management can send it again as a reminder. */
+// Includes clients already chased and still waiting, so sending again works as a reminder.
 function sibChaseTargets(month){
-  return sibCases().filter(c=> c.month===month && !c.retentionKey && !c.emailClient && !c.doNotContact && !sibChasePending(c));
+  return sibCases().filter(c=> c.month===month && !c.retentionKey && !c.emailClient && !c.doNotContact);
 }
 function sibRenderChaseTools(all){
   const sum = document.getElementById('sibSummary');
@@ -4779,7 +4800,7 @@ function sibRenderChaseTools(all){
   const n = sibChaseTargets(sibState.month).filter(c=> sibOwnerId(c)).length; // only clients whose adviser is a colleague can be chased
   sum.insertAdjacentHTML('beforeend', `<span class="sib-chase-tools" style="display:inline-flex; gap:6px; align-items:center; margin-left:auto;">
     ${chased.length ? `<span class="sib-tag ${pending.length ? 'due' : 'ok'}" title="Advisor Chase for ${esc(sibMonthLabel(sibState.month))}">Chase: ${yes} yes · ${no} no${pending.length ? ` · ${pending.length} waiting` : ''}</span>` : ''}
-    <button type="button" class="btn btn-primary btn-sm" id="sibChaseBtn" ${n ? '' : 'disabled title="No open clients with Email client? not set (and an adviser in the tracker) this month"'}>Send Advisor Chase${n ? ` (${n})` : ''}</button></span>`);
+    <button type="button" class="btn btn-primary btn-sm" id="sibChaseBtn" title="${n ? 'Send (or send again as a reminder) to every adviser with clients whose Email client? is not set' : 'No open clients with Email client? not set (and an adviser in the tracker) this month'}">Send Advisor Chase${n ? ` (${n})` : ''}</button></span>`);
   const btn = document.getElementById('sibChaseBtn');
   if(btn) btn.addEventListener('click', ()=> sibSendChase(sibState.month, btn));
 }
@@ -4791,7 +4812,8 @@ function sibSendChase(month, btn){
   const lines = Object.entries(byOwner).map(([id, list])=> `• ${USERS[id].name}: ${list.length}`).join('\n');
   const total = targets.length - skipped.length;
   if(!total){ toast(`None of these clients' servicing advisers match a colleague, so there's no one to chase.`,'error'); return; }
-  if(!confirm(`Send Advisor Chase for ${sibMonthLabel(month)}?\n\n${total} client${total===1?'':'s'} with Email client? not set:\n${lines}${skipped.length ? `\n\n${skipped.length} skipped: their servicing adviser isn't a colleague in the tracker.` : ''}\n\nEach adviser must answer Yes or No for every client before they can use Send in Blue.`)) return;
+  const again = targets.filter(c=> sibOwnerId(c) && sibChasePending(c)).length;
+  if(!confirm(`Send Advisor Chase for ${sibMonthLabel(month)}?\n\n${total} client${total===1?'':'s'} with Email client? not set:\n${lines}${again ? `\n\n${again} of these ${again===1?'was':'were'} already chased and ${again===1?'is':'are'} still waiting, so this sends a reminder.` : ''}${skipped.length ? `\n\n${skipped.length} skipped: their servicing adviser isn't a colleague in the tracker.` : ''}\n\nEach adviser must answer Yes or No for every client before they can use Send in Blue.`)) return;
   btn.disabled = true;
   const now = Date.now(), updates = {};
   Object.entries(byOwner).forEach(([id, list])=>{
@@ -4806,7 +4828,8 @@ function sibSendChase(month, btn){
   });
   db.ref().update(updates)
     .then(()=> toast(`Advisor Chase sent: ${total} client${total===1?'':'s'} across ${Object.keys(byOwner).length} adviser${Object.keys(byOwner).length===1?'':'s'}.`,'success'))
-    .catch(err=>{ toast('Could not send: '+err.message,'error'); btn.disabled = false; });
+    .catch(err=> toast('Could not send: '+err.message,'error'))
+    .finally(()=>{ btn.disabled = false; });
 }
 // Clients waiting on this colleague's Advisor Chase answer.
 function sibMyChasePending(){ return currentUser ? sibCases().filter(c=> sibChasePending(c) && sibIsMine(c)) : []; }
@@ -4943,7 +4966,7 @@ function renderSibPots(all){
     else if(sibSnoozed(c)) sub = `<span class="snz">Moved on to ${esc(fmtDate(c.snoozeUntil))}</span>`;
     else sub = sibLetterPill(c) + (c.emailClient ? `<span class="sib-tag ${c.emailClient==='YES'?'ok':'no'}">Email: ${esc(c.emailClient)}</span>` : '');
     const showAdv = sibSeesAll();
-    return `<div class="lead-card sib-card ${pot==='reviews' && sibSnoozed(c) ? 'snoozed' : ''} ${sibChasePending(c) ? 'chase-pending' : ''}" data-sib-case="${esc(c.key)}">
+    return `<div class="lead-card sib-card ${sibOutcomeCls(c)} ${pot==='reviews' && sibSnoozed(c) ? 'snoozed' : ''} ${sibChasePending(c) ? 'chase-pending' : ''}" data-sib-case="${esc(c.key)}">
       <div class="lc-top"><div class="lc-name">${esc(c.mailingName||'(no name)')}</div>${q ? `<span class="sib-tag open">${esc(sibMonthLabel(c.month))}</span>` : ''}${showAdv ? `<span class="lc-avatar" style="--av:${advisorTone(sibOwnerId(c)||c.servicingAdviser||'')}" title="${esc(c.servicingAdviser||'Not allocated')}">${esc(initials(c.servicingAdviser||'?'))}</span>` : ''}</div>
       <div class="lc-sub">${sub}</div>
       <div class="lc-activity">${lastLine(c)}</div>
@@ -5377,15 +5400,17 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
     const read = tabs.filter(t=> !t.skipped && t.count), skipped = tabs.filter(t=> t.skipped || !t.count).map(t=> t.name.trim());
     const keys = Object.keys(cases);
     if(!keys.length){ status.textContent = `Nothing uploaded: no cases found in ${file.name}. Each month tab needs a heading row with a "Case ID" column.`; status.classList.add('sib-status-bad'); toast("No cases found. The month tabs need a header row with a Case ID column.",'error'); return; }
-    const existing = keys.filter(k=> SIB[k]);
-    const binned = existing.filter(k=> SIB[k].deleted);
+    // Cases in the Recycle Bin start again from scratch: the old notes, history,
+    // reassignments and outcomes are thrown away and the spreadsheet row is added fresh.
+    const binned = keys.filter(k=> SIB[k] && SIB[k].deleted);
+    const existing = keys.filter(k=> SIB[k] && !SIB[k].deleted);
     const months = [...new Set(keys.map(k=> cases[k].month))].sort();
-    if(!confirm((swapped ? `Dates in this file were saved month-first (US style), so they've been read day-first: e.g. ${swapped.example ? `saved as ${fmtDate(swapped.example[0])}, read as ${fmtDate(swapped.example[1])}` : ''} (${swapped.count} date${swapped.count===1?'':'s'}).\n\n` : '') + `Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\nTabs read: ${read.map(t=> t.name.trim()+' ('+t.count+')').join(', ')}${skipped.length ? '\nTabs skipped (no cases): '+skipped.join(', ') : ''}\n\n${keys.length-existing.length} new case${keys.length-existing.length===1?'':'s'} will be added.\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.${binned.length ? `\n${binned.length} of those are in the Send in Blue Recycle Bin (you'll be asked next whether to restore them).` : ''}\n\nGo ahead?`)){ status.textContent = ''; return; }
+    if(!confirm((swapped ? `Dates in this file were saved month-first (US style), so they've been read day-first: e.g. ${swapped.example ? `saved as ${fmtDate(swapped.example[0])}, read as ${fmtDate(swapped.example[1])}` : ''} (${swapped.count} date${swapped.count===1?'':'s'}).\n\n` : '') + `Found ${keys.length} cases across ${months.length} month${months.length===1?'':'s'} (${sibMonthLabel(months[0])} to ${sibMonthLabel(months[months.length-1])}).\n\nTabs read: ${read.map(t=> t.name.trim()+' ('+t.count+')').join(', ')}${skipped.length ? '\nTabs skipped (no cases): '+skipped.join(', ') : ''}\n\n${keys.length-existing.length-binned.length} new case${keys.length-existing.length-binned.length===1?'':'s'} will be added.${binned.length ? `\n${binned.length} were deleted (in the Recycle Bin): they'll be added again as fresh cases with a clean slate. Their old notes, history, reassignments and outcomes are cleared.` : ''}\n${existing.length} already in the dashboard: only their empty fields will be filled in, so nothing done in the dashboard is overwritten.\n\nGo ahead?`)){ status.textContent = ''; return; }
     // The 6 / 3 / 0 month Send in Blue email dates come from the spreadsheet: where they
     // differ from the dashboard, offer to replace them (a blank in the spreadsheet clears it).
     const SIB_EMAIL_F = [['sib6','6 month'],['sib3','3 month'],['sib0','0 month']];
     const emailTxt = v=> !v ? 'blank' : v==='UNSUBSCRIBED' ? 'Unsubscribed' : fmtDate(v);
-    const emailDiffs = existing.filter(k=> !SIB[k].deleted || binned.includes(k)).map(k=>{
+    const emailDiffs = existing.map(k=>{
       const ch = SIB_EMAIL_F.filter(([f])=> (cases[k][f]||'') !== (SIB[k][f]||''));
       return ch.length ? {k, ch} : null;
     }).filter(Boolean);
@@ -5394,14 +5419,16 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
       const eg = emailDiffs.slice(0, 3).map(({k, ch})=> `• ${SIB[k].mailingName || cases[k].mailingName || k}: ` + ch.map(([f, lbl])=> `${lbl} ${emailTxt(cases[k][f])} (dashboard: ${emailTxt(SIB[k][f])})`).join(', ')).join('\n');
       useSheetEmails = confirm(`The 6, 3 and 0 month Send in Blue email dates in this file differ from the dashboard for ${emailDiffs.length} client${emailDiffs.length===1?'':'s'}, for example:\n${eg}\n\nUse the spreadsheet's dates?\n\nOK = use the spreadsheet (a blank in the spreadsheet clears the dashboard's date)\nCancel = keep the dashboard's dates`);
     }
-    // Cases matched in the Recycle Bin stay hidden unless they're restored.
-    const restore = binned.length > 0 && confirm(`${binned.length} of the cases in this file were deleted and are in the Send in Blue Recycle Bin, so they're hidden.\n\nRestore them now?\n\nOK = restore them\nCancel = leave them in the Recycle Bin`);
     const now = Date.now(), batches = [];
     let updates = {}, n = 0, filled = 0, emailsSet = 0;
+    // Deleted cases are removed for good first (their history can't be overwritten in place), then added fresh below.
+    binned.forEach(k=>{ updates[`sib/cases/${k}`] = null; if(++n % 150 === 0){ batches.push(updates); updates = {}; } });
+    if(Object.keys(updates).length){ batches.push(updates); updates = {}; }
+    n = 0;
     const diffByKey = Object.fromEntries(emailDiffs.map(d=> [d.k, d.ch]));
     keys.forEach(k=>{
       const c = cases[k], cur = SIB[k];
-      if(!cur){
+      if(!cur || cur.deleted){
         updates[`sib/cases/${k}`] = {...c, importedAt:now, audit:{[db.ref().push().key]: {type:'assigned', text:`Imported from spreadsheet (${sibMonthLabel(c.month)})`, byId:currentUser.id, byName:currentUser.name, at:now}}};
       } else {
         Object.entries(c).forEach(([f, v])=>{ if(f!=='row' && !(useSheetEmails && /^sib[630]$/.test(f)) && (cur[f]==null || cur[f]==='')){ updates[`sib/cases/${k}/${f}`] = v; filled++; } });
@@ -5410,7 +5437,6 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
           updates[`sib/cases/${k}/audit/${db.ref().push().key}`] = {type:'sent', text:`Send in Blue email dates updated from spreadsheet: ${diffByKey[k].map(([f, lbl])=> `${lbl} ${emailTxt(c[f])} (was ${emailTxt(cur[f])})`).join(', ')}`, byId:currentUser.id, byName:currentUser.name, at:now};
           emailsSet++;
         }
-        if(restore && cur.deleted) Object.assign(updates, {[`sib/cases/${k}/deleted`]:null, [`sib/cases/${k}/deletedAt`]:null, [`sib/cases/${k}/deletedBy`]:null});
       }
       if(++n % 150 === 0){ batches.push(updates); updates = {}; }
     });
@@ -5419,7 +5445,7 @@ document.getElementById('sibFileInput').addEventListener('change', function(){
     status.textContent = `Saving… 0 of ${batches.length}`;
     return batches.reduce((p, u)=> p.then(()=> db.ref().update(u)).then(()=>{ status.textContent = `Saving… ${++done} of ${batches.length}`; }), Promise.resolve())
       .then(()=>{
-        status.textContent = `Last upload (${file.name}): ${keys.length-existing.length} new, ${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in${emailsSet ? `, email dates updated for ${emailsSet} client${emailsSet===1?'':'s'}` : ''})${binned.length ? (restore ? `, ${binned.length} restored from the Recycle Bin` : `, ${binned.length} left in the Recycle Bin`) : ''}. Saved.`;
+        status.textContent = `Last upload (${file.name}): ${keys.length-existing.length-binned.length} new, ${binned.length ? `${binned.length} deleted case${binned.length===1?'':'s'} added again with a clean slate, ` : ''}${existing.length} matched (${filled} empty field${filled===1?'':'s'} filled in${emailsSet ? `, email dates updated for ${emailsSet} client${emailsSet===1?'':'s'}` : ''}). Saved.`;
         toast(`Send in Blue updated: ${keys.length-existing.length} new cases`,'success');
       });
   }).catch(err=>{
@@ -5831,6 +5857,12 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15c', date:'2026-10-15', items:[
+    {text:"<b>Send in Blue pots read more of the notes</b>: \"In contact\" (even misspelt), illustrations, KFI / ESIS, DIP, quotes sent, applications and product transfers now put a client in <b>Research</b>. \"Tried to contact\", \"not in contact\", voicemails and emails alone still keep them in <b>Client Reviews</b>."},
+    {text:"<b>Outcome colours</b>: in Send in Blue, <b>Retained</b> clients show pale green, <b>Not Converted</b> pale red and <b>No Opportunity</b> pale amber, in the table and in the pots. Advisor Chase answers no longer colour the rows."},
+    {text:"<b>Send Advisor Chase again</b>: the button stays on after sending, so you can press it again to remind advisers who still haven't answered.", roles:['management']},
+    {text:"<b>Re-uploading deleted clients starts fresh</b>: if clients in the Recycle Bin are in a spreadsheet you upload, they come back as brand new cases. Their old notes, history, reassignments and outcomes are cleared.", roles:['management']},
+  ]},
   {id:'2026-10-15b', date:'2026-10-15', items:[
     {text:"<b>Send in Blue pots read the notes</b>: a client only starts in <b>Research</b> if the notes show someone spoke to them (\"Spoke to client, he said…\", \"discussed\", \"happy to\", \"appointment\"). Voicemails, no answers and emails alone keep them in <b>Client Reviews</b>. Anything moved by hand or worked in the dashboard stays where it is; use <b>Move to Research</b> on the case if one is in the wrong pot."},
   ]},
@@ -5857,7 +5889,7 @@ const WHATS_NEW = [
     {text:"<b>Outcomes need more detail</b>: <b>Retained</b> needs the product and the case value; <b>Not Converted</b> and <b>No Opportunity</b> need a reason and a detailed note."},
     {text:"<b>Reassign</b> a Send in Blue client from the case window.", roles:['mapa','management']},
     {text:"<b>Advisor Chase</b>: when Management sends one, a window opens in Send in Blue listing your clients who need a Yes or No for \"Email client?\". Answer each one to carry on. No needs a reason and a note, and moves the client to Research.", roles:['mapa']},
-    {text:"<b>Send Advisor Chase</b>: pick a month in Send in Blue and press <b>Send Advisor Chase</b>. Every open client with Email client? not set goes to their adviser, who must answer Yes or No before carrying on. Answered rows turn pale green (Yes) or pale red (No) in the table.", roles:['management']},
+    {text:"<b>Send Advisor Chase</b>: pick a month in Send in Blue and press <b>Send Advisor Chase</b>. Every open client with Email client? not set goes to their adviser, who must answer Yes or No before carrying on. You can press it again to send a reminder to anyone still waiting.", roles:['management']},
   ]},
   {id:'2026-10-14e', date:'2026-10-14', items:[
     {text:"<b>Callbacks clear when you sign up or decline.</b> Submitting a case to underwriting, marking terms issued, putting it On Risk or declining it now removes any booked callback, as you've spoken to the client. Cases already in those pots no longer show overdue calls either. You can still book a chase call on a Submitted or Terms Issued case: it shows and reminds you while it's coming up, then drops off once it's passed.", roles:['mapa','management']},
@@ -7895,7 +7927,7 @@ const HELP = [
   {group:'Send in Blue', items:[
     {t:'Send in Blue pots', h:`Pick a month at the top. Your clients sit in three pots: <b>Client Reviews</b> (to contact), <b>Research</b> (spoken to, looking at options) and <b>Outcomes</b>.<ul><li>Call and choose <b>Spoke to client</b> (or book an appointment, or log a protection chat): the client moves to Research.</li><li><b>No answer</b> or an email: choose <b>Move on 1 week</b> or <b>2 weeks</b>. The client drops to the bottom of Client Reviews until then.</li><li>Save an <b>Outcome</b>: the client moves to Outcomes. Retained needs the product and case value; Not Converted and No Opportunity need a reason and a detailed note.</li></ul>Use <b>Pots</b> / <b>Table</b> next to the search to switch views. <b>Move to Research</b> / <b>Back to Client Reviews</b> on the case moves a client by hand.`},
     {t:'Reassign a Send in Blue client', roles:['mapa','management'], h:`Open the client and press <b>Reassign</b>, choose the colleague and add a note if you like. They become the servicing adviser and get a notification.`},
-    {t:'Advisor Chase', h:`Once a month Management sends an <b>Advisor Chase</b> for a month's clients whose "Email client?" isn't set. The adviser sees a window in Send in Blue and must answer <b>Yes</b> (email the client) or <b>No</b> (with a reason and detailed note; the client moves to Research) for each one before carrying on. Management: pick the month and press <b>Send Advisor Chase</b>. Answered rows show pale green (Yes) or pale red (No) in the table.`},
+    {t:'Advisor Chase', h:`Once a month Management sends an <b>Advisor Chase</b> for a month's clients whose "Email client?" isn't set. The adviser sees a window in Send in Blue and must answer <b>Yes</b> (email the client) or <b>No</b> (with a reason and detailed note; the client moves to Research) for each one before carrying on. Management: pick the month and press <b>Send Advisor Chase</b>; press it again any time to send a reminder.`},
     {t:'Finding clients', h:`Use the <b>year</b> buttons and <b>month</b> cards (the month the product ends), or search by name, address, email or case ID across all months. Filters: adviser, outcome, email client.`},
     {t:'The lender letter countdown', h:`Shows how many days until the lender sends their reminder letter (6 months before the product ends unless a date is set). It turns amber, then red as it gets close. The aim is to contact the client <b>before</b> the letter. Pick <b>Beat the letter</b> in the filter for everyone not yet contacted, soonest first.`},
     {t:'Working a case', h:`Open the client and use <b>Call</b>, <b>Email</b>, <b>Appointment</b>, <b>Note</b>, <b>Outcome</b> or <b>Edit details</b>. Tick the <b>6 / 3 / 0 month</b> Send in Blue emails when sent. Everything goes in the case history.`},

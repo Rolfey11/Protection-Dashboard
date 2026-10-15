@@ -3122,7 +3122,7 @@ let selfDeletingLeadId = null; // case this user is deleting right now
 let lastRenderedLead = null; // JSON of the lead last drawn in the modal, to skip needless redraws
 let leadsLoaded = false; // false until the first leads download after sign-in arrives
 let leadsLive = false;
-let sibChaseActive = false, sibChaseNoOpen = null; // Send in Blue Advisor Chase window (see sibCheckChase)   // true once the live download has arrived (not just the refresh copy below)
+let sibChaseActive = false, sibChaseNoOpen = null, sibChaseWaiting = false, sibChaseSwitch = false; // Send in Blue Advisor Chase window (see sibCheckChase); Waiting = held back until the open case is closed; Switch = go to Send in Blue once the open lead is closed   // true once the live download has arrived (not just the refresh copy below)
 
 /* Refresh copy: the colleague list, cases and notifications, kept for this
    browser tab only (sessionStorage, which the browser deletes when the tab
@@ -3303,7 +3303,11 @@ function closeModal(id){
   document.getElementById(id).classList.remove('open');
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; }
-  if(!document.querySelector('.modal-overlay.open')) document.body.classList.remove('scroll-lock');
+  if(!document.querySelector('.modal-overlay.open')){
+    document.body.classList.remove('scroll-lock');
+    if(sibChaseSwitch){ sibChaseSwitch = false; setTimeout(()=> setAppMode('sib'), 0); } // Advisor Chase arrived while a lead was open elsewhere
+    else if(sibChaseWaiting) setTimeout(sibCheckChase, 0); // an Advisor Chase held back while a case was open
+  }
 }
 function closeAllModals(){ document.querySelectorAll('.modal-overlay.open').forEach(m=> closeModal(m.id)); }
 document.addEventListener('keydown', (e)=>{
@@ -3599,7 +3603,7 @@ function tryResolveSession(){
 
 function logout(){
   forcePinActive = false;
-  sibChaseActive = false; sibChaseNoOpen = null;
+  sibChaseActive = false; sibChaseNoOpen = null; sibChaseWaiting = false; sibChaseSwitch = false;
   if(auth.currentUser){ try{ sessionStorage.removeItem('plt_pin_checked_'+auth.currentUser.uid); }catch(e){} }
   listenRetry = 'none';
   closeAllModals();
@@ -4850,14 +4854,36 @@ function sibSendChase(month, btn){
 }
 // Clients waiting on this colleague's Advisor Chase answer.
 function sibMyChasePending(){ return currentUser ? sibCases().filter(c=> sibChasePending(c) && sibIsMine(c)) : []; }
+// An Advisor Chase has just come in. Off the Send in Blue cases page (Protection,
+// Insights, Settings…) take the adviser there, but not while they have a lead,
+// case or other window open: that waits until they close it.
+function sibChaseArrived(){
+  if(!document.getElementById('page-sib').classList.contains('hidden')) return; // sibCheckChase handles it there
+  if(document.querySelector('.modal-overlay.open')){
+    if(!sibChaseSwitch) toast("Advisor Chase: some Send in Blue clients need a Yes or No. It'll open when you close this.");
+    sibChaseSwitch = true;
+    return;
+  }
+  setAppMode('sib');
+}
 function sibCheckChase(){
   const onSib = !document.getElementById('page-sib').classList.contains('hidden');
+  if(onSib) sibChaseSwitch = false;
   const list = onSib && sibLoaded ? sibMyChasePending() : [];
   if(!list.length){
+    sibChaseWaiting = false;
     if(sibChaseActive){ sibChaseActive = false; sibChaseNoOpen = null; closeModal('sibChaseOverlay'); if(onSib) toast('Advisor Chase done. Thank you!','success'); }
     return;
   }
-  if(!sibChaseActive){ sibChaseActive = true; closeModal('sibOverlay'); openModal('sibChaseOverlay'); }
+  if(!sibChaseActive){
+    // Don't interrupt someone partway through a case (or any other window): wait until it's closed.
+    if(document.querySelector('.modal-overlay.open:not(#sibChaseOverlay)')){
+      if(!sibChaseWaiting) toast(`Advisor Chase: ${list.length} client${list.length===1?' needs':'s need'} a Yes or No. It'll open when you close this.`);
+      sibChaseWaiting = true;
+      return;
+    }
+    sibChaseWaiting = false; sibChaseActive = true; openModal('sibChaseOverlay');
+  }
   renderSibChase(list);
 }
 function renderSibChase(list){
@@ -5874,6 +5900,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-15e', date:'2026-10-15', items:[
+    {text:"<b>Advisor Chase waits for you to finish</b>: if you're in the middle of a Send in Blue case or a protection lead when Management sends an Advisor Chase, it no longer interrupts you. A message says it's waiting. As soon as you close the case or lead, the tracker switches to Send in Blue (if you're on the Protection side) and opens the chase window.", roles:['mapa']},
+    {text:"<b>Advisor Chase waits for the adviser to finish</b>: if an adviser has a Send in Blue case or protection lead open when you send an Advisor Chase, it waits until they close it. Then the tracker takes them to Send in Blue (from the Protection side too) and opens the chase window.", roles:['management','admin']},
+  ]},
   {id:'2026-10-15d', date:'2026-10-15', items:[
     {text:"<b>Adviser scorecard</b>: Send in Blue <b>Insights</b> has a new <b>Adviser scorecard</b> tab. There's one card per adviser for the months you pick: retained %, value retained, contact rates, lender-letter timing, clients at risk, Not Converted and the top reason, days to an outcome, Advisor Chase answers and speed, protection conversations and recent activity. Each figure sits next to the team's, with ▲ ahead or ▼ behind.", roles:['management','admin']},
     {text:"<b>My scorecard</b>: Send in Blue <b>Insights</b> has a new <b>My scorecard</b> tab showing how your clients are going next to the whole team: retained %, contact rates, clients at risk, days to an outcome and more, with ▲ where you're ahead and ▼ where you're behind.", roles:['mapa']},
@@ -5909,7 +5939,7 @@ const WHATS_NEW = [
     {text:"<b>Send in Blue pots</b>: your clients for the month picked at the top are now in three pots. <b>Client Reviews</b> (to contact), <b>Research</b> (spoken to, looking at options) and <b>Outcomes</b>. A call where you spoke to the client moves them to Research; after a no answer you can <b>move them on 1 or 2 weeks</b> and they drop to the bottom of Client Reviews. Switch between <b>Pots</b> and <b>Table</b> next to the search box."},
     {text:"<b>Outcomes need more detail</b>: <b>Retained</b> needs the product and the case value; <b>Not Converted</b> and <b>No Opportunity</b> need a reason and a detailed note."},
     {text:"<b>Reassign</b> a Send in Blue client from the case window.", roles:['mapa','management']},
-    {text:"<b>Advisor Chase</b>: when Management sends one, a window opens in Send in Blue listing your clients who need a Yes or No for \"Email client?\". Answer each one to carry on. No needs a reason and a note, and moves the client to Research.", roles:['mapa']},
+    {text:"<b>Advisor Chase</b>: when Management sends one, a window opens in Send in Blue listing your clients who need a Yes or No for \"Email client?\". If you're on the Protection side it switches you over; if you have a lead or case open, it waits until you close it. Answer each one to carry on. No needs a reason and a note, and moves the client to Research.", roles:['mapa']},
     {text:"<b>Send Advisor Chase</b>: pick a month in Send in Blue and press <b>Send Advisor Chase</b>. Every open client with Email client? not set goes to their adviser, who must answer Yes or No before carrying on. You can press it again to send a reminder to anyone still waiting.", roles:['management']},
   ]},
   {id:'2026-10-14e', date:'2026-10-14', items:[
@@ -10082,6 +10112,7 @@ function checkLeadAlerts(){
   if(!fresh.length) return;
   fresh.forEach(n=> done.add(n.id));
   saveAlerted(done);
+  if(fresh.some(n=> n.kind==='sibChase')) sibChaseArrived(); // even with pop-ups off: the chase window has to be answered
   if(!alertsOn()) return; // marked as seen, so turning alerts back on doesn't replay them
   // Send in Blue notices get their own pop-up (an Advisor Chase can't wait).
   fresh.filter(n=> n.kind==='sibChase' || n.kind==='sibReassigned').forEach(n=>

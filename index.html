@@ -6056,6 +6056,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-16', date:'2026-10-16', items:[
+    {text:"<b>Old callbacks on submitted cases are cleared</b>: if a case was submitted to underwriting (or had terms issued) but still had a callback from before, that callback no longer shows on the case, the calendar, My Day or in reminders, and it's removed when the case is opened. A chase call booked <i>after</i> submitting still shows as normal. If a callback is in your Google Calendar, delete it there, as the tracker can't change your calendar."},
+  ]},
   {id:'2026-10-15i', date:'2026-10-15', items:[
     {text:"<b>\"Where did they go?\" is now optional</b>: on a Send in Blue client who went direct or online, leave the provider and term blank if you don't know them and the outcome saves as normal. Fill them in and the client is added back for when their new deal ends, as before."},
   ]},
@@ -6927,7 +6930,20 @@ function hasBookedCall(l){
   const pot = potOf(l);
   if(!l.followUpDate) return false;
   if(pot==='existing') return true;
-  return (pot==='underwriting' || pot==='terms') && !isCallOverdue(l.followUpDate, l.followUpTime);
+  return (pot==='underwriting' || pot==='terms') && !staleCallback(l) && !isCallOverdue(l.followUpDate, l.followUpTime);
+}
+/* A callback booked before the case was submitted / had terms issued is left
+   over from before (cases signed up before callbacks were cleared automatically,
+   or saved from an out-of-date tab). Only a chase call booked afterwards counts. */
+const staleMemo = new WeakMap();
+function staleCallback(l){
+  if(!l || !l.followUpDate || !l.audit || typeof l.audit!=='object') return false;
+  if(staleMemo.has(l.audit)) return staleMemo.get(l.audit);
+  let moved = 0, booked = 0;
+  Object.values(l.audit).forEach(a=>{ if(!a || !a.at) return; if(a.type==='underwriting' || a.type==='terms') moved = Math.max(moved, a.at); else if(a.type==='followup') booked = Math.max(booked, a.at); });
+  const v = !!moved && booked < moved;
+  staleMemo.set(l.audit, v);
+  return v;
 }
 
 function potOf(lead){
@@ -8356,6 +8372,8 @@ function openLead(id){
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
   actionUIState = null; ldMoreOpen = false;
+  // Tidy a left-over callback away for good (it's already hidden everywhere).
+  if(['underwriting','terms'].includes(LEADS[id].status) && staleCallback(LEADS[id]) && canManageLead(LEADS[id])) db.ref('leads/'+id).update(CLEAR_CALLBACK).catch(()=>{});
   renderLeadModal();
   document.getElementById('leadDeleteBtn').classList.toggle('hidden', currentUser.role!=='management');
   openModal('leadOverlay');

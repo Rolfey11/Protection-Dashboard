@@ -981,6 +981,9 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-acts .action-btn svg{width:16px; height:16px;}
 .sib-acts .action-btn.on{border-color:var(--brand); background:var(--brand-tint); color:var(--brand);}
 .sib-acts .action-btn.on svg{stroke:var(--brand);}
+.sib-acts .action-btn.ld-decline-btn{color:var(--red); border-color:color-mix(in srgb, var(--red) 45%, var(--border-2));}
+.sib-acts .action-btn.ld-decline-btn svg{stroke:var(--red);}
+.sib-acts .action-btn.ld-decline-btn:hover,.sib-acts .action-btn.ld-decline-btn.on{background:var(--red-bg); border-color:var(--red); color:var(--red);}
 .sib-acts .action-btn.primary{background:var(--brand); border-color:var(--brand); color:#fff;}
 .sib-acts .action-btn.primary svg{stroke:#fff;}
 .sib-acts .action-btn.sib-protect-btn{background:var(--red-bg); border-color:var(--red); color:var(--red);}
@@ -6076,6 +6079,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-19b', date:'2026-10-19', items:[
+    {text:"<b>Decline from Appointments / Research</b>: cases in Appointments / Research now have a <b>Decline</b> button next to Book appointment and Set reminder. It opens the usual decline form with the reason, detail and decline steps.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-19', date:'2026-10-19', items:[
     {text:"<b>Reminders and appointments</b>: on <b>New Cases</b> and the renamed <b>Appointments / Research</b> pot (was Contacted Clients) the actions are now <b>Book appointment</b> (phone call, video call or face to face) and <b>Set reminder</b>. Every case there must have one booked before you can close it. A reminder keeps a new case in New Cases; booking an appointment moves it to Appointments / Research. Reminders go in your calendar as <b>REMINDER CHASE - client name</b>, and appointments keep the usual \"Protection Call with Michael Usher Mortgage Services\" title.", roles:['mapa','management']},
     {text:"<b>Outcome of meeting</b>: once an appointment's time has passed, the case asks how it went: <b>No answer</b> or <b>Spoke to client</b>, a note of at least 20 characters, then <b>Sign Up</b>, <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>.", roles:['mapa','management']},
@@ -8260,7 +8266,7 @@ const HELP = [
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b> or <b>No answer</b>.</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>.</li></ol>`},
     {t:'Overdue reminders and appointments', roles:['mapa'], h:`When you open the protection dashboard, any overdue reminders or appointments pop up first, and you can't use the dashboard until each one is dealt with. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment. A reminder or appointment that goes overdue while you're working pops up as soon as you close what you're doing.`},
-    {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>New Cases</b> and <b>Appointments / Research</b> must have its next step booked; you can't close it until it does.<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li></ul>`},
+    {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>New Cases</b> and <b>Appointments / Research</b> must have its next step booked; you can't close it until it does.<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li><li><b>Decline</b> (Appointments / Research only): opens the decline form with the reason, detail and decline steps.</li></ul>`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
     {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the total commission, choose each policy sold (DTA, LTA, FIB, CIC, IP, WOL) and tick which client it covers. Tick more than one client for a joint policy; use <b>+ Add another policy</b> for more.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission and policies are filled in for you: check them and change anything that's different.</li></ol>`},
     {t:'Mark quotes as sent', roles:['mapa','management'], h:`Open a case in <b>Appointments / Research</b> and press <b>Quotes Sent</b> once the client has their quotes. The card turns pale green with a ✓, and it's recorded in the case history. Pressed it by mistake? Press <b>Undo</b> on the case.`},
@@ -8554,7 +8560,8 @@ function renderLeadModal(){
   const actionHtml = (canAction(lead) || moreItems.length) ? `
     <div class="sib-acts" id="actionBar">
       ${booking ? (due ? '' : `<button type="button" class="action-btn ${actionUIState && actionUIState.kind==='appointment' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="bookappt">${ico('calendar')}Book appointment</button>
-      <button type="button" class="action-btn ${actionUIState && actionUIState.kind==='reminder' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="setreminder">${ico('clock')}Set reminder</button>`)
+      <button type="button" class="action-btn ${actionUIState && actionUIState.kind==='reminder' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="setreminder">${ico('clock')}Set reminder</button>
+      ${lead.status==='existing' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>` : ''}`)
       : canAction(lead) ? `<button type="button" class="action-btn primary" data-act="call">${ico('phone')}Call</button>
       <button type="button" class="action-btn" data-act="text">${ico('message')}Text</button>
       <button type="button" class="action-btn" data-act="email">${ico('mail')}Email</button>
@@ -8828,6 +8835,10 @@ const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'App
 function handleActionClick(lead, type){
   // Email: write it first; the outcome buttons appear once it's sent.
   if(type==='email'){ openEmailCompose(lead.id, true); return; }
+  if(type==='decline'){ // Appointments / Research: decline straight from the case
+    actionUIState = actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? null : {stage:'decline'};
+    refreshLeadModal(true); return;
+  }
   if(type==='bookappt' || type==='setreminder'){
     const kind = type==='bookappt' ? 'appointment' : 'reminder';
     actionUIState = actionUIState && actionUIState.stage==='schedule' && actionUIState.kind===kind && !actionUIState.prelude ? null : {kind, stage:'schedule'};

@@ -9056,6 +9056,8 @@ function renderDynamicArea(lead){
 
 /* ---- Reminders, appointments and the outcome of meeting ---- */
 const MEETING_NOTE_MIN = 20;
+// Once something is typed or picked, its red "missing" outline goes.
+['input','change'].forEach(ev=> document.addEventListener(ev, e=>{ if(e.target.closest && e.target.closest('#dynamicActionArea')) e.target.classList.remove('missing'); }));
 function bookingWhen(l){ return fmtDateSlash(l.followUpDate) + (l.followUpTime ? ' at '+l.followUpTime : ''); }
 function renderBookingArea(lead, area){
   const st = actionUIState, l = LEADS[lead.id] || lead;

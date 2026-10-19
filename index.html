@@ -1155,6 +1155,13 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .modal-overlay.open{opacity:1; pointer-events:auto;}
 /* Sign-up modal can open on top of the lead detail modal, so it needs a higher stacking context */
 #signupOverlay{z-index:110;}
+#overdueOverlay{z-index:99;}
+.mt-panel{border-color:var(--amber) !important; background:var(--amber-bg) !important;}
+.outcome-panel.mt-panel .op-title{color:var(--amber);}
+.mt-panel.rem{border-color:var(--blue) !important; background:var(--blue-bg) !important;}
+.outcome-panel.mt-panel.rem .op-title{color:var(--blue);}
+.mt-sub{font-size:12.5px; color:var(--text-muted); margin:2px 0 10px;}
+.mt-panel .em-dec-opts label{font-weight:600;}
 #deleteConfirmOverlay{z-index:110;}
 #deleteNoteOverlay{z-index:110;}
 #reassignOverlay{z-index:110;}
@@ -1248,7 +1255,8 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .ld-contact .info-cell{background:none; padding:2px 0; grid-column:auto !important;}
 @media (max-width:640px){ .ld-contact{grid-template-columns:1fr;} .ld-steps li:not(.now):not(.bad){font-size:0;} .ld-steps li{font-size:11px;} }
 #leadLeftPane .sib-next{flex-direction:row; align-items:center; flex-wrap:wrap; margin:12px 0 0;}
-#leadLeftPane .sib-next .cal-btns, #leadLeftPane .sib-next > div:last-child{margin-left:auto;}
+#leadLeftPane .sib-next .cal-btns{margin-left:auto;}
+#leadLeftPane > .sib-next{margin:0 0 12px;}
 .status-pill{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:99px; text-transform:uppercase; letter-spacing:.3px;}
 .status-pill.new{background:var(--blue-bg); color:var(--blue);}
 .status-pill.existing{background:var(--amber-bg); color:var(--amber);}
@@ -1881,7 +1889,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <div class="pot-body" id="pot-new"></div>
         </div>
         <div class="pot" data-pot="existing" style="--pot:var(--amber)">
-          <div class="pot-head"><div class="pot-head-title"><h3>Contacted Clients</h3></div><span class="pot-count" id="count-existing">0</span></div>
+          <div class="pot-head"><div class="pot-head-title"><h3>Appointments / Research</h3></div><span class="pot-count" id="count-existing">0</span></div>
           <div class="pot-body" id="pot-existing"></div>
         </div>
         <div class="pot" data-pot="underwriting" style="--pot:var(--violet)">
@@ -2593,6 +2601,13 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 <!-- ============================================================
      MODAL: BULK DELETE CONFIRMATION (Management / Admin)
      ============================================================ -->
+<div class="modal-overlay" id="overdueOverlay" role="dialog" aria-modal="true" aria-labelledby="overdueTitle">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-head"><div><h2 id="overdueTitle">Overdue: please deal with these first</h2><p class="sub" id="overdueSub" style="margin:4px 0 0; font-size:13px; color:var(--text-muted);"></p></div></div>
+    <div class="modal-body"><p class="mt-sub" style="margin-top:0;">Appointments need their <b>outcome of meeting</b>; reminders need a note and a new reminder or appointment. Open each one to deal with it.</p><div id="overdueBody"></div></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="bulkDeleteConfirmOverlay">
   <div class="modal" style="max-width:400px;">
     <div class="modal-head"><h2>Delete these cases?</h2><button class="modal-close" data-close="bulkDeleteConfirmOverlay">✕</button></div>
@@ -2696,7 +2711,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <label for="csStatus">Move to</label>
         <select id="csStatus">
           <option value="new">New Cases</option>
-          <option value="existing">Contacted Clients</option>
+          <option value="existing">Appointments / Research</option>
           <option value="underwriting">Submitted / In Underwriting</option>
           <option value="terms">Terms Issued</option>
           <option value="signedup">On Risk</option>
@@ -3370,11 +3385,13 @@ function toast(msg, type=''){
 }
 
 function openModal(id){ document.getElementById(id).classList.add('open'); document.body.classList.add('scroll-lock'); }
-function closeModal(id){
+function closeModal(id, force){
   if(id==='forcePinOverlay' && forcePinActive) return; // must choose a new PIN or sign out
+  if(!force && id==='overdueOverlay' && overdueGateActive && myOverdueBookings().length) return; // deal with every overdue item first
+  if(!force && id==='leadOverlay' && activeLeadId){ const why = leadCloseBlock(LEADS[activeLeadId]); if(why){ toast(why,'error'); return; } }
   if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
-  if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; }
+  if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
   if(!document.querySelector('.modal-overlay.open')){
     document.body.classList.remove('scroll-lock');
@@ -3382,7 +3399,7 @@ function closeModal(id){
     else if(sibChaseWaiting) setTimeout(sibCheckChase, 0); // an Advisor Chase held back while a case was open
   }
 }
-function closeAllModals(){ document.querySelectorAll('.modal-overlay.open').forEach(m=> closeModal(m.id)); }
+function closeAllModals(force){ document.querySelectorAll('.modal-overlay.open').forEach(m=> closeModal(m.id, force)); }
 document.addEventListener('keydown', (e)=>{
   if(e.key !== 'Escape') return;
   const open = Array.from(document.querySelectorAll('.modal-overlay.open'));
@@ -3679,7 +3696,8 @@ function logout(){
   sibChaseActive = false; sibChaseNoOpen = null; sibChaseWaiting = false; sibChaseSwitch = false;
   if(auth.currentUser){ try{ sessionStorage.removeItem('plt_pin_checked_'+auth.currentUser.uid); }catch(e){} }
   listenRetry = 'none';
-  closeAllModals();
+  overdueGateActive = false;
+  closeAllModals(true);
   db.ref('leads').off();
   notifsQuery().off();
   db.ref('clientSources').off();
@@ -4622,6 +4640,7 @@ function setAppMode(mode, go=true){
   document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.classList.toggle('on', b.dataset.mode===APP_MODE));
   document.querySelector('.brand-text .t1').textContent = APP_MODE==='sib' ? 'Send in Blue' : 'Protection Lead Tracker';
   if(go && currentUser) goPage(APP_MODE==='sib' ? 'sib' : 'dashboard');
+  if(currentUser) setTimeout(checkOverdueGate, 0);
 }
 document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.addEventListener('click', ()=> setAppMode(b.dataset.mode)));
 
@@ -6040,6 +6059,7 @@ function openLeadFromSib(leadId){
 }
 function openSibFromLead(key){
   closeModal('leadOverlay');
+  if(document.getElementById('leadOverlay').classList.contains('open')) return; // the case needs its next step booked first (message already shown)
   setAppMode('sib');
   startSibListener();
   ensureSibLoaded().then(()=>{
@@ -6056,6 +6076,12 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-19', date:'2026-10-19', items:[
+    {text:"<b>Reminders and appointments</b>: on <b>New Cases</b> and the renamed <b>Appointments / Research</b> pot (was Contacted Clients) the actions are now <b>Book appointment</b> (phone call, video call or face to face) and <b>Set reminder</b>. Every case there must have one booked before you can close it. A reminder keeps a new case in New Cases; booking an appointment moves it to Appointments / Research. Reminders go in your calendar as <b>REMINDER CHASE - client name</b>, and appointments keep the usual \"Protection Call with Michael Usher Mortgage Services\" title.", roles:['mapa','management']},
+    {text:"<b>Outcome of meeting</b>: once an appointment's time has passed, the case asks how it went: <b>No answer</b> or <b>Spoke to client</b>, a note of at least 20 characters, then <b>Sign Up</b>, <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>.", roles:['mapa','management']},
+    {text:"<b>Overdue items first</b>: when you open the protection dashboard, any overdue reminders or appointments pop up and must be dealt with before you can carry on.", roles:['mapa']},
+    {text:"<b>MAPAs now deal with overdue items first</b>: when a MAPA opens the protection dashboard, their overdue reminders and appointments pop up and must be dealt with before they can carry on.", roles:['management','admin']},
+  ]},
   {id:'2026-10-16', date:'2026-10-16', items:[
     {text:"<b>Old callbacks on submitted cases are cleared</b>: if a case was submitted to underwriting (or had terms issued) but still had a callback from before, that callback no longer shows on the case, the calendar, My Day or in reminders, and it's removed when the case is opened. A chase call booked <i>after</i> submitting still shows as normal. If a callback is in your Google Calendar, delete it there, as the tracker can't change your calendar."},
   ]},
@@ -6120,7 +6146,7 @@ const WHATS_NEW = [
     {text:"<b>Policies sold</b>: when you submit a case to underwriting or put it On Risk, choose the policies (DTA, LTA, FIB, CIC, IP, WOL) and tick which client each one covers. Tick more than one client for a joint policy, and use <b>+ Add another policy</b> for the next one. Policies chosen at submission carry through to On Risk, ready to check. They show on the case and on the card.", roles:['mapa','management']},
   ]},
   {id:'2026-10-14c', date:'2026-10-13', items:[
-    {text:"<b>Quotes Sent</b>: on a case in Contacted Clients, press <b>Quotes Sent</b> once you've sent the client their quotes. The card turns pale green with a ✓, so you can see at a glance who's had quotes and who hasn't. Pressed it by mistake? Use <b>Undo</b> on the case.", roles:['mapa','management']},
+    {text:"<b>Quotes Sent</b>: on a case in Appointments / Research, press <b>Quotes Sent</b> once you've sent the client their quotes. The card turns pale green with a ✓, so you can see at a glance who's had quotes and who hasn't. Pressed it by mistake? Use <b>Undo</b> on the case.", roles:['mapa','management']},
   ]},
   {id:'2026-10-14b', date:'2026-10-13', items:[
     {text:"<b>Follow-ups now need a date and a time.</b> If either is missing (or the time has already passed), the box is highlighted in red and it won't save until it's filled in. This keeps My Day, the calendar and call reminders accurate.", roles:['mapa','management']},
@@ -6829,6 +6855,7 @@ function startAuthedListeners(){
     if(currentUser){
       renderDashboard();
       renderLogins();
+      setTimeout(checkOverdueGate, 0);
       if(activeLeadId){
         const raw = LEADS[activeLeadId];
         if(!raw || raw.deleted){
@@ -6926,10 +6953,28 @@ const CLEAR_CALLBACK = {followUpDate:null, followUpTime:null};
    overdue call: on Submitted / Terms Issued a chase call shows while it's
    coming up and then drops off once its time has passed. On Risk and
    Declined cases never have one. */
+/* New Cases and Appointments / Research always have their next step booked:
+   a reminder (to chase the client) or an appointment (phone, video or face to
+   face). A reminder keeps a new case in New Cases; booking an appointment moves
+   it to Appointments / Research. Once its time has passed, an appointment needs
+   its "Outcome of meeting" and a reminder needs dealing with (a note, then a new
+   reminder or appointment). Bookings made before this existed count as appointments. */
+const APPT_TYPES = {phone:'Phone call', video:'Video call', f2f:'Face to face'};
+function fuKind(l){ return l && l.followUpKind==='reminder' ? 'reminder' : 'appointment'; }
+function fuKindLabel(l){ return fuKind(l)==='reminder' ? 'Reminder' : `Appointment${l.apptType && APPT_TYPES[l.apptType] ? ' ('+APPT_TYPES[l.apptType]+')' : ''}`; }
+function inBookingPot(l){ return !!l && (l.status==='new' || l.status==='existing'); }
+function fuDue(l){ return inBookingPot(l) && !!l.followUpDate && isCallOverdue(l.followUpDate, l.followUpTime); }
+// Why the assigned MAPA can't leave this case yet ('' = they can).
+function leadCloseBlock(l){
+  if(!l || !currentUser || currentUser.role!=='mapa' || l.advisorId!==currentUser.id || l.deleted || !inBookingPot(l)) return '';
+  if(fuDue(l)) return fuKind(l)==='reminder' ? 'Deal with the reminder first: add a note, then set a new reminder or book an appointment.' : 'Record the outcome of the meeting first.';
+  if(!l.followUpDate) return 'Set a reminder or book an appointment before leaving this case.';
+  return '';
+}
 function hasBookedCall(l){
   const pot = potOf(l);
   if(!l.followUpDate) return false;
-  if(pot==='existing') return true;
+  if(pot==='existing' || pot==='new') return true;
   return (pot==='underwriting' || pot==='terms') && !staleCallback(l) && !isCallOverdue(l.followUpDate, l.followUpTime);
 }
 /* A callback booked before the case was submitted / had terms issued is left
@@ -7188,17 +7233,18 @@ function followUpBadge(dateStr, timeStr){
 }
 
 /* Compact one-line version of the call-due badge, used on dashboard cards. */
-function followUpInline(dateStr, timeStr){
+function followUpInline(dateStr, timeStr, lead){
+  const what = !lead || !lead.followUpKind ? 'Call' : lead.followUpKind==='reminder' ? 'Reminder' : 'Appt';
   const today = new Date(); today.setHours(0,0,0,0);
   const due = toDate(dateStr); due.setHours(0,0,0,0);
   const diff = Math.round((due - today) / 86400000);
   const at = timeStr ? `, ${esc(timeStr)}` : '';
   const short = dfmt({day:'numeric',month:'short'}).format(toDate(dateStr));
   const [label, tone] = isCallOverdue(dateStr, timeStr) ? [diff===0 ? `Overdue today${at}` : `Overdue ${short}${at}`, 'bad']
-    : diff === 0 ? [`Call today${at}`, 'warn']
-    : diff === 1 ? [`Call tomorrow${at}`, 'soon']
-    : [`Call ${short}${at}`, 'soon'];
-  return `<span class="lc-due ${tone}">${ico('phone')}${label}</span>`;
+    : diff === 0 ? [`${what} today${at}`, 'warn']
+    : diff === 1 ? [`${what} tomorrow${at}`, 'soon']
+    : [`${what} ${short}${at}`, 'soon'];
+  return `<span class="lc-due ${tone}">${ico(what==='Reminder' ? 'clock' : what==='Appt' ? 'calendar' : 'phone')}${label}</span>`;
 }
 
 /* Existing-workflow cases whose follow-up date has passed. Scoped to the
@@ -7257,7 +7303,8 @@ function myDayItems(){
     if(hasBookedCall(l)){
       const late = isCallOverdue(l.followUpDate, l.followUpTime);
       if(late || daysLate(l.followUpDate)===0){
-        reasons.push(late ? [0,'bad',`Call ${overdueText(l.followUpDate, l.followUpTime)}`] : [0,'warn',`Call due today${l.followUpTime ? ' at '+l.followUpTime : ''}`]);
+        const what = !inBookingPot(l) || !l.followUpKind ? 'Call' : fuKind(l)==='reminder' ? 'Reminder' : 'Appointment';
+        reasons.push(late ? [0,'bad',`${what} ${overdueText(l.followUpDate, l.followUpTime)}${what==='Appointment' ? ': record the outcome' : ''}`] : [0,'warn',`${what} due today${l.followUpTime ? ' at '+l.followUpTime : ''}`]);
       }
     }
     if(pot==='new' && !Object.values(l.audit||{}).some(isContactEntry)){
@@ -7267,8 +7314,8 @@ function myDayItems(){
       const left = DECLINE_STEPS.filter(st=> !declineStepDone(l, st)).map(st=> st.short);
       reasons.push([0,'bad','Decline — ' + (left.length > 1 ? left.slice(0,-1).join(', ') + ' & ' + left[left.length-1] : left[0] || 'steps') + ' pending']);
     }
-    if(pot==='existing' && !l.followUpDate){
-      reasons.push([1,'warn','No next call booked']);
+    if((pot==='existing' || pot==='new') && !l.followUpDate){
+      reasons.push([1,'warn','Nothing booked: set a reminder or book an appointment']);
     }
     if(pot==='terms'){
       const at = l.termsIssuedAt || (Object.values(l.audit||{}).filter(a=> a && a.type==='terms').sort((x,y)=> y.at-x.at)[0]||{}).at;
@@ -7428,7 +7475,7 @@ function calEventTimes(lead){
 
 function calEventText(lead){
   const lines = [
-    'Protection follow-up call',
+    lead.followUpKind==='reminder' ? 'Reminder: chase the client' : `Protection ${(APPT_TYPES[lead.apptType] || 'call').toLowerCase()}`,
     `Client: ${lead.clientName||''}`,
     lead.clientSource ? `Source: ${lead.clientSource}` : '',
     lead.advisorName ? `Adviser: ${lead.advisorName}` : '',
@@ -7438,7 +7485,7 @@ function calEventText(lead){
   return {title: calTitle(lead), details: lines.join('\n')};
 }
 const COMPANY_NAME = 'Michael Usher Mortgage Services';
-function calTitle(lead){ return `Protection Call with ${COMPANY_NAME} - ${lead.clientName||'Client'}`; }
+function calTitle(lead){ return lead.followUpKind==='reminder' ? `REMINDER CHASE - ${lead.clientName||'Client'}` : `Protection Call with ${COMPANY_NAME} - ${lead.clientName||'Client'}`; }
 
 /* What the client sees when they're invited: no internal notes, sources or
    links, just a friendly confirmation. */
@@ -7473,11 +7520,12 @@ function googleCalUrl(lead, {invite} = {}){
   const {start, end} = calEventTimes(lead);
   // invite: put the client in Guests so Google sends them an invite. Left
   // unset, a client with an email on file is invited (the calendar buttons).
-  const emails = invite === false ? [] : leadEmails(lead);
+  const emails = invite === false || lead.followUpKind==='reminder' ? [] : leadEmails(lead);
   const title = calTitle(lead);
   const details = emails.length ? clientEventText(lead) : calEventText(lead).details;
   const p = new URLSearchParams({action:'TEMPLATE', text:title, dates:`${start}/${end}`, details});
-  p.set('location', emails.length ? `Phone call: ${lead.advisorName || 'your adviser'} will call you` : 'Phone call');
+  const where = lead.followUpKind==='reminder' ? '' : (APPT_TYPES[lead.apptType] || 'Phone call');
+  if(where) p.set('location', emails.length && where==='Phone call' ? `Phone call: ${lead.advisorName || 'your adviser'} will call you` : where);
   if(emails.length) p.set('add', emails.join(','));
   return 'https://calendar.google.com/calendar/render?' + p.toString();
 }
@@ -8029,7 +8077,7 @@ function leadCardHtml(lead, potKey){
   const showAdvisor = currentUser.role!=='mapa';
 
   let isOverdue = false;
-  if(potKey==='existing' && lead.followUpDate){
+  if((potKey==='existing' || potKey==='new') && lead.followUpDate){
     isOverdue = isCallOverdue(lead.followUpDate, lead.followUpTime);
   }
 
@@ -8041,8 +8089,8 @@ function leadCardHtml(lead, potKey){
   let sub = [lead.clientSource ? esc(lead.clientSource) : '', fmtDate(lead.appDate)].filter(Boolean).join('<span class="lc-sep">·</span>');
   // Keep every card the same three-row shape: extra details for Contacted
   // and Sign Ups replace the second line rather than adding new rows.
-  if(potKey==='existing' && lead.followUpDate){
-    sub = followUpInline(lead.followUpDate, lead.followUpTime) + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
+  if((potKey==='existing' || potKey==='new') && lead.followUpDate){
+    sub = followUpInline(lead.followUpDate, lead.followUpTime, lead) + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
   } else if((potKey==='underwriting' || potKey==='terms') && lead.commission!=null){
     sub = `<span class="lc-money">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})} pending</span>` + cardTail(lead);
   } else if(potKey==='signedup' && lead.commission!=null){
@@ -8209,13 +8257,13 @@ const HELP = [
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},
   ]},
   {group:'Protection cases', items:[
-    {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). Below it are the action buttons: <b>Call</b>, <b>Text</b>, <b>Email</b>, <b>Appointment</b>, and <b>More</b> for Other, Reassign, Edit client source and Change status. Signing up and declining are done through an action's outcome.`},
-    {t:'Log a call', roles:['mapa','management'], h:`<ol><li>Open the case and click <b>Call</b>.</li><li>Choose what happened: <b>Sign Up</b>, <b>Follow Up</b> or <b>Decline</b>, and/or add a note about the call.</li></ol>Notes are always added through an action like this, so each note says what was done.The client's phone number shows at the top of the Call box. Click it to dial.`},
-    {t:'No answer', roles:['mapa','management'], h:`Click <b>Call</b> on the case and choose <b>Follow Up</b> to book when to try again, with a note such as "No answer". Every call, text, email and appointment you log counts as a contact attempt (shown under the client's name and on the card).`},
-    {t:'Book a follow-up call', roles:['mapa','management'], h:`<ol><li>On the case, click <b>Call</b> (or Text, Email…), then <b>Follow Up</b>.</li><li>Choose the date and time (both are needed) and add a comment.</li><li><b>Add to Calendar – Client invite</b> sends the client an invite through Google Calendar; <b>No invite</b> puts it just in your calendar; or <b>Save without adding to Calendar</b>.</li></ol>The case moves to Contacted Clients and shows when the call is due.`},
+    {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
+    {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b> or <b>No answer</b>.</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>.</li></ol>`},
+    {t:'Overdue reminders and appointments', roles:['mapa'], h:`When you open the protection dashboard, any overdue reminders or appointments pop up first, and you can't use the dashboard until each one is dealt with. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment. A reminder or appointment that goes overdue while you're working pops up as soon as you close what you're doing.`},
+    {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>New Cases</b> and <b>Appointments / Research</b> must have its next step booked; you can't close it until it does.<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li></ul>`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
     {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the total commission, choose each policy sold (DTA, LTA, FIB, CIC, IP, WOL) and tick which client it covers. Tick more than one client for a joint policy; use <b>+ Add another policy</b> for more.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission and policies are filled in for you: check them and change anything that's different.</li></ol>`},
-    {t:'Mark quotes as sent', roles:['mapa','management'], h:`Open a case in <b>Contacted Clients</b> and press <b>Quotes Sent</b> once the client has their quotes. The card turns pale green with a ✓, and it's recorded in the case history. Pressed it by mistake? Press <b>Undo</b> on the case.`},
+    {t:'Mark quotes as sent', roles:['mapa','management'], h:`Open a case in <b>Appointments / Research</b> and press <b>Quotes Sent</b> once the client has their quotes. The card turns pale green with a ✓, and it's recorded in the case history. Pressed it by mistake? Press <b>Undo</b> on the case.`},
     {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
     {t:'Client has a medical condition', roles:['mapa','management'], h:`Open <b>Useful Info → Medical Conditions Guide</b>. Search for the condition (e.g. "diabetes" or "back") to see how insurers usually treat it for Life, CI and IP, and the questions to ask before you go to market. It's general guidance: always get an indicative decision from the insurer.`},
     {t:'Client phone and email', h:`Both show on the case. Click a phone number to dial it. Use <b>Add phone</b> / <b>Edit</b> to change them; the change is recorded in the history.`},
@@ -8475,7 +8523,7 @@ function renderLeadModal(){
     : STEPS.map(([, lbl], i)=> `<li class="${i < at ? 'done' : i===at ? 'now' : ''}">${lbl}</li>`).join('');
   let nextHtml = '';
   if(canAction(lead) || lead.status==='decline'){
-    if(lead.status==='new') nextHtml = `<span>Next: log your first contact with an action below (Call, Text, Email…).</span>`;
+    if(lead.status==='new') nextHtml = `<span>Next: <b>book an appointment</b> with the client, or <b>set a reminder</b> to chase them. The case stays in New Cases until an appointment is booked.</span>`;
     if(lead.status==='existing') nextHtml = lead.quotesSentAt
       ? `<span class="quotes-done">${ico('checkCircle')} <b>Quotes sent ${esc(fmtDate(lead.quotesSentAt))}</b>${lead.quotesSentByName ? ' by '+esc(lead.quotesSentByName) : ''} · the case shows pale green on the dashboard</span><button type="button" class="linkish" id="quotesUndoBtn">Undo</button>`
       : `<span>Next stage: <b>Quotes sent</b>. Mark it once the client has their quotes (the case shows pale green on the dashboard).</span><button type="button" class="stage-btn" id="quotesSentBtn" style="background:var(--green);">✓ Quotes Sent</button>`;
@@ -8491,15 +8539,23 @@ function renderLeadModal(){
   const trackerHtml = `<div class="ld-track"><ol class="ld-steps" aria-label="Case stage">${stepsHtml}</ol>${nextHtml ? `<div class="ld-next">${nextHtml}</div>` : ''}</div>`;
 
   // Action buttons: the only way to log contact, sign up or decline.
+  const booking = canAction(lead) && inBookingPot(lead); // New Cases + Appointments / Research: reminders and appointments only
+  const due = booking && fuDue(lead);
+  // Something due: the outcome / reminder panel shows first and the case can't move on without it.
+  const dueStage = fuKind(lead)==='reminder' ? 'reminderdue' : 'meeting';
+  if(due && (!actionUIState || (actionUIState.auto && actionUIState.stage!==dueStage))) actionUIState = {kind: fuKind(lead), stage: dueStage, auto:true};
+  if(!due && actionUIState && actionUIState.auto) actionUIState = null;
   const moreItems = [
-    ...(canAction(lead) ? [`<button type="button" class="action-btn" data-act="other">${ico('dots')}Other</button>`] : []),
+    ...(canAction(lead) && !booking ? [`<button type="button" class="action-btn" data-act="other">${ico('dots')}Other</button>`] : []),
     ...(canReassign() ? [`<button type="button" class="action-btn" id="reassignBtn">${ico('users')}Reassign</button>`] : []),
     ...(canManageLead(lead) ? [`<button type="button" class="action-btn" id="editSourceBtn">${ico('pin')}Edit client source</button>`] : []),
     ...(canChangeStatus(lead) ? [`<button type="button" class="action-btn" id="changeStatusBtn" title="Manual override: move the case to any pot">${ico('shuffle')}Change status</button>`] : []),
   ];
   const actionHtml = (canAction(lead) || moreItems.length) ? `
     <div class="sib-acts" id="actionBar">
-      ${canAction(lead) ? `<button type="button" class="action-btn primary" data-act="call">${ico('phone')}Call</button>
+      ${booking ? (due ? '' : `<button type="button" class="action-btn ${actionUIState && actionUIState.kind==='appointment' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="bookappt">${ico('calendar')}Book appointment</button>
+      <button type="button" class="action-btn ${actionUIState && actionUIState.kind==='reminder' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="setreminder">${ico('clock')}Set reminder</button>`)
+      : canAction(lead) ? `<button type="button" class="action-btn primary" data-act="call">${ico('phone')}Call</button>
       <button type="button" class="action-btn" data-act="text">${ico('message')}Text</button>
       <button type="button" class="action-btn" data-act="email">${ico('mail')}Email</button>
       <button type="button" class="action-btn" data-act="appointment">${ico('calendar')}Appointment</button>` : ''}
@@ -8508,7 +8564,8 @@ function renderLeadModal(){
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
     <div id="dynamicActionArea"></div>` : '';
 
-  const nextCallHtml = hasBookedCall(lead) ? `<div class="sib-next warn"><span class="ic" aria-hidden="true">⏰</span><div><b>${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>Next call due</small></div>${calButtonsHtml(lead, true)}</div>` : '';
+  const nextCallHtml = hasBookedCall(lead) && !due ? `<div class="sib-next ${inBookingPot(lead) && fuKind(lead)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${inBookingPot(lead) && fuKind(lead)==='reminder' ? '🔔' : '⏰'}</span><div><b>${inBookingPot(lead) && lead.followUpKind ? esc(fuKindLabel(lead))+': ' : ''}${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${inBookingPot(lead) && lead.followUpKind ? (fuKind(lead)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened') : 'Next call due'}${lead.followUpNote ? ' · '+esc(lead.followUpNote) : ''}</small></div>${calButtonsHtml({id:lead.id, ...lead}, true)}</div>`
+    : booking && !lead.followUpDate ? `<div class="sib-next bad"><span class="ic" aria-hidden="true">⚠️</span><div><b>Nothing booked yet</b><small>Set a reminder or book an appointment: every case needs its next step booked.</small></div></div>` : '';
 
   // Outcome details (terms, policies, commission, decline reason) in one box.
   const pols = ['underwriting','terms','signedup'].includes(potKey) ? leadPolicies(lead) : [];
@@ -8539,7 +8596,7 @@ function renderLeadModal(){
       ${lead.sibKey ? `<div style="margin-top:10px; font-size:13px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><span>Referred from Send in Blue: mortgage product ends <b>${esc(lead.sibMonthLabel||'')}</b></span><button type="button" class="btn btn-secondary btn-sm" id="openSibFromLead">Open Send in Blue case</button></div>` : ''}
     </div>`;
 
-  document.getElementById('leadLeftPane').innerHTML = trackerHtml + actionHtml + nextCallHtml + outcomeHtml + infoHtml;
+  document.getElementById('leadLeftPane').innerHTML = trackerHtml + (due ? '' : nextCallHtml) + actionHtml + outcomeHtml + infoHtml;
 
   bindClientEmailCell(lead);
   bindClientPhoneCell(lead);
@@ -8575,7 +8632,7 @@ function renderLeadModal(){
       const now = Date.now();
       logAudit(lead.id, {type:'quotes', text:`Quotes sent - ${fmtDateSlash(now)}`, byId:currentUser.id, byName:currentUser.name, at:now},
         {quotesSentAt:now, quotesSentBy:currentUser.id, quotesSentByName:currentUser.name})
-        .then(()=>{ toast('Quotes sent. The case now shows green in Contacted Clients.','success'); refreshLeadModal(true); })
+        .then(()=>{ toast('Quotes sent. The case now shows green in Appointments / Research.','success'); refreshLeadModal(true); })
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
     });
     const qub = document.getElementById('quotesUndoBtn');
@@ -8715,7 +8772,7 @@ document.getElementById('esSubmit').addEventListener('click', function(){
     .finally(()=>{ btn.disabled = false; });
 });
 
-const STATUS_LABELS = {new:'New Cases', existing:'Contacted Clients', underwriting:'Submitted / In Underwriting', terms:'Terms Issued', signedup:'On Risk', decline:'Declined · email pending', completed:'Fully Declined'};
+const STATUS_LABELS = {new:'New Cases', existing:'Appointments / Research', underwriting:'Submitted / In Underwriting', terms:'Terms Issued', signedup:'On Risk', decline:'Declined · email pending', completed:'Fully Declined'};
 
 document.getElementById('csSubmit').addEventListener('click', function(){
   const leadId = this.dataset.leadId;
@@ -8771,6 +8828,11 @@ const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'App
 function handleActionClick(lead, type){
   // Email: write it first; the outcome buttons appear once it's sent.
   if(type==='email'){ openEmailCompose(lead.id, true); return; }
+  if(type==='bookappt' || type==='setreminder'){
+    const kind = type==='bookappt' ? 'appointment' : 'reminder';
+    actionUIState = actionUIState && actionUIState.stage==='schedule' && actionUIState.kind===kind && !actionUIState.prelude ? null : {kind, stage:'schedule'};
+    refreshLeadModal(true); return;
+  }
   actionUIState = {kind:type};
   renderDynamicArea(lead);
 }
@@ -8778,6 +8840,7 @@ function handleActionClick(lead, type){
 function renderDynamicArea(lead){
   const area = document.getElementById('dynamicActionArea');
   if(!area) return;
+  if(actionUIState && ['schedule','meeting','reminderdue'].includes(actionUIState.stage)){ renderBookingArea(lead, area); return; }
 
   if(actionUIState && actionUIState.kind && !actionUIState.stage){
     const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
@@ -8909,7 +8972,7 @@ function renderDynamicArea(lead){
             try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
           }
           const next = mode==='invite' ? 'In Google, click Save, then Send to invite the client.'
-            : mode==='calendar' ? 'Google Calendar opened: click Save there.' : (stayInUw ? `Still in ${STATUS_LABELS[curStatus]}.` : 'Moved to Contacted Clients.');
+            : mode==='calendar' ? 'Google Calendar opened: click Save there.' : (stayInUw ? `Still in ${STATUS_LABELS[curStatus]}.` : 'Moved to Appointments / Research.');
           toast(`Follow-up booked for ${fmtDate(date)}${time?' at '+time:''}. ${next}`,'success');
           actionUIState=null; refreshLeadModal();
         })
@@ -8990,6 +9053,153 @@ function renderDynamicArea(lead){
 
   area.innerHTML = '';
 }
+
+/* ---- Reminders, appointments and the outcome of meeting ---- */
+const MEETING_NOTE_MIN = 20;
+// Once something is typed or picked, its red "missing" outline goes.
+['input','change'].forEach(ev=> document.addEventListener(ev, e=>{ if(e.target.closest && e.target.closest('#dynamicActionArea')) e.target.classList.remove('missing'); }));
+function bookingWhen(l){ return fmtDateSlash(l.followUpDate) + (l.followUpTime ? ' at '+l.followUpTime : ''); }
+function renderBookingArea(lead, area){
+  const st = actionUIState, l = LEADS[lead.id] || lead;
+  const by = ()=> ({byId:currentUser.id, byName:currentUser.name, at:Date.now()});
+  const clearBooking = {...CLEAR_CALLBACK, followUpKind:null, apptType:null, followUpNote:null};
+  const noteHint = id=> `<div class="req-hint" id="${id}Count">At least ${MEETING_NOTE_MIN} characters.</div>`;
+  const noteOk = id=>{ const el = document.getElementById(id), v = el.value.trim(); if(v.length >= MEETING_NOTE_MIN) return v; el.classList.add('missing'); el.focus(); toast(`Please add a note of at least ${MEETING_NOTE_MIN} characters about what happened.`,'error'); return null; };
+  if(st.stage==='meeting'){
+    const res = st.res || '';
+    const choice = st.choice || '';
+    area.innerHTML = `<div class="outcome-panel mt-panel">
+        <div class="op-title">${ico('alert')} Outcome of meeting · ${esc(APPT_TYPES[l.apptType] || 'Appointment')} ${esc(bookingWhen(l))}</div>
+        <p class="mt-sub">This appointment has happened. Record how it went before doing anything else on this case.${leadPhones(l).length ? ' Client: ' + leadPhones(l).map(ph=> `<a href="${esc(telHref(ph))}" class="tel-link">${esc(ph)}</a>`).join(' ') : ''}</p>
+        <div class="em-dec-opts">
+          <label><input type="radio" name="mtRes" value="noanswer" ${res==='noanswer'?'checked':''}> No answer</label>
+          <label><input type="radio" name="mtRes" value="spoke" ${res==='spoke'?'checked':''}> Spoke to client</label>
+        </div>
+        <div class="field" style="margin:12px 0 10px;"><label for="mtNote">What happened? (required)</label><textarea id="mtNote" placeholder="e.g. Spoke to Sarah, went through LTA and CIC options; she wants to check with her partner…"></textarea>${noteHint('mtNote')}</div>
+        ${res ? `<div class="outcome-buttons">
+          ${res==='spoke' ? '<button class="ob-signup" data-mt="signup">Sign Up</button>' : ''}
+          <button class="ob-followup" data-mt="followup">${res==='spoke' ? 'Follow Up' : 'Try again'}</button>
+          <button class="ob-decline" data-mt="decline">Decline</button>
+        </div>
+        ${choice==='signup' ? `<div class="signup-choice"><div class="op-title">Sign Up: where is the case now?</div><div class="outcome-buttons"><button class="ob-onrisk" data-mt-signup="onrisk">On Risk</button><button class="ob-uw" data-mt-signup="underwriting">Submitted to underwriting</button></div></div>` : ''}
+        ${choice==='followup' ? `<div class="signup-choice"><div class="op-title">${res==='spoke' ? 'Follow up' : 'Try again'}: what's next?</div><div class="outcome-buttons"><button class="ob-uw" data-mt-next="appointment">Book appointment</button><button class="ob-followup" data-mt-next="reminder">Set reminder</button></div></div>` : ''}` : '<p class="mt-sub" style="margin:0;">Choose <b>No answer</b> or <b>Spoke to client</b> to see the next steps.</p>'}
+      </div>`;
+    area.querySelectorAll('input[name="mtRes"]').forEach(r=> r.addEventListener('change', ()=>{ st.res = r.value; st.choice = ''; refreshLeadModal(true); }));
+    const prelude = note=> ({type:'call', via:'appointment', meeting:st.res, text:`Outcome of meeting (${APPT_TYPES[l.apptType] || 'Appointment'} ${bookingWhen(l)}): ${st.res==='spoke' ? 'Spoke to client' : 'No answer'} - ${note}`});
+    area.querySelectorAll('[data-mt]').forEach(b=> b.addEventListener('click', ()=>{
+      const note = noteOk('mtNote'); if(!note) return;
+      if(b.dataset.mt==='decline'){
+        b.disabled = true;
+        logAudit(lead.id, {...prelude(note), ...by()}, clearBooking).then(()=>{ actionUIState = {kind:'appointment', stage:'decline'}; refreshLeadModal(); })
+          .catch(err=>{ toast('Could not save: '+err.message,'error'); b.disabled = false; });
+        return;
+      }
+      st.choice = st.choice===b.dataset.mt ? '' : b.dataset.mt; st.note = note; refreshLeadModal(true);
+    }));
+    area.querySelectorAll('[data-mt-signup]').forEach(b=> b.addEventListener('click', ()=>{
+      const note = noteOk('mtNote'); if(!note) return;
+      b.disabled = true;
+      logAudit(lead.id, {...prelude(note), ...by()}, clearBooking).then(()=>{ actionUIState = null; refreshLeadModal(); openSignup(lead.id, 'appointment', b.dataset.mtSignup); })
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); b.disabled = false; });
+    }));
+    area.querySelectorAll('[data-mt-next]').forEach(b=> b.addEventListener('click', ()=>{
+      const note = noteOk('mtNote'); if(!note) return;
+      actionUIState = {kind:b.dataset.mtNext, stage:'schedule', prelude:prelude(note), back:{...st, auto:true}};
+      refreshLeadModal(true);
+    }));
+    return;
+  }
+  if(st.stage==='reminderdue'){
+    area.innerHTML = `<div class="outcome-panel mt-panel rem">
+        <div class="op-title">${ico('clock')} Reminder due · chase ${esc(l.clientName||'the client')} (${esc(bookingWhen(l))})</div>
+        ${l.followUpNote ? `<p class="mt-sub">Reminder note: ${esc(l.followUpNote)}</p>` : ''}
+        <div class="field" style="margin:8px 0 10px;"><label for="rdNote">What happened? (required)</label><textarea id="rdNote" placeholder="e.g. Called twice, no answer; left a voicemail and sent a text…"></textarea>${noteHint('rdNote')}</div>
+        <div class="outcome-buttons"><button class="ob-uw" data-rd="appointment">Book appointment</button><button class="ob-followup" data-rd="reminder">Set reminder</button></div>
+      </div>`;
+    area.querySelectorAll('[data-rd]').forEach(b=> b.addEventListener('click', ()=>{
+      const note = noteOk('rdNote'); if(!note) return;
+      actionUIState = {kind:b.dataset.rd, stage:'schedule', prelude:{type:'call', via:'reminder', text:`Reminder chase (${bookingWhen(l)}): ${note}`}, back:{...st, auto:true}};
+      refreshLeadModal(true);
+    }));
+    return;
+  }
+  // schedule: book an appointment or set a reminder
+  const appt = st.kind==='appointment';
+  const tmr = new Date(Date.now() + 86400000);
+  area.innerHTML = `<div class="inline-form bk-form">
+      <div class="op-title" style="font-weight:700; margin-bottom:10px;">${appt ? 'Book an appointment' : 'Set a reminder'}${st.prelude ? ' <span class="mt-sub" style="font-weight:500;">(your note is saved with it)</span>' : ''}</div>
+      ${appt ? `<div class="field"><label for="apType">Type of appointment</label><select id="apType">${Object.entries(APPT_TYPES).map(([k, v])=> `<option value="${k}">${esc(v)}</option>`).join('')}</select></div>` : ''}
+      <div class="field-row">
+        <div class="field"><label for="fuDate">${appt ? 'Date' : 'Remind me on'}</label><input type="date" id="fuDate" min="${isoDay(new Date())}" value="${isoDay(tmr)}"></div>
+        <div class="field"><label for="fuTime">Time</label><input type="time" id="fuTime" step="300" value="${appt ? '' : '10:00'}"></div>
+      </div>
+      <div class="field"><label for="fuComment">Note (optional)</label><textarea id="fuComment" placeholder="${appt ? 'e.g. Go through LTA quotes with Sarah and James' : 'e.g. Try again after 5pm'}"></textarea></div>
+      <div class="fu-actions">
+        ${appt ? `<button class="btn btn-primary btn-sm" data-bk="invite" ${leadEmails(l).length ? '' : 'disabled title="Add the client\'s email to the case first"'}>${ico('calendar')} Add to Calendar – Client invite</button>
+        <button class="btn btn-secondary btn-sm" data-bk="calendar">${ico('calendar')} Add to Calendar – No invite</button>`
+        : `<button class="btn btn-primary btn-sm" data-bk="calendar">${ico('calendar')} Save &amp; add to Google Calendar</button>`}
+        <button class="btn btn-ghost btn-sm" data-bk="save">Save without adding to Calendar</button>
+        <button class="btn btn-ghost btn-sm" data-bk="cancel">Cancel</button>
+      </div>
+      <div class="fu-hint">${appt ? 'Calendar title: <b>' + esc(calTitle({clientName:l.clientName})) + '</b>' : 'Calendar title: <b>' + esc(calTitle({clientName:l.clientName, followUpKind:'reminder'})) + '</b>. A reminder keeps a new case in New Cases until you speak to the client.'}</div>
+      ${appt ? (leadEmails(l).length ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(leadEmails(l).join(', '))}</b>. In Google, click <b>Save</b>, then <b>Send</b>.</span></div>`
+        : `<div class="fu-invite none">${ico('info')}<span>No client email on this case, so a client invite isn't available. <button type="button" class="linkish" id="bkAddEmail">Add an email</button></span></div>`) : ''}
+    </div>`;
+  const addEm = document.getElementById('bkAddEmail');
+  if(addEm) addEm.addEventListener('click', ()=>{ const b = document.getElementById('ceEditBtn'); if(b){ b.click(); b.closest('.info-cell').scrollIntoView({behavior:'smooth', block:'center'}); } });
+  area.querySelector('[data-bk="cancel"]').addEventListener('click', ()=>{ actionUIState = st.back || null; refreshLeadModal(true); });
+  area.querySelectorAll('[data-bk]:not([data-bk="cancel"])').forEach(b=> b.addEventListener('click', ()=>{
+    const mode = b.dataset.bk, date = document.getElementById('fuDate').value, time = document.getElementById('fuTime').value;
+    const note = document.getElementById('fuComment').value.trim(), type = appt ? document.getElementById('apType').value : null;
+    const miss = [!date && 'fuDate', !time && 'fuTime'].filter(Boolean);
+    if(miss.length){ miss.forEach(id=> document.getElementById(id).classList.add('missing')); document.getElementById(miss[0]).focus(); toast('Choose a date and time.','error'); return; }
+    if(callDueAt(date, time).getTime() <= Date.now()){ document.getElementById('fuTime').classList.add('missing'); toast('Choose a date and time in the future.','error'); return; }
+    const gTab = mode!=='save' ? window.open('about:blank', '_blank') : null;
+    area.querySelectorAll('[data-bk]').forEach(x=> x.disabled = true);
+    const when = fmtDateSlash(date) + ` at ${time}`;
+    const calNote = mode==='invite' ? ' - Calendar invite prepared for the client' : mode==='calendar' ? ' - Added to calendar' : '';
+    const patch = {followUpDate:date, followUpTime:time, followUpKind:st.kind, apptType:type, followUpNote:note||null, ...(appt ? {status:'existing'} : {})};
+    const entry = appt ? {type:'followup', via:'appointment', text:`Appointment booked (${APPT_TYPES[type]}) - ${when}${note ? ' - '+note : ''}${calNote}`}
+      : {type:'reminder', text:`Reminder set - ${when}${note ? ' - '+note : ''}${calNote}`};
+    (st.prelude ? logAudit(lead.id, {...st.prelude, ...by()}) : Promise.resolve())
+      .then(()=> logAudit(lead.id, {...entry, ...by(), at:Date.now()+1}, patch))
+      .then(()=>{
+        if(gTab){
+          const url = googleCalUrl({...(LEADS[lead.id] || l), id:lead.id, ...patch}, {invite: mode==='invite'});
+          try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
+        }
+        const cal = mode==='invite' ? ' In Google, click Save, then Send to invite the client.' : mode==='calendar' ? ' Google Calendar opened: click Save there.' : '';
+        toast(appt ? `Appointment booked for ${fmtDate(date)} at ${time}. ${l.status==='new' ? 'Moved to Appointments / Research.' : ''}${cal}` : `Reminder set for ${fmtDate(date)} at ${time}.${l.status==='new' ? ' Still in New Cases until you speak to the client.' : ''}${cal}`,'success');
+        actionUIState = null; refreshLeadModal();
+      })
+      .catch(err=>{ if(gTab) gTab.close(); toast('Could not save: '+err.message,'error'); area.querySelectorAll('[data-bk]').forEach(x=> x.disabled = false); });
+  }));
+}
+
+/* ---- Overdue lock: a MAPA with overdue reminders or appointments deals with
+   them before using the protection dashboard (one at a time, in the case window). ---- */
+let overdueGateActive = false;
+function myOverdueBookings(){
+  if(!currentUser || currentUser.role!=='mapa') return [];
+  return Object.entries(LEADS).map(([id, l])=> ({id, ...l})).filter(l=> !l.deleted && l.advisorId===currentUser.id && fuDue(l))
+    .sort((a,b)=> callDueAt(a.followUpDate, a.followUpTime) - callDueAt(b.followUpDate, b.followUpTime));
+}
+function checkOverdueGate(){
+  if(!currentUser || !leadsLive || APP_MODE!=='protection') { if(overdueGateActive && APP_MODE!=='protection'){ overdueGateActive = false; closeModal('overdueOverlay'); } return; }
+  const list = myOverdueBookings();
+  if(!list.length){
+    if(overdueGateActive){ overdueGateActive = false; closeModal('overdueOverlay'); toast('All caught up. Thank you!','success'); }
+    return;
+  }
+  // Never interrupt someone partway through another window; it opens as soon as they close it.
+  if(!overdueGateActive && document.querySelector('.modal-overlay.open')) return;
+  document.getElementById('overdueSub').textContent = `${list.length} overdue ${list.length===1 ? 'item needs' : 'items need'} dealing with before you can use the dashboard.`;
+  document.getElementById('overdueBody').innerHTML = list.map(l=> `<div class="chase-row"><div class="who"><div><b>${esc(l.clientName||'(no name)')}</b><small>${esc(fuKindLabel(l))} · ${esc(overdueText(l.followUpDate, l.followUpTime))}${l.followUpNote ? ' · '+esc(l.followUpNote) : ''}</small></div>
+      <div class="chase-btns"><button type="button" class="btn btn-primary btn-sm" data-overdue-open="${esc(l.id)}">${fuKind(l)==='reminder' ? 'Deal with reminder' : 'Record outcome'}</button></div></div></div>`).join('');
+  document.querySelectorAll('[data-overdue-open]').forEach(b=> b.addEventListener('click', ()=> openLead(b.dataset.overdueOpen)));
+  if(!overdueGateActive){ overdueGateActive = true; openModal('overdueOverlay'); }
+}
+setInterval(()=>{ if(currentUser && leadsLive) checkOverdueGate(); }, 60000);
 
 /* mode: 'onrisk' → On Risk; 'underwriting' → Submitted / In Underwriting;
    'nowonrisk' → a case with terms issued that the client has taken up. */
@@ -9225,7 +9435,7 @@ function renderInsights(){
   const pct = n => total ? Math.round(n/total*100) : 0;
   const funnelDefs = [
     ['New Cases', counts.new, 'var(--blue)'],
-    ['Contacted Clients', counts.existing, 'var(--amber)'],
+    ['Appointments / Research', counts.existing, 'var(--amber)'],
     ['Submitted / In Underwriting', counts.underwriting, 'var(--violet)'],
     ['Terms Issued', counts.terms, 'var(--indigo)'],
     ['On Risk', counts.signedup, 'var(--green)'],
@@ -10195,7 +10405,8 @@ function checkCallReminders(){
       const due = callDueAt(l.followUpDate, l.followUpTime).getTime();
       remindAt = due - before; lastChance = due + 30*60000; // skip calls already half an hour late
       const mins = Math.round((due - now)/60000);
-      title = mins > 0 ? `Call ${l.clientName||'client'} in ${mins} min` : `Call ${l.clientName||'client'} now`;
+      const what = inBookingPot(l) && l.followUpKind==='reminder' ? 'Reminder: chase' : inBookingPot(l) && l.followUpKind==='appointment' ? `${APPT_TYPES[l.apptType] || 'Appointment'} with` : 'Call';
+      title = mins > 0 ? `${what} ${l.clientName||'client'} in ${mins} min` : `${what} ${l.clientName||'client'} now`;
     } else {
       const day = toDate(l.followUpDate); day.setHours(9,0,0,0); // untimed calls: a 9am nudge on the day
       remindAt = day.getTime(); lastChance = callDueAt(l.followUpDate, null).getTime();

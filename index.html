@@ -6059,6 +6059,7 @@ function openLeadFromSib(leadId){
 }
 function openSibFromLead(key){
   closeModal('leadOverlay');
+  if(document.getElementById('leadOverlay').classList.contains('open')) return; // the case needs its next step booked first (message already shown)
   setAppMode('sib');
   startSibListener();
   ensureSibLoaded().then(()=>{

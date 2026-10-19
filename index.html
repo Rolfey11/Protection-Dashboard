@@ -9067,7 +9067,7 @@ function renderBookingArea(lead, area){
     const choice = st.choice || '';
     area.innerHTML = `<div class="outcome-panel mt-panel">
         <div class="op-title">${ico('alert')} Outcome of meeting · ${esc(APPT_TYPES[l.apptType] || 'Appointment')} ${esc(bookingWhen(l))}</div>
-        <p class="mt-sub">This appointment has happened. Record how it went before doing anything else on this case.</p>
+        <p class="mt-sub">This appointment has happened. Record how it went before doing anything else on this case.${leadPhones(l).length ? ' Client: ' + leadPhones(l).map(ph=> `<a href="${esc(telHref(ph))}" class="tel-link">${esc(ph)}</a>`).join(' ') : ''}</p>
         <div class="em-dec-opts">
           <label><input type="radio" name="mtRes" value="noanswer" ${res==='noanswer'?'checked':''}> No answer</label>
           <label><input type="radio" name="mtRes" value="spoke" ${res==='spoke'?'checked':''}> Spoke to client</label>
@@ -9139,7 +9139,11 @@ function renderBookingArea(lead, area){
         <button class="btn btn-ghost btn-sm" data-bk="cancel">Cancel</button>
       </div>
       <div class="fu-hint">${appt ? 'Calendar title: <b>' + esc(calTitle({clientName:l.clientName})) + '</b>' : 'Calendar title: <b>' + esc(calTitle({clientName:l.clientName, followUpKind:'reminder'})) + '</b>. A reminder keeps a new case in New Cases until you speak to the client.'}</div>
+      ${appt ? (leadEmails(l).length ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(leadEmails(l).join(', '))}</b>. In Google, click <b>Save</b>, then <b>Send</b>.</span></div>`
+        : `<div class="fu-invite none">${ico('info')}<span>No client email on this case, so a client invite isn't available. <button type="button" class="linkish" id="bkAddEmail">Add an email</button></span></div>`) : ''}
     </div>`;
+  const addEm = document.getElementById('bkAddEmail');
+  if(addEm) addEm.addEventListener('click', ()=>{ const b = document.getElementById('ceEditBtn'); if(b){ b.click(); b.closest('.info-cell').scrollIntoView({behavior:'smooth', block:'center'}); } });
   area.querySelector('[data-bk="cancel"]').addEventListener('click', ()=>{ actionUIState = st.back || null; refreshLeadModal(true); });
   area.querySelectorAll('[data-bk]:not([data-bk="cancel"])').forEach(b=> b.addEventListener('click', ()=>{
     const mode = b.dataset.bk, date = document.getElementById('fuDate').value, time = document.getElementById('fuTime').value;

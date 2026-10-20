@@ -6079,6 +6079,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-20', date:'2026-10-20', items:[
+    {text:"<b>Not attempted</b>: Outcome of meeting has a third choice for when the appointment didn't go ahead from our side. Like No answer, it needs a note, then <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. It isn't counted as a contact attempt.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-19b', date:'2026-10-19', items:[
     {text:"<b>Decline from Appointments / Research</b>: cases in Appointments / Research now have a <b>Decline</b> button next to Book appointment and Set reminder. It opens the usual decline form with the reason, detail and decline steps.", roles:['mapa','management']},
   ]},
@@ -8264,7 +8267,7 @@ const HELP = [
   ]},
   {group:'Protection cases', items:[
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
-    {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b> or <b>No answer</b>.</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>.</li></ol>`},
+    {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b>, <b>No answer</b> or <b>Not attempted</b> (the appointment didn't go ahead from our side).</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer or Not attempted: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. Not attempted doesn't count as a contact attempt.</li></ol>`},
     {t:'Overdue reminders and appointments', roles:['mapa'], h:`When you open the protection dashboard, any overdue reminders or appointments pop up first, and you can't use the dashboard until each one is dealt with. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment. A reminder or appointment that goes overdue while you're working pops up as soon as you close what you're doing.`},
     {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>New Cases</b> and <b>Appointments / Research</b> must have its next step booked; you can't close it until it does.<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li><li><b>Decline</b> (Appointments / Research only): opens the decline form with the reason, detail and decline steps.</li></ul>`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
@@ -9085,18 +9088,21 @@ function renderBookingArea(lead, area){
         <div class="em-dec-opts">
           <label><input type="radio" name="mtRes" value="noanswer" ${res==='noanswer'?'checked':''}> No answer</label>
           <label><input type="radio" name="mtRes" value="spoke" ${res==='spoke'?'checked':''}> Spoke to client</label>
+          <label><input type="radio" name="mtRes" value="notattempted" ${res==='notattempted'?'checked':''}> Not attempted</label>
         </div>
-        <div class="field" style="margin:12px 0 10px;"><label for="mtNote">What happened? (required)</label><textarea id="mtNote" placeholder="e.g. Spoke to Sarah, went through LTA and CIC options; she wants to check with her partner…"></textarea>${noteHint('mtNote')}</div>
+        <div class="field" style="margin:12px 0 10px;"><label for="mtNote">${res==='notattempted' ? 'Why wasn\'t it attempted? (required)' : 'What happened? (required)'}</label><textarea id="mtNote" placeholder="${res==='notattempted' ? 'e.g. Off sick that day; client emailed to ask to move it to next week…' : 'e.g. Spoke to Sarah, went through LTA and CIC options; she wants to check with her partner…'}"></textarea>${noteHint('mtNote')}</div>
         ${res ? `<div class="outcome-buttons">
           ${res==='spoke' ? '<button class="ob-signup" data-mt="signup">Sign Up</button>' : ''}
           <button class="ob-followup" data-mt="followup">${res==='spoke' ? 'Follow Up' : 'Try again'}</button>
           <button class="ob-decline" data-mt="decline">Decline</button>
         </div>
         ${choice==='signup' ? `<div class="signup-choice"><div class="op-title">Sign Up: where is the case now?</div><div class="outcome-buttons"><button class="ob-onrisk" data-mt-signup="onrisk">On Risk</button><button class="ob-uw" data-mt-signup="underwriting">Submitted to underwriting</button></div></div>` : ''}
-        ${choice==='followup' ? `<div class="signup-choice"><div class="op-title">${res==='spoke' ? 'Follow up' : 'Try again'}: what's next?</div><div class="outcome-buttons"><button class="ob-uw" data-mt-next="appointment">Book appointment</button><button class="ob-followup" data-mt-next="reminder">Set reminder</button></div></div>` : ''}` : '<p class="mt-sub" style="margin:0;">Choose <b>No answer</b> or <b>Spoke to client</b> to see the next steps.</p>'}
+        ${choice==='followup' ? `<div class="signup-choice"><div class="op-title">${res==='spoke' ? 'Follow up' : 'Try again'}: what's next?</div><div class="outcome-buttons"><button class="ob-uw" data-mt-next="appointment">Book appointment</button><button class="ob-followup" data-mt-next="reminder">Set reminder</button></div></div>` : ''}` : '<p class="mt-sub" style="margin:0;">Choose <b>No answer</b>, <b>Spoke to client</b> or <b>Not attempted</b> to see the next steps.</p>'}
       </div>`;
     area.querySelectorAll('input[name="mtRes"]').forEach(r=> r.addEventListener('change', ()=>{ st.res = r.value; st.choice = ''; refreshLeadModal(true); }));
-    const prelude = note=> ({type:'call', via:'appointment', meeting:st.res, text:`Outcome of meeting (${APPT_TYPES[l.apptType] || 'Appointment'} ${bookingWhen(l)}): ${st.res==='spoke' ? 'Spoke to client' : 'No answer'} - ${note}`});
+    const resLabel = {spoke:'Spoke to client', noanswer:'No answer', notattempted:'Not attempted'}[st.res] || st.res;
+    // "Not attempted" is recorded but isn't a contact attempt.
+    const prelude = note=> ({type: st.res==='notattempted' ? 'status' : 'call', via:'appointment', meeting:st.res, text:`Outcome of meeting (${APPT_TYPES[l.apptType] || 'Appointment'} ${bookingWhen(l)}): ${resLabel} - ${note}`});
     area.querySelectorAll('[data-mt]').forEach(b=> b.addEventListener('click', ()=>{
       const note = noteOk('mtNote'); if(!note) return;
       if(b.dataset.mt==='decline'){

@@ -1942,7 +1942,9 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="section-lbl" style="margin-top:0;">This week</div>
       <div class="stat-grid" id="weekDigest"></div>
 
-      <div class="section-lbl">Conversion funnel</div>
+      <div class="sib-ins-tabs" role="tablist" aria-label="Insights sections" id="pinsTabs"><button type="button" role="tab" data-pins-tab="pipeline" aria-selected="true" class="on">Pipeline &amp; commission</button><button type="button" role="tab" data-pins-tab="appts" aria-selected="false" class="">Appointments &amp; reminders</button><button type="button" role="tab" data-pins-tab="uw" aria-selected="false" class="">Underwriting</button><button type="button" role="tab" data-pins-tab="advisers" aria-selected="false" class="">Advisers &amp; sources</button><button type="button" role="tab" data-pins-tab="declines" aria-selected="false" class="">Declines &amp; workload</button><button type="button" role="tab" data-pins-tab="speed" aria-selected="false" class="">Speed &amp; stale cases</button></div>
+      <div class="sib-ins-sec" data-pins-sec="pipeline" role="tabpanel">
+      <div class="section-lbl" style="margin-top:0;">Conversion funnel</div>
       <div class="insights-card" style="margin-bottom:26px;">
         <div id="funnelChart"></div>
       </div>
@@ -1950,13 +1952,29 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="section-lbl">Commission</div>
       <div class="stat-grid" id="commissionStats"></div>
 
-      <div class="section-lbl">Underwriting</div>
+      </div>
+      <div class="sib-ins-sec hidden" data-pins-sec="appts" role="tabpanel">
+      <p class="nml-note" style="margin-top:0;">Outcomes of meetings, how quickly overdue appointments and reminders are dealt with, and what happens next. Uses the advisor filter, and the date range for <i>when things happened</i>.</p>
+      <div class="stat-grid" id="apptStats"></div>
+      <div class="insights-cols" style="margin-bottom:20px;">
+        <div class="insights-card"><h4>Outcome of meetings</h4><div id="meetOutcomeChart"></div></div>
+        <div class="insights-card"><h4>What happened next</h4><div id="meetNextChart"></div></div>
+      </div>
+      <div class="insights-card" style="margin-bottom:20px;"><h4>Appointments vs reminders, week by week</h4><div id="apptVsRemChart"></div></div>
+      <div class="insights-card" style="margin-bottom:20px;"><h4 id="apptAdvTitle">By adviser</h4><div class="sib-ins-wrap"><table class="mini-table" id="apptAdvisorTable"></table></div>
+        <p class="nml-note" style="margin-bottom:0;"><b>Time to deal with overdue</b> is from when the appointment or reminder was due to when its outcome or note was recorded (typical = median).</p></div>
+      <div class="insights-card" style="margin-bottom:26px;"><h4>By appointment type</h4><div class="sib-ins-wrap"><table class="mini-table" id="apptTypeTable"></table></div></div>
+
+      </div>
+      <div class="sib-ins-sec hidden" data-pins-sec="uw" role="tabpanel">
       <div class="stat-grid" id="uwStats"></div>
       <div class="insights-card" id="uwAdvisorCard" style="margin-bottom:20px;">
         <h4>Underwriting by advisor</h4>
         <table class="mini-table" id="uwAdvisorTable"></table>
       </div>
 
+      </div>
+      <div class="sib-ins-sec hidden" data-pins-sec="advisers" role="tabpanel">
       <div class="insights-cols" id="advisorSourceRow">
         <div class="insights-card" id="byAdvisorCard">
           <h4>By advisor</h4>
@@ -1968,6 +1986,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
       </div>
 
+      </div>
+      <div class="sib-ins-sec hidden" data-pins-sec="declines" role="tabpanel">
       <div class="insights-cols" id="declineWorkloadRow">
         <div class="insights-card">
           <h4>Decline reasons</h4>
@@ -1979,19 +1999,8 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
       </div>
 
-      <div class="section-lbl">Appointments &amp; reminders</div>
-      <p class="nml-note" style="margin-top:-4px;">Outcomes of meetings, how quickly overdue appointments and reminders are dealt with, and what happens next. Uses the advisor filter, and the date range for <i>when things happened</i>.</p>
-      <div class="stat-grid" id="apptStats"></div>
-      <div class="insights-cols" style="margin-bottom:20px;">
-        <div class="insights-card"><h4>Outcome of meetings</h4><div id="meetOutcomeChart"></div></div>
-        <div class="insights-card"><h4>What happened next</h4><div id="meetNextChart"></div></div>
       </div>
-      <div class="insights-card" style="margin-bottom:20px;"><h4>Appointments vs reminders, week by week</h4><div id="apptVsRemChart"></div></div>
-      <div class="insights-card" style="margin-bottom:20px;"><h4 id="apptAdvTitle">By adviser</h4><div class="sib-ins-wrap"><table class="mini-table" id="apptAdvisorTable"></table></div>
-        <p class="nml-note" style="margin-bottom:0;"><b>Time to deal with overdue</b> is from when the appointment or reminder was due to when its outcome or note was recorded (typical = median).</p></div>
-      <div class="insights-card" style="margin-bottom:26px;"><h4>By appointment type</h4><div class="sib-ins-wrap"><table class="mini-table" id="apptTypeTable"></table></div></div>
-
-      <div class="section-lbl">Speed &amp; compliance</div>
+      <div class="sib-ins-sec hidden" data-pins-sec="speed" role="tabpanel">
       <div class="stat-grid" id="speedStats"></div>
 
       <div class="section-lbl">Stale cases — no activity in 5+ days</div>
@@ -2001,6 +2010,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <tbody></tbody>
         </table>
         <div id="agingEmpty" class="settings-empty hidden">Nothing stale right now — nice work.</div>
+      </div>
       </div>
     </div>
 
@@ -6098,6 +6108,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-20c', date:'2026-10-20', items:[
+    {text:"<b>Tidier protection Insights</b>: the \"This week\" figures stay at the top, and everything else now sits under tabs (Pipeline &amp; commission, Appointments &amp; reminders, Underwriting, Advisers &amp; sources, Declines &amp; workload, Speed &amp; stale cases), so you only see one section at a time. The tab you last used is remembered."},
+  ]},
   {id:'2026-10-20b', date:'2026-10-20', items:[
     {text:"<b>Appointments &amp; reminders in Insights</b>: a new section shows outcomes of meetings (spoke / no answer / not attempted), what happened next (signed up, rebooked, reminder, declined), appointments booked vs reminders set week by week, and how quickly overdue items are dealt with. It's broken down by adviser and by appointment type (phone, video, face to face), with how fast new cases get an appointment.", roles:['management','admin']},
     {text:"<b>Your appointments &amp; reminders in Insights</b>: see your meeting outcomes, what happened next, how quickly you deal with overdue items and how fast new cases get an appointment.", roles:['mapa']},
@@ -9535,6 +9548,16 @@ function statCard(value, label, tone=''){
   return `<div class="stat-card ${tone}"><div class="sv">${value}</div><div class="sl">${esc(label)}</div></div>`;
 }
 
+/* Protection Insights tabs: the "This week" figures stay at the top; the
+   detail sits under tabs. The chosen tab is remembered on this device. */
+function setPinsTab(k){
+  if(!document.querySelector(`[data-pins-sec="${k}"]`)) k = 'pipeline';
+  document.querySelectorAll('[data-pins-tab]').forEach(b=>{ const on = b.dataset.pinsTab===k; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+  document.querySelectorAll('[data-pins-sec]').forEach(x=> x.classList.toggle('hidden', x.dataset.pinsSec!==k));
+  try{ localStorage.setItem('plt_insTab', k); }catch(e){}
+}
+document.querySelectorAll('[data-pins-tab]').forEach(b=> b.addEventListener('click', ()=> setPinsTab(b.dataset.pinsTab)));
+try{ setPinsTab(localStorage.getItem('plt_insTab') || 'pipeline'); }catch(e){}
 function renderInsights(){
   const isMapa = currentUser.role==='mapa';
   document.getElementById('insightsSub').textContent = isMapa

@@ -776,6 +776,13 @@ body:not(.mode-sib) .sib-only{display:none !important;}
 .sib-legend{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:11.5px; color:var(--text-muted); margin:-6px 0 12px;}
 .sib-legend span{display:inline-flex; align-items:center; gap:5px;}
 .sib-legend i{display:inline-block; width:10px; height:10px; border-radius:3px;}
+.avr-legend{display:flex; gap:14px; font-size:12px; color:var(--text-muted); margin-bottom:8px;}
+.avr-legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px;}
+.avr-row{display:grid; grid-template-columns:90px 1fr 70px; gap:10px; align-items:center; padding:4px 0; font-size:12.5px;}
+.avr-bars{display:flex; flex-direction:column; gap:3px;}
+.avr-bars i{display:block; height:8px; border-radius:0 4px 4px 0; min-width:2px;}
+.avr-row b{text-align:right; font-weight:600; color:var(--text-muted);}
+.avr-a{background:var(--brand);} .avr-r{background:var(--blue);}
 .sib-hbar{display:grid; grid-template-columns:minmax(110px, 38%) 1fr auto; align-items:center; gap:10px; padding:5px 0; font-size:12.5px;}
 .sib-hbar .t{height:10px; border-radius:0 4px 4px 0; background:var(--bg);}
 .sib-hbar .t i{display:block; height:100%; border-radius:0 4px 4px 0; background:var(--brand); min-width:2px;}
@@ -1971,6 +1978,18 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <div id="workloadChart"></div>
         </div>
       </div>
+
+      <div class="section-lbl">Appointments &amp; reminders</div>
+      <p class="nml-note" style="margin-top:-4px;">Outcomes of meetings, how quickly overdue appointments and reminders are dealt with, and what happens next. Uses the advisor filter, and the date range for <i>when things happened</i>.</p>
+      <div class="stat-grid" id="apptStats"></div>
+      <div class="insights-cols" style="margin-bottom:20px;">
+        <div class="insights-card"><h4>Outcome of meetings</h4><div id="meetOutcomeChart"></div></div>
+        <div class="insights-card"><h4>What happened next</h4><div id="meetNextChart"></div></div>
+      </div>
+      <div class="insights-card" style="margin-bottom:20px;"><h4>Appointments vs reminders, week by week</h4><div id="apptVsRemChart"></div></div>
+      <div class="insights-card" style="margin-bottom:20px;"><h4 id="apptAdvTitle">By adviser</h4><div class="sib-ins-wrap"><table class="mini-table" id="apptAdvisorTable"></table></div>
+        <p class="nml-note" style="margin-bottom:0;"><b>Time to deal with overdue</b> is from when the appointment or reminder was due to when its outcome or note was recorded (typical = median).</p></div>
+      <div class="insights-card" style="margin-bottom:26px;"><h4>By appointment type</h4><div class="sib-ins-wrap"><table class="mini-table" id="apptTypeTable"></table></div></div>
 
       <div class="section-lbl">Speed &amp; compliance</div>
       <div class="stat-grid" id="speedStats"></div>
@@ -6079,6 +6098,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-20b', date:'2026-10-20', items:[
+    {text:"<b>Appointments &amp; reminders in Insights</b>: a new section shows outcomes of meetings (spoke / no answer / not attempted), what happened next (signed up, rebooked, reminder, declined), appointments booked vs reminders set week by week, and how quickly overdue items are dealt with. It's broken down by adviser and by appointment type (phone, video, face to face), with how fast new cases get an appointment.", roles:['management','admin']},
+    {text:"<b>Your appointments &amp; reminders in Insights</b>: see your meeting outcomes, what happened next, how quickly you deal with overdue items and how fast new cases get an appointment.", roles:['mapa']},
+  ]},
   {id:'2026-10-20', date:'2026-10-20', items:[
     {text:"<b>Not attempted</b>: Outcome of meeting has a third choice for when the appointment didn't go ahead from our side. Like No answer, it needs a note, then <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. It isn't counted as a contact attempt.", roles:['mapa','management']},
   ]},
@@ -9102,7 +9125,7 @@ function renderBookingArea(lead, area){
     area.querySelectorAll('input[name="mtRes"]').forEach(r=> r.addEventListener('change', ()=>{ st.res = r.value; st.choice = ''; refreshLeadModal(true); }));
     const resLabel = {spoke:'Spoke to client', noanswer:'No answer', notattempted:'Not attempted'}[st.res] || st.res;
     // "Not attempted" is recorded but isn't a contact attempt.
-    const prelude = note=> ({type: st.res==='notattempted' ? 'status' : 'call', via:'appointment', meeting:st.res, text:`Outcome of meeting (${APPT_TYPES[l.apptType] || 'Appointment'} ${bookingWhen(l)}): ${resLabel} - ${note}`});
+    const prelude = note=> ({type: st.res==='notattempted' ? 'status' : 'call', via:'appointment', meeting:st.res, dueAt: callDueAt(l.followUpDate, l.followUpTime).getTime(), apptType: l.apptType || null, text:`Outcome of meeting (${APPT_TYPES[l.apptType] || 'Appointment'} ${bookingWhen(l)}): ${resLabel} - ${note}`});
     area.querySelectorAll('[data-mt]').forEach(b=> b.addEventListener('click', ()=>{
       const note = noteOk('mtNote'); if(!note) return;
       if(b.dataset.mt==='decline'){
@@ -9135,7 +9158,7 @@ function renderBookingArea(lead, area){
       </div>`;
     area.querySelectorAll('[data-rd]').forEach(b=> b.addEventListener('click', ()=>{
       const note = noteOk('rdNote'); if(!note) return;
-      actionUIState = {kind:b.dataset.rd, stage:'schedule', prelude:{type:'call', via:'reminder', text:`Reminder chase (${bookingWhen(l)}): ${note}`}, back:{...st, auto:true}};
+      actionUIState = {kind:b.dataset.rd, stage:'schedule', prelude:{type:'call', via:'reminder', dueAt: callDueAt(l.followUpDate, l.followUpTime).getTime(), text:`Reminder chase (${bookingWhen(l)}): ${note}`}, back:{...st, auto:true}};
       refreshLeadModal(true);
     }));
     return;
@@ -9413,6 +9436,101 @@ function insightsLeads(){
   return all;
 }
 
+/* ---- Appointments & reminders insights ----
+   Events (meeting outcomes, reminder chases, bookings) are counted by when they
+   happened, so these use the advisor filter but apply the date range to the event. */
+function fmtDur(ms){
+  if(ms==null || isNaN(ms)) return '—';
+  const m = Math.max(0, ms) / 60000;
+  if(m < 60) return Math.round(m) + ' min';
+  if(m < 48*60) return (Math.round(m/6)/10) + ' hrs';
+  return Math.round(m/1440) + ' days';
+}
+function median(arr){ if(!arr.length) return null; const a = arr.slice().sort((x,y)=> x-y), i = Math.floor(a.length/2); return a.length % 2 ? a[i] : (a[i-1]+a[i])/2; }
+// When was the item due? Saved on new entries; older ones have it in the text, e.g. "(Phone call 18/10/2026 at 11:00)".
+function entryDueAt(a){
+  if(a.dueAt) return a.dueAt;
+  const m = /\((?:[^()]*?\s)?(\d{2})\/(\d{2})\/(\d{4})(?: at (\d{1,2}):(\d{2}))?\)/.exec(a.text||'');
+  if(!m) return null;
+  return new Date(+m[3], +m[2]-1, +m[1], m[4] ? +m[4] : 23, m[5] ? +m[5] : 59).getTime();
+}
+function entryApptType(a){ if(a.apptType) return a.apptType; const t = /^Outcome of meeting \((Phone call|Video call|Face to face)/.exec(a.text||''); return t ? Object.keys(APPT_TYPES).find(k=> APPT_TYPES[k]===t[1]) : null; }
+const NEXT_STEPS = [['signup','Signed up (on risk / submitted)'],['appointment','Another appointment booked'],['reminder','Reminder set'],['decline','Declined'],['none','Nothing recorded yet']];
+function renderApptInsights(){
+  const isMapa = currentUser.role==='mapa';
+  let leads = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted);
+  if(isMapa) leads = leads.filter(l=> l.advisorId===currentUser.id);
+  else if(selectedAdvisorFilter) leads = selectedAdvisorFilter==='__unassigned__' ? leads.filter(l=> !l.advisorId) : leads.filter(l=> l.advisorId===selectedAdvisorFilter);
+  const from = dateRangeFrom ? new Date(dateRangeFrom+'T00:00:00').getTime() : -Infinity, to = dateRangeTo ? new Date(dateRangeTo+'T23:59:59').getTime() : Infinity;
+  const inRange = at=> at >= from && at <= to;
+  const meetings = [], chases = [], booked = [], reminders = [], speedToAppt = {};
+  leads.forEach(l=>{
+    const es = Object.values(l.audit||{}).filter(a=> a && a.at).sort((a,b)=> a.at-b.at);
+    const adv = l.advisorName || 'Unassigned';
+    es.forEach((a, i)=>{
+      if(!inRange(a.at)) return;
+      const who = a.byName || adv;
+      if(a.meeting){
+        const nx = es.slice(i+1).find(x=> ['signup','underwriting','decline','followup','reminder'].includes(x.type));
+        const next = !nx ? 'none' : (nx.type==='signup' || nx.type==='underwriting') ? 'signup' : nx.type==='decline' ? 'decline' : nx.type==='reminder' ? 'reminder' : 'appointment';
+        const due = entryDueAt(a);
+        meetings.push({who, res:a.meeting, next, late: due ? a.at - due : null, type: entryApptType(a)});
+      } else if(a.via==='reminder' && /^Reminder chase/.test(a.text||'')){
+        const due = entryDueAt(a); chases.push({who, late: due ? a.at - due : null});
+      } else if(a.type==='followup' && a.via==='appointment'){
+        const t = /^Appointment booked \((Phone call|Video call|Face to face)\)/.exec(a.text||''); booked.push({who, at:a.at, type: t ? Object.keys(APPT_TYPES).find(k=> APPT_TYPES[k]===t[1]) : null});
+      } else if(a.type==='reminder' && /^Reminder set/.test(a.text||'')) reminders.push({who, at:a.at});
+    });
+    // New case → first appointment booked
+    const first = es.find(a=> a.type==='followup' && a.via==='appointment');
+    if(first && l.createdAt && inRange(first.at)) (speedToAppt[adv] = speedToAppt[adv] || []).push(first.at - l.createdAt);
+  });
+  const resCount = r=> meetings.filter(m=> m.res===r).length, n = meetings.length;
+  const pc = (a, b)=> b ? Math.round(a/b*100)+'%' : '—';
+  const overdueItems = [...meetings, ...chases].map(x=> x.late).filter(x=> x!=null);
+  const overdueNow = leads.filter(fuDue).length;
+  document.getElementById('apptStats').innerHTML =
+    statCard(n, 'Meeting outcomes recorded') +
+    statCard(pc(resCount('spoke'), n), 'Spoke to client', n && resCount('spoke')/n >= .6 ? 'good' : n ? 'warn' : '') +
+    statCard(`${resCount('noanswer')} · ${pc(resCount('noanswer'), n)}`, 'No answer') +
+    statCard(`${resCount('notattempted')} · ${pc(resCount('notattempted'), n)}`, 'Not attempted', resCount('notattempted') ? 'warn' : '') +
+    statCard(booked.length, 'Appointments booked') +
+    statCard(reminders.length, 'Reminders set') +
+    statCard(fmtDur(median(overdueItems)), 'Typical time to deal with an overdue item') +
+    statCard(overdueNow, 'Overdue right now', overdueNow ? 'bad' : 'good');
+  document.getElementById('meetOutcomeChart').innerHTML = n ? sibHBars([['Spoke to client', resCount('spoke')], ['No answer', resCount('noanswer')], ['Not attempted', resCount('notattempted')]].filter(e=> e[1]), n) : '<div class="insights-empty">No meeting outcomes recorded in this range yet.</div>';
+  document.getElementById('meetNextChart').innerHTML = n ? sibHBars(NEXT_STEPS.map(([k, lbl])=> [lbl, meetings.filter(m=> m.next===k).length]).filter(e=> e[1]), n)
+    + `<p class="nml-note" style="margin-bottom:0;">Of meetings where they spoke to the client, <b>${pc(meetings.filter(m=> m.res==='spoke' && m.next==='signup').length, resCount('spoke'))}</b> signed up there and then.</p>` : '<div class="insights-empty">Nothing yet.</div>';
+  // Appointments vs reminders: the last 8 weeks (to the end of the date range, if one is set)
+  const endTs = isFinite(to) ? to : Date.now();
+  const wk0 = startOfWeek(endTs) - 7*7*86400000;
+  const weeks = Array.from({length:8}, (_, i)=> { const st = wk0 + i*7*86400000; return {st, a: booked.filter(x=> x.at >= st && x.at < st + 7*86400000).length, r: reminders.filter(x=> x.at >= st && x.at < st + 7*86400000).length}; });
+  const wMax = Math.max(1, ...weeks.map(w=> Math.max(w.a, w.r)));
+  const ratio = booked.length && reminders.length ? (reminders.length / booked.length) : null;
+  document.getElementById('apptVsRemChart').innerHTML = (booked.length || reminders.length)
+    ? `<div class="avr-legend"><span><i class="avr-a"></i>Appointments booked (${booked.length})</span><span><i class="avr-r"></i>Reminders set (${reminders.length})</span></div>` +
+      weeks.map(w=> `<div class="avr-row" title="Week of ${esc(fmtDate(w.st))}: ${w.a} appointment${w.a===1?'':'s'}, ${w.r} reminder${w.r===1?'':'s'}"><span>w/c ${esc(new Date(w.st).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))}</span><span class="avr-bars"><i class="avr-a" style="width:${w.a/wMax*100}%"></i><i class="avr-r" style="width:${w.r/wMax*100}%"></i></span><b>${w.a} · ${w.r}</b></div>`).join('') +
+      `<p class="nml-note" style="margin-bottom:0;">${ratio==null ? (booked.length ? 'Only appointments booked so far.' : 'Only reminders set so far.') : ratio >= 1 ? `<b>${ratio.toFixed(1)}</b> reminders set for every appointment booked.` : `<b>${(1/ratio).toFixed(1)}</b> appointments booked for every reminder set.`} Lots of reminders compared with appointments can mean cases are being chased rather than booked in.</p>`
+    : '<div class="insights-empty">No appointments or reminders booked in this range yet.</div>';
+  // by adviser
+  const advNames = [...new Set([...meetings, ...chases, ...booked, ...reminders].map(x=> x.who).concat(leads.filter(fuDue).map(l=> l.advisorName||'Unassigned')))].sort();
+  document.getElementById('apptAdvTitle').textContent = isMapa ? 'Your figures' : 'By adviser';
+  document.getElementById('apptAdvisorTable').innerHTML = !advNames.length ? '<tr><td class="insights-empty">Nothing in this range yet.</td></tr>' :
+    `<thead><tr><th>Adviser</th><th>Meetings</th><th>Spoke</th><th>No answer</th><th>Not attempted</th><th>Signed up at meeting</th><th>Appts booked</th><th>Reminders</th><th title="Reminders set for each appointment booked">Reminders per appt</th><th title="Median time from due to outcome / note recorded">Time to deal with overdue</th><th>Dealt with within 24 hrs</th><th>Overdue now</th><th title="New case created → first appointment booked (median)">New case → appointment</th></tr></thead><tbody>` +
+    advNames.map(a=>{
+      const ms = meetings.filter(m=> m.who===a), lates = [...ms, ...chases.filter(c=> c.who===a)].map(x=> x.late).filter(x=> x!=null);
+      const od = leads.filter(l=> fuDue(l) && (l.advisorName||'Unassigned')===a).length;
+      const sp = ms.filter(m=> m.res==='spoke').length;
+      return `<tr><td style="font-weight:600;">${esc(a)}</td><td>${ms.length}</td><td>${pc(sp, ms.length)}</td><td>${ms.filter(m=> m.res==='noanswer').length}</td><td>${ms.filter(m=> m.res==='notattempted').length}</td><td>${pc(ms.filter(m=> m.res==='spoke' && m.next==='signup').length, sp)}</td><td>${booked.filter(x=> x.who===a).length}</td><td>${reminders.filter(x=> x.who===a).length}</td><td>${booked.filter(x=> x.who===a).length ? (reminders.filter(x=> x.who===a).length / booked.filter(x=> x.who===a).length).toFixed(1) : '—'}</td><td>${fmtDur(median(lates))}</td><td>${pc(lates.filter(x=> x <= 86400000).length, lates.length)}</td><td style="${od ? 'color:var(--red); font-weight:700;' : ''}">${od}</td><td>${fmtDur(median(speedToAppt[a]||[]))}</td></tr>`;
+    }).join('') + '</tbody>';
+  // by appointment type
+  const types = Object.entries(APPT_TYPES);
+  document.getElementById('apptTypeTable').innerHTML = `<thead><tr><th>Type</th><th>Booked</th><th>Outcomes recorded</th><th>Spoke to client</th><th>No answer</th><th>Signed up at meeting</th></tr></thead><tbody>` +
+    types.map(([k, lbl])=>{ const ms = meetings.filter(m=> m.type===k), sp = ms.filter(m=> m.res==='spoke').length;
+      return `<tr><td style="font-weight:600;">${esc(lbl)}</td><td>${booked.filter(b=> b.type===k).length}</td><td>${ms.length}</td><td>${pc(sp, ms.length)}</td><td>${ms.filter(m=> m.res==='noanswer').length}</td><td>${pc(ms.filter(m=> m.res==='spoke' && m.next==='signup').length, sp)}</td></tr>`; }).join('') +
+    (meetings.some(m=> !m.type) ? `<tr><td style="font-weight:600;">Booked before types existed</td><td>—</td><td>${meetings.filter(m=> !m.type).length}</td><td>${pc(meetings.filter(m=> !m.type && m.res==='spoke').length, meetings.filter(m=> !m.type).length)}</td><td>${meetings.filter(m=> !m.type && m.res==='noanswer').length}</td><td>—</td></tr>` : '') + '</tbody>';
+}
+
 function statCard(value, label, tone=''){
   return `<div class="stat-card ${tone}"><div class="sv">${value}</div><div class="sl">${esc(label)}</div></div>`;
 }
@@ -9588,6 +9706,8 @@ function renderInsights(){
         <div class="bar-track"><div class="bar-fill" style="width:${r.open/maxWorkload*100}%;"></div></div>
         <div class="bar-num">${r.open}</div>
       </div>`).join('');
+
+  renderApptInsights();
 
   /* ---- Speed & compliance ---- */
   const contactTimes = [];

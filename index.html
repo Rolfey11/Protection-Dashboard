@@ -3423,7 +3423,7 @@ function closeModal(id, force){
   if(!force && id==='leadOverlay' && activeLeadId){ const why = leadCloseBlock(LEADS[activeLeadId]); if(why){ toast(why,'error'); return; } }
   if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
-  if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
+  if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; ldEditClient = false; ldEditNames = null; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
   if(!document.querySelector('.modal-overlay.open')){
     document.body.classList.remove('scroll-lock');
@@ -6108,6 +6108,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-20d', date:'2026-10-20', items:[
+    {text:"<b>Fix a typo</b>: on a protection case you can now correct the <b>commission and policies</b> (the <b>✎ Edit</b> link on the Case outcome box) and the <b>client name(s)</b> (<b>More → Edit client name(s)</b>). Phone, email and client source were already editable. Every change is recorded in the case history."},
+  ]},
   {id:'2026-10-20c', date:'2026-10-20', items:[
     {text:"<b>Tidier protection Insights</b>: the \"This week\" figures stay at the top, and everything else now sits under tabs (Pipeline &amp; commission, Appointments &amp; reminders, Underwriting, Advisers &amp; sources, Declines &amp; workload, Speed &amp; stale cases), so you only see one section at a time. The tab you last used is remembered."},
   ]},
@@ -8303,6 +8306,7 @@ const HELP = [
   ]},
   {group:'Protection cases', items:[
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
+    {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
     {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b>, <b>No answer</b> or <b>Not attempted</b> (the appointment didn't go ahead from our side).</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer or Not attempted: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. Not attempted doesn't count as a contact attempt.</li></ol>`},
     {t:'Overdue reminders and appointments', roles:['mapa'], h:`When you open the protection dashboard, any overdue reminders or appointments pop up first, and you can't use the dashboard until each one is dealt with. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment. A reminder or appointment that goes overdue while you're working pops up as soon as you close what you're doing.`},
     {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>New Cases</b> and <b>Appointments / Research</b> must have its next step booked; you can't close it until it does.<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li><li><b>Decline</b> (Appointments / Research only): opens the decline form with the reason, detail and decline steps.</li></ul>`},
@@ -8464,7 +8468,7 @@ function openLead(id){
   if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
-  actionUIState = null; ldMoreOpen = false;
+  actionUIState = null; ldMoreOpen = false; ldEditClient = false; ldEditNames = null;
   // Tidy a left-over callback away for good (it's already hidden everywhere).
   if(['underwriting','terms'].includes(LEADS[id].status) && staleCallback(LEADS[id]) && canManageLead(LEADS[id])) db.ref('leads/'+id).update(CLEAR_CALLBACK).catch(()=>{});
   renderLeadModal();
@@ -8535,11 +8539,15 @@ function canManageLead(lead){
 /* "Change status" moves a case straight into any pot, skipping the action
    buttons, so only Management and Admin can use it. MAPAs move cases with
    the action buttons (Sign Up, Terms issued, Decline…). */
+/* Commission, policies and client names can be corrected (typos) by the
+   adviser on their own cases, Management and Admin. Every change is in the history. */
+function canEditDetails(lead){ return !!lead && !!currentUser && (canManageLead(lead) || currentUser.role==='admin'); }
 function canChangeStatus(lead){
   return !!lead && (currentUser.role==='management' || currentUser.role==='admin');
 }
 
 let ldMoreOpen = false; // the lead window's "More" row of buttons
+let ldEditClient = false, ldEditNames = null; // the "Edit client name(s)" form
 function renderLeadModal(){
   const raw = LEADS[activeLeadId];
   if(!raw){ closeModal('leadOverlay'); return; }
@@ -8593,6 +8601,7 @@ function renderLeadModal(){
   const moreItems = [
     ...(canAction(lead) && !booking ? [`<button type="button" class="action-btn" data-act="other">${ico('dots')}Other</button>`] : []),
     ...(canReassign() ? [`<button type="button" class="action-btn" id="reassignBtn">${ico('users')}Reassign</button>`] : []),
+    ...(canEditDetails(lead) ? [`<button type="button" class="action-btn ${ldEditClient ? 'on' : ''}" id="editClientBtn">${ico('users')}Edit client name(s)</button>`] : []),
     ...(canManageLead(lead) ? [`<button type="button" class="action-btn" id="editSourceBtn">${ico('pin')}Edit client source</button>`] : []),
     ...(canChangeStatus(lead) ? [`<button type="button" class="action-btn" id="changeStatusBtn" title="Manual override: move the case to any pot">${ico('shuffle')}Change status</button>`] : []),
   ];
@@ -8617,7 +8626,7 @@ function renderLeadModal(){
   const pols = ['underwriting','terms','signedup'].includes(potKey) ? leadPolicies(lead) : [];
   const comm = ['underwriting','terms','signedup'].includes(potKey) && lead.commission!=null;
   const outcomeHtml = (pols.length || comm || lead.declineReason) ? `<div class="sib-box">
-      <div class="sib-box-hd">${lead.declineReason ? 'Decline' : 'Case outcome'}</div>
+      <div class="sib-box-hd">${lead.declineReason ? 'Decline' : 'Case outcome'}${(pols.length || comm) && canEditDetails(lead) ? '<button type="button" class="linkish" id="editCommBtn">✎ Edit commission &amp; policies</button>' : ''}</div>
       ${pols.length ? `<div style="font-size:12.5px; color:var(--text-muted); margin-bottom:4px;">${potKey==='signedup' ? 'Policies on risk' : potKey==='terms' ? 'Policies (terms issued)' : 'Policies submitted'}</div><div class="pol-pills">${pols.map(p=> `<span class="pol-pill">${esc(p.type)} · ${esc(policyWho(p))}${p.who.length>1 ? ' (joint)' : ''}</span>`).join('')}</div>` : ''}
       ${comm ? `<div style="margin-top:${pols.length ? 10 : 0}px; font-size:13px;">Commission${potKey==='signedup' ? '' : ` (pending${potKey==='terms' ? ', terms issued' : ' underwriting'})`}: <b style="color:var(--green); font-size:15px;">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</b></div>` : ''}
       ${lead.declineReason ? `<div class="info-cell decline-box full" style="margin-top:${pols.length || comm ? 10 : 0}px;">
@@ -8642,7 +8651,14 @@ function renderLeadModal(){
       ${lead.sibKey ? `<div style="margin-top:10px; font-size:13px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><span>Referred from Send in Blue: mortgage product ends <b>${esc(lead.sibMonthLabel||'')}</b></span><button type="button" class="btn btn-secondary btn-sm" id="openSibFromLead">Open Send in Blue case</button></div>` : ''}
     </div>`;
 
-  document.getElementById('leadLeftPane').innerHTML = trackerHtml + (due ? '' : nextCallHtml) + actionHtml + outcomeHtml + infoHtml;
+  const names = ldEditClient ? (ldEditNames || leadClientList(lead)) : [];
+  const clientEditHtml = ldEditClient && canEditDetails(lead) ? `<div class="inline-form" id="ceNamesForm" style="margin-top:12px;">
+      <div class="op-title" style="font-weight:700; margin-bottom:10px;">Client name(s)</div>
+      ${names.map((n, i)=> `<div class="field" style="display:flex; gap:8px; align-items:flex-end;"><div style="flex:1;"><label for="cnName${i}">Client ${i+1}</label><input type="text" id="cnName${i}" maxlength="80" value="${esc(n)}"></div>${names.length > 1 ? `<button type="button" class="btn btn-ghost btn-sm" data-cn-del="${i}" title="Remove client ${i+1}">✕</button>` : ''}</div>`).join('')}
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">${names.length < MAX_CLIENTS ? '<button type="button" class="btn btn-secondary btn-sm" id="cnAdd">+ Add a client</button>' : ''}<button type="button" class="btn btn-primary btn-sm" id="cnSave">Save names</button><button type="button" class="btn btn-ghost btn-sm" id="cnCancel">Cancel</button></div>
+      <div class="field-hint">Policies keep their client: changing Client 1's name updates it on their policies too.</div>
+    </div>` : '';
+  document.getElementById('leadLeftPane').innerHTML = trackerHtml + (due ? '' : nextCallHtml) + actionHtml + clientEditHtml + outcomeHtml + infoHtml;
 
   bindClientEmailCell(lead);
   bindClientPhoneCell(lead);
@@ -8663,6 +8679,31 @@ function renderLeadModal(){
     if(esb) esb.addEventListener('click', ()=> openEditSource(lead));
   }
 
+  const ecb = document.getElementById('editCommBtn');
+  if(ecb) ecb.addEventListener('click', ()=> openSignup(lead.id, '', 'edit', lead.commission!=null ? lead.commission : null));
+  const ecl = document.getElementById('editClientBtn');
+  if(ecl) ecl.addEventListener('click', ()=>{ ldEditClient = !ldEditClient; ldEditNames = null; refreshLeadModal(true); });
+  if(ldEditClient && document.getElementById('ceNamesForm')){
+    const readNames = ()=> [...document.querySelectorAll('#ceNamesForm [id^="cnName"]')].map(i=> i.value);
+    const add = document.getElementById('cnAdd');
+    if(add) add.addEventListener('click', ()=>{ ldEditNames = [...readNames(), '']; refreshLeadModal(); });
+    document.querySelectorAll('[data-cn-del]').forEach(b=> b.addEventListener('click', ()=>{ const n = readNames(); n.splice(Number(b.dataset.cnDel), 1); ldEditNames = n; refreshLeadModal(); }));
+    document.getElementById('cnCancel').addEventListener('click', ()=>{ ldEditClient = false; ldEditNames = null; refreshLeadModal(); });
+    document.getElementById('cnSave').addEventListener('click', function(){
+      const before = leadClientList(lead);
+      const raw = readNames().map(n=> n.trim().replace(/\s+/g,' '));
+      const keep = raw.map((n, i)=> n ? i : -1).filter(i=> i>=0), names = keep.map(i=> raw[i]);
+      if(!names.length){ toast('Add at least one client name.','error'); return; }
+      if(names.join(' & ')===before.join(' & ')){ ldEditClient = false; ldEditNames = null; refreshLeadModal(); return; }
+      // Policies point at clients by position: move them with the names (a removed client comes off its policies).
+      const pols = leadPolicies(lead).map(p=>{ const clients = p.clients.map(i=> keep.indexOf(i)).filter(i=> i>=0); return {type:p.type, clients, who:clients.map(i=> names[i])}; });
+      this.disabled = true;
+      logAudit(lead.id, {type:'edit', text:`Client name(s) changed from "${before.join(' & ')}" to "${names.join(' & ')}"`, byId:currentUser.id, byName:currentUser.name, at:Date.now()},
+        {clientName:names.join(' & '), clientNames:names, ...(pols.length ? {policies:pols} : {})})
+        .then(()=>{ toast('Client name(s) updated.','success'); ldEditClient = false; ldEditNames = null; refreshLeadModal(); })
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    });
+  }
   const lmb = document.getElementById('ldMoreBtn');
   if(lmb) lmb.addEventListener('click', ()=>{ ldMoreOpen = !ldMoreOpen; refreshLeadModal(true); });
   if(canAction(lead)){
@@ -9260,6 +9301,7 @@ const SIGNUP_MODES = {
   onrisk:       {title:'Sign Up: On Risk',            status:'signedup',     type:'signup',       what:'Sign Up (On Risk)'},
   underwriting: {title:'Sign Up: Submitted to underwriting', status:'underwriting', type:'underwriting', what:'Submitted to Underwriting'},
   nowonrisk:    {title:'On Risk',                     status:'signedup',     type:'signup',       what:'Terms accepted - On Risk'},
+  edit:         {title:'Edit commission & policies',  status:null,           type:'edit',         what:'Commission & policies updated'},
 };
 /* Policies sold: chosen when a case is submitted to underwriting or goes
    on risk. Saved on the lead as policies = [{type, clients:[0,1], who:[names]}];
@@ -9349,6 +9391,17 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
   btn.disabled = true;
   const m = SIGNUP_MODES[this.dataset.mode] || SIGNUP_MODES.onrisk;
   const money = `£${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
+  // Edit: a correction to commission / policies only; the case stays where it is.
+  if(this.dataset.mode==='edit'){
+    const was = (LEADS[leadId]||{}).commission, wasPol = policiesText(leadPolicies(LEADS[leadId]||{}));
+    const changes = [Number(was)!==Number(val) ? `Commission ${money}${was!=null ? ` (was £${Number(was).toLocaleString(undefined,{minimumFractionDigits:2})})` : ''}` : '', policiesText(policies)!==wasPol ? `Policies: ${policiesText(policies)} (was ${wasPol || 'none'})` : ''].filter(Boolean);
+    if(!changes.length){ toast('Nothing changed.','info'); closeModal('signupOverlay'); btn.disabled = false; return; }
+    logAudit(leadId, {type:'edit', text:`${m.what} - ${changes.join(' - ')}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {commission:Number(val), policies})
+      .then(()=>{ toast('Commission and policies updated.','success'); closeModal('signupOverlay'); refreshLeadModal(true); })
+      .catch(err=> toast('Could not save: '+err.message,'error'))
+      .finally(()=>{ btn.disabled = false; });
+    return;
+  }
   const text = (this.dataset.mode==='nowonrisk' ? '' : `${label} - `) + `${m.what} - ${fmtDateSlash(Date.now())} - Commission ${money} - Policies: ${policiesText(policies)}`;
   logAudit(leadId, {type:m.type, via:this.dataset.actionKind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:m.status, commission:Number(val), policies, ...CLEAR_CALLBACK})
     .then(()=>{

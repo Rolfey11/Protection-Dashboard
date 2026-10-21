@@ -6108,6 +6108,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-21', date:'2026-10-21', items:[
+    {text:"<b>No more \"Not touched for 7 days\"</b>: My Day no longer flags cases just because nothing has been logged on them for a week. Overdue reminders and appointments, cases with nothing booked, and terms / underwriting chasers still show.", roles:['mapa']},
+  ]},
   {id:'2026-10-20d', date:'2026-10-20', items:[
     {text:"<b>Fix a typo</b>: on a protection case you can now correct the <b>commission and policies</b> (the <b>✎ Edit</b> link on the Case outcome box) and the <b>client name(s)</b> (<b>More → Edit client name(s)</b>). Phone, email and client source were already editable. Every change is recorded in the case history."},
   ]},
@@ -7338,7 +7341,7 @@ function renderOverdueBanner(){
    Management/Admin don't get this — it's specifically to replace scanning
    five pots every morning with one list. */
 /* How long before a quiet case is flagged in My Day. */
-const MYDAY_STALE_DAYS = 7, MYDAY_TERMS_DAYS = 7, MYDAY_UW_DAYS = 14;
+const MYDAY_TERMS_DAYS = 7, MYDAY_UW_DAYS = 14;
 function daysSince(ts){ return ts ? Math.floor((Date.now() - ts) / 86400000) : 0; }
 function myDayItems(){
   if(currentUser.role!=='mapa') return [];
@@ -7374,11 +7377,6 @@ function myDayItems(){
       const at = (Object.values(l.audit||{}).filter(a=> a && a.type==='underwriting').sort((x,y)=> y.at-x.at)[0]||{}).at;
       const d = daysSince(at);
       if(at && d >= MYDAY_UW_DAYS) reasons.push([2,'accent',`Submitted ${d} days ago — check with the insurer`]);
-    }
-    // Skip "not touched" when a reminder above already says how long it's been.
-    if(['new','existing','underwriting','terms'].includes(pot) && !reasons.some(r=> r[0]===0 || /days ago/.test(r[2]))){
-      const last = leadLastActivity(l), d = daysSince((last && last.at) || l.createdAt);
-      if(d >= MYDAY_STALE_DAYS) reasons.push([1,'warn',`Not touched for ${d} days`]);
     }
     if(!reasons.length) return;
     reasons.sort((x,y)=> x[0]-y[0]);
@@ -8299,7 +8297,7 @@ function submitNewTask(another){
    roles: who sees the topic (omit = everyone). */
 const HELP = [
   {group:'Your day', items:[
-    {t:'What is My Day?', roles:['mapa'], h:`<b>My Day</b> at the top of the dashboard lists every case that needs you today, most urgent first:<ul><li>calls overdue or due today</li><li>new cases with no contact yet</li><li>declines still waiting on their steps</li><li><b>No next call booked</b>: a Contacted Client with no follow-up date</li><li><b>Not touched for 7+ days</b></li><li><b>Terms issued 7+ days ago</b>: chase the client</li><li><b>Submitted 14+ days ago</b>: check with the insurer</li></ul>Click a row to open the case.`},
+    {t:'What is My Day?', roles:['mapa'], h:`<b>My Day</b> at the top of the dashboard lists every case that needs you today, most urgent first:<ul><li>reminders and appointments overdue or due today</li><li>new cases with no contact yet</li><li>declines still waiting on their steps</li><li><b>Nothing booked</b>: a case with no reminder or appointment</li><li><b>Terms issued 7+ days ago</b>: chase the client</li><li><b>Submitted 14+ days ago</b>: check with the insurer</li></ul>Click a row to open the case.`},
     {t:'Notifications and What\'s new', roles:['mapa','management'], h:`The <b>bell</b> shows new leads assigned to you and cases moved to you. Click one to open the case. <b>What's new</b> (inside the bell) lists recent changes to the tracker.`},
     {t:'Pop-up and sound for new leads', roles:['mapa','management'], h:`When a lead is added to your New Cases or reassigned to you, the tracker can show a Windows/Chrome pop-up and play a chime. Turn it on with <b>Turn on alerts</b> on the dashboard, or in <b>Settings → App, alerts &amp; reminders</b>, and choose <b>Allow</b> when the browser asks. Keep the tracker open (minimised is fine). Use <b>Send a test alert</b> to check it, and untick <b>Play a sound</b> if you only want the pop-up.`},
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},

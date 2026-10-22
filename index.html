@@ -1011,6 +1011,55 @@ body:not(.mode-com) .com-only{display:none !important;}
 .sib-acts .action-btn.ld-refer-btn{color:var(--green); border-color:color-mix(in srgb, var(--green) 45%, var(--border-2));}
 .handover-box{border-color:color-mix(in srgb, var(--green) 35%, var(--border)); background:color-mix(in srgb, var(--green-bg) 55%, var(--surface));}
 .handover-text{font-size:13px; line-height:1.5; white-space:pre-wrap; color:var(--text);}
+.fb-box .fb-item{padding:9px 0; border-top:1px solid var(--border);} .fb-box .fb-item:first-of-type{border-top:none; padding-top:2px;}
+.fb-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:3px; font-size:13px;}
+.fb-meta{margin-left:auto; font-size:11.5px; color:var(--text-faint);}
+.fb-new{display:inline-block; font-size:10.5px; font-weight:700; color:#fff; background:var(--brand); border-radius:999px; padding:1px 7px; vertical-align:1px;}
+.ref-chip{border-color:var(--green); color:var(--green);}
+.tc-chip{border-color:#DB2777; color:#DB2777;}
+.tw-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px;}
+.tw-item{position:relative; cursor:pointer; border-radius:16px; transition:transform .15s;} .tw-item:hover{transform:translateY(-3px);}
+.tw-item:focus-visible{outline:3px solid var(--brand-light); outline-offset:3px;}
+.tw-new{position:absolute; top:-7px; right:-5px; z-index:2;}
+.tw-cap{font-size:12.5px; color:var(--text-muted); margin-top:7px; text-align:center;}
+.rc-table tr{cursor:pointer;} .rc-table tr.rc-unread td{background:color-mix(in srgb, var(--brand-tint) 70%, transparent);}
+.rc-status{display:inline-block; font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--bg); color:var(--text-muted); white-space:nowrap;}
+.rc-status.rc-new{background:var(--blue-bg); color:var(--blue);} .rc-status.rc-existing{background:var(--amber-bg); color:var(--amber);}
+.rc-status.rc-underwriting{background:var(--violet-bg); color:var(--violet);} .rc-status.rc-terms{background:var(--indigo-bg); color:var(--indigo);}
+.rc-status.rc-signedup{background:var(--green-bg); color:var(--green);} .rc-status.rc-decline,.rc-status.rc-completed{background:var(--red-bg); color:var(--red);}
+#leadOverlay.ro .ld-next button, #leadOverlay.ro .cal-btns{display:none !important;}
+.audit-icon.t-thanks{color:#DB2777; background:color-mix(in srgb, #F472B6 18%, transparent); border-color:transparent;}
+.sib-acts .action-btn.ld-thanks-btn{color:#DB2777; border-color:color-mix(in srgb, #DB2777 40%, var(--border-2));}
+/* Thank-you cards */
+.tcard{position:relative; overflow:hidden; border-radius:16px; color:#fff; padding:26px 18px 16px; background:var(--tc-bg); box-shadow:0 14px 30px -14px rgba(0,0,0,.45); text-align:center; isolation:isolate;}
+.tcard::after{content:''; position:absolute; inset:0; background:linear-gradient(110deg, transparent 30%, rgba(255,255,255,.28) 48%, transparent 66%); transform:translateX(-120%); animation:tcShine 3.2s ease-in-out infinite; z-index:-1;}
+.tc-emoji{font-size:46px; line-height:1.1; display:inline-block; animation:var(--tc-anim) 1.8s ease-in-out infinite; filter:drop-shadow(0 6px 10px rgba(0,0,0,.25));}
+.tc-title{font-family:inherit; font-weight:800; font-size:20px; margin-top:6px; letter-spacing:-.01em;}
+.tc-msg{font-size:13.5px; opacity:.95; margin-top:4px; line-height:1.45;}
+.tc-note{font-size:13.5px; margin-top:10px; padding:9px 11px; border-radius:10px; background:rgba(255,255,255,.18); line-height:1.45; font-style:italic;}
+.tc-from{font-size:12px; font-weight:700; margin-top:10px; opacity:.9; text-transform:uppercase; letter-spacing:.06em;}
+.tc-spark{position:absolute; width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.75); animation:tcTwinkle 2.4s ease-in-out infinite; z-index:-1;}
+.tc-spark.s1{top:14%; left:12%;} .tc-spark.s2{top:22%; right:14%; width:6px; height:6px; animation-delay:.8s;} .tc-spark.s3{bottom:18%; left:22%; width:5px; height:5px; animation-delay:1.5s;}
+.tcard.big{padding:28px 22px 22px; animation:tcIn .6s cubic-bezier(.2,1.4,.4,1) both;} .tcard.big .tc-emoji{font-size:72px;} .tcard.big .tc-title{font-size:26px;}
+.tcard.small{text-align:left; padding:12px 14px; margin-top:4px;} .tcard.small .tc-emoji{font-size:28px; float:left; margin-right:10px;} .tcard.small .tc-title{font-size:15px; margin-top:2px;} .tcard.small .tc-msg{font-size:12.5px;} .tcard.small::before{content:''; display:table; clear:both;}
+.tc-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px;}
+@media (max-width:560px){ .tc-grid{grid-template-columns:repeat(2, minmax(0,1fr));} }
+.tcard.mini{padding:14px 6px 9px; border-radius:12px; cursor:pointer; outline:3px solid transparent; outline-offset:2px; transition:transform .15s, outline-color .15s;}
+.tcard.mini .tc-emoji{font-size:28px; animation-play-state:paused;} .tcard.mini .tc-spark.s3{display:none;} .tcard.mini .tc-title{font-size:12px; margin-top:3px;}
+.tcard.mini:hover .tc-emoji,.tcard.mini.on .tc-emoji{animation-play-state:running;} .tcard.mini:hover{transform:translateY(-2px);}
+.tcard.mini.on{outline-color:var(--brand); transform:translateY(-2px) scale(1.03);}
+.tcard.mini:focus-visible{outline-color:var(--brand-light);}
+@keyframes tcShine{0%,55%{transform:translateX(-120%);}100%{transform:translateX(120%);}}
+@keyframes tcTwinkle{0%,100%{opacity:.15; transform:scale(.6);}50%{opacity:1; transform:scale(1.2);}}
+@keyframes tcIn{from{opacity:0; transform:scale(.6) rotate(-6deg);}to{opacity:1; transform:none;}}
+@keyframes tcBounce{0%,100%{transform:translateY(0);}40%{transform:translateY(-12px) rotate(-6deg);}60%{transform:translateY(-4px) rotate(4deg);}}
+@keyframes tcSpin{0%{transform:rotate(0) scale(1);}50%{transform:rotate(180deg) scale(1.2);}100%{transform:rotate(360deg) scale(1);}}
+@keyframes tcWiggle{0%,100%{transform:rotate(0);}25%{transform:rotate(-10deg);}75%{transform:rotate(10deg);}}
+@keyframes tcLaunch{0%,100%{transform:translate(0,0) rotate(0);}45%{transform:translate(6px,-14px) rotate(8deg);}55%{transform:translate(6px,-14px) rotate(8deg);}}
+@keyframes tcPop{0%,100%{transform:scale(1);}30%{transform:scale(1.28) rotate(-8deg);}55%{transform:scale(.95) rotate(4deg);}}
+@keyframes tcFloat{0%,100%{transform:translateY(0) rotate(0);}50%{transform:translateY(-8px) rotate(5deg);}}
+@media (prefers-reduced-motion: reduce){ .tcard,.tcard::after,.tc-emoji,.tc-spark{animation:none !important;} }
+.audit-icon.t-feedback{color:var(--green); background:var(--green-bg); border-color:transparent;}
 .lc-ref{flex:none; font-size:10.5px; font-weight:700; color:var(--green); background:var(--green-bg); border-radius:999px; padding:1px 7px; white-space:nowrap;}
 .sib-acts .action-btn.ld-decline-btn{color:var(--red); border-color:color-mix(in srgb, var(--red) 45%, var(--border-2));}
 .sib-acts .action-btn.ld-decline-btn svg{stroke:var(--red);}
@@ -2985,6 +3034,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div id="spList" role="group" aria-labelledby="spLabel"></div>
       <button type="button" class="sp-add" id="spAdd">+ Add another policy</button>
       <p class="sp-summary" id="spSummary"></p>
+      <div class="sp-fb hidden" id="spFbWrap">
+        <div class="field" style="margin:14px 0 8px;"><label for="spFbNote" id="spFbLabel">Send feedback to the MAPA <span class="label-opt">(optional)</span></label>
+          <textarea id="spFbNote" rows="3" maxlength="1000"></textarea><div class="req-hint" id="spFbHint"></div></div>
+        <div class="field" style="margin-bottom:0;"><label>Add a thank-you card <span class="label-opt">(optional)</span></label><div id="spTcPicker"></div></div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="signupOverlay">Cancel</button>
@@ -3175,6 +3229,33 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <button class="btn btn-secondary" data-close="bulkReassignOverlay">Cancel</button>
       <button class="btn btn-primary" id="brSubmit" disabled>Reassign</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="thanksPopOverlay">
+  <div class="modal tc-pop" style="max-width:440px;">
+    <div class="modal-head"><div><h2>You've got a thank-you card!</h2><p class="sub" id="tcPopSub" style="margin:4px 0 0; font-size:13px; color:var(--text-muted);"></p></div><button class="modal-close" data-close="thanksPopOverlay">✕</button></div>
+    <div class="modal-body"><div id="tcPopCard"></div></div>
+    <div class="modal-foot"><button class="btn btn-secondary" id="tcPopOpen">Open the case</button><button class="btn btn-primary" data-close="thanksPopOverlay">Thanks!</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="thanksWallOverlay">
+  <div class="modal" style="max-width:980px;">
+    <div class="modal-head"><div><h2>💐 Thank You's</h2><p class="sub" id="twSub" style="margin:4px 0 0; font-size:13px; color:var(--text-muted);"></p></div><button class="modal-close" data-close="thanksWallOverlay">✕</button></div>
+    <div class="modal-body"><div id="twBody"></div></div>
+    <div class="modal-foot"><button class="btn btn-secondary" data-close="thanksWallOverlay">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="referredOverlay">
+  <div class="modal" style="max-width:980px;">
+    <div class="modal-head"><h2>Referred Clients</h2><button class="modal-close" data-close="referredOverlay">✕</button></div>
+    <div class="modal-body">
+      <p class="sub" id="rcSub" style="font-size:13px; color:var(--text-muted); margin:0 0 12px;"></p>
+      <div id="rcBody"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-secondary" data-close="referredOverlay">Close</button></div>
   </div>
 </div>
 
@@ -3539,13 +3620,14 @@ function closeModal(id, force){
   if(!force && id==='comOverlay' && comOpenId){ const why = comCloseBlock(COM[comOpenId]); if(why){ toast(why,'error'); return; } }
   if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
-  if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; ldEditClient = false; ldEditNames = null; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
+  if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldEditClient = false; ldEditNames = null; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
   if(id==='comOverlay'){ comOpenId = null; comAct = null; comEditOpen = false; if(currentUser) setTimeout(checkOverdueGate, 0); }
   if(!document.querySelector('.modal-overlay.open')){
     document.body.classList.remove('scroll-lock');
     if(sibChaseSwitch){ sibChaseSwitch = false; setTimeout(()=> setAppMode('sib'), 0); } // Advisor Chase arrived while a lead was open elsewhere
     else if(sibChaseWaiting) setTimeout(sibCheckChase, 0); // an Advisor Chase held back while a case was open
+    if(currentUser) setTimeout(checkThanksCards, 300);
   }
 }
 function closeAllModals(force){ document.querySelectorAll('.modal-overlay.open').forEach(m=> closeModal(m.id, force)); }
@@ -6249,6 +6331,12 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22i', date:'2026-10-22', items:[
+    {text:"<b>Referred Clients</b>: on the dashboard, MAPAs have a <b>Referred Clients</b> button listing every client they've referred to a protection adviser, with its status, next appointment and latest feedback. Click one to see the case, notes and history (view only).", roles:['mapa','management']},
+    {text:"<b>Feedback to the MAPA</b>: on a case referred to you, press <b>Feedback to …</b> to tell the MAPA how it's going. They get a notification and see it on their Referred Clients list.", roles:['mapa','management']},
+    {text:"<b>💐 Thank You's</b>: MAPAs have a <b>Thank You's</b> button on the dashboard where every thank-you card you've been sent for a referral is kept.", roles:['mapa','management']},
+    {text:"<b>💐 Send thanks</b>: send the MAPA who referred a client an animated thank-you card (High five, Star referral, Coffee's on me and more). It pops up on their screen. When you submit a referred case to underwriting or put it on risk, the sign-up window also has a <b>Send feedback to …</b> box and an optional card, a good chance to update them and say thanks.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-22h', date:'2026-10-22', items:[
     {text:"<b>Referral insights</b>: Protection Insights has a new <b>Referrals</b> tab showing how MAPA → protection adviser referrals are going: referrals made, how fast the adviser makes contact, how many are submitted and go on risk, commission (on risk and pending) and per referral, by MAPA, by adviser and by pairing, whether a detailed handover or an agreed appointment makes a difference, referred vs kept cases, month by month, decline reasons and the latest referrals.", roles:['management']},
     {text:"<b>Your referrals in Insights</b>: Protection Insights has a <b>Referrals</b> tab showing the cases you've referred to a protection adviser (or, for advisers, received) and how they went: contacted, submitted, on risk and commission.", roles:['mapa']},
@@ -7238,8 +7326,11 @@ function renderAdvisorFilter(){
   const declinedBtn = `<button type="button" class="filter-chip declined-chip" id="fullyDeclinedBtn" title="Declined cases with every step done (reasoning sent, HLP email, NPW)">Fully Declined Leads${nDeclined ? ' ('+nDeclined+')' : ''}</button>`;
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   if((currentUser.role!=='management' && currentUser.role!=='admin') || mapas.length===0){
-    row.innerHTML = declinedBtn;
+    row.innerHTML = referredBtnHtml() + thanksBtnHtml() + declinedBtn;
     document.getElementById('fullyDeclinedBtn').addEventListener('click', openFullyDeclined);
+    const rb = document.getElementById('referredBtn'); if(rb) rb.addEventListener('click', openReferredList);
+    const tw = document.getElementById('thanksWallBtn'); if(tw) tw.addEventListener('click', openThanksWall);
+    if(document.getElementById('referredOverlay').classList.contains('open')) renderReferredList();
     return;
   }
   const unassignedCount = Object.values(LEADS).filter(l=> !l.deleted && !l.advisorId).length;
@@ -8506,6 +8597,7 @@ const HELP = [
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
     {t:'Refer to a protection adviser', roles:['mapa','management'], h:`On a case in <b>New Cases</b> or <b>Appointments / Research</b> you can do the protection yourself, or press <b>Refer to protection adviser</b>. Choose the adviser, add the appointment type, date and time if you've agreed one with the client (leave the date blank if not), and write a detailed handover note (at least 20 characters): the mortgage, completion date, family, health and what cover they want. The case moves to the protection adviser: into Appointments / Research if you booked a time, otherwise New Cases for them to book. They'll see your handover at the top of the case and a <b>↪ your name</b> tag on the card.`},
+    {t:'Referred Clients and feedback', roles:['mapa','management'], h:`<b>MAPAs:</b> the <b>Referred Clients</b> button on the dashboard lists every client you've referred to a protection adviser: who has it, its status, the next appointment and the latest feedback (new feedback is highlighted). Click a client to see the case, notes and history. It's view only, so you can't change anything. <b>Protection advisers:</b> on a referred case, press <b>Feedback to …</b>, choose how it's going and write at least 20 characters. The MAPA gets a notification, and the feedback shows in a box on the case. <b>💐 Send thanks</b> sends an animated thank-you card that pops up on the MAPA's screen; MAPAs keep all their cards under the <b>💐 Thank You's</b> button on the dashboard. When you submit a referred case to underwriting or put it on risk, the sign-up window has a <b>Send feedback to …</b> box and an optional card too.`},
     {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b>, <b>No answer</b> or <b>Not attempted</b> (the appointment didn't go ahead from our side).</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer or Not attempted: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. Not attempted doesn't count as a contact attempt.</li></ol>`},
     {t:'Overdue reminders and appointments', roles:['mapa'], h:`When you open the protection dashboard, any overdue reminders or appointments pop up first, and you can't use the dashboard until each one is dealt with. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment. A reminder or appointment that goes overdue while you're working pops up as soon as you close what you're doing.`},
     {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>Appointments / Research</b> must have its next step booked; you can't close it until it does. <b>New Cases</b> can be closed without one (it shows <i>Nothing booked yet</i> until you book).<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li><li><b>Decline</b> (Appointments / Research only): opens the decline form with the reason, detail and decline steps.</li></ul>`},
@@ -8667,7 +8759,7 @@ function openLead(id){
   if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
-  actionUIState = null; ldMoreOpen = false; ldEditClient = false; ldEditNames = null;
+  actionUIState = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldFeedbackSeenBase = LEADS[id].refFeedbackSeenAt || 0; ldEditClient = false; ldEditNames = null;
   // Tidy a left-over callback away for good (it's already hidden everywhere).
   if(['underwriting','terms'].includes(LEADS[id].status) && staleCallback(LEADS[id]) && canManageLead(LEADS[id])) db.ref('leads/'+id).update(CLEAR_CALLBACK).catch(()=>{});
   renderLeadModal();
@@ -8804,7 +8896,8 @@ function renderLeadModal(){
     ...(canManageLead(lead) ? [`<button type="button" class="action-btn" id="editSourceBtn">${ico('pin')}Edit client source</button>`] : []),
     ...(canChangeStatus(lead) ? [`<button type="button" class="action-btn" id="changeStatusBtn" title="Manual override: move the case to any pot">${ico('shuffle')}Change status</button>`] : []),
   ];
-  const actionHtml = (canAction(lead) || moreItems.length) ? `
+  const canFb = canSendFeedback(lead);
+  const actionHtml = (canAction(lead) || moreItems.length || canFb) ? `
     <div class="sib-acts" id="actionBar">
       ${booking ? (due ? '' : `<button type="button" class="action-btn ${actionUIState && actionUIState.kind==='appointment' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="bookappt">${ico('calendar')}Book appointment</button>
       <button type="button" class="action-btn ${actionUIState && actionUIState.kind==='reminder' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="setreminder">${ico('clock')}Set reminder</button>
@@ -8814,12 +8907,15 @@ function renderLeadModal(){
       <button type="button" class="action-btn" data-act="text">${ico('message')}Text</button>
       <button type="button" class="action-btn" data-act="email">${ico('mail')}Email</button>
       <button type="button" class="action-btn" data-act="appointment">${ico('calendar')}Appointment</button>` : ''}
+      ${canFb ? `<button type="button" class="action-btn ld-refer-btn ${ldFeedbackOpen ? 'on' : ''}" id="fbBtn">${ico('message')}Feedback to ${esc(String(lead.referredByName||'MAPA').split(' ')[0])}</button>
+      <button type="button" class="action-btn ld-thanks-btn ${ldThanksOpen ? 'on' : ''}" id="tcBtn"><span aria-hidden="true">💐</span>Send thanks</button>` : ''}
       ${moreItems.length ? `<button type="button" class="action-btn" id="ldMoreBtn" aria-expanded="${ldMoreOpen}" aria-controls="ldMoreRow">${ldMoreOpen ? 'Less ▴' : 'More ▾'}</button>` : ''}
     </div>
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
-    <div id="dynamicActionArea"></div>` : '';
+    <div id="dynamicActionArea"></div>
+    ${canFb && ldFeedbackOpen ? feedbackFormHtml(lead) : ''}${canFb && ldThanksOpen ? thanksFormHtml(lead) : ''}` : '';
 
-  const nextCallHtml = hasBookedCall(lead) && !due ? `<div class="sib-next ${inBookingPot(lead) && fuKind(lead)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${inBookingPot(lead) && fuKind(lead)==='reminder' ? '🔔' : '⏰'}</span><div><b>${inBookingPot(lead) && lead.followUpKind ? esc(fuKindLabel(lead))+': ' : ''}${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${inBookingPot(lead) && lead.followUpKind ? (fuKind(lead)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened') : 'Next call due'}${lead.followUpNote ? ' · '+esc(lead.followUpNote) : ''}</small></div>${calButtonsHtml({id:lead.id, ...lead}, true)}</div>`
+  const nextCallHtml = hasBookedCall(lead) && !due ? `<div class="sib-next ${inBookingPot(lead) && fuKind(lead)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${inBookingPot(lead) && fuKind(lead)==='reminder' ? '🔔' : '⏰'}</span><div><b>${inBookingPot(lead) && lead.followUpKind ? esc(fuKindLabel(lead))+': ' : ''}${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${inBookingPot(lead) && lead.followUpKind ? (fuKind(lead)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened') : 'Next call due'}${lead.followUpNote ? ' · '+esc(lead.followUpNote) : ''}</small></div>${calButtonsHtml({id:lead.id, ...lead}, canAction(lead))}</div>`
     : booking && !lead.followUpDate ? `<div class="sib-next bad"><span class="ic" aria-hidden="true">⚠️</span><div><b>Nothing booked yet</b><small>${lead.status==='new' ? 'Set a reminder or book an appointment when you\'re ready.' : 'Set a reminder or book an appointment: every case here needs its next step booked.'}</small></div></div>` : '';
 
   // Outcome details (terms, policies, commission, decline reason) in one box.
@@ -8859,7 +8955,13 @@ function renderLeadModal(){
       <div class="field-hint">Policies keep their client: changing Client 1's name updates it on their policies too.</div>
     </div>` : '';
   const handoverHtml = lead.referralNote ? `<div class="sib-box handover-box"><div class="sib-box-hd">Handover from ${esc(lead.referredByName||'MAPA')} · ${esc(fmtDate(lead.referredAt))}</div><div class="handover-text">${esc(lead.referralNote)}</div></div>` : '';
-  document.getElementById('leadLeftPane').innerHTML = trackerHtml + (due ? '' : nextCallHtml) + actionHtml + handoverHtml + clientEditHtml + outcomeHtml + infoHtml;
+  const ro = isReferrerView(lead);
+  document.getElementById('leadOverlay').classList.toggle('ro', ro);
+  const roHtml = ro ? `<div class="sib-next info ro-banner"><span class="ic" aria-hidden="true">👀</span><div><b>View only</b><small>You referred this client to ${esc(lead.advisorName||'a protection adviser')}. You can follow its progress, notes and feedback here, but not change anything.</small></div></div>` : '';
+  document.getElementById('leadLeftPane').innerHTML = roHtml + trackerHtml + (due ? '' : nextCallHtml) + actionHtml + feedbackListHtml(lead) + handoverHtml + clientEditHtml + outcomeHtml + infoHtml;
+  bindFeedback(lead);
+  // The referring MAPA has now seen the latest feedback.
+  if(ro && lead.lastFeedbackAt && (lead.refFeedbackSeenAt||0) < lead.lastFeedbackAt) db.ref('leads/'+lead.id+'/refFeedbackSeenAt').set(Date.now()).catch(()=>{});
 
   bindClientEmailCell(lead);
   bindClientPhoneCell(lead);
@@ -8975,7 +9077,7 @@ function renderLeadModal(){
 function auditIcon(type){
   const map = {
     assigned:'pin', call:'phone', text:'message', email:'mail', appointment:'calendar', other:'note',
-    signup:'checkCircle', underwriting:'clock', terms:'note', quotes:'send', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
+    feedback:'message', thanks:'send', signup:'checkCircle', underwriting:'clock', terms:'note', quotes:'send', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
   };
   return map[type] ? ico(map[type]) : '•';
 }
@@ -9403,6 +9505,177 @@ function renderReferArea(lead, area){
   });
 }
 
+/* ---- Feedback to the referring MAPA ----
+   The protection adviser (or Management) can send the MAPA who referred a
+   case an update; it's kept in the case history (type 'feedback'), shown in
+   a box on the case, and sent to the MAPA as a notification. */
+const FEEDBACK_KINDS = ['Spoke to the client: going ahead', 'Spoke to the client: thinking it over', 'Appointment booked', "Couldn't reach the client yet", 'Submitted to underwriting', 'On risk', 'Not proceeding', 'Other update'];
+let ldFeedbackOpen = false, ldThanksOpen = false, ldThanksCard = '', ldFeedbackSeenBase = 0; // seen base: when the MAPA last read feedback, as of opening the case
+/* Thank-you cards the adviser can send the referring MAPA (animated). */
+const THANKS_CARDS = [
+  {key:'highfive', emoji:'🙌', title:'High five!', msg:'Thanks for the referral. Great teamwork!', bg:'linear-gradient(135deg,#7C3AED,#EC4899)', anim:'tcBounce'},
+  {key:'star', emoji:'🌟', title:'Star referral', msg:'This one was a perfect fit. Thank you!', bg:'linear-gradient(135deg,#F59E0B,#EF4444)', anim:'tcSpin'},
+  {key:'coffee', emoji:'☕', title:"Coffee's on me", msg:'Thanks for sending this client my way.', bg:'linear-gradient(135deg,#7C2D12,#D97706)', anim:'tcWiggle'},
+  {key:'rocket', emoji:'🚀', title:'Off to underwriting!', msg:"Your client's application is in. Thanks for the referral!", bg:'linear-gradient(135deg,#1D4ED8,#06B6D4)', anim:'tcLaunch'},
+  {key:'party', emoji:'🎉', title:"They're covered!", msg:'Your client is on risk. Thank you for the referral!', bg:'linear-gradient(135deg,#047857,#84CC16)', anim:'tcPop'},
+  {key:'flowers', emoji:'💐', title:'Thank you', msg:'Really appreciate you thinking of me.', bg:'linear-gradient(135deg,#BE185D,#F472B6)', anim:'tcFloat'},
+];
+function thanksCard(key){ return THANKS_CARDS.find(c=> c.key===key) || null; }
+function thanksCardHtml(c, opts={}){
+  if(!c) return '';
+  return `<div class="tcard ${opts.size||''}" style="--tc-bg:${c.bg}; --tc-anim:${c.anim};" ${opts.pick ? `data-tc-pick="${c.key}" role="radio" tabindex="0" aria-checked="${opts.on ? 'true' : 'false'}"` : ''}>
+    <span class="tc-spark s1"></span><span class="tc-spark s2"></span><span class="tc-spark s3"></span>
+    <div class="tc-emoji" aria-hidden="true">${c.emoji}</div><div class="tc-title">${esc(c.title)}</div>${opts.size==='mini' ? '' : `<div class="tc-msg">${esc(c.msg)}</div>`}
+    ${opts.note ? `<div class="tc-note">“${esc(opts.note)}”</div>` : ''}${opts.from ? `<div class="tc-from">From ${esc(opts.from)}</div>` : ''}
+  </div>`;
+}
+function thanksPickerHtml(selected){
+  return `<div class="tc-grid" role="radiogroup" aria-label="Choose a card">${THANKS_CARDS.map(c=> thanksCardHtml(c, {size:'mini', pick:true, on: c.key===selected})).join('')}</div>`;
+}
+function bindThanksPicker(root, onPick){
+  root.querySelectorAll('[data-tc-pick]').forEach(el=>{
+    const pick = ()=> onPick(el.dataset.tcPick);
+    el.addEventListener('click', pick);
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); pick(); } });
+  });
+}
+/* One update to the referring MAPA: feedback (kind + note), a thank-you
+   card, or both. Logged on the case and sent as one notification. */
+function sendReferralUpdate(lead, {kind='', note='', card=''}){
+  const now = Date.now(), toName = lead.referredByName || 'the MAPA', c = thanksCard(card);
+  const entries = [];
+  if(kind || (note && !c)) entries.push({type:'feedback', toId:lead.referredById, kind: kind || 'Update', note, text:`Feedback to ${toName}: ${kind || 'Update'} - ${note}`});
+  if(c) entries.push({type:'thanks', toId:lead.referredById, card:c.key, note: kind ? '' : note, kind:c.title, text:`Thank-you card to ${toName}: ${c.emoji} ${c.title}${!kind && note ? ' - '+note : ''}`});
+  if(!entries.length) return Promise.resolve();
+  const u = {[`leads/${lead.id}/lastFeedbackAt`]: now + entries.length};
+  entries.forEach((e, i)=> u[`leads/${lead.id}/audit/${db.ref().push().key}`] = {...e, byId:currentUser.id, byName:currentUser.name, at: now + i + 1});
+  u[`notifications/${db.ref().push().key}`] = {leadId:lead.id, leadName:lead.clientName, toUserId:lead.referredById, toRole:null, byId:currentUser.id, byName:currentUser.name, at:now, readBy:{},
+    ...(c ? {kind:'refThanks', card:c.key, note, message:`${currentUser.name} sent you a thank-you card for ${lead.clientName}: ${c.title}`}
+          : {kind:'refFeedback', message:`${currentUser.name} sent feedback on ${lead.clientName}: ${kind || 'Update'}`})};
+  return db.ref().update(u);
+}
+function canSendFeedback(lead){ return !!lead && !!currentUser && !!lead.referredById && lead.referredById!==currentUser.id && !lead.deleted && (lead.advisorId===currentUser.id || currentUser.role==='management'); }
+// The MAPA who referred the case, looking at it after it's gone to the adviser.
+function isReferrerView(lead){ return !!lead && !!currentUser && currentUser.role==='mapa' && lead.referredById===currentUser.id && lead.advisorId!==currentUser.id; }
+function leadFeedback(lead){ return Object.values((lead && lead.audit) || {}).filter(a=> a && (a.type==='feedback' || a.type==='thanks')).sort((a,b)=> b.at-a.at); }
+function feedbackFormHtml(lead){
+  const first = String(lead.referredByName||'the MAPA').split(' ')[0];
+  return `<div class="inline-form fb-form" id="feedbackArea" style="margin-top:12px;">
+      <div class="op-title" style="font-weight:700; margin-bottom:4px;">${ico('message')} Feedback to ${esc(lead.referredByName||'the MAPA')}</div>
+      <p class="mt-sub" style="margin:0 0 10px;">Let ${esc(first)} know how it's going. They'll get a notification and can read it on their Referred Clients list.</p>
+      <div class="field"><label for="fbKind">How's it going?</label><select id="fbKind"><option value="">Choose…</option>${FEEDBACK_KINDS.map(k=> `<option>${esc(k)}</option>`).join('')}</select></div>
+      <div class="field"><label for="fbNote">Feedback (required)</label><textarea id="fbNote" rows="3" placeholder="e.g. Spoke to Sarah, lovely call. Quoted LTA + CIC at £48/month; she's checking with James and we're speaking Thursday."></textarea><div class="req-hint">At least ${MEETING_NOTE_MIN} characters.</div></div>
+      <div class="fu-actions"><button class="btn btn-primary btn-sm" id="fbSend">${ico('send')} Send feedback</button><button class="btn btn-ghost btn-sm" id="fbCancel">Cancel</button></div>
+    </div>`;
+}
+function feedbackListHtml(lead){
+  const list = leadFeedback(lead); if(!list.length || !lead.referredById) return '';
+  const unread = isReferrerView(lead) ? ldFeedbackSeenBase : Infinity;
+  return `<div class="sib-box fb-box"><div class="sib-box-hd">Feedback to ${esc(lead.referredByName||'the MAPA')} (${list.length})</div>
+    ${list.map(a=> `<div class="fb-item"><div class="fb-top"><b>${a.type==='thanks' ? 'Thank-you card' : esc(a.kind||'Update')}</b>${a.at > unread ? '<span class="fb-new">New</span>' : ''}<span class="fb-meta">${esc(a.byName||'')} · ${fmtDateTime(a.at)}</span></div>${a.type==='thanks' ? thanksCardHtml(thanksCard(a.card), {size:'small', note:a.note}) : `<div class="handover-text">${esc(a.note || a.text || '')}</div>`}</div>`).join('')}</div>`;
+}
+function bindFeedback(lead){
+  const btn = document.getElementById('fbBtn');
+  if(btn) btn.addEventListener('click', ()=>{ ldFeedbackOpen = !ldFeedbackOpen; ldThanksOpen = false; refreshLeadModal(true); if(ldFeedbackOpen){ const k = document.getElementById('fbKind'); if(k) k.focus(); } });
+  bindThanks(lead);
+  const area = document.getElementById('feedbackArea'); if(!area) return;
+  area.querySelectorAll('select, textarea').forEach(el=> ['input','change'].forEach(ev=> el.addEventListener(ev, ()=> el.classList.remove('missing'))));
+  document.getElementById('fbCancel').addEventListener('click', ()=>{ ldFeedbackOpen = false; refreshLeadModal(true); });
+  document.getElementById('fbSend').addEventListener('click', function(){
+    const kind = document.getElementById('fbKind').value, note = document.getElementById('fbNote').value.trim();
+    if(!kind){ document.getElementById('fbKind').classList.add('missing'); toast("Choose how it's going.",'error'); return; }
+    if(note.length < MEETING_NOTE_MIN){ const n = document.getElementById('fbNote'); n.classList.add('missing'); n.focus(); toast(`Please write at least ${MEETING_NOTE_MIN} characters of feedback.`,'error'); return; }
+    this.disabled = true;
+    sendReferralUpdate(lead, {kind, note})
+      .then(()=>{ ldFeedbackOpen = false; toast(`Feedback sent to ${lead.referredByName || 'the MAPA'}.`,'success'); refreshLeadModal(true); })
+      .catch(err=>{ toast('Could not send: '+err.message,'error'); this.disabled = false; });
+  });
+}
+function thanksFormHtml(lead){
+  const first = String(lead.referredByName||'the MAPA').split(' ')[0];
+  return `<div class="inline-form tc-form" id="thanksArea" style="margin-top:12px;">
+      <div class="op-title" style="font-weight:700; margin-bottom:4px;">💐 Send thanks to ${esc(lead.referredByName||'the MAPA')}</div>
+      <p class="mt-sub" style="margin:0 0 10px;">Pick a card. ${esc(first)} sees it pop up on their screen.</p>
+      <div id="tcPicker">${thanksPickerHtml(ldThanksCard)}</div>
+      <div class="field" style="margin-top:12px;"><label for="tcNote">Personal message <span class="label-opt">(optional)</span></label><textarea id="tcNote" rows="2" maxlength="300" placeholder="e.g. Thanks Pat, Rhea was lovely and really appreciated the call."></textarea></div>
+      <div class="fu-actions"><button class="btn btn-primary btn-sm" id="tcSend">Send card</button><button class="btn btn-ghost btn-sm" id="tcCancel">Cancel</button></div>
+    </div>`;
+}
+function bindThanks(lead){
+  const btn = document.getElementById('tcBtn');
+  if(btn) btn.addEventListener('click', ()=>{ ldThanksOpen = !ldThanksOpen; ldFeedbackOpen = false; ldThanksCard = ''; refreshLeadModal(true); });
+  const area = document.getElementById('thanksArea'); if(!area) return;
+  const picker = document.getElementById('tcPicker');
+  const pick = k=>{ ldThanksCard = k; picker.querySelectorAll('[data-tc-pick]').forEach(el=>{ const on = el.dataset.tcPick===k; el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); }); };
+  bindThanksPicker(picker, pick);
+  document.getElementById('tcCancel').addEventListener('click', ()=>{ ldThanksOpen = false; refreshLeadModal(true); });
+  document.getElementById('tcSend').addEventListener('click', function(){
+    if(!ldThanksCard){ toast('Choose a card first.','error'); return; }
+    this.disabled = true;
+    const c = thanksCard(ldThanksCard);
+    sendReferralUpdate(lead, {card:ldThanksCard, note:document.getElementById('tcNote').value.trim()})
+      .then(()=>{ ldThanksOpen = false; ldThanksCard = ''; toast(`${c.emoji} ${c.title} sent to ${lead.referredByName || 'the MAPA'}.`,'success'); refreshLeadModal(true); })
+      .catch(err=>{ toast('Could not send: '+err.message,'error'); this.disabled = false; });
+  });
+}
+
+/* ---- Referred Clients: a MAPA's view-only list of the cases they referred ---- */
+function myReferredLeads(){ return Object.entries(LEADS).map(([id, l])=> ({id, ...l})).filter(l=> !l.deleted && l.referredById===currentUser.id && l.advisorId!==currentUser.id); }
+function refUnread(l){ return !!l.lastFeedbackAt && (l.refFeedbackSeenAt||0) < l.lastFeedbackAt; }
+function showReferredBtn(){ return !!currentUser && currentUser.role==='mapa' && !isProtAdviser(currentUser.id) && (protAdvisers().length > 0 || myReferredLeads().length > 0); }
+function referredBtnHtml(){
+  if(!showReferredBtn()) return '';
+  const list = myReferredLeads(), nNew = list.filter(refUnread).length;
+  return `<button type="button" class="filter-chip ref-chip" id="referredBtn" title="Clients you referred to a protection adviser: view only">Referred Clients${list.length ? ' ('+list.length+')' : ''}${nNew ? ` <span class="fb-new">${nNew} new feedback</span>` : ''}</button>`;
+}
+function renderReferredList(){
+  const list = myReferredLeads().sort((a,b)=> (refUnread(b) - refUnread(a)) || (b.referredAt||0) - (a.referredAt||0));
+  document.getElementById('rcSub').textContent = list.length ? `${list.length} client${list.length===1?'':'s'} you referred to a protection adviser. View only: click one to see its progress, notes and feedback.` : '';
+  document.getElementById('rcBody').innerHTML = list.length ? `<div class="nml-table-wrap"><table class="nml-table rc-table">
+    <thead><tr><th>Client</th><th>Protection adviser</th><th>Referred</th><th>Status</th><th>Next step</th><th>Latest feedback</th></tr></thead>
+    <tbody>${list.map(l=>{ const fb = leadFeedback(l)[0], pot = potOf(l);
+      const next = inBookingPot(l) && l.followUpDate ? `${esc(fuKindLabel(l))}<div class="nml-notes">${esc(bookingWhen(l))}</div>` : inBookingPot(l) ? '<span style="color:var(--amber);">Nothing booked yet</span>' : '—';
+      return `<tr data-rc="${esc(l.id)}" class="${refUnread(l) ? 'rc-unread' : ''}"><td><div class="nml-ins">${esc(l.clientName)}</div></td><td>${esc(l.advisorName||'')}</td><td>${esc(fmtDate(l.referredAt))}</td>
+        <td><span class="rc-status rc-${esc(pot)}">${esc(STATUS_LABELS[pot]||pot)}</span>${pot==='signedup' && l.commission!=null ? `<div class="nml-notes">£${Number(l.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div>` : ''}</td>
+        <td>${next}</td>
+        <td>${fb ? `${refUnread(l) ? '<span class="fb-new">New</span> ' : ''}<b>${fb.type==='thanks' && thanksCard(fb.card) ? esc(thanksCard(fb.card).emoji+' '+thanksCard(fb.card).title) : esc(fb.kind||'Update')}</b><div class="nml-notes">${esc(String(fb.note||fb.text||'').slice(0,110))}${String(fb.note||fb.text||'').length>110 ? '…' : ''} · ${esc(fmtDate(fb.at))}</div>` : '<span class="nml-notes">None yet</span>'}</td></tr>`; }).join('')}</tbody></table></div>`
+    : '<div class="nml-empty">You haven\'t referred any clients to a protection adviser yet. Use <b>Refer to protection adviser</b> on a case in New Cases or Appointments / Research.</div>';
+  document.querySelectorAll('#rcBody [data-rc]').forEach(tr=> tr.addEventListener('click', ()=>{ closeModal('referredOverlay'); openLead(tr.dataset.rc); }));
+}
+function openReferredList(){ renderReferredList(); openModal('referredOverlay'); }
+
+/* ---- Thank You's: every thank-you card a MAPA has been sent, kept in one place ---- */
+function myThanks(){
+  const out = [];
+  Object.entries(LEADS).forEach(([id, l])=>{ if(!l || l.deleted) return; Object.values(l.audit||{}).forEach(a=>{ if(a && a.type==='thanks' && a.toId===currentUser.id && thanksCard(a.card)) out.push({...a, leadId:id, clientName:l.clientName}); }); });
+  return out.sort((a,b)=> b.at-a.at);
+}
+function thanksWallSeen(){ try{ return Number(localStorage.getItem('plt_tcWall_'+currentUser.id)) || 0; }catch(e){ return 0; } }
+function thanksBtnHtml(){
+  if(!showReferredBtn()) return '';
+  const list = myThanks(), seen = thanksWallSeen(), nNew = list.filter(t=> t.at > seen).length;
+  return `<button type="button" class="filter-chip tc-chip" id="thanksWallBtn" title="Thank-you cards from protection advisers"><span aria-hidden="true">💐</span> Thank You's${list.length ? ' ('+list.length+')' : ''}${nNew ? ` <span class="fb-new">${nNew} new</span>` : ''}</button>`;
+}
+function openThanksWall(){
+  const list = myThanks(), seen = thanksWallSeen();
+  const byAdv = {}; list.forEach(t=> byAdv[t.byName||'Someone'] = (byAdv[t.byName||'Someone']||0) + 1);
+  document.getElementById('twSub').textContent = list.length
+    ? `${list.length} thank-you card${list.length===1?'':'s'} for your referrals` + (Object.keys(byAdv).length ? ' · ' + Object.entries(byAdv).map(([n, c])=> `${c} from ${n}`).join(', ') : '') + '. Click a card to see the client.'
+    : '';
+  document.getElementById('twBody').innerHTML = list.length ? `<div class="tw-grid">${list.map(t=> `<div class="tw-item" data-tw="${esc(t.leadId)}" role="button" tabindex="0">
+      ${t.at > seen ? '<span class="fb-new tw-new">New</span>' : ''}
+      ${thanksCardHtml(thanksCard(t.card), {note:t.note, from:t.byName})}
+      <div class="tw-cap">For <b>${esc(t.clientName||'')}</b> · ${esc(fmtDate(t.at))}</div></div>`).join('')}</div>`
+    : `<div class="nml-empty">No thank-you cards yet. When a protection adviser sends you one for a referral, it'll be kept here.</div>`;
+  document.querySelectorAll('#twBody [data-tw]').forEach(el=>{
+    const go = ()=>{ if(!LEADS[el.dataset.tw]) return; closeModal('thanksWallOverlay'); openLead(el.dataset.tw); };
+    el.addEventListener('click', go); el.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
+  });
+  try{ localStorage.setItem('plt_tcWall_'+currentUser.id, String(Date.now())); }catch(e){}
+  openModal('thanksWallOverlay');
+  renderAdvisorFilter();
+}
+
 /* ---- Reminders, appointments and the outcome of meeting ---- */
 const MEETING_NOTE_MIN = 20;
 // Once something is typed or picked, its red "missing" outline goes.
@@ -9631,8 +9904,24 @@ function openSignup(leadId, actionKind, mode='onrisk', commission=null){
   document.getElementById('signupSubmit').dataset.leadId = leadId;
   document.getElementById('signupSubmit').dataset.actionKind = actionKind || '';
   document.getElementById('signupSubmit').disabled = false;
+  // A referred case going to underwriting / on risk: a chance to update and thank the MAPA.
+  const fbOn = mode!=='edit' && !!lead.referredById && lead.referredById!==currentUser.id;
+  document.getElementById('spFbWrap').classList.toggle('hidden', !fbOn);
+  if(fbOn){
+    const who = lead.referredByName || 'the MAPA', first = who.split(' ')[0];
+    document.getElementById('spFbLabel').innerHTML = `Send feedback to ${esc(who)} <span class="label-opt">(optional)</span>`;
+    document.getElementById('spFbHint').textContent = `A good chance to update ${first} and thank them for the referral.`;
+    const fbNote = document.getElementById('spFbNote');
+    fbNote.value = ''; fbNote.placeholder = `e.g. Thanks ${first}! ${lead.clientName || 'The client'} has gone ahead with LTA + CIC, all submitted. Really appreciate the referral.`;
+    spThanksCard = '';
+    const pk = document.getElementById('spTcPicker');
+    pk.innerHTML = thanksPickerHtml('');
+    pk.dataset.tcToggle = '1';
+    bindThanksPicker(pk, k=>{ spThanksCard = spThanksCard===k ? '' : k; pk.querySelectorAll('[data-tc-pick]').forEach(el=>{ const on = el.dataset.tcPick===spThanksCard; el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); }); });
+  }
   openModal('signupOverlay');
 }
+let spThanksCard = '';
 document.getElementById('signupSubmit').addEventListener('click', function(){
   const leadId = this.dataset.leadId;
   const label = ACTION_LABELS[this.dataset.actionKind] || 'Contact';
@@ -9668,6 +9957,12 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
   const text = (this.dataset.mode==='nowonrisk' ? '' : `${label} - `) + `${m.what} - ${fmtDateSlash(Date.now())} - Commission ${money} - Policies: ${policiesText(policies)}`;
   logAudit(leadId, {type:m.type, via:this.dataset.actionKind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:m.status, commission:Number(val), policies, ...CLEAR_CALLBACK})
     .then(()=>{
+      // Feedback / thank-you card to the referring MAPA, if the adviser added one.
+      const ld = LEADS[leadId], fbNote = document.getElementById('spFbNote').value.trim();
+      if(ld && !document.getElementById('spFbWrap').classList.contains('hidden') && (fbNote || spThanksCard)){
+        sendReferralUpdate({id:leadId, ...ld}, {kind: fbNote ? (m.status==='underwriting' ? 'Submitted to underwriting' : 'On risk') : '', note:fbNote, card:spThanksCard})
+          .then(()=> toast(`Update sent to ${ld.referredByName || 'the MAPA'}.`,'success')).catch(err=> toast('Feedback not sent: '+err.message,'error'));
+      }
       if(m.status==='signedup') celebrate(`${money} on risk! 🎉`);
       toast(m.status==='underwriting' ? `Submitted to underwriting with ${money} commission pending. Moved to Submitted / In Underwriting.` : `On risk with ${money} commission. Moved to On Risk.`,'success'); closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();
@@ -9881,6 +10176,7 @@ function referralFacts(l){
     commOnRisk: pot==='signedup' ? comm : 0, commPending: (pot==='underwriting' || pot==='terms') ? comm : 0,
     booked: l.referralBooked===true || (!!refEntry && / - appointment booked \(/.test(refEntry.text||'')),
     detailed: String(l.referralNote||'').length >= 100,
+    feedback: after.some(a=> a.type==='feedback' || a.type==='thanks'),
     policies: submitted ? leadPolicies(l).length : 0,
   };
 }
@@ -9910,6 +10206,7 @@ function renderReferralInsights(){
     statCard(pc(cnt(r=> r.f.booked), n), 'Appointment agreed at handover') +
     statCard(pc(cnt(r=> r.f.contactMs!=null), n), 'Contacted by the adviser') +
     statCard(fmtDur(median(contactTimes)), 'Typical time to first contact') +
+    statCard(pc(cnt(r=> r.f.feedback), n), 'Feedback or thanks sent to the MAPA') +
     statCard(`${subm} · ${pc(subm, n)}`, 'Submitted from referrals', subm ? 'good' : '') +
     statCard(`${onRisk} · ${pc(onRisk, n)}`, 'On risk', onRisk ? 'good' : '') +
     statCard(money(commR), 'Commission on risk', commR ? 'good' : '') +
@@ -11072,8 +11369,27 @@ function fireLeadAlert(title, body, tag, leadId){
   if(document.visibilityState==='visible') toast(`${title}. ${body}`, 'info');
 }
 
+/* A thank-you card for the MAPA pops up (once) when it arrives, or the next
+   time they're on the tracker with nothing else open. */
+function thanksShown(){ try{ return new Set(JSON.parse(localStorage.getItem('plt_tcShown_'+currentUser.id) || '[]')); }catch(e){ return new Set(); } }
+function checkThanksCards(){
+  if(!currentUser || currentUser.role!=='mapa' || document.querySelector('.modal-overlay.open')) return;
+  const shown = thanksShown();
+  const n = myNotifs().filter(x=> x.kind==='refThanks' && x.toUserId===currentUser.id && isUnread(x) && !shown.has(x.id)).sort((a,b)=> a.at-b.at)[0];
+  if(!n) return;
+  shown.add(n.id); try{ localStorage.setItem('plt_tcShown_'+currentUser.id, JSON.stringify([...shown].slice(-200))); }catch(e){}
+  db.ref(`notifications/${n.id}/readBy/${currentUser.id}`).set(true).catch(()=>{});
+  document.getElementById('tcPopCard').innerHTML = thanksCardHtml(thanksCard(n.card) || THANKS_CARDS[0], {size:'big', note:n.note, from:n.byName || ''});
+  document.getElementById('tcPopSub').textContent = n.leadName ? `For referring ${n.leadName}` : '';
+  const open = document.getElementById('tcPopOpen');
+  open.classList.toggle('hidden', !(n.leadId && LEADS[n.leadId]));
+  open.onclick = ()=>{ closeModal('thanksPopOverlay'); openLead(n.leadId); };
+  openModal('thanksPopOverlay');
+  if(motionOK() && !window.__noConfetti) celebrate('Thank you! 💐', false);
+}
 function checkLeadAlerts(){
   if(!currentUser || currentUser.role==='admin') return;
+  setTimeout(checkThanksCards, 0);
   const now = Date.now(), done = loadAlerted();
   let fresh = myNotifs().filter(n=> n.toUserId===currentUser.id && n.byId!==currentUser.id && isUnread(n)
     && n.at > now - ALERT_WINDOW_MS && !done.has(n.id)).sort((a,b)=> a.at-b.at);
@@ -11085,7 +11401,9 @@ function checkLeadAlerts(){
   // Send in Blue notices get their own pop-up (an Advisor Chase can't wait).
   fresh.filter(n=> n.kind==='sibChase' || n.kind==='sibReassigned').forEach(n=>
     fireLeadAlert(n.kind==='sibChase' ? 'Advisor Chase' : 'Send in Blue client reassigned to you', (n.message||'').replace(/^Advisor Chase:\s*/, ''), 'plt-sib-'+n.id, null));
-  fresh = fresh.filter(n=> n.kind!=='sibChase' && n.kind!=='sibReassigned');
+  // A thank-you card shows its own pop-up on screen; only send a system alert if the tracker isn't in view.
+  fresh.filter(n=> n.kind==='refFeedback' || (n.kind==='refThanks' && document.visibilityState!=='visible')).forEach(n=> fireLeadAlert(n.kind==='refThanks' ? 'You got a thank-you card' : 'Feedback on a client you referred', n.message||'', 'plt-fb-'+n.id, n.leadId||null));
+  fresh = fresh.filter(n=> n.kind!=='sibChase' && n.kind!=='sibReassigned' && n.kind!=='refFeedback' && n.kind!=='refThanks');
   if(!fresh.length) return;
   const reassigned = n=> n.kind==='reassigned' || /reassigned to you/i.test(n.message||'');
   if(fresh.length===1){

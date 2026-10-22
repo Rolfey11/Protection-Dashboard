@@ -2285,7 +2285,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
     <!-- ============= COMMERCIAL ============= -->
     <div id="page-com" class="hidden">
       <div class="page-head">
-        <div><h1>Commercial</h1><p class="sub" id="comSub">Commercial mortgages, development, bridging, asset and invoice finance.</p></div>
+        <div><h1>Commercial</h1><p class="sub" id="comSub">Commercial mortgages, development, bridging, business loans, asset and invoice finance.</p></div>
         <button class="btn btn-primary" id="comNewBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> New lead</button>
       </div>
       <div class="stat-grid" id="comStats"></div>
@@ -6331,6 +6331,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22j', date:'2026-10-22', items:[
+    {text:"<b>Business Loan</b> is now a category for Commercial leads, in New lead, Edit details and the category filter.", roles:['mapa','management','admin']},
+  ]},
   {id:'2026-10-22i', date:'2026-10-22', items:[
     {text:"<b>Referred Clients</b>: on the dashboard, MAPAs have a <b>Referred Clients</b> button listing every client they've referred to a protection adviser, with its status, next appointment and latest feedback. Click one to see the case, notes and history (view only).", roles:['mapa','management']},
     {text:"<b>Feedback to the MAPA</b>: on a case referred to you, press <b>Feedback to …</b> to tell the MAPA how it's going. They get a notification and see it on their Referred Clients list.", roles:['mapa','management']},
@@ -11629,7 +11632,7 @@ function renderUsersTable(){
    MAPAs see their own cases; Management and Admin see them all.
    ---------------------------------------------------------------------------- */
 const COM_SOURCES = ['Phone in','FLG','Google','Existing Client','Referral','Other'];
-const COM_CATEGORIES = ['Commercial Mortgage','Development Finance','Bridging Loan','Asset Finance','Invoice Finance','NON UK Resident Mortgage'];
+const COM_CATEGORIES = ['Commercial Mortgage','Development Finance','Bridging Loan','Business Loan','Asset Finance','Invoice Finance','NON UK Resident Mortgage'];
 const COM_STAGES = [['new','New Case','var(--blue)'],['research','Research','var(--amber)'],['docs','Waiting for docs/info','var(--violet)'],['terms','Terms issued / Application submitted','var(--indigo)'],['complete','Complete','var(--green)']];
 let COM = {}, comListening = false, comLoaded = false, comOpenId = null, comEditOpen = false;
 const comState = {search:'', cat:'', adv:'', calAdv:'', lost:false};

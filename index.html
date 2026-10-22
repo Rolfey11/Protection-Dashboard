@@ -1973,7 +1973,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="section-lbl" style="margin-top:0;">This week</div>
       <div class="stat-grid" id="weekDigest"></div>
 
-      <div class="sib-ins-tabs" role="tablist" aria-label="Insights sections" id="pinsTabs"><button type="button" role="tab" data-pins-tab="pipeline" aria-selected="true" class="on">Pipeline &amp; commission</button><button type="button" role="tab" data-pins-tab="appts" aria-selected="false" class="">Appointments &amp; reminders</button><button type="button" role="tab" data-pins-tab="uw" aria-selected="false" class="">Underwriting</button><button type="button" role="tab" data-pins-tab="advisers" aria-selected="false" class="">Advisers &amp; sources</button><button type="button" role="tab" data-pins-tab="declines" aria-selected="false" class="">Declines &amp; workload</button><button type="button" role="tab" data-pins-tab="speed" aria-selected="false" class="">Speed &amp; stale cases</button></div>
+      <div class="sib-ins-tabs" role="tablist" aria-label="Insights sections" id="pinsTabs"><button type="button" role="tab" data-pins-tab="pipeline" aria-selected="true" class="on">Pipeline &amp; commission</button><button type="button" role="tab" data-pins-tab="appts" aria-selected="false" class="">Appointments &amp; reminders</button><button type="button" role="tab" data-pins-tab="uw" aria-selected="false" class="">Underwriting</button><button type="button" role="tab" data-pins-tab="advisers" aria-selected="false" class="">Advisers &amp; sources</button><button type="button" role="tab" data-pins-tab="declines" aria-selected="false" class="">Declines &amp; workload</button><button type="button" role="tab" data-pins-tab="speed" aria-selected="false" class="">Speed &amp; stale cases</button><button type="button" role="tab" data-pins-tab="referrals" aria-selected="false" class="hidden" id="pinsRefTab">Referrals</button></div>
       <div class="sib-ins-sec" data-pins-sec="pipeline" role="tabpanel">
       <div class="section-lbl" style="margin-top:0;">Conversion funnel</div>
       <div class="insights-card" style="margin-bottom:26px;">
@@ -2042,6 +2042,27 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </table>
         <div id="agingEmpty" class="settings-empty hidden">Nothing stale right now — nice work.</div>
       </div>
+      </div>
+      <div class="sib-ins-sec hidden" data-pins-sec="referrals" role="tabpanel">
+      <p class="nml-note" style="margin-top:0;" id="refInsNote">Cases MAPAs referred to a protection adviser, and how they went. The date range applies to <i>when the case was referred</i>.</p>
+      <div class="stat-grid" id="refStats"></div>
+      <div class="insights-cols" style="margin-bottom:20px;">
+        <div class="insights-card"><h4>From referral to on risk</h4><div id="refFunnel"></div></div>
+        <div class="insights-card"><h4>Where referred cases are now</h4><div id="refNow"></div></div>
+      </div>
+      <div class="insights-card" style="margin-bottom:20px;" id="refByMapaCard"><h4 id="refByMapaTitle">By referring MAPA</h4><div class="sib-ins-wrap"><table class="mini-table" id="refByMapa"></table></div>
+        <p class="nml-note" style="margin-bottom:0;"><b>Converted</b> = submitted to underwriting (or straight on risk). <b>Commission</b> = on risk; <b>pending</b> = submitted or terms issued, not yet on risk.</p></div>
+      <div class="insights-card" style="margin-bottom:20px;" id="refByPaCard"><h4 id="refByPaTitle">By protection adviser</h4><div class="sib-ins-wrap"><table class="mini-table" id="refByPa"></table></div></div>
+      <div class="insights-card" style="margin-bottom:20px;" id="refPairsCard"><h4>MAPA → protection adviser</h4><div class="sib-ins-wrap"><table class="mini-table" id="refPairs"></table></div></div>
+      <div class="insights-cols" style="margin-bottom:20px;">
+        <div class="insights-card"><h4>Does the handover make a difference?</h4><div class="sib-ins-wrap"><table class="mini-table" id="refQuality"></table></div><p class="nml-note" style="margin-bottom:0;">A <b>detailed</b> handover is 100+ characters.</p></div>
+        <div class="insights-card" id="refVsKeptCard"><h4>Referred vs kept by the MAPA</h4><div class="sib-ins-wrap"><table class="mini-table" id="refVsKept"></table></div><p class="nml-note" style="margin-bottom:0;" id="refVsKeptNote"></p></div>
+      </div>
+      <div class="insights-cols" style="margin-bottom:20px;">
+        <div class="insights-card"><h4>Month by month</h4><div class="sib-ins-wrap"><table class="mini-table" id="refMonths"></table></div></div>
+        <div class="insights-card"><h4>Why referred cases declined</h4><div id="refDeclines"></div></div>
+      </div>
+      <div class="insights-card" style="margin-bottom:26px;"><h4>Latest referrals</h4><div class="sib-ins-wrap"><table class="mini-table" id="refRecent"></table></div></div>
       </div>
     </div>
 
@@ -6228,6 +6249,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22h', date:'2026-10-22', items:[
+    {text:"<b>Referral insights</b>: Protection Insights has a new <b>Referrals</b> tab showing how MAPA → protection adviser referrals are going: referrals made, how fast the adviser makes contact, how many are submitted and go on risk, commission (on risk and pending) and per referral, by MAPA, by adviser and by pairing, whether a detailed handover or an agreed appointment makes a difference, referred vs kept cases, month by month, decline reasons and the latest referrals.", roles:['management']},
+    {text:"<b>Your referrals in Insights</b>: Protection Insights has a <b>Referrals</b> tab showing the cases you've referred to a protection adviser (or, for advisers, received) and how they went: contacted, submitted, on risk and commission.", roles:['mapa']},
+  ]},
   {id:'2026-10-22g', date:'2026-10-22', items:[
     {text:"<b>New Cases can be closed without a booking</b>: you no longer have to set a reminder or book an appointment before clicking off a case in New Cases. Appointments / Research still needs its next step booked, and overdue appointments still need their outcome.", roles:['mapa','management']},
   ]},
@@ -9362,7 +9387,7 @@ function renderReferArea(lead, area){
     this.disabled = true;
     const pa = USERS[paId], now = Date.now(), booked = !!date;
     const when = booked ? `${APPT_TYPES[type]} ${fmtDateSlash(date)} at ${time}` : '';
-    const patch = {advisorId:paId, advisorName:pa.name, referredById:currentUser.id, referredByName:currentUser.name, referredAt:now, referralNote:note,
+    const patch = {advisorId:paId, advisorName:pa.name, referredById:currentUser.id, referredByName:currentUser.name, referredAt:now, referralNote:note, referralBooked:booked,
       ...(booked ? {followUpDate:date, followUpTime:time, followUpKind:'appointment', apptType:type, followUpNote:null, status:'existing'}
                  : {...CLEAR_CALLBACK, followUpKind:null, apptType:null, followUpNote:null, status:'new'})};
     logAudit(lead.id, {type:'assigned', referral:true, text:`Referred to protection adviser ${pa.name} by ${currentUser.name}${booked ? ` - appointment booked (${when})` : ' - no appointment agreed yet'}. Handover: ${note}`,
@@ -9835,6 +9860,123 @@ function renderApptInsights(){
     (meetings.some(m=> !m.type) ? `<tr><td style="font-weight:600;">Booked before types existed</td><td>—</td><td>${meetings.filter(m=> !m.type).length}</td><td>${pc(meetings.filter(m=> !m.type && m.res==='spoke').length, meetings.filter(m=> !m.type).length)}</td><td>${meetings.filter(m=> !m.type && m.res==='noanswer').length}</td><td>—</td></tr>` : '') + '</tbody>';
 }
 
+/* ---- Referrals: MAPA → protection adviser ----
+   Management sees every referral (the advisor filter matches either side);
+   a MAPA sees the cases they referred; a protection adviser the ones they
+   received. Dated by when the case was referred. */
+function referralFacts(l){
+  const refAt = l.referredAt || 0;
+  const es = Object.values(l.audit||{}).filter(a=> a && a.at).sort((a,b)=> a.at-b.at);
+  const after = es.filter(a=> a.at > refAt);
+  const contact = after.find(a=> isContactAttempt(a));
+  const subm = after.find(a=> a.type==='underwriting' || a.type==='signup');
+  const pot = potOf(l);
+  const submitted = !!subm || ['underwriting','terms','signedup'].includes(pot);
+  const comm = Number(l.commission) || 0;
+  const refEntry = es.find(a=> a.referral);
+  return {
+    refAt, pot, submitted, onRisk: pot==='signedup', declined: pot==='decline' || pot==='completed', open: pot==='new' || pot==='existing',
+    contactMs: contact ? contact.at - refAt : null, met: after.some(a=> a.meeting==='spoke'),
+    submitMs: subm ? subm.at - refAt : null,
+    commOnRisk: pot==='signedup' ? comm : 0, commPending: (pot==='underwriting' || pot==='terms') ? comm : 0,
+    booked: l.referralBooked===true || (!!refEntry && / - appointment booked \(/.test(refEntry.text||'')),
+    detailed: String(l.referralNote||'').length >= 100,
+    policies: submitted ? leadPolicies(l).length : 0,
+  };
+}
+function renderReferralInsights(){
+  const me = currentUser.id, isPA = isProtAdviser(me), isMapa = currentUser.role==='mapa', isMg = currentUser.role==='management';
+  const anyRefs = Object.values(LEADS).some(l=> l && !l.deleted && l.referredById);
+  const tabOn = protAdvisers().length > 0 || anyRefs;
+  document.getElementById('pinsRefTab').classList.toggle('hidden', !tabOn);
+  if(!tabOn){ if(!document.querySelector('[data-pins-sec="referrals"]').classList.contains('hidden')) setPinsTab('pipeline'); return; }
+  const from = dateRangeFrom ? new Date(dateRangeFrom+'T00:00:00').getTime() : -Infinity, to = dateRangeTo ? new Date(dateRangeTo+'T23:59:59').getTime() : Infinity;
+  let refs = Object.entries(LEADS).map(([id, l])=> ({id, ...l})).filter(l=> !l.deleted && l.referredById && (l.referredAt||0) >= from && (l.referredAt||0) <= to);
+  if(isPA) refs = refs.filter(l=> l.advisorId===me);
+  else if(isMapa) refs = refs.filter(l=> l.referredById===me);
+  else if(selectedAdvisorFilter) refs = refs.filter(l=> l.referredById===selectedAdvisorFilter || l.advisorId===selectedAdvisorFilter);
+  const rows = refs.map(l=> ({l, f: referralFacts(l)}));
+  const n = rows.length, cnt = fn=> rows.filter(fn).length, sum = (fn, list=rows)=> list.reduce((t, r)=> t + fn(r), 0);
+  const pc = (a, b)=> b ? Math.round(a/b*100)+'%' : '—';
+  const money = v=> '£' + Math.round(v).toLocaleString();
+  const days = ms=> ms==null ? '—' : (Math.round(ms/86400000*10)/10) + ' days';
+  const subm = cnt(r=> r.f.submitted), onRisk = cnt(r=> r.f.onRisk), commR = sum(r=> r.f.commOnRisk), commP = sum(r=> r.f.commPending);
+  const contactTimes = rows.map(r=> r.f.contactMs).filter(x=> x!=null);
+  document.getElementById('refInsNote').innerHTML = isPA ? 'Cases MAPAs referred to you, and how they went. The date range applies to <i>when the case was referred</i>.'
+    : isMapa ? 'Cases you referred to a protection adviser, and how they went. The date range applies to <i>when you referred them</i>.'
+    : 'Cases MAPAs referred to a protection adviser, and how they went. The date range applies to <i>when the case was referred</i>; the advisor filter matches the MAPA or the adviser.';
+  document.getElementById('refStats').innerHTML =
+    statCard(n, isPA ? 'Referrals received' : 'Referrals made') +
+    statCard(pc(cnt(r=> r.f.booked), n), 'Appointment agreed at handover') +
+    statCard(pc(cnt(r=> r.f.contactMs!=null), n), 'Contacted by the adviser') +
+    statCard(fmtDur(median(contactTimes)), 'Typical time to first contact') +
+    statCard(`${subm} · ${pc(subm, n)}`, 'Submitted from referrals', subm ? 'good' : '') +
+    statCard(`${onRisk} · ${pc(onRisk, n)}`, 'On risk', onRisk ? 'good' : '') +
+    statCard(money(commR), 'Commission on risk', commR ? 'good' : '') +
+    statCard(money(commP), 'Commission pending') +
+    statCard(n ? money((commR + commP) / n) : '—', 'Commission per referral (incl. pending)') +
+    statCard(days(median(rows.map(r=> r.f.submitMs).filter(x=> x!=null))), 'Typical referral → submitted') +
+    statCard(cnt(r=> r.f.declined), 'Declined') +
+    statCard(cnt(r=> r.f.open), 'Still open', cnt(r=> r.f.open) ? 'warn' : '');
+  const empty = '<div class="insights-empty">No referrals in this range yet.</div>';
+  document.getElementById('refFunnel').innerHTML = n ? sibHBars([['Referred', n], ['Contacted', cnt(r=> r.f.contactMs!=null)], ['Spoke at an appointment', cnt(r=> r.f.met)], ['Submitted', subm], ['On risk', onRisk]], n) : empty;
+  document.getElementById('refNow').innerHTML = n ? sibHBars(['new','existing','underwriting','terms','signedup','decline','completed'].map(k=> [STATUS_LABELS[k], cnt(r=> r.f.pot===k)]).filter(e=> e[1]), n) : empty;
+  const head = '<th>Referrals</th><th>Appt agreed</th><th>Contacted ≤24h</th><th>Submitted</th><th>Converted</th><th>On risk</th><th>Commission</th><th>Pending</th><th>Per referral</th><th>Declined</th><th>Open</th>';
+  const line = (label, list)=>{ const s2 = list.filter(r=> r.f.submitted).length, cR = sum(r=> r.f.commOnRisk, list), cP = sum(r=> r.f.commPending, list);
+    return `<tr><td style="font-weight:600;">${esc(label)}</td><td>${list.length}</td><td>${pc(list.filter(r=> r.f.booked).length, list.length)}</td><td>${pc(list.filter(r=> r.f.contactMs!=null && r.f.contactMs <= 86400000).length, list.length)}</td><td>${s2}</td><td><b>${pc(s2, list.length)}</b></td><td>${list.filter(r=> r.f.onRisk).length}</td><td>${money(cR)}</td><td>${money(cP)}</td><td>${list.length ? money((cR+cP)/list.length) : '—'}</td><td>${list.filter(r=> r.f.declined).length}</td><td>${list.filter(r=> r.f.open).length}</td></tr>`; };
+  const group = key=>{ const g = {}; rows.forEach(r=> (g[key(r.l)] = g[key(r.l)] || []).push(r)); return Object.entries(g).sort((a,b)=> b[1].length - a[1].length); };
+  const tbl = (id, first, groups)=> document.getElementById(id).innerHTML = !groups.length ? '<tr><td class="insights-empty">No referrals in this range yet.</td></tr>' : `<thead><tr><th>${first}</th>${head}</tr></thead><tbody>${groups.map(([k, list])=> line(k, list)).join('')}</tbody>`;
+  // By referring MAPA: Management and protection advisers (who sends them work)
+  document.getElementById('refByMapaCard').classList.toggle('hidden', isMapa && !isPA);
+  document.getElementById('refByMapaTitle').textContent = isPA ? 'Who refers to you' : 'By referring MAPA';
+  tbl('refByMapa', 'MAPA', group(l=> l.referredByName || 'Unknown'));
+  // By protection adviser: Management, and MAPAs (who they refer to)
+  document.getElementById('refByPaCard').classList.toggle('hidden', isPA);
+  document.getElementById('refByPaTitle').textContent = isMapa ? 'Who you refer to' : 'By protection adviser';
+  const byPa = group(l=> l.advisorName || 'Unassigned');
+  tbl('refByPa', 'Protection adviser', byPa);
+  if(!isPA && byPa.length){
+    const ct = list=> median(list.map(r=> r.f.contactMs).filter(x=> x!=null));
+    document.getElementById('refByPa').querySelector('thead tr').insertAdjacentHTML('beforeend', '<th>Typical first contact</th><th>Typical to submitted</th>');
+    document.getElementById('refByPa').querySelectorAll('tbody tr').forEach((tr, i)=> tr.insertAdjacentHTML('beforeend', `<td>${fmtDur(ct(byPa[i][1]))}</td><td>${days(median(byPa[i][1].map(r=> r.f.submitMs).filter(x=> x!=null)))}</td>`));
+  }
+  // Pairs: Management only
+  document.getElementById('refPairsCard').classList.toggle('hidden', !isMg);
+  if(isMg) tbl('refPairs', 'MAPA → adviser', group(l=> `${l.referredByName||'Unknown'} → ${l.advisorName||'Unassigned'}`));
+  // Handover quality and booked-at-handover
+  const qRow = (label, list)=> `<tr><td style="font-weight:600;">${esc(label)}</td><td>${list.length}</td><td>${pc(list.filter(r=> r.f.contactMs!=null).length, list.length)}</td><td><b>${pc(list.filter(r=> r.f.submitted).length, list.length)}</b></td><td>${list.length ? money(sum(r=> r.f.commOnRisk + r.f.commPending, list)/list.length) : '—'}</td></tr>`;
+  document.getElementById('refQuality').innerHTML = !n ? '<tr><td class="insights-empty">No referrals in this range yet.</td></tr>' :
+    `<thead><tr><th></th><th>Referrals</th><th>Contacted</th><th>Converted</th><th>Per referral</th></tr></thead><tbody>` +
+    qRow('Detailed handover', rows.filter(r=> r.f.detailed)) + qRow('Brief handover', rows.filter(r=> !r.f.detailed)) +
+    qRow('Appointment agreed at handover', rows.filter(r=> r.f.booked)) + qRow('No appointment agreed', rows.filter(r=> !r.f.booked)) + '</tbody>';
+  // Referred vs kept: cases MAPAs (not protection advisers) worked themselves, by when they were created
+  document.getElementById('refVsKeptCard').classList.toggle('hidden', isPA);
+  if(!isPA){
+    let kept = Object.entries(LEADS).map(([id, l])=> ({id, ...l})).filter(l=> !l.deleted && !l.referredById && l.advisorId && !isProtAdviser(l.advisorId) && USERS[l.advisorId] && USERS[l.advisorId].role==='mapa' && (l.createdAt||0) >= from && (l.createdAt||0) <= to);
+    if(isMapa) kept = kept.filter(l=> l.advisorId===me);
+    else if(selectedAdvisorFilter) kept = kept.filter(l=> l.advisorId===selectedAdvisorFilter);
+    const kRows = kept.map(l=>{ const pot = potOf(l), c = Number(l.commission)||0; return {f:{submitted:['underwriting','terms','signedup'].includes(pot) || Object.values(l.audit||{}).some(a=> a && (a.type==='underwriting' || a.type==='signup')), onRisk: pot==='signedup', commOnRisk: pot==='signedup' ? c : 0, commPending: (pot==='underwriting'||pot==='terms') ? c : 0, declined: pot==='decline'||pot==='completed'}}; });
+    const vRow = (label, list)=> `<tr><td style="font-weight:600;">${esc(label)}</td><td>${list.length}</td><td><b>${pc(list.filter(r=> r.f.submitted).length, list.length)}</b></td><td>${pc(list.filter(r=> r.f.onRisk).length, list.length)}</td><td>${pc(list.filter(r=> r.f.declined).length, list.length)}</td><td>${list.length ? money(sum(r=> r.f.commOnRisk + r.f.commPending, list)/list.length) : '—'}</td></tr>`;
+    document.getElementById('refVsKept').innerHTML = `<thead><tr><th></th><th>Cases</th><th>Converted</th><th>On risk</th><th>Declined</th><th>Per case</th></tr></thead><tbody>${vRow('Referred to an adviser', rows)}${vRow(isMapa ? 'Kept and done yourself' : 'Kept and done by the MAPA', kRows)}</tbody>`;
+    document.getElementById('refVsKeptNote').textContent = 'Kept cases are dated by when the case was created; referred ones by when they were referred.';
+  }
+  // Month by month: last 6 months up to the end of the range
+  const endD = new Date(isFinite(to) ? to : Date.now());
+  const months = Array.from({length:6}, (_, i)=> new Date(endD.getFullYear(), endD.getMonth() - 5 + i, 1));
+  const mRows = months.map(m=>{ const st = m.getTime(), en = new Date(m.getFullYear(), m.getMonth()+1, 1).getTime(); const list = rows.filter(r=> r.f.refAt >= st && r.f.refAt < en);
+    return `<tr><td style="font-weight:600;">${esc(m.toLocaleDateString('en-GB',{month:'short', year:'2-digit'}))}</td><td>${list.length}</td><td>${list.filter(r=> r.f.submitted).length}</td><td>${list.filter(r=> r.f.onRisk).length}</td><td>${money(sum(r=> r.f.commOnRisk + r.f.commPending, list))}</td></tr>`; });
+  document.getElementById('refMonths').innerHTML = `<thead><tr><th>Referred in</th><th>Referrals</th><th>Submitted</th><th>On risk</th><th>Commission (incl. pending)</th></tr></thead><tbody>${mRows.join('')}</tbody>`;
+  const decl = rows.filter(r=> r.f.declined), dr = {};
+  decl.forEach(r=>{ const k = r.l.declineReason || 'No reason given'; dr[k] = (dr[k]||0) + 1; });
+  document.getElementById('refDeclines').innerHTML = decl.length ? sibHBars(Object.entries(dr).sort((a,b)=> b[1]-a[1]), decl.length) : '<div class="insights-empty">No referred cases declined in this range.</div>';
+  const recent = rows.slice().sort((a,b)=> b.f.refAt - a.f.refAt).slice(0, 15);
+  document.getElementById('refRecent').innerHTML = !recent.length ? '<tr><td class="insights-empty">No referrals in this range yet.</td></tr>' :
+    `<thead><tr><th>Referred</th><th>Client</th><th>From</th><th>To</th><th>Appt agreed</th><th>First contact</th><th>Now</th><th>Commission</th></tr></thead><tbody>` +
+    recent.map(({l, f})=> `<tr data-ref-open="${esc(l.id)}" style="cursor:pointer;"><td>${esc(fmtDate(f.refAt))}</td><td style="font-weight:600;">${esc(l.clientName||'')}</td><td>${esc(l.referredByName||'')}</td><td>${esc(l.advisorName||'')}</td><td>${f.booked ? 'Yes' : 'No'}</td><td>${f.contactMs!=null ? 'after '+fmtDur(f.contactMs) : '<span style="color:var(--amber);">Not yet</span>'}</td><td>${esc(STATUS_LABELS[l.status]||l.status||'')}</td><td>${f.commOnRisk || f.commPending ? money(f.commOnRisk || f.commPending) + (f.commPending ? ' (pending)' : '') : '—'}</td></tr>`).join('') + '</tbody>';
+  // Management and the adviser can open the case; the referring MAPA no longer owns it.
+  document.querySelectorAll('[data-ref-open]').forEach(tr=> tr.addEventListener('click', ()=>{ const l = LEADS[tr.dataset.refOpen]; if(l && (isMg || currentUser.role==='admin' || l.advisorId===me)) openLead(tr.dataset.refOpen); }));
+}
+
 function statCard(value, label, tone=''){
   return `<div class="stat-card ${tone}"><div class="sv">${value}</div><div class="sl">${esc(label)}</div></div>`;
 }
@@ -10022,6 +10164,7 @@ function renderInsights(){
       </div>`).join('');
 
   renderApptInsights();
+  renderReferralInsights();
 
   /* ---- Speed & compliance ---- */
   const contactTimes = [];

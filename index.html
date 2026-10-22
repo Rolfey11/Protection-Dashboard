@@ -681,9 +681,13 @@ body:not(.mode-com) .com-only{display:none !important;}
 .com-done{font-weight:700; color:var(--green);}
 .com-next{margin-top:5px; font-weight:600; color:var(--text-muted);}
 .com-next.bad{color:var(--red);} .com-next.warn{color:var(--amber);}
-.com-toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
-.com-toolbar input[type=search]{flex:1; min-width:200px; padding:10px 13px; border-radius:11px; border:1px solid var(--border-2); background:var(--surface); font:inherit; color:var(--text);}
-.com-toolbar select{padding:10px 12px; border-radius:11px; border:1px solid var(--border-2); background:var(--surface); font:inherit; color:var(--text);}
+/* Same look as the Send in Blue filter bar */
+.com-toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;}
+.com-toolbar input,.com-toolbar select{padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; background:var(--surface); color:var(--text); font:inherit; font-size:13px;}
+.com-toolbar input:focus,.com-toolbar select:focus{outline:none; border-color:var(--brand-light);}
+.com-toolbar input{flex:1 1 260px; min-width:0;}
+.com-toolbar select{flex:0 1 210px; min-width:0;}
+.com-toolbar .btn{flex:none;}
 .com-move{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
 .users-table .com-tick{width:18px; height:18px; accent-color:#0E6E5C; cursor:pointer;}
 @media (max-width:700px){ .mode-switch button{padding:6px 9px; font-size:11.5px;} }
@@ -6204,6 +6208,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22e', date:'2026-10-22', items:[
+    {text:"<b>Tidier Commercial filters</b>: the search box and filters above the Commercial lanes are now the same size as everywhere else.", roles:['mapa','management','admin']},
+  ]},
   {id:'2026-10-22d', date:'2026-10-22', items:[
     {text:"<b>Faster switching</b>: moving between screens and sections is quicker, especially back to a busy dashboard, and Send in Blue and Commercial load in the background after you log in so they're ready when you switch."},
   ]},

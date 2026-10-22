@@ -1236,7 +1236,7 @@ body:not(.mode-com) .com-only{display:none !important;}
 .ce-edit input{flex:1; min-width:200px; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); font-size:13.5px;}
 .ce-edit input:focus{border-color:var(--brand-light); outline:none;}
 .cal-btn.mail{flex:0 0 auto;}
-.field input[type=text],.field input[type=email],.field input[type=password],.field input[type=date],.field input[type=month],.field input[type=time],.field input[type=number],.field textarea{
+.field input[type=text],.field input[type=email],.field input[type=tel],.field input[type=password],.field input[type=date],.field input[type=month],.field input[type=time],.field input[type=number],.field textarea{
   width:100%; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm);
   background:var(--surface); color:var(--text); font-size:14px; transition:border-color .15s;
 }
@@ -6186,6 +6186,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22b', date:'2026-10-22', items:[
+    {text:"<b>Tidier phone boxes</b>: the telephone box on New lead (Commercial) and New Task now matches the other boxes."},
+  ]},
   {id:'2026-10-22', date:'2026-10-22', items:[
     {text:"<b>New: Commercial</b>. A third section next to Protection and Send in Blue for commercial mortgages, development finance, bridging, asset and invoice finance, and non-UK resident mortgages. New leads record the client, business, contact details, lead source and category. Cases move through New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete (with the lender and value). Only colleagues ticked <b>Commercial</b> in Settings → Colleagues can see it.", roles:['management']},
     {text:"<b>New: Commercial</b>. If you've been given access, a <b>Commercial</b> switch appears at the top next to Protection and Send in Blue, for commercial leads and their cases.", roles:['mapa','admin']},
@@ -11122,7 +11125,7 @@ document.getElementById('cnwSave').addEventListener('click', function(){
   this.disabled = true;
   ref.set({...Object.fromEntries(Object.entries(d).filter(([, x])=> x!=='')), advisorName:USERS[d.advisorId].name, stage:'new', createdAt:now, createdById:currentUser.id, createdByName:currentUser.name, audit})
     .then(()=>{ closeModal('comNewOverlay'); toast('Commercial lead created.','success'); })
-    .catch(err=> toast('Could not save: '+err.message,'error'))
+    .catch(err=> toast(/permission/i.test(err.code||err.message) ? "Couldn't save: the database isn't set up for Commercial yet. Management needs to publish the latest Firebase rules." : 'Could not save: '+err.message,'error'))
     .finally(()=>{ this.disabled = false; });
 });
 

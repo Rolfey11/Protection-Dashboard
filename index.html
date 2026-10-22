@@ -1143,6 +1143,9 @@ body:not(.mode-com) .com-only{display:none !important;}
 .lead-card.quoted:hover{border-color:color-mix(in srgb, var(--green) 60%, var(--border));}
 .lc-quoted{flex:none; display:grid; place-items:center; width:18px; height:18px; color:var(--green); background:var(--green-bg); border-radius:50%;}
 .lc-quoted .ico{width:12px; height:12px;}
+/* Cards scrolled out of view inside a column aren't laid out until they're
+   scrolled to, which keeps switching back to a busy board quick. */
+.pot-body > .lead-card{content-visibility:auto; contain-intrinsic-size:auto 76px;}
 .lead-card.overdue{border-color:color-mix(in srgb, var(--red) 40%, var(--border)); box-shadow:inset 3px 0 0 var(--red);}
 .lead-card.overdue:hover{border-color:var(--red); box-shadow:inset 3px 0 0 var(--red), 0 10px 24px -10px color-mix(in srgb, var(--red) 45%, transparent);}
 .lead-card .lc-top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
@@ -4040,7 +4043,8 @@ function enterApp(){
   syncComAccess();
   setAppMode(APP_MODE, false);
   goPage(appHomePage());
-  renderDashboard();
+  prefetchSections();
+  if(appHomePage()!=='dashboard') renderDashboard(); // goPage already drew it
   renderNotifs();
   // Once per update: a short summary of what's new (after the screen settles).
   setTimeout(()=>{ if(currentUser && !forcePinActive && !document.querySelector('.modal-overlay.open')) showWhatsNew(false); }, 900);
@@ -4088,8 +4092,11 @@ function goPage(page){
     }
     renderSettingsNav();
   }
+  // A quick fade-in. Run through the animation API so it doesn't force the
+  // browser to lay the whole page out an extra time (that made switching slow).
   const shown = document.getElementById('page-'+page);
-  if(shown){ shown.classList.remove('page-enter'); void shown.offsetWidth; shown.classList.add('page-enter'); }
+  if(shown && shown.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+    shown.animate([{opacity:0, transform:'translateY(4px)'}, {opacity:1, transform:'none'}], {duration:160, easing:'cubic-bezier(.2,.8,.2,1)'});
   if(page==='dashboard') renderDashboard();
   if(page==='insights') renderInsights();
   if(page==='themes') renderThemes();
@@ -4762,6 +4769,12 @@ document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.addEventListe
 function ensureSibLoaded(){
   if(sibLoaded) return Promise.resolve();
   return db.ref('sib/cases').once('value').then(snap=>{ if(!sibLoaded){ SIB = snap.val() || {}; sibLoaded = true; } });
+}
+/* Load the other sections' data quietly a few seconds after logging in, so
+   the first switch to Send in Blue or Commercial doesn't wait for a download. */
+function prefetchSections(){
+  clearTimeout(prefetchSections.t);
+  prefetchSections.t = setTimeout(()=> (window.requestIdleCallback || (f=> f()))(()=>{ if(currentUser){ startSibListener(); startComListener(); } }), 3000);
 }
 function startSibListener(){
   if(sibListening || !currentUser) return;
@@ -6191,6 +6204,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22d', date:'2026-10-22', items:[
+    {text:"<b>Faster switching</b>: moving between screens and sections is quicker, especially back to a busy dashboard, and Send in Blue and Commercial load in the background after you log in so they're ready when you switch."},
+  ]},
   {id:'2026-10-22c', date:'2026-10-22', items:[
     {text:"<b>Commercial: reminders, appointments and outcomes</b>. Every open Commercial case now has its next step booked, the same as Protection: <b>Book appointment</b> (phone, video or face to face, with a client invite) or <b>Set reminder</b>, each added to Google Calendar with a Commercial title. Once an appointment has happened, record the <b>Outcome of meeting</b> (No answer, Spoke to client or Not attempted, with a note of at least 20 characters), then follow up, complete it, or mark it <b>Not proceeding</b>. MAPAs can't leave a case without its next step booked, and overdue items must be dealt with when they open Commercial. There's also a Commercial <b>Calendar</b> tab.", roles:['mapa','management','admin']},
   ]},
@@ -6516,6 +6532,10 @@ function sibScoreCards(list, team, advisers){
 function renderSibInsights(){
   const page = document.getElementById('page-sibInsights');
   if(!page || page.classList.contains('hidden') || !currentUser) return;
+  // Nothing changed since it was last drawn (same data, filters, user and hour): keep what's there.
+  const memoKey = [JSON.stringify(sibIns), currentUser.id, new Date().toISOString().slice(0,13)].join('|');
+  if(renderSibInsights.last && renderSibInsights.last.sib===SIB && renderSibInsights.last.users===USERS && renderSibInsights.last.key===memoKey && sibLoaded) return;
+  renderSibInsights.last = {sib:SIB, users:USERS, key:memoKey};
   sibLetterMemo.clear();
   const body = document.getElementById('sibInsBody');
   document.getElementById('sibInsSub').textContent = sibSeesAll() ? 'How the retention book is performing: outcomes, follow-up, advisers and team activity.' : 'How your Send in Blue cases are going: your own clients and the ones you inherited.';
@@ -7326,15 +7346,22 @@ function renderDashboard(){
 
 /* Fit the board to the window: each column's list gets whatever height is
    left below it (min 220px), and scrolls inside itself. Six-across only;
-   on narrow screens the columns wrap and keep their default height. */
+   on narrow screens the columns wrap and keep their default height.
+   Measured just after the browser has drawn the page (when its layout is
+   already up to date, so reading it is cheap) instead of forcing an extra
+   layout of every card mid-render, and only changed when it actually differs. */
+let potsBodyH = '';
 function sizePots(){
-  const grid = document.querySelector('.pots-grid');
-  if(!grid || !grid.offsetParent) return;
-  if(window.innerWidth <= 1100){ grid.style.removeProperty('--pot-body-h'); return; }
-  const head = grid.querySelector('.pot-head');
-  const top = grid.getBoundingClientRect().top + window.scrollY;
-  const avail = window.innerHeight - top - (head ? head.offsetHeight : 40) - 30;
-  grid.style.setProperty('--pot-body-h', Math.max(220, Math.floor(avail)) + 'px');
+  cancelAnimationFrame(sizePots.raf); clearTimeout(sizePots.t);
+  sizePots.raf = requestAnimationFrame(()=>{ sizePots.t = setTimeout(()=>{
+    const grid = document.querySelector('.pots-grid');
+    if(!grid || !grid.offsetParent) return;
+    if(window.innerWidth <= 1100){ if(potsBodyH){ potsBodyH = ''; grid.style.removeProperty('--pot-body-h'); } return; }
+    const head = grid.querySelector('.pot-head');
+    const top = grid.getBoundingClientRect().top + window.scrollY;
+    const h = Math.max(220, Math.floor(window.innerHeight - top - (head ? head.offsetHeight : 40) - 30)) + 'px';
+    if(h!==potsBodyH){ potsBodyH = h; grid.style.setProperty('--pot-body-h', h); }
+  }, 0); });
 }
 window.addEventListener('resize', ()=> sizePots());
 

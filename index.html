@@ -670,6 +670,20 @@ main{max-width:1680px; margin:0 auto; padding:20px 24px 20px;}
 body.mode-sib .mode-switch button.on{background:#1D6FA5;}
 body.mode-sib .prot-only{display:none !important;}
 body:not(.mode-sib) .sib-only{display:none !important;}
+/* Commercial: a third section, only for colleagues ticked "Commercial" in Settings */
+body.mode-com .mode-switch button.on{background:#0E6E5C;}
+body.mode-com .prot-only{display:none !important;}
+body:not(.mode-com) .com-only{display:none !important;}
+.com-pots{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:14px; align-items:start;}
+@media (max-width:1100px){ .com-pots{grid-template-columns:repeat(3, minmax(0,1fr));} }
+@media (max-width:700px){ .com-pots{grid-template-columns:1fr;} }
+.com-cat{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--teal-bg); color:var(--teal); white-space:nowrap;}
+.com-done{font-weight:700; color:var(--green);}
+.com-toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
+.com-toolbar input[type=search]{flex:1; min-width:200px; padding:10px 13px; border-radius:11px; border:1px solid var(--border-2); background:var(--surface); font:inherit; color:var(--text);}
+.com-toolbar select{padding:10px 12px; border-radius:11px; border:1px solid var(--border-2); background:var(--surface); font:inherit; color:var(--text);}
+.com-move{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.users-table .com-tick{width:18px; height:18px; accent-color:#0E6E5C; cursor:pointer;}
 @media (max-width:700px){ .mode-switch button{padding:6px 9px; font-size:11.5px;} }
 .sib-unmatched{margin-top:10px; font-size:12.5px; line-height:1.7; color:var(--text-muted);}
 .sib-year-counts{margin-top:10px; font-size:12.5px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
@@ -1772,6 +1786,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="mode-switch" id="modeSwitch" role="group" aria-label="Section">
         <button type="button" data-mode="protection" class="on">Protection</button>
         <button type="button" data-mode="sib">Send in Blue</button>
+        <button type="button" data-mode="com" id="comModeBtn" class="hidden">Commercial</button>
       </div>
 
       <div class="nav-tabs" id="navTabs">
@@ -1781,6 +1796,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <button class="nav-tab hidden prot-only" data-page="useful" id="usefulTab">Useful Info</button>
         <button class="nav-tab sib-only" data-page="sib" id="sibTab">Cases</button>
         <button class="nav-tab sib-only hidden" data-page="sibInsights" id="sibInsightsTab">Insights</button>
+        <button class="nav-tab com-only" data-page="com" id="comTab">Cases</button>
         <button class="nav-tab hidden" data-page="logins" id="loginsTab">Log in Data</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
@@ -2181,6 +2197,21 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       </div>
     </div>
 
+    <!-- ============= COMMERCIAL ============= -->
+    <div id="page-com" class="hidden">
+      <div class="page-head">
+        <div><h1>Commercial</h1><p class="sub" id="comSub">Commercial mortgages, development, bridging, asset and invoice finance.</p></div>
+        <button class="btn btn-primary" id="comNewBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> New lead</button>
+      </div>
+      <div class="stat-grid" id="comStats"></div>
+      <div class="com-toolbar">
+        <input type="search" id="comSearch" placeholder="Search name, business, email, phone or lender…" aria-label="Search commercial cases">
+        <select id="comCatFilter" aria-label="Category"><option value="">All categories</option></select>
+        <select id="comAdvFilter" aria-label="Adviser" class="hidden"><option value="">All advisers</option></select>
+      </div>
+      <div class="com-pots" id="comPots"></div>
+    </div>
+
     <div id="page-sib" class="hidden">
       <div class="page-head sib-head">
         <div>
@@ -2367,7 +2398,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <div class="page-head">
           <div>
             <h1 style="font-size:19px;">Colleagues</h1>
-            <p class="sub">Manage colleague access — name, user level and PIN.</p>
+            <p class="sub">Manage colleague access — name, user level, PIN and who can see Commercial.</p>
           </div>
           <div style="display:flex; gap:10px;">
             <button class="btn btn-primary" id="addUserBtn">
@@ -2378,7 +2409,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         </div>
         <div class="settings-card" style="margin-bottom:34px;">
           <table class="users-table">
-            <thead><tr><th>Name</th><th>User level</th><th>PIN</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>User level</th><th>PIN</th><th title="Can see the Commercial section">Commercial</th><th></th></tr></thead>
             <tbody id="usersTableBody"></tbody>
           </table>
           <div id="usersEmpty" class="settings-empty hidden">No colleagues added yet. Click "Add Colleague" to get started.</div>
@@ -2637,6 +2668,46 @@ table.users-table tr:hover td{background:var(--brand-tint);}
   <div class="modal" style="max-width:620px;">
     <div class="modal-head"><div><h2 id="overdueTitle">Overdue: please deal with these first</h2><p class="sub" id="overdueSub" style="margin:4px 0 0; font-size:13px; color:var(--text-muted);"></p></div></div>
     <div class="modal-body"><p class="mt-sub" style="margin-top:0;">Appointments need their <b>outcome of meeting</b>; reminders need a note and a new reminder or appointment. Open each one to deal with it.</p><div id="overdueBody"></div></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="comNewOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>New commercial lead</h2><button class="modal-close" data-close="comNewOverlay">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label for="cnwName">Client name</label><input type="text" id="cnwName" maxlength="120" placeholder="e.g. Sarah Jenkins"></div>
+      <div class="field"><label for="cnwBiz">Business name</label><input type="text" id="cnwBiz" maxlength="120" placeholder="e.g. Jenkins Property Ltd"></div>
+      <div class="field"><label for="cnwEmail">Email <span class="label-opt">(optional)</span></label><input type="email" id="cnwEmail" maxlength="120" autocomplete="off"></div>
+      <div class="field"><label for="cnwPhone">Telephone number <span class="label-opt">(optional)</span></label><input type="tel" id="cnwPhone" maxlength="40" autocomplete="off"></div>
+      <div class="field"><label for="cnwSource">Lead source</label><select id="cnwSource"></select></div>
+      <div class="field hidden" id="cnwSourceTextWrap"><label for="cnwSourceText" id="cnwSourceTextLbl">Who referred them?</label><input type="text" id="cnwSourceText" maxlength="120"></div>
+      <div class="field"><label for="cnwCat">Category</label><select id="cnwCat"></select></div>
+      <div class="field"><label for="cnwAdv">Adviser</label><select id="cnwAdv"></select></div>
+      <div class="field"><label for="cnwNote">Notes <span class="label-opt">(optional)</span></label><textarea id="cnwNote" maxlength="2000" placeholder="e.g. Looking for £850k on a mixed-use building, 65% LTV"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="comNewOverlay">Cancel</button>
+      <button class="btn btn-primary" id="cnwSave">Create lead</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="comOverlay">
+  <div class="modal lead-modal">
+    <div class="modal-head">
+      <div style="min-width:0;"><h2 id="comCaseName">Client</h2><div class="sib-sum" id="comCaseSum"></div></div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="icon-btn del hidden" id="comDeleteBtn" title="Delete this case"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+        <button class="modal-close" data-close="comOverlay">✕</button>
+      </div>
+    </div>
+    <div class="lead-detail-grid">
+      <div class="lead-left" id="comLeft"></div>
+      <div class="lead-right">
+        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> History</div>
+        <div class="audit-list" id="comAudit"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3425,6 +3496,7 @@ function closeModal(id, force){
   document.getElementById(id).classList.remove('open');
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; ldEditClient = false; ldEditNames = null; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
+  if(id==='comOverlay'){ comOpenId = null; comCompleteOpen = false; comEditOpen = false; }
   if(!document.querySelector('.modal-overlay.open')){
     document.body.classList.remove('scroll-lock');
     if(sibChaseSwitch){ sibChaseSwitch = false; setTimeout(()=> setAppMode('sib'), 0); } // Advisor Chase arrived while a lead was open elsewhere
@@ -3737,6 +3809,7 @@ function logout(){
   db.ref('pins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {};
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
   db.ref('sib/cases').off(); sibListening = false; sibLoaded = false; SIB = {}; sibOpenKey = null;
+  db.ref('commercial/cases').off(); comListening = false; comLoaded = false; COM = {}; comOpenId = null;
   selectedAdvisorFilter = null; searchTerm = ''; dateRangeFrom = null; dateRangeTo = null;
   document.getElementById('globalSearch').value = '';
   document.getElementById('dateFrom').value = ''; document.getElementById('dateTo').value = '';
@@ -3959,8 +4032,9 @@ function enterApp(){
     currentUser.role==='admin' ? "Here's everything logged across the team." :
     "Here's everything happening across the whole team's workflow.";
 
+  syncComAccess();
   setAppMode(APP_MODE, false);
-  goPage(APP_MODE==='sib' ? 'sib' : 'dashboard');
+  goPage(appHomePage());
   renderDashboard();
   renderNotifs();
   // Once per update: a short summary of what's new (after the screen settles).
@@ -3978,6 +4052,8 @@ function goPage(page){
   document.getElementById('page-logins').classList.toggle('hidden', page!=='logins');
   document.getElementById('page-sib').classList.toggle('hidden', page!=='sib');
   document.getElementById('page-sibInsights').classList.toggle('hidden', page!=='sibInsights');
+  document.getElementById('page-com').classList.toggle('hidden', page!=='com');
+  if(page==='com'){ startComListener(); renderCom(); }
   document.getElementById('page-useful').classList.toggle('hidden', page!=='useful');
   if(page==='useful') showUsefulHome();
   document.getElementById('page-calendar').classList.toggle('hidden', page!=='calendar');
@@ -4606,10 +4682,11 @@ function sibReasonsFor(outcome){
 }
 const SIB_REASONS = ['Resi Product Transfer','Resi Remortgage','Mortgage NTU','BTL Remortgage','BTL Product Transfer','Discussing Options','Client/s went direct','Client/s went online','Client/s have moved','Client/s have cleared mortgage','Not Due yet','Clients separated','Unsubscribed from SIB'];
 let APP_MODE = 'protection';
-try{ if(localStorage.getItem('plt_mode')==='sib') APP_MODE = 'sib'; }catch(e){}
+try{ const m = localStorage.getItem('plt_mode'); if(m==='sib' || m==='com') APP_MODE = m; }catch(e){}
 let SIB = {}, sibListening = false, sibLoaded = false, sibOpenKey = null, sibAction = null, sibMoreOpen = false;
 
 document.body.classList.toggle('mode-sib', APP_MODE==='sib');
+document.body.classList.toggle('mode-com', APP_MODE==='com');
 const sibState = {month:null, search:'', adviser:'', outcome:'all', emailClient:'', showAll:false, view:null};
 /* Pots for working Send in Blue clients (all follow the month picked at the top):
    Client Reviews: not spoken to yet (No answer → move on 1 or 2 weeks, drops to the bottom);
@@ -4666,12 +4743,13 @@ function sibChasePending(c){ return !!c.chaseAt && !c.chaseAnswer; }
 function sibMoney(v){ return '£' + Number(v).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2}); }
 
 function setAppMode(mode, go=true){
-  APP_MODE = mode==='sib' ? 'sib' : 'protection';
+  APP_MODE = mode==='sib' ? 'sib' : mode==='com' && (!currentUser || comAccess()) ? 'com' : 'protection';
   try{ localStorage.setItem('plt_mode', APP_MODE); }catch(e){}
   document.body.classList.toggle('mode-sib', APP_MODE==='sib');
+  document.body.classList.toggle('mode-com', APP_MODE==='com');
   document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.classList.toggle('on', b.dataset.mode===APP_MODE));
-  document.querySelector('.brand-text .t1').textContent = APP_MODE==='sib' ? 'Send in Blue' : 'Protection Lead Tracker';
-  if(go && currentUser) goPage(APP_MODE==='sib' ? 'sib' : 'dashboard');
+  document.querySelector('.brand-text .t1').textContent = APP_MODE==='sib' ? 'Send in Blue' : APP_MODE==='com' ? 'Commercial' : 'Protection Lead Tracker';
+  if(go && currentUser) goPage(appHomePage());
   if(currentUser) setTimeout(checkOverdueGate, 0);
 }
 document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.addEventListener('click', ()=> setAppMode(b.dataset.mode)));
@@ -6108,6 +6186,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22', date:'2026-10-22', items:[
+    {text:"<b>New: Commercial</b>. A third section next to Protection and Send in Blue for commercial mortgages, development finance, bridging, asset and invoice finance, and non-UK resident mortgages. New leads record the client, business, contact details, lead source and category. Cases move through New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete (with the lender and value). Only colleagues ticked <b>Commercial</b> in Settings → Colleagues can see it.", roles:['management']},
+    {text:"<b>New: Commercial</b>. If you've been given access, a <b>Commercial</b> switch appears at the top next to Protection and Send in Blue, for commercial leads and their cases.", roles:['mapa','admin']},
+  ]},
   {id:'2026-10-21', date:'2026-10-21', items:[
     {text:"<b>No more \"Not touched for 7 days\"</b>: My Day no longer flags cases just because nothing has been logged on them for a week. Overdue reminders and appointments, cases with nothing booked, and terms / underwriting chasers still show.", roles:['mapa']},
   ]},
@@ -6808,6 +6890,7 @@ db.ref('users').on('value', snap=>{
   if(currentUser){
     const me = USERS[currentUser.id];
     if(!me){ logout(); toast('Your account has been removed. Please speak to Management.', 'error'); return; }
+    syncComAccess();
     // Pick up name/role changes made in Settings without needing to log out
     if(me.role !== currentUser.role){
       Object.assign(currentUser, {name:me.name, role:me.role});
@@ -8303,6 +8386,7 @@ const HELP = [
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},
   ]},
   {group:'Protection cases', items:[
+    {t:'Commercial', h:`<b>Commercial</b> sits next to Protection and Send in Blue at the top, for colleagues ticked <b>Commercial</b> in Settings → Colleagues (Management ticks the box). Press <b>New lead</b> for the client name, business name, email, telephone, lead source (Referral and Other ask for detail) and category, and choose the adviser. Cases move through <b>New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete</b>; Complete asks for the lender and value. Open a case to move it, add notes or edit its details. MAPAs see their own cases; Management and Admin see everyone's.`},
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
     {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b>, <b>No answer</b> or <b>Not attempted</b> (the appointment didn't go ahead from our side).</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer or Not attempted: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. Not attempted doesn't count as a contact attempt.</li></ol>`},
@@ -10877,6 +10961,7 @@ function renderUsersTable(){
       <td style="font-weight:600;">${esc(u.name)}</td>
       <td><span class="role-badge ${esc(u.role)}">${esc(ROLE_LABEL[u.role]||u.role)}</span></td>
       <td>${pinsLoaded && pinFor(id)==null ? `<span style="color:var(--amber); font-weight:600; font-size:12.5px;">Not set, edit to add</span>` : `<span class="pin-mono">••••</span>`}</td>
+      <td><input type="checkbox" class="com-tick" data-com-user="${esc(id)}" ${u.commercial ? 'checked' : ''} aria-label="${esc(u.name)} does commercial"></td>
       <td>
         <div class="row-actions">
           <button class="icon-btn" data-edit="${esc(id)}" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
@@ -10885,6 +10970,12 @@ function renderUsersTable(){
       </td>
     </tr>`).join('');
   body.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click', ()=> openUserModal(b.dataset.edit)));
+  body.querySelectorAll('[data-com-user]').forEach(cb=> cb.addEventListener('change', ()=>{
+    const id = cb.dataset.comUser, on = cb.checked;
+    db.ref('users/'+id+'/commercial').set(on ? true : null)
+      .then(()=> toast(`${USERS[id] ? USERS[id].name : 'Colleague'} ${on ? 'can now see' : 'no longer sees'} Commercial.`,'success'))
+      .catch(err=>{ cb.checked = !on; toast('Could not save: '+err.message,'error'); });
+  }));
   body.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{
     const u = USERS[b.dataset.del];
     if(b.dataset.del===currentUser.id){ toast("You can't remove your own login. Ask another Management colleague to do it.",'error'); return; }
@@ -10907,6 +10998,250 @@ function renderUsersTable(){
     }
   }));
 }
+
+/* ----------------------------------------------------------------------------
+   COMMERCIAL — a third section (Protection | Send in Blue | Commercial), only
+   for colleagues ticked "Commercial" in Settings → Colleagues.
+   /commercial/cases/{id}: {clientName, businessName, email, phone, source,
+   sourceDetail, category, stage, advisorId, advisorName, lender, value,
+   completedAt, createdAt, createdByName, audit{}}
+   MAPAs see their own cases; Management and Admin see them all.
+   ---------------------------------------------------------------------------- */
+const COM_SOURCES = ['Phone in','FLG','Google','Existing Client','Referral','Other'];
+const COM_CATEGORIES = ['Commercial Mortgage','Development Finance','Bridging Loan','Asset Finance','Invoice Finance','NON UK Resident Mortgage'];
+const COM_STAGES = [['new','New Case','var(--blue)'],['research','Research','var(--amber)'],['docs','Waiting for docs/info','var(--violet)'],['terms','Terms issued / Application submitted','var(--indigo)'],['complete','Complete','var(--green)']];
+let COM = {}, comListening = false, comLoaded = false, comOpenId = null, comCompleteOpen = false, comEditOpen = false;
+const comState = {search:'', cat:'', adv:''};
+function comAccess(){ return !!currentUser && !!USERS[currentUser.id] && USERS[currentUser.id].commercial===true; }
+function comSeesAll(){ return !!currentUser && currentUser.role!=='mapa'; }
+function appHomePage(){ return APP_MODE==='sib' ? 'sib' : APP_MODE==='com' ? 'com' : 'dashboard'; }
+// Show the Commercial switch only to ticked colleagues; move anyone un-ticked back to Protection.
+function syncComAccess(){
+  const ok = comAccess();
+  document.getElementById('comModeBtn').classList.toggle('hidden', !ok);
+  if(!ok && APP_MODE==='com'){ closeModal('comOverlay', true); closeModal('comNewOverlay', true); setAppMode('protection'); }
+}
+function startComListener(){
+  if(comListening || !comAccess()) return;
+  comListening = true;
+  db.ref('commercial/cases').on('value', snap=>{
+    COM = snap.val() || {}; comLoaded = true;
+    if(!document.getElementById('page-com').classList.contains('hidden')) renderCom();
+    if(comOpenId && document.getElementById('comOverlay').classList.contains('open')) renderComCase();
+  }, ()=>{
+    comListening = false;
+    document.getElementById('comPots').innerHTML = '<div class="nml-empty">Could not load Commercial cases. Publish the updated Firebase rules, then refresh.</div>';
+  });
+}
+function comCases(){
+  return Object.entries(COM).filter(([, c])=> c && !c.deleted).map(([id, c])=> ({id, ...c}))
+    .filter(c=> comSeesAll() || c.advisorId===currentUser.id);
+}
+function comAdvisers(){ return Object.entries(USERS).filter(([, u])=> u && u.commercial===true).sort((a,b)=> String(a[1].name).localeCompare(String(b[1].name))); }
+function comSourceLabel(c){ return c.source + (c.sourceDetail ? ': ' + c.sourceDetail : ''); }
+function comStage(c){ return COM_STAGES.find(s=> s[0]===c.stage) || COM_STAGES[0]; }
+function comMoney(v){ return '£' + Number(v||0).toLocaleString(undefined, {maximumFractionDigits:0}); }
+function comCardHtml(c){
+  const showAdv = comSeesAll();
+  return `<div class="lead-card" data-com-id="${esc(c.id)}" tabindex="0" role="button">
+    <div class="lc-top"><div class="lc-name">${esc(c.clientName||c.businessName||'(no name)')}</div>${showAdv ? `<span class="lc-avatar" style="--av:${advisorTone(c.advisorId||'')}" title="${esc(c.advisorName||'Unassigned')}">${esc(initials(c.advisorName||'?'))}</span>` : ''}</div>
+    ${c.businessName && c.clientName ? `<div class="lc-sub">${esc(c.businessName)}</div>` : ''}
+    <div style="margin-top:5px;"><span class="com-cat">${esc(c.category||'')}</span></div>
+    <div class="lc-sub" style="margin-top:5px;">${c.stage==='complete' ? `<span class="com-done">${esc(comMoney(c.value))}</span><span class="lc-sep">·</span>${esc(c.lender||'')}` : esc(comSourceLabel(c))}</div>
+  </div>`;
+}
+function renderCom(){
+  if(!currentUser || document.getElementById('page-com').classList.contains('hidden')) return;
+  const catSel = document.getElementById('comCatFilter'), advSel = document.getElementById('comAdvFilter');
+  if(catSel.options.length <= 1) catSel.innerHTML = '<option value="">All categories</option>' + COM_CATEGORIES.map(c=> `<option>${esc(c)}</option>`).join('');
+  advSel.classList.toggle('hidden', !comSeesAll());
+  advSel.innerHTML = '<option value="">All advisers</option>' + comAdvisers().map(([id, u])=> `<option value="${esc(id)}">${esc(u.name)}</option>`).join('');
+  advSel.value = comState.adv; catSel.value = comState.cat;
+  document.getElementById('comSub').textContent = comSeesAll() ? 'Every commercial case across the team.' : 'Your commercial cases.';
+  const pots = document.getElementById('comPots');
+  if(!comLoaded){ pots.innerHTML = '<div class="nml-empty">Loading…</div>'; return; }
+  const q = comState.search.trim().toLowerCase();
+  const all = comCases();
+  const list = all.filter(c=> (!comState.cat || c.category===comState.cat) && (!comState.adv || c.advisorId===comState.adv)
+    && (!q || [c.clientName, c.businessName, c.email, c.phone, c.lender, c.sourceDetail].some(v=> String(v||'').toLowerCase().includes(q))));
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  const doneMonth = all.filter(c=> c.stage==='complete' && (c.completedAt||0) >= monthStart.getTime() && (!comState.adv || c.advisorId===comState.adv));
+  const open = all.filter(c=> c.stage!=='complete' && (!comState.adv || c.advisorId===comState.adv));
+  document.getElementById('comStats').innerHTML = statCard(open.length, 'Open cases') + statCard(doneMonth.length, 'Completed this month', 'good')
+    + statCard(comMoney(doneMonth.reduce((t, c)=> t + Number(c.value||0), 0)), 'Value completed this month', 'accent')
+    + statCard(open.filter(c=> c.stage==='docs').length, 'Waiting for docs/info', 'warn');
+  pots.innerHTML = COM_STAGES.map(([k, lbl, col])=>{
+    const inPot = list.filter(c=> (c.stage||'new')===k).sort((a,b)=> k==='complete' ? (b.completedAt||0)-(a.completedAt||0) : (a.createdAt||0)-(b.createdAt||0));
+    return `<div class="pot" data-com-pot="${k}" style="--pot:${col}"><div class="pot-head"><div class="pot-head-title"><h3>${esc(lbl)}</h3></div><span class="pot-count">${inPot.length}</span></div>
+      <div class="pot-body">${inPot.length ? inPot.map(comCardHtml).join('') : '<div class="pot-empty" style="padding:22px 8px; text-align:center; color:var(--text-faint); font-size:12.5px;">Nothing here right now</div>'}</div></div>`;
+  }).join('');
+  pots.querySelectorAll('[data-com-id]').forEach(el=>{
+    el.addEventListener('click', ()=> openComCase(el.dataset.comId));
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openComCase(el.dataset.comId); } });
+  });
+}
+document.getElementById('comSearch').addEventListener('input', function(){ comState.search = this.value; renderCom(); });
+document.getElementById('comCatFilter').addEventListener('change', function(){ comState.cat = this.value; renderCom(); });
+document.getElementById('comAdvFilter').addEventListener('change', function(){ comState.adv = this.value; renderCom(); });
+
+// ---- New lead
+function comSourceSync(prefix){
+  const v = document.getElementById(prefix+'Source').value, wrap = document.getElementById(prefix+'SourceTextWrap');
+  wrap.classList.toggle('hidden', v!=='Referral' && v!=='Other');
+  document.getElementById(prefix+'SourceTextLbl').textContent = v==='Referral' ? 'Who referred them?' : 'Where did the lead come from?';
+}
+document.getElementById('comNewBtn').addEventListener('click', ()=>{
+  ['cnwName','cnwBiz','cnwEmail','cnwPhone','cnwSourceText','cnwNote'].forEach(id=> document.getElementById(id).value = '');
+  document.getElementById('cnwSource').innerHTML = '<option value="">Select a source…</option>' + COM_SOURCES.map(x=> `<option>${esc(x)}</option>`).join('');
+  document.getElementById('cnwCat').innerHTML = '<option value="">Select a category…</option>' + COM_CATEGORIES.map(x=> `<option>${esc(x)}</option>`).join('');
+  const advs = comAdvisers();
+  document.getElementById('cnwAdv').innerHTML = '<option value="">Select an adviser…</option>' + advs.map(([id, u])=> `<option value="${esc(id)}">${esc(u.name)}</option>`).join('');
+  if(advs.some(([id])=> id===currentUser.id)) document.getElementById('cnwAdv').value = currentUser.id;
+  comSourceSync('cnw');
+  document.querySelectorAll('#comNewOverlay .missing').forEach(e=> e.classList.remove('missing'));
+  openModal('comNewOverlay'); setTimeout(()=> document.getElementById('cnwName').focus(), 50);
+});
+document.getElementById('cnwSource').addEventListener('change', ()=> comSourceSync('cnw'));
+document.querySelectorAll('#comNewOverlay input, #comNewOverlay select, #comNewOverlay textarea').forEach(el=> el.addEventListener('input', ()=> el.classList.remove('missing')));
+document.getElementById('cnwSave').addEventListener('click', function(){
+  const v = id=> document.getElementById(id).value.trim();
+  const d = {clientName:v('cnwName'), businessName:v('cnwBiz'), email:v('cnwEmail'), phone:v('cnwPhone'), source:v('cnwSource'), sourceDetail:v('cnwSourceText'), category:v('cnwCat'), advisorId:v('cnwAdv')};
+  const bad = [];
+  if(!d.clientName && !d.businessName) bad.push(['cnwName','a client or business name']);
+  if(d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) bad.push(['cnwEmail','a valid email']);
+  if(d.phone && (d.phone.replace(/\D/g,'').length < 7)) bad.push(['cnwPhone','a valid phone number']);
+  if(!d.source) bad.push(['cnwSource','the lead source']);
+  if((d.source==='Referral' || d.source==='Other') && !d.sourceDetail) bad.push(['cnwSourceText', d.source==='Referral' ? 'who referred them' : 'where the lead came from']);
+  if(!d.category) bad.push(['cnwCat','the category']);
+  if(!d.advisorId) bad.push(['cnwAdv','the adviser']);
+  if(bad.length){ bad.forEach(([id])=> document.getElementById(id).classList.add('missing')); document.getElementById(bad[0][0]).focus(); toast('Please add ' + bad.map(b=> b[1]).join(', ') + '.','error'); return; }
+  if(d.source!=='Referral' && d.source!=='Other') d.sourceDetail = '';
+  const ref = db.ref('commercial/cases').push(), now = Date.now(), note = v('cnwNote');
+  const audit = {[db.ref().push().key]: {type:'assigned', text:`Lead created (${d.category}, ${comSourceLabel(d)}) and assigned to ${USERS[d.advisorId].name}`, byId:currentUser.id, byName:currentUser.name, at:now}};
+  if(note) audit[db.ref().push().key] = {type:'note', text:`Note: ${note}`, byId:currentUser.id, byName:currentUser.name, at:now+1};
+  this.disabled = true;
+  ref.set({...Object.fromEntries(Object.entries(d).filter(([, x])=> x!=='')), advisorName:USERS[d.advisorId].name, stage:'new', createdAt:now, createdById:currentUser.id, createdByName:currentUser.name, audit})
+    .then(()=>{ closeModal('comNewOverlay'); toast('Commercial lead created.','success'); })
+    .catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ this.disabled = false; });
+});
+
+// ---- Case window
+function openComCase(id){
+  if(!COM[id] || COM[id].deleted) return;
+  comOpenId = id; comCompleteOpen = false; comEditOpen = false;
+  renderComCase();
+  document.getElementById('comDeleteBtn').classList.toggle('hidden', currentUser.role!=='management');
+  openModal('comOverlay');
+}
+function comWrite(id, fields, text){
+  const updates = {};
+  Object.entries(fields).forEach(([k, val])=> updates[`commercial/cases/${id}/${k}`] = val==='' || val===undefined ? null : val);
+  updates[`commercial/cases/${id}/updatedAt`] = Date.now();
+  if(text) updates[`commercial/cases/${id}/audit/${db.ref().push().key}`] = {type:'status', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()};
+  return db.ref().update(updates);
+}
+function renderComCase(){
+  const c = COM[comOpenId]; if(!c || c.deleted){ closeModal('comOverlay', true); return; }
+  const st = comStage(c), idx = COM_STAGES.indexOf(st);
+  document.getElementById('comCaseName').textContent = c.clientName || c.businessName || '(no name)';
+  document.getElementById('comCaseSum').innerHTML = [c.businessName && c.clientName ? `<b>${esc(c.businessName)}</b>` : '', `<span class="com-cat">${esc(c.category||'')}</span>`, esc(c.advisorName||'Unassigned'), esc(comSourceLabel(c)), `Created <b>${esc(fmtDate(c.createdAt))}</b>`].filter(Boolean).join(' · ');
+  const SHORT = {docs:'Docs/info', terms:'Terms / Application'};
+  const steps = COM_STAGES.map(([k, lbl], i)=> `<li class="${i < idx || c.stage==='complete' ? 'done' : i===idx ? 'now' : ''}">${esc(SHORT[k]||lbl)}</li>`).join('');
+  const moveBtns = COM_STAGES.filter(([k])=> k!==c.stage && k!=='complete').map(([k, lbl])=> `<button type="button" class="btn btn-secondary btn-sm" data-com-move="${k}">${esc(lbl)}</button>`).join('');
+  const next = COM_STAGES[idx+1];
+  const canEdit = comSeesAll() || c.advisorId===currentUser.id;
+  const kv = (lbl, val)=> `<span>${lbl}</span><b>${val}</b>`;
+  document.getElementById('comLeft').innerHTML = `
+    <div class="ld-track"><ol class="ld-steps" aria-label="Stage">${steps}</ol>
+      ${canEdit ? `<div class="ld-next">${c.stage==='complete'
+        ? `<span>Completed${c.completedAt ? ' '+esc(fmtDate(c.completedAt)) : ''} with <b>${esc(c.lender||'')}</b>, <b class="com-done">${esc(comMoney(c.value))}</b>.</span><button type="button" class="btn btn-ghost btn-sm" data-com-move="terms">Reopen</button>`
+        : `<span>Next stage: <b>${esc(next[1])}</b>.</span>${next[0]==='complete' ? '<button type="button" class="stage-btn" id="comCompleteBtn" style="background:var(--green);">✓ Complete</button>' : `<button type="button" class="stage-btn" data-com-move="${next[0]}" style="background:var(--brand);">Move to ${esc(next[1])}</button>`}`}</div>` : ''}
+    </div>
+    ${canEdit && c.stage!=='complete' ? `<div class="com-move"><span class="mt-sub" style="margin:0;">Or move to:</span>${moveBtns}${next && next[0]!=='complete' ? '<button type="button" class="btn btn-secondary btn-sm" id="comCompleteBtn2">Complete</button>' : ''}</div>` : ''}
+    ${comCompleteOpen ? `<div class="inline-form" style="margin-top:12px;">
+        <div class="op-title" style="font-weight:700; margin-bottom:10px;">Complete the case</div>
+        <div class="field"><label for="comLender">Lender</label><input type="text" id="comLender" maxlength="120" value="${esc(c.lender||'')}" placeholder="e.g. Shawbrook"></div>
+        <div class="field"><label for="comValue">Value</label><div class="money-wrap"><span>£</span><input type="number" id="comValue" min="0" step="1" value="${c.value!=null ? esc(c.value) : ''}" placeholder="e.g. 850000"></div></div>
+        <div style="display:flex; gap:8px;"><button class="btn btn-primary btn-sm" id="comCompleteSave">Save: Complete</button><button class="btn btn-ghost btn-sm" id="comCompleteCancel">Cancel</button></div>
+      </div>` : ''}
+    ${canEdit ? `<div class="inline-form" style="margin-top:12px;"><div class="field" style="margin-bottom:8px;"><label for="comNote">Add a note</label><textarea id="comNote" maxlength="2000" placeholder="e.g. Chased the accountant for 2 years' accounts"></textarea></div><button class="btn btn-secondary btn-sm" id="comNoteSave">Add note</button></div>` : ''}
+    ${comEditOpen ? `<div class="inline-form" style="margin-top:12px;">
+        <div class="op-title" style="font-weight:700; margin-bottom:10px;">Edit details</div>
+        <div class="field"><label for="ceClient">Client name</label><input type="text" id="ceClient" maxlength="120" value="${esc(c.clientName||'')}"></div>
+        <div class="field"><label for="ceBiz">Business name</label><input type="text" id="ceBiz" maxlength="120" value="${esc(c.businessName||'')}"></div>
+        <div class="field"><label for="ceEmail2">Email</label><input type="email" id="ceEmail2" maxlength="120" value="${esc(c.email||'')}"></div>
+        <div class="field"><label for="cePhone2">Telephone number</label><input type="tel" id="cePhone2" maxlength="40" value="${esc(c.phone||'')}"></div>
+        <div class="field"><label for="ceSource">Lead source</label><select id="ceSource">${COM_SOURCES.map(x=> `<option ${c.source===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
+        <div class="field ${c.source==='Referral' || c.source==='Other' ? '' : 'hidden'}" id="ceSourceTextWrap"><label for="ceSourceText" id="ceSourceTextLbl">Who referred them?</label><input type="text" id="ceSourceText" maxlength="120" value="${esc(c.sourceDetail||'')}"></div>
+        <div class="field"><label for="ceCat">Category</label><select id="ceCat">${COM_CATEGORIES.map(x=> `<option ${c.category===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
+        ${comSeesAll() ? `<div class="field"><label for="ceAdv">Adviser</label><select id="ceAdv">${comAdvisers().map(([id, u])=> `<option value="${esc(id)}" ${c.advisorId===id?'selected':''}>${esc(u.name)}</option>`).join('')}</select></div>` : ''}
+        ${c.stage==='complete' ? `<div class="field"><label for="ceLender">Lender</label><input type="text" id="ceLender" maxlength="120" value="${esc(c.lender||'')}"></div><div class="field"><label for="ceValue">Value</label><div class="money-wrap"><span>£</span><input type="number" id="ceValue" min="0" step="1" value="${c.value!=null ? esc(c.value) : ''}"></div></div>` : ''}
+        <div style="display:flex; gap:8px;"><button class="btn btn-primary btn-sm" id="ceSave">Save details</button><button class="btn btn-ghost btn-sm" id="ceCancel">Cancel</button></div>
+      </div>` : ''}
+    <div class="sib-box"><div class="sib-box-hd">Client &amp; case details ${canEdit && !comEditOpen ? '<button type="button" class="linkish" id="comEditBtn">✎ Edit</button>' : ''}</div>
+      <div class="sib-kv">
+        ${kv('Client', esc(c.clientName||'—'))}${kv('Business', esc(c.businessName||'—'))}
+        ${kv('Email', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '—')}${kv('Telephone', c.phone ? `<a href="${esc(telHref(c.phone))}" class="tel-link">${esc(c.phone)}</a>` : '—')}
+        ${kv('Lead source', esc(comSourceLabel(c)))}${kv('Category', esc(c.category||'—'))}
+        ${kv('Adviser', esc(c.advisorName||'—'))}${kv('Created by', esc(c.createdByName||'—'))}
+        ${c.stage==='complete' ? kv('Lender', esc(c.lender||'—')) + kv('Value', `<span class="com-done">${esc(comMoney(c.value))}</span>`) : ''}
+      </div></div>`;
+  const entries = Object.values(c.audit||{}).filter(Boolean).sort((a,b)=> b.at-a.at);
+  document.getElementById('comAudit').innerHTML = entries.length ? entries.map(a=> `<div class="audit-item"><div class="audit-icon t-${esc(a.type)}">${auditIcon(a.type)}</div><div class="audit-line"></div><div class="audit-content"><div class="audit-text">${esc(a.text)}</div><div class="audit-meta">${esc(a.byName||'')} · ${fmtDateTime(a.at)}</div></div></div>`).join('') : '<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>';
+  const left = document.getElementById('comLeft');
+  left.querySelectorAll('[data-com-move]').forEach(b=> b.addEventListener('click', ()=>{
+    const to = b.dataset.comMove, lbl = COM_STAGES.find(s=> s[0]===to)[1];
+    b.disabled = true;
+    comWrite(comOpenId, {stage:to, ...(c.stage==='complete' ? {completedAt:null} : {})}, c.stage==='complete' ? `Reopened: moved to ${lbl}` : `Moved to ${lbl}`)
+      .then(()=> toast(`Moved to ${lbl}.`,'success')).catch(err=>{ toast('Could not save: '+err.message,'error'); b.disabled = false; });
+  }));
+  ['comCompleteBtn','comCompleteBtn2'].forEach(id=>{ const b = document.getElementById(id); if(b) b.addEventListener('click', ()=>{ comCompleteOpen = true; renderComCase(); const l = document.getElementById('comLender'); if(l) l.focus(); }); });
+  const on = (id, fn)=>{ const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+  on('comCompleteCancel', ()=>{ comCompleteOpen = false; renderComCase(); });
+  on('comCompleteSave', function(){
+    const lender = document.getElementById('comLender').value.trim(), raw = document.getElementById('comValue').value;
+    const bad = [!lender && 'comLender', (raw==='' || isNaN(raw) || Number(raw) <= 0) && 'comValue'].filter(Boolean);
+    if(bad.length){ bad.forEach(id=> document.getElementById(id).classList.add('missing')); document.getElementById(bad[0]).focus(); toast('Please add the lender and the value.','error'); return; }
+    this.disabled = true;
+    comWrite(comOpenId, {stage:'complete', lender, value:Number(raw), completedAt:Date.now()}, `Complete: ${lender}, ${comMoney(raw)}`)
+      .then(()=>{ comCompleteOpen = false; renderComCase(); celebrate(`${comMoney(raw)} completed! 🎉`); toast('Case completed.','success'); })
+      .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+  });
+  on('comNoteSave', function(){
+    const t = document.getElementById('comNote').value.trim();
+    if(!t){ toast('Write a note first.','error'); return; }
+    this.disabled = true;
+    db.ref(`commercial/cases/${comOpenId}/audit/${db.ref().push().key}`).set({type:'note', text:`Note: ${t}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+      .then(()=> toast('Note added.','success')).catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+  });
+  on('comEditBtn', ()=>{ comEditOpen = true; renderComCase(); });
+  on('ceCancel', ()=>{ comEditOpen = false; renderComCase(); });
+  const ceSrc = document.getElementById('ceSource');
+  if(ceSrc){ ceSrc.addEventListener('change', ()=> comSourceSync('ce')); comSourceSync('ce'); }
+  on('ceSave', function(){
+    const v = id=>{ const el = document.getElementById(id); return el ? el.value.trim() : undefined; };
+    const f = {clientName:v('ceClient'), businessName:v('ceBiz'), email:v('ceEmail2'), phone:v('cePhone2'), source:v('ceSource'), sourceDetail:v('ceSourceText'), category:v('ceCat')};
+    if(!f.clientName && !f.businessName){ toast('Add a client or business name.','error'); return; }
+    if(f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)){ toast("That email doesn't look right.",'error'); return; }
+    if((f.source==='Referral' || f.source==='Other') && !f.sourceDetail){ document.getElementById('ceSourceText').classList.add('missing'); toast(f.source==='Referral' ? 'Add who referred them.' : 'Add where the lead came from.','error'); return; }
+    if(f.source!=='Referral' && f.source!=='Other') f.sourceDetail = '';
+    const adv = v('ceAdv'); if(adv && adv!==c.advisorId){ f.advisorId = adv; f.advisorName = USERS[adv].name; }
+    if(c.stage==='complete'){ const lv = v('ceLender'), vv = v('ceValue'); if(!lv || vv==='' || isNaN(vv) || Number(vv) <= 0){ toast('A completed case needs its lender and value.','error'); return; } f.lender = lv; f.value = Number(vv); }
+    const LBL = {clientName:'Client', businessName:'Business', email:'Email', phone:'Telephone', source:'Lead source', sourceDetail:'Source detail', category:'Category', advisorName:'Adviser', lender:'Lender', value:'Value'};
+    const changed = Object.keys(f).filter(k=> k!=='advisorId' && String(f[k]||'')!==String(c[k]||''));
+    if(!changed.length){ comEditOpen = false; renderComCase(); return; }
+    this.disabled = true;
+    comWrite(comOpenId, f, 'Details updated: ' + changed.map(k=> `${LBL[k]} "${c[k]||''}" → "${f[k]||''}"`).join('; '))
+      .then(()=>{ comEditOpen = false; renderComCase(); toast('Details saved.','success'); })
+      .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+  });
+}
+document.getElementById('comDeleteBtn').addEventListener('click', ()=>{
+  const c = COM[comOpenId]; if(!c) return;
+  if(!confirm(`Delete the commercial case for ${c.clientName || c.businessName}? This can't be undone.`)) return;
+  db.ref('commercial/cases/'+comOpenId).remove().then(()=>{ closeModal('comOverlay', true); toast('Case deleted.','success'); }).catch(err=> toast('Could not delete: '+err.message,'error'));
+});
 
 /* ----------------------------------------------------------------------------
    12) FIRST PAINT

@@ -66,6 +66,23 @@
       }
     },
 
+    "commercial": {
+      "cases": {
+        ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('commercial').val() === true",
+        "$caseId": {
+          ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('commercial').val() === true && (!data.exists() || (!newData.exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'))",
+          "audit": {
+            "$auditId": {
+              ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('commercial').val() === true && !data.exists()"
+            }
+          },
+          "$field": {
+            ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('commercial').val() === true"
+          }
+        }
+      }
+    },
+
     "logins": {
       ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
       "$userId": {

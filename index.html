@@ -679,6 +679,8 @@ body:not(.mode-com) .com-only{display:none !important;}
 @media (max-width:700px){ .com-pots{grid-template-columns:1fr;} }
 .com-cat{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--teal-bg); color:var(--teal); white-space:nowrap;}
 .com-done{font-weight:700; color:var(--green);}
+.com-next{margin-top:5px; font-weight:600; color:var(--text-muted);}
+.com-next.bad{color:var(--red);} .com-next.warn{color:var(--amber);}
 .com-toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
 .com-toolbar input[type=search]{flex:1; min-width:200px; padding:10px 13px; border-radius:11px; border:1px solid var(--border-2); background:var(--surface); font:inherit; color:var(--text);}
 .com-toolbar select{padding:10px 12px; border-radius:11px; border:1px solid var(--border-2); background:var(--surface); font:inherit; color:var(--text);}
@@ -1797,6 +1799,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <button class="nav-tab sib-only" data-page="sib" id="sibTab">Cases</button>
         <button class="nav-tab sib-only hidden" data-page="sibInsights" id="sibInsightsTab">Insights</button>
         <button class="nav-tab com-only" data-page="com" id="comTab">Cases</button>
+        <button class="nav-tab com-only" data-page="calendar" id="comCalTab">Calendar</button>
         <button class="nav-tab hidden" data-page="logins" id="loginsTab">Log in Data</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
@@ -2208,6 +2211,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <input type="search" id="comSearch" placeholder="Search name, business, email, phone or lender…" aria-label="Search commercial cases">
         <select id="comCatFilter" aria-label="Category"><option value="">All categories</option></select>
         <select id="comAdvFilter" aria-label="Adviser" class="hidden"><option value="">All advisers</option></select>
+        <button type="button" class="btn btn-secondary btn-sm" id="comLostToggle">Not proceeding (0)</button>
       </div>
       <div class="com-pots" id="comPots"></div>
     </div>
@@ -3490,13 +3494,14 @@ function toast(msg, type=''){
 function openModal(id){ document.getElementById(id).classList.add('open'); document.body.classList.add('scroll-lock'); }
 function closeModal(id, force){
   if(id==='forcePinOverlay' && forcePinActive) return; // must choose a new PIN or sign out
-  if(!force && id==='overdueOverlay' && overdueGateActive && myOverdueBookings().length) return; // deal with every overdue item first
+  if(!force && id==='overdueOverlay' && overdueGateActive && overdueGateList().length) return; // deal with every overdue item first
   if(!force && id==='leadOverlay' && activeLeadId){ const why = leadCloseBlock(LEADS[activeLeadId]); if(why){ toast(why,'error'); return; } }
+  if(!force && id==='comOverlay' && comOpenId){ const why = comCloseBlock(COM[comOpenId]); if(why){ toast(why,'error'); return; } }
   if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; ldEditClient = false; ldEditNames = null; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
-  if(id==='comOverlay'){ comOpenId = null; comCompleteOpen = false; comEditOpen = false; }
+  if(id==='comOverlay'){ comOpenId = null; comAct = null; comEditOpen = false; if(currentUser) setTimeout(checkOverdueGate, 0); }
   if(!document.querySelector('.modal-overlay.open')){
     document.body.classList.remove('scroll-lock');
     if(sibChaseSwitch){ sibChaseSwitch = false; setTimeout(()=> setAppMode('sib'), 0); } // Advisor Chase arrived while a lead was open elsewhere
@@ -3809,7 +3814,7 @@ function logout(){
   db.ref('pins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {};
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
   db.ref('sib/cases').off(); sibListening = false; sibLoaded = false; SIB = {}; sibOpenKey = null;
-  db.ref('commercial/cases').off(); comListening = false; comLoaded = false; COM = {}; comOpenId = null;
+  db.ref('commercial/cases').off(); comListening = false; comLoaded = false; COM = {}; comOpenId = null; comAct = null;
   selectedAdvisorFilter = null; searchTerm = ''; dateRangeFrom = null; dateRangeTo = null;
   document.getElementById('globalSearch').value = '';
   document.getElementById('dateFrom').value = ''; document.getElementById('dateTo').value = '';
@@ -4091,7 +4096,7 @@ function goPage(page){
   if(page==='logins') startLoginsListener();
   if(page==='sib'){ startSibListener(); renderSib(); }
   if(page==='sibInsights'){ startSibListener(); renderSibInsights(); }
-  if(page==='calendar') renderCalendar();
+  if(page==='calendar'){ if(APP_MODE==='com') startComListener(); renderCalendar(); }
 }
 
 /* ----------------------------------------------------------------------------
@@ -6186,6 +6191,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22c', date:'2026-10-22', items:[
+    {text:"<b>Commercial: reminders, appointments and outcomes</b>. Every open Commercial case now has its next step booked, the same as Protection: <b>Book appointment</b> (phone, video or face to face, with a client invite) or <b>Set reminder</b>, each added to Google Calendar with a Commercial title. Once an appointment has happened, record the <b>Outcome of meeting</b> (No answer, Spoke to client or Not attempted, with a note of at least 20 characters), then follow up, complete it, or mark it <b>Not proceeding</b>. MAPAs can't leave a case without its next step booked, and overdue items must be dealt with when they open Commercial. There's also a Commercial <b>Calendar</b> tab.", roles:['mapa','management','admin']},
+  ]},
   {id:'2026-10-22b', date:'2026-10-22', items:[
     {text:"<b>Tidier phone boxes</b>: the telephone box on New lead (Commercial) and New Task now matches the other boxes."},
   ]},
@@ -7584,6 +7592,7 @@ function trackerUrl(){ return /^https?:/.test(location.protocol) ? location.orig
    filter, but not the search box or the "task created" date range, which
    would otherwise hide calls booked for leads created outside that range. */
 function calendarCalls(){
+  if(APP_MODE==='com') return comCalendarCalls();
   let all = Object.entries(LEADS).map(([id,l])=>({id,...l})).filter(l=> !l.deleted && hasBookedCall(l));
   if(currentUser.role==='mapa') all = all.filter(l=> l.advisorId===currentUser.id);
   else if(selectedAdvisorFilter){
@@ -7606,6 +7615,7 @@ function calEventTimes(lead){
 }
 
 function calEventText(lead){
+  if(lead._com) return comCalEventText(lead);
   const lines = [
     lead.followUpKind==='reminder' ? 'Reminder: chase the client' : `Protection ${(APPT_TYPES[lead.apptType] || 'call').toLowerCase()}`,
     `Client: ${lead.clientName||''}`,
@@ -7617,11 +7627,12 @@ function calEventText(lead){
   return {title: calTitle(lead), details: lines.join('\n')};
 }
 const COMPANY_NAME = 'Michael Usher Mortgage Services';
-function calTitle(lead){ return lead.followUpKind==='reminder' ? `REMINDER CHASE - ${lead.clientName||'Client'}` : `Protection Call with ${COMPANY_NAME} - ${lead.clientName||'Client'}`; }
+function calTitle(lead){ if(lead._com) return comCalTitle(lead); return lead.followUpKind==='reminder' ? `REMINDER CHASE - ${lead.clientName||'Client'}` : `Protection Call with ${COMPANY_NAME} - ${lead.clientName||'Client'}`; }
 
 /* What the client sees when they're invited: no internal notes, sources or
    links, just a friendly confirmation. */
 function clientEventText(lead){
+  if(lead._com) return comClientEventText(lead);
   const adv = lead.advisorName || 'your adviser';
   const first = adv.split(' ')[0];
   return [
@@ -8036,7 +8047,7 @@ function bindClientEmailCell(lead){
 function calButtonsHtml(lead, compact=false){
   return `<div class="cal-btns ${compact?'compact':''}">
     <a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Add to Google Calendar</span></a>
-    <button type="button" class="cal-btn" data-cal-ics="${esc(lead.id)}">${ico('calendarCheck')}<span>Calendar file</span></button>
+    <button type="button" class="cal-btn" data-cal-ics="${esc(lead.id)}" ${lead._com ? 'data-cal-com="1"' : ''}>${ico('calendarCheck')}<span>Calendar file</span></button>
     ${compact ? `<button type="button" class="cal-btn mail" data-email-client="${esc(lead.id)}" title="Write an email to the client and open it in Gmail">${ico('mail')}<span>Email client</span></button>` : ''}
   </div>`;
 }
@@ -8044,7 +8055,7 @@ document.addEventListener('click', (e)=>{
   const b = e.target.closest('[data-cal-ics]');
   if(b){
     e.preventDefault(); e.stopPropagation();
-    const l = LEADS[b.dataset.calIcs]; if(!l || !l.followUpDate) return;
+    const l = b.dataset.calCom ? (COM[b.dataset.calIcs] && comCalLead(COM[b.dataset.calIcs])) : LEADS[b.dataset.calIcs]; if(!l || !l.followUpDate) return;
     const lead = {id:b.dataset.calIcs, ...l};
     downloadIcs([lead], `call-${safeFileName(lead.clientName)}-${isoDay(lead.followUpDate)}.ics`);
     toast(`Calendar file downloaded for ${lead.clientName}. Open it to add the call.`, 'success');
@@ -8079,14 +8090,14 @@ function calItemHtml(l){
   const d = callInfo(l);
   const showAdv = currentUser.role!=='mapa';
   return `
-    <div class="cal-item ${d.tone}" data-open="${esc(l.id)}">
+    <div class="cal-item ${d.tone}" data-open="${esc(l.id)}" ${l._com ? 'data-com="1"' : ''}>
       <div class="cal-item-top">
         <div class="cal-item-name">${esc(l.clientName)}</div>
         <span class="cal-due ${d.tone}">${d.label}${l.followUpTime && !(d.tone==='bad' && daysLate(l.followUpDate)===0) ? ' · '+esc(l.followUpTime) : ''}</span>
       </div>
       <div class="cal-item-sub">
         ${showAdv ? (l.advisorId ? `<span class="lc-avatar" style="--av:${advisorTone(l.advisorId)}">${esc(initials(l.advisorName||'?'))}</span>${esc(l.advisorName||'')}` : `<span class="lc-avatar none">?</span>Unassigned`) : ''}
-        ${showAdv && l.clientSource ? '<span class="lc-sep">·</span>' : ''}${l.clientSource ? esc(l.clientSource) : ''}
+        ${showAdv && l.clientSource ? '<span class="lc-sep">·</span>' : ''}${l.clientSource ? esc(l.clientSource) : ''}${l._com ? `<span class="lc-sep">·</span>${esc(comBookingLabel(l))}` : ''}
       </div>
       ${calButtonsHtml(l)}
     </div>`;
@@ -8094,6 +8105,16 @@ function calItemHtml(l){
 
 function renderCalAdvisorRow(){
   const row = document.getElementById('calAdvisorRow');
+  if(APP_MODE==='com'){
+    const advs = comAdvisers();
+    if(!comSeesAll() || !advs.length){ row.classList.add('hidden'); return; }
+    row.classList.remove('hidden');
+    row.innerHTML = `<span style="font-size:12px;font-weight:600;color:var(--text-muted);margin-right:2px;">Show for:</span>` +
+      `<button class="filter-chip ${!comState.calAdv?'active':''}" data-adv="">Everyone</button>` +
+      advs.map(([id,u])=> `<button class="filter-chip ${comState.calAdv===id?'active':''}" data-adv="${esc(id)}">${esc(u.name)}</button>`).join('');
+    row.querySelectorAll('.filter-chip').forEach(chip=> chip.addEventListener('click', ()=>{ comState.calAdv = chip.dataset.adv || ''; renderCalendar(); }));
+    return;
+  }
   if(currentUser.role==='mapa'){ row.classList.add('hidden'); return; }
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
   if(!mapas.length){ row.classList.add('hidden'); return; }
@@ -8115,7 +8136,10 @@ function renderCalendar(){
   const today = isoDay(new Date());
   if(!calSelected) calSelected = today;
 
-  document.getElementById('calSub').textContent = currentUser.role==='mapa'
+  document.getElementById('calSub').textContent = APP_MODE==='com' ? (comSeesAll()
+    ? 'Commercial appointments and reminders across the team. Add any of them to your own calendar in one click.'
+    : 'Your commercial appointments and reminders. Add any of them to your own calendar in one click.')
+    : currentUser.role==='mapa'
     ? 'Your booked follow-up calls. Add any call to your own calendar in one click.'
     : 'Booked follow-up calls across the team. Add any call to your own calendar in one click.';
 
@@ -8176,7 +8200,7 @@ function renderCalendar(){
 
   document.querySelectorAll('#page-calendar .cal-item').forEach(it=> it.addEventListener('click', (e)=>{
     if(e.target.closest('.cal-btns')) return;
-    openLead(it.dataset.open);
+    if(it.dataset.com) openComCase(it.dataset.open); else openLead(it.dataset.open);
   }));
 }
 
@@ -8389,7 +8413,7 @@ const HELP = [
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},
   ]},
   {group:'Protection cases', items:[
-    {t:'Commercial', h:`<b>Commercial</b> sits next to Protection and Send in Blue at the top, for colleagues ticked <b>Commercial</b> in Settings → Colleagues (Management ticks the box). Press <b>New lead</b> for the client name, business name, email, telephone, lead source (Referral and Other ask for detail) and category, and choose the adviser. Cases move through <b>New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete</b>; Complete asks for the lender and value. Open a case to move it, add notes or edit its details. MAPAs see their own cases; Management and Admin see everyone's.`},
+    {t:'Commercial', h:`<b>Commercial</b> sits next to Protection and Send in Blue at the top, for colleagues ticked <b>Commercial</b> in Settings → Colleagues (Management ticks the box). Press <b>New lead</b> for the client name, business name, email, telephone, lead source (Referral and Other ask for detail) and category, and choose the adviser. Cases move through <b>New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete</b>; Complete asks for the lender and value. Open a case to move it, add notes or edit its details. Every open case needs its next step booked: <b>Book appointment</b> (phone, video or face to face) or <b>Set reminder</b>, with one-click Google Calendar. When an appointment's time has passed, record the <b>Outcome of meeting</b>; a due reminder needs a note and a new booking. <b>Not proceeding</b> takes a case off the board (see the <b>Not proceeding</b> button above the lanes; it can be reopened). MAPAs can't leave a case without its next step booked, and overdue items must be cleared when they open Commercial. The Commercial <b>Calendar</b> tab shows every booking. MAPAs see their own cases; Management and Admin see everyone's.`},
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
     {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b>, <b>No answer</b> or <b>Not attempted</b> (the appointment didn't go ahead from our side).</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer or Not attempted: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. Not attempted doesn't count as a contact attempt.</li></ol>`},
@@ -9363,9 +9387,14 @@ function myOverdueBookings(){
   return Object.entries(LEADS).map(([id, l])=> ({id, ...l})).filter(l=> !l.deleted && l.advisorId===currentUser.id && fuDue(l))
     .sort((a,b)=> callDueAt(a.followUpDate, a.followUpTime) - callDueAt(b.followUpDate, b.followUpTime));
 }
+// Protection and Commercial each have their own lock; Send in Blue has none.
+let overdueGateMode = null;
+function overdueGateList(){ return APP_MODE==='protection' ? myOverdueBookings() : APP_MODE==='com' ? myComOverdue() : []; }
 function checkOverdueGate(){
-  if(!currentUser || !leadsLive || APP_MODE!=='protection') { if(overdueGateActive && APP_MODE!=='protection'){ overdueGateActive = false; closeModal('overdueOverlay'); } return; }
-  const list = myOverdueBookings();
+  if(overdueGateActive && overdueGateMode!==APP_MODE){ overdueGateActive = false; closeModal('overdueOverlay', true); }
+  const live = APP_MODE==='protection' ? leadsLive : APP_MODE==='com' && comLoaded;
+  if(!currentUser || !live) return;
+  const list = overdueGateList();
   if(!list.length){
     if(overdueGateActive){ overdueGateActive = false; closeModal('overdueOverlay'); toast('All caught up. Thank you!','success'); }
     return;
@@ -9373,12 +9402,12 @@ function checkOverdueGate(){
   // Never interrupt someone partway through another window; it opens as soon as they close it.
   if(!overdueGateActive && document.querySelector('.modal-overlay.open')) return;
   document.getElementById('overdueSub').textContent = `${list.length} overdue ${list.length===1 ? 'item needs' : 'items need'} dealing with before you can use the dashboard.`;
-  document.getElementById('overdueBody').innerHTML = list.map(l=> `<div class="chase-row"><div class="who"><div><b>${esc(l.clientName||'(no name)')}</b><small>${esc(fuKindLabel(l))} · ${esc(overdueText(l.followUpDate, l.followUpTime))}${l.followUpNote ? ' · '+esc(l.followUpNote) : ''}</small></div>
+  document.getElementById('overdueBody').innerHTML = list.map(l=> `<div class="chase-row"><div class="who"><div><b>${esc(l._com || APP_MODE==='com' ? comName(l) : l.clientName||'(no name)')}</b><small>${esc(fuKindLabel(l))} · ${esc(overdueText(l.followUpDate, l.followUpTime))}${l.followUpNote ? ' · '+esc(l.followUpNote) : ''}</small></div>
       <div class="chase-btns"><button type="button" class="btn btn-primary btn-sm" data-overdue-open="${esc(l.id)}">${fuKind(l)==='reminder' ? 'Deal with reminder' : 'Record outcome'}</button></div></div></div>`).join('');
-  document.querySelectorAll('[data-overdue-open]').forEach(b=> b.addEventListener('click', ()=> openLead(b.dataset.overdueOpen)));
-  if(!overdueGateActive){ overdueGateActive = true; openModal('overdueOverlay'); }
+  document.querySelectorAll('[data-overdue-open]').forEach(b=> b.addEventListener('click', ()=> APP_MODE==='com' ? openComCase(b.dataset.overdueOpen) : openLead(b.dataset.overdueOpen)));
+  if(!overdueGateActive){ overdueGateActive = true; overdueGateMode = APP_MODE; openModal('overdueOverlay'); }
 }
-setInterval(()=>{ if(currentUser && leadsLive) checkOverdueGate(); }, 60000);
+setInterval(()=>{ if(currentUser) checkOverdueGate(); }, 60000);
 
 /* mode: 'onrisk' → On Risk; 'underwriting' → Submitted / In Underwriting;
    'nowonrisk' → a case with terms issued that the client has taken up. */
@@ -11006,15 +11035,17 @@ function renderUsersTable(){
    COMMERCIAL — a third section (Protection | Send in Blue | Commercial), only
    for colleagues ticked "Commercial" in Settings → Colleagues.
    /commercial/cases/{id}: {clientName, businessName, email, phone, source,
-   sourceDetail, category, stage, advisorId, advisorName, lender, value,
-   completedAt, createdAt, createdByName, audit{}}
+   sourceDetail, category, stage ('new'…'complete' or 'lost' = not proceeding),
+   advisorId, advisorName, lender, value, completedAt, followUpDate,
+   followUpTime, followUpKind, apptType, followUpNote, lostReason, lostDetail,
+   lostAt, lostFromStage, createdAt, createdByName, audit{}}
    MAPAs see their own cases; Management and Admin see them all.
    ---------------------------------------------------------------------------- */
 const COM_SOURCES = ['Phone in','FLG','Google','Existing Client','Referral','Other'];
 const COM_CATEGORIES = ['Commercial Mortgage','Development Finance','Bridging Loan','Asset Finance','Invoice Finance','NON UK Resident Mortgage'];
 const COM_STAGES = [['new','New Case','var(--blue)'],['research','Research','var(--amber)'],['docs','Waiting for docs/info','var(--violet)'],['terms','Terms issued / Application submitted','var(--indigo)'],['complete','Complete','var(--green)']];
-let COM = {}, comListening = false, comLoaded = false, comOpenId = null, comCompleteOpen = false, comEditOpen = false;
-const comState = {search:'', cat:'', adv:''};
+let COM = {}, comListening = false, comLoaded = false, comOpenId = null, comEditOpen = false;
+const comState = {search:'', cat:'', adv:'', calAdv:'', lost:false};
 function comAccess(){ return !!currentUser && !!USERS[currentUser.id] && USERS[currentUser.id].commercial===true; }
 function comSeesAll(){ return !!currentUser && currentUser.role!=='mapa'; }
 function appHomePage(){ return APP_MODE==='sib' ? 'sib' : APP_MODE==='com' ? 'com' : 'dashboard'; }
@@ -11031,6 +11062,8 @@ function startComListener(){
     COM = snap.val() || {}; comLoaded = true;
     if(!document.getElementById('page-com').classList.contains('hidden')) renderCom();
     if(comOpenId && document.getElementById('comOverlay').classList.contains('open')) renderComCase();
+    if(APP_MODE==='com' && !document.getElementById('page-calendar').classList.contains('hidden')) renderCalendar();
+    checkOverdueGate();
   }, ()=>{
     comListening = false;
     document.getElementById('comPots').innerHTML = '<div class="nml-empty">Could not load Commercial cases. Publish the updated Firebase rules, then refresh.</div>';
@@ -11044,13 +11077,24 @@ function comAdvisers(){ return Object.entries(USERS).filter(([, u])=> u && u.com
 function comSourceLabel(c){ return c.source + (c.sourceDetail ? ': ' + c.sourceDetail : ''); }
 function comStage(c){ return COM_STAGES.find(s=> s[0]===c.stage) || COM_STAGES[0]; }
 function comMoney(v){ return '£' + Number(v||0).toLocaleString(undefined, {maximumFractionDigits:0}); }
+function comCalendarCalls(){
+  if(!comLoaded) return [];
+  let all = comCases().filter(c=> comOpen(c) && c.followUpDate);
+  if(comSeesAll() && comState.calAdv) all = all.filter(c=> c.advisorId===comState.calAdv);
+  return all.map(c=> ({...comCalLead(c), day: isoDay(c.followUpDate)}))
+    .sort((a,b)=> a.day.localeCompare(b.day) || (a.followUpTime||'99').localeCompare(b.followUpTime||'99') || (a.clientName||'').localeCompare(b.clientName||''));
+}
 function comCardHtml(c){
-  const showAdv = comSeesAll();
-  return `<div class="lead-card" data-com-id="${esc(c.id)}" tabindex="0" role="button">
+  const showAdv = comSeesAll(), due = comDue(c);
+  const nextLine = c.stage==='lost' ? `<div class="lc-sub com-next bad">Not proceeding: ${esc(c.lostReason||'')}</div>`
+    : !comOpen(c) ? '' : c.followUpDate ? `<div class="lc-sub com-next ${due ? 'bad' : ''}">${fuKind(c)==='reminder' ? '🔔' : '📅'} ${esc(comBookingLabel(c))} · ${due ? esc(overdueText(c.followUpDate, c.followUpTime)) : esc(bookingWhen(c))}</div>`
+    : '<div class="lc-sub com-next warn">⚠️ Nothing booked</div>';
+  return `<div class="lead-card ${due ? 'overdue' : ''}" data-com-id="${esc(c.id)}" tabindex="0" role="button">
     <div class="lc-top"><div class="lc-name">${esc(c.clientName||c.businessName||'(no name)')}</div>${showAdv ? `<span class="lc-avatar" style="--av:${advisorTone(c.advisorId||'')}" title="${esc(c.advisorName||'Unassigned')}">${esc(initials(c.advisorName||'?'))}</span>` : ''}</div>
     ${c.businessName && c.clientName ? `<div class="lc-sub">${esc(c.businessName)}</div>` : ''}
     <div style="margin-top:5px;"><span class="com-cat">${esc(c.category||'')}</span></div>
     <div class="lc-sub" style="margin-top:5px;">${c.stage==='complete' ? `<span class="com-done">${esc(comMoney(c.value))}</span><span class="lc-sep">·</span>${esc(c.lender||'')}` : esc(comSourceLabel(c))}</div>
+    ${nextLine}
   </div>`;
 }
 function renderCom(){
@@ -11069,11 +11113,19 @@ function renderCom(){
     && (!q || [c.clientName, c.businessName, c.email, c.phone, c.lender, c.sourceDetail].some(v=> String(v||'').toLowerCase().includes(q))));
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
   const doneMonth = all.filter(c=> c.stage==='complete' && (c.completedAt||0) >= monthStart.getTime() && (!comState.adv || c.advisorId===comState.adv));
-  const open = all.filter(c=> c.stage!=='complete' && (!comState.adv || c.advisorId===comState.adv));
+  const open = all.filter(c=> comOpen(c) && (!comState.adv || c.advisorId===comState.adv));
+  const lostAll = list.filter(c=> c.stage==='lost');
+  const lt = document.getElementById('comLostToggle');
+  lt.textContent = comState.lost ? '← Back to the board' : `Not proceeding (${lostAll.length})`;
   document.getElementById('comStats').innerHTML = statCard(open.length, 'Open cases') + statCard(doneMonth.length, 'Completed this month', 'good')
     + statCard(comMoney(doneMonth.reduce((t, c)=> t + Number(c.value||0), 0)), 'Value completed this month', 'accent')
-    + statCard(open.filter(c=> c.stage==='docs').length, 'Waiting for docs/info', 'warn');
-  pots.innerHTML = COM_STAGES.map(([k, lbl, col])=>{
+    + statCard(open.filter(c=> c.stage==='docs').length, 'Waiting for docs/info', 'warn')
+    + statCard(open.filter(comDue).length, 'Overdue reminders & appointments', 'bad');
+  if(comState.lost){
+    const ls = lostAll.sort((a,b)=> (b.lostAt||0)-(a.lostAt||0));
+    pots.innerHTML = `<div class="pot" style="--pot:var(--red); grid-column:1/-1;"><div class="pot-head"><div class="pot-head-title"><h3>Not proceeding</h3></div><span class="pot-count">${ls.length}</span></div>
+      <div class="pot-body" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">${ls.length ? ls.map(comCardHtml).join('') : '<div style="padding:22px 8px; text-align:center; color:var(--text-faint); font-size:12.5px;">No cases marked as not proceeding.</div>'}</div></div>`;
+  } else pots.innerHTML = COM_STAGES.map(([k, lbl, col])=>{
     const inPot = list.filter(c=> (c.stage||'new')===k).sort((a,b)=> k==='complete' ? (b.completedAt||0)-(a.completedAt||0) : (a.createdAt||0)-(b.createdAt||0));
     return `<div class="pot" data-com-pot="${k}" style="--pot:${col}"><div class="pot-head"><div class="pot-head-title"><h3>${esc(lbl)}</h3></div><span class="pot-count">${inPot.length}</span></div>
       <div class="pot-body">${inPot.length ? inPot.map(comCardHtml).join('') : '<div class="pot-empty" style="padding:22px 8px; text-align:center; color:var(--text-faint); font-size:12.5px;">Nothing here right now</div>'}</div></div>`;
@@ -11086,6 +11138,7 @@ function renderCom(){
 document.getElementById('comSearch').addEventListener('input', function(){ comState.search = this.value; renderCom(); });
 document.getElementById('comCatFilter').addEventListener('change', function(){ comState.cat = this.value; renderCom(); });
 document.getElementById('comAdvFilter').addEventListener('change', function(){ comState.adv = this.value; renderCom(); });
+document.getElementById('comLostToggle').addEventListener('click', ()=>{ comState.lost = !comState.lost; renderCom(); });
 
 // ---- New lead
 function comSourceSync(prefix){
@@ -11129,45 +11182,187 @@ document.getElementById('cnwSave').addEventListener('click', function(){
     .finally(()=>{ this.disabled = false; });
 });
 
+// ---- Bookings: every open case has its next step booked, like Protection's
+// New Cases and Appointments / Research (a reminder, or a phone / video /
+// face-to-face appointment). Once its time has passed an appointment needs its
+// outcome of meeting and a reminder needs dealing with; the assigned MAPA can't
+// leave the case until it's done, and overdue items lock Commercial at log-on.
+const COM_LOST_REASONS = ['Went to another lender or broker', "Didn't meet lending criteria", 'Client changed their mind', 'Unable to contact the client', 'Other'];
+const COM_CLEAR_BOOKING = {followUpDate:null, followUpTime:null, followUpKind:null, apptType:null, followUpNote:null};
+let comAct = null; // what the case window is doing: {stage:'schedule'|'meeting'|'reminderdue'|'lost'|'complete', ...}
+function comOpen(c){ return !!c && c.stage!=='complete' && c.stage!=='lost'; }
+function comDue(c){ return comOpen(c) && !!c.followUpDate && isCallOverdue(c.followUpDate, c.followUpTime); }
+function comName(c){ return c.clientName || c.businessName || '(no name)'; }
+function comBookingLabel(c){ return fuKind(c)==='reminder' ? 'Reminder' : (APPT_TYPES[c.apptType] || 'Appointment'); }
+// Why the assigned MAPA can't leave this case yet ('' = they can).
+function comCloseBlock(c){
+  if(!c || !currentUser || currentUser.role!=='mapa' || c.advisorId!==currentUser.id || c.deleted || !comOpen(c)) return '';
+  if(comDue(c)) return fuKind(c)==='reminder' ? 'Deal with the reminder first: add a note, then set a new reminder or book an appointment.' : 'Record the outcome of the meeting first.';
+  if(!c.followUpDate) return 'Set a reminder or book an appointment before leaving this case.';
+  return '';
+}
+function myComOverdue(){
+  if(!currentUser || currentUser.role!=='mapa' || !comLoaded) return [];
+  return comCases().filter(c=> c.advisorId===currentUser.id && comDue(c))
+    .sort((a,b)=> callDueAt(a.followUpDate, a.followUpTime) - callDueAt(b.followUpDate, b.followUpTime));
+}
+// A case shaped for the calendar helpers (Google link, calendar file, Calendar page).
+function comCalLead(c){ return {...c, _com:true, clientName:comName(c), businessName: c.clientName ? (c.businessName||'') : '', clientEmails: c.email ? [c.email] : [], clientSource: c.category || ''}; }
+function comCalTitle(l){
+  const who = (l.clientName||'Client') + (l.businessName ? ` (${l.businessName})` : '');
+  return l.followUpKind==='reminder' ? `COMMERCIAL REMINDER CHASE - ${who}` : `Commercial Finance Meeting with ${COMPANY_NAME} - ${who}`;
+}
+function comCalEventText(l){
+  const lines = [
+    l.followUpKind==='reminder' ? 'Commercial reminder: chase the client' : `Commercial ${(APPT_TYPES[l.apptType] || 'call').toLowerCase()}`,
+    `Client: ${l.clientName||''}`,
+    l.businessName ? `Business: ${l.businessName}` : '',
+    l.category ? `Category: ${l.category}` : '',
+    l.phone ? `Telephone: ${l.phone}` : '',
+    l.advisorName ? `Adviser: ${l.advisorName}` : '',
+    l.followUpNote ? `Notes: ${l.followUpNote}` : '',
+    trackerUrl() ? `Commercial cases: ${trackerUrl()}` : ''
+  ].filter(Boolean);
+  return {title: comCalTitle(l), details: lines.join('\n')};
+}
+function comClientEventText(l){
+  const adv = l.advisorName || 'your adviser', first = adv.split(' ')[0];
+  const how = l.apptType==='video' ? `${first} will send you the video call link before the meeting.` : l.apptType==='f2f' ? `${first} looks forward to meeting you.` : `${first} will call you at the time shown.`;
+  return [`Your commercial finance meeting with ${adv} from ${COMPANY_NAME}${l.category ? ' about your ' + l.category : ''}.`, '',
+    `${how} If this time no longer suits you, please reply to this invitation and we'll rearrange.`, '', 'Kind regards,', COMPANY_NAME].join('\n');
+}
+// One update: case fields plus any history entries (in order).
+function comUpdate(id, fields, entries){
+  const u = {}, base = `commercial/cases/${id}/`, now = Date.now();
+  Object.entries(fields||{}).forEach(([k, v])=> u[base+k] = v==='' || v===undefined ? null : v);
+  u[base+'updatedAt'] = now;
+  (entries||[]).forEach((e, i)=> u[`${base}audit/${db.ref().push().key}`] = {...e, byId:currentUser.id, byName:currentUser.name, at:now+i});
+  return db.ref().update(u);
+}
+function comWrite(id, fields, text){ return comUpdate(id, fields, text ? [{type:'status', text}] : []); }
+
 // ---- Case window
 function openComCase(id){
   if(!COM[id] || COM[id].deleted) return;
-  comOpenId = id; comCompleteOpen = false; comEditOpen = false;
+  comOpenId = id; comAct = null; comEditOpen = false;
   renderComCase();
   document.getElementById('comDeleteBtn').classList.toggle('hidden', currentUser.role!=='management');
   openModal('comOverlay');
 }
-function comWrite(id, fields, text){
-  const updates = {};
-  Object.entries(fields).forEach(([k, val])=> updates[`commercial/cases/${id}/${k}`] = val==='' || val===undefined ? null : val);
-  updates[`commercial/cases/${id}/updatedAt`] = Date.now();
-  if(text) updates[`commercial/cases/${id}/audit/${db.ref().push().key}`] = {type:'status', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()};
-  return db.ref().update(updates);
+function comMeetingHtml(c){
+  const res = comAct.res || '', choice = comAct.choice || '';
+  return `<div class="outcome-panel mt-panel">
+      <div class="op-title">${ico('alert')} Outcome of meeting · ${esc(APPT_TYPES[c.apptType] || 'Appointment')} ${esc(bookingWhen(c))}</div>
+      <p class="mt-sub">This appointment has happened. Record how it went before doing anything else on this case.${c.phone ? ` Client: <a href="${esc(telHref(c.phone))}" class="tel-link">${esc(c.phone)}</a>` : ''}</p>
+      <div class="em-dec-opts">
+        <label><input type="radio" name="comMtRes" value="noanswer" ${res==='noanswer'?'checked':''}> No answer</label>
+        <label><input type="radio" name="comMtRes" value="spoke" ${res==='spoke'?'checked':''}> Spoke to client</label>
+        <label><input type="radio" name="comMtRes" value="notattempted" ${res==='notattempted'?'checked':''}> Not attempted</label>
+      </div>
+      <div class="field" style="margin:12px 0 10px;"><label for="comMtNote">${res==='notattempted' ? "Why wasn't it attempted? (required)" : 'What happened? (required)'}</label><textarea id="comMtNote" placeholder="${res==='notattempted' ? 'e.g. Off sick that day; client emailed to ask to move it to next week…' : 'e.g. Spoke to Sarah about the bridge; she is sending the valuation and 2 years of accounts…'}">${esc(comAct.note||'')}</textarea><div class="req-hint">At least ${MEETING_NOTE_MIN} characters.</div></div>
+      ${res ? `<div class="outcome-buttons">
+        <button class="ob-followup" data-cmt="followup">${res==='spoke' ? 'Follow up' : 'Try again'}</button>
+        ${res==='spoke' ? '<button class="ob-signup" data-cmt="complete">Complete</button>' : ''}
+        <button class="ob-decline" data-cmt="lost">Not proceeding</button>
+      </div>
+      ${choice==='followup' ? `<div class="signup-choice"><div class="op-title">${res==='spoke' ? 'Follow up' : 'Try again'}: what's next?</div>
+        ${res==='spoke' ? `<div class="field" style="max-width:340px;"><label for="comMtStage">Stage after this meeting</label><select id="comMtStage">${COM_STAGES.filter(([k])=> k!=='complete').map(([k, l])=> `<option value="${k}" ${k===c.stage?'selected':''}>${esc(l)}</option>`).join('')}</select></div>` : ''}
+        <div class="outcome-buttons"><button class="ob-uw" data-cmt-next="appointment">Book appointment</button><button class="ob-followup" data-cmt-next="reminder">Set reminder</button></div></div>` : ''}`
+      : '<p class="mt-sub" style="margin:0;">Choose <b>No answer</b>, <b>Spoke to client</b> or <b>Not attempted</b> to see the next steps.</p>'}
+    </div>`;
+}
+function comReminderDueHtml(c){
+  return `<div class="outcome-panel mt-panel rem">
+      <div class="op-title">${ico('clock')} Reminder due · chase ${esc(comName(c))} (${esc(bookingWhen(c))})</div>
+      ${c.followUpNote ? `<p class="mt-sub">Reminder note: ${esc(c.followUpNote)}</p>` : ''}
+      <div class="field" style="margin:8px 0 10px;"><label for="comRdNote">What happened? (required)</label><textarea id="comRdNote" placeholder="e.g. Chased the accountant again; still waiting on the SA302s…"></textarea><div class="req-hint">At least ${MEETING_NOTE_MIN} characters.</div></div>
+      <div class="outcome-buttons"><button class="ob-uw" data-crd="appointment">Book appointment</button><button class="ob-followup" data-crd="reminder">Set reminder</button><button class="ob-decline" data-crd="lost">Not proceeding</button></div>
+    </div>`;
+}
+function comScheduleHtml(c){
+  const appt = comAct.kind==='appointment', tmr = new Date(Date.now() + 86400000);
+  return `<div class="inline-form bk-form">
+      <div class="op-title" style="font-weight:700; margin-bottom:10px;">${appt ? 'Book an appointment' : 'Set a reminder'}${comAct.prelude ? ' <span class="mt-sub" style="font-weight:500;">(your note is saved with it)</span>' : ''}</div>
+      ${appt ? `<div class="field"><label for="comApType">Type of appointment</label><select id="comApType">${Object.entries(APPT_TYPES).map(([k, v])=> `<option value="${k}">${esc(v)}</option>`).join('')}</select></div>` : ''}
+      <div class="field-row">
+        <div class="field"><label for="comFuDate">${appt ? 'Date' : 'Remind me on'}</label><input type="date" id="comFuDate" min="${isoDay(new Date())}" value="${isoDay(tmr)}"></div>
+        <div class="field"><label for="comFuTime">Time</label><input type="time" id="comFuTime" step="300" value="${appt ? '' : '10:00'}"></div>
+      </div>
+      <div class="field"><label for="comFuNote">Note (optional)</label><textarea id="comFuNote" placeholder="${appt ? 'e.g. Go through the bridging terms with Sarah' : 'e.g. Chase the valuation report'}"></textarea></div>
+      <div class="fu-actions">
+        ${appt ? `<button class="btn btn-primary btn-sm" data-cbk="invite" ${c.email ? '' : 'disabled title="Add the client\'s email to the case first"'}>${ico('calendar')} Add to Calendar – Client invite</button>
+        <button class="btn btn-secondary btn-sm" data-cbk="calendar">${ico('calendar')} Add to Calendar – No invite</button>`
+        : `<button class="btn btn-primary btn-sm" data-cbk="calendar">${ico('calendar')} Save &amp; add to Google Calendar</button>`}
+        <button class="btn btn-ghost btn-sm" data-cbk="save">Save without adding to Calendar</button>
+        <button class="btn btn-ghost btn-sm" data-cbk="cancel">Cancel</button>
+      </div>
+      <div class="fu-hint">Calendar title: <b>${esc(comCalTitle(comCalLead({...c, followUpKind:comAct.kind})))}</b></div>
+      ${appt ? (c.email ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(c.email)}</b>. In Google, click <b>Save</b>, then <b>Send</b>.</span></div>`
+        : `<div class="fu-invite none">${ico('info')}<span>No client email on this case, so a client invite isn't available. Add one with <b>✎ Edit</b> on the details below.</span></div>`) : ''}
+    </div>`;
+}
+function comLostHtml(){
+  return `<div class="inline-form" style="margin-top:12px;">
+      <div class="op-title" style="font-weight:700; margin-bottom:10px;">Not proceeding${comAct.prelude ? ' <span class="mt-sub" style="font-weight:500;">(your note is saved with it)</span>' : ''}</div>
+      <div class="field"><label for="comLostReason">Reason</label><select id="comLostReason"><option value="">Choose a reason…</option>${COM_LOST_REASONS.map(r=> `<option>${esc(r)}</option>`).join('')}</select></div>
+      <div class="field"><label for="comLostNote">Details <span class="label-opt">(optional)</span></label><textarea id="comLostNote" maxlength="1000" placeholder="e.g. Went direct to Shawbrook for a better rate"></textarea></div>
+      <div style="display:flex; gap:8px;"><button class="btn btn-danger btn-sm" id="comLostSave">Save: Not proceeding</button><button class="btn btn-ghost btn-sm" id="comLostCancel">Cancel</button></div>
+    </div>`;
+}
+function comCompleteHtml(c){
+  return `<div class="inline-form" style="margin-top:12px;">
+      <div class="op-title" style="font-weight:700; margin-bottom:10px;">Complete the case${comAct.prelude ? ' <span class="mt-sub" style="font-weight:500;">(your note is saved with it)</span>' : ''}</div>
+      <div class="field"><label for="comLender">Lender</label><input type="text" id="comLender" maxlength="120" value="${esc(c.lender||'')}" placeholder="e.g. Shawbrook"></div>
+      <div class="field"><label for="comValue">Value</label><div class="money-wrap"><span>£</span><input type="number" id="comValue" min="0" step="1" value="${c.value!=null ? esc(c.value) : ''}" placeholder="e.g. 850000"></div></div>
+      <div style="display:flex; gap:8px;"><button class="btn btn-primary btn-sm" id="comCompleteSave">Save: Complete</button><button class="btn btn-ghost btn-sm" id="comCompleteCancel">Cancel</button></div>
+    </div>`;
 }
 function renderComCase(){
-  const c = COM[comOpenId]; if(!c || c.deleted){ closeModal('comOverlay', true); return; }
-  const st = comStage(c), idx = COM_STAGES.indexOf(st);
-  document.getElementById('comCaseName').textContent = c.clientName || c.businessName || '(no name)';
+  const c0 = COM[comOpenId]; if(!c0 || c0.deleted){ closeModal('comOverlay', true); return; }
+  const id = comOpenId, c = {id, ...c0};
+  const lost = c.stage==='lost', done = c.stage==='complete', open = comOpen(c);
+  const st = comStage(c), idx = lost ? -1 : COM_STAGES.indexOf(st);
+  const canEdit = comSeesAll() || c.advisorId===currentUser.id;
+  const due = canEdit && comDue(c);
+  // Something due: the outcome / reminder panel shows first (kept across refreshes unless the booking changed).
+  const dueStage = fuKind(c)==='reminder' ? 'reminderdue' : 'meeting';
+  if(!open || !canEdit) comAct = null;
+  else if(due && (!comAct || (comAct.auto && comAct.stage!==dueStage))) comAct = {kind:fuKind(c), stage:dueStage, auto:true};
+  else if(!due && comAct && comAct.auto) comAct = null;
+  // Keep anything typed if the case refreshes underneath (someone else saving).
+  const keep = {};
+  document.querySelectorAll('#comLeft input:not([type=radio]), #comLeft textarea, #comLeft select').forEach(el=>{ if(el.id) keep[el.id] = el.value; });
+
+  document.getElementById('comCaseName').textContent = comName(c);
   document.getElementById('comCaseSum').innerHTML = [c.businessName && c.clientName ? `<b>${esc(c.businessName)}</b>` : '', `<span class="com-cat">${esc(c.category||'')}</span>`, esc(c.advisorName||'Unassigned'), esc(comSourceLabel(c)), `Created <b>${esc(fmtDate(c.createdAt))}</b>`].filter(Boolean).join(' · ');
   const SHORT = {docs:'Docs/info', terms:'Terms / Application'};
-  const steps = COM_STAGES.map(([k, lbl], i)=> `<li class="${i < idx || c.stage==='complete' ? 'done' : i===idx ? 'now' : ''}">${esc(SHORT[k]||lbl)}</li>`).join('');
-  const moveBtns = COM_STAGES.filter(([k])=> k!==c.stage && k!=='complete').map(([k, lbl])=> `<button type="button" class="btn btn-secondary btn-sm" data-com-move="${k}">${esc(lbl)}</button>`).join('');
+  const steps = COM_STAGES.map(([k, lbl], i)=> `<li class="${done || i < idx ? 'done' : i===idx ? 'now' : ''}">${esc(SHORT[k]||lbl)}</li>`).join('');
   const next = COM_STAGES[idx+1];
-  const canEdit = comSeesAll() || c.advisorId===currentUser.id;
+  const nextHtml = !canEdit ? '' : done
+    ? `<span>Completed${c.completedAt ? ' '+esc(fmtDate(c.completedAt)) : ''} with <b>${esc(c.lender||'')}</b>, <b class="com-done">${esc(comMoney(c.value))}</b>.</span><button type="button" class="btn btn-ghost btn-sm" data-com-move="terms">Reopen</button>`
+    : lost ? `<span style="color:var(--red);">Not proceeding: <b>${esc(c.lostReason||'')}</b>${c.lostDetail ? ' · '+esc(c.lostDetail) : ''}${c.lostAt ? ' ('+esc(fmtDate(c.lostAt))+')' : ''}.</span><button type="button" class="btn btn-ghost btn-sm" id="comReopenLost">Reopen</button>`
+    : due ? `<span>Stage: <b>${esc(st[1])}</b>. ${fuKind(c)==='reminder' ? 'Deal with the reminder below first.' : 'Record the outcome of the meeting below first.'}</span>`
+    : `<span>Next stage: <b>${esc(next[1])}</b>.</span>${next[0]==='complete' ? '<button type="button" class="stage-btn" id="comCompleteBtn" style="background:var(--green);">✓ Complete</button>' : `<button type="button" class="stage-btn" data-com-move="${next[0]}" style="background:var(--brand);">Move to ${esc(next[1])}</button>`}`;
+  const moveBtns = COM_STAGES.filter(([k])=> k!==c.stage && k!=='complete').map(([k, lbl])=> `<button type="button" class="btn btn-secondary btn-sm" data-com-move="${k}">${esc(lbl)}</button>`).join('');
+  const sched = comAct && comAct.stage==='schedule';
+  const actsHtml = canEdit && open && !due ? `
+    <div class="sib-acts" id="comActionBar">
+      <button type="button" class="action-btn ${sched && comAct.kind==='appointment' ? 'on' : ''}" data-cact="appointment">${ico('calendar')}${c.followUpDate && fuKind(c)==='appointment' ? 'Rebook appointment' : 'Book appointment'}</button>
+      <button type="button" class="action-btn ${sched && comAct.kind==='reminder' ? 'on' : ''}" data-cact="reminder">${ico('clock')}Set reminder</button>
+      <button type="button" class="action-btn ld-decline-btn ${comAct && comAct.stage==='lost' ? 'on' : ''}" data-cact="lost">${ico('xCircle')}Not proceeding</button>
+    </div>` : '';
+  const nextBookHtml = !open ? '' : c.followUpDate && !due
+    ? `<div class="sib-next ${fuKind(c)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${fuKind(c)==='reminder' ? '🔔' : '⏰'}</span><div><b>${esc(fuKindLabel(c))}: ${esc(followUpBadge(c.followUpDate, c.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${fuKind(c)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened'}${c.followUpNote ? ' · '+esc(c.followUpNote) : ''}</small></div>${calButtonsHtml(comCalLead(c))}</div>`
+    : !c.followUpDate ? `<div class="sib-next bad"><span class="ic" aria-hidden="true">⚠️</span><div><b>Nothing booked yet</b><small>Set a reminder or book an appointment: every open case needs its next step booked.</small></div></div>` : '';
+  const dyn = !comAct ? '' : comAct.stage==='meeting' ? comMeetingHtml(c) : comAct.stage==='reminderdue' ? comReminderDueHtml(c)
+    : comAct.stage==='schedule' ? comScheduleHtml(c) : comAct.stage==='lost' ? comLostHtml() : comAct.stage==='complete' ? comCompleteHtml(c) : '';
   const kv = (lbl, val)=> `<span>${lbl}</span><b>${val}</b>`;
   document.getElementById('comLeft').innerHTML = `
-    <div class="ld-track"><ol class="ld-steps" aria-label="Stage">${steps}</ol>
-      ${canEdit ? `<div class="ld-next">${c.stage==='complete'
-        ? `<span>Completed${c.completedAt ? ' '+esc(fmtDate(c.completedAt)) : ''} with <b>${esc(c.lender||'')}</b>, <b class="com-done">${esc(comMoney(c.value))}</b>.</span><button type="button" class="btn btn-ghost btn-sm" data-com-move="terms">Reopen</button>`
-        : `<span>Next stage: <b>${esc(next[1])}</b>.</span>${next[0]==='complete' ? '<button type="button" class="stage-btn" id="comCompleteBtn" style="background:var(--green);">✓ Complete</button>' : `<button type="button" class="stage-btn" data-com-move="${next[0]}" style="background:var(--brand);">Move to ${esc(next[1])}</button>`}`}</div>` : ''}
-    </div>
-    ${canEdit && c.stage!=='complete' ? `<div class="com-move"><span class="mt-sub" style="margin:0;">Or move to:</span>${moveBtns}${next && next[0]!=='complete' ? '<button type="button" class="btn btn-secondary btn-sm" id="comCompleteBtn2">Complete</button>' : ''}</div>` : ''}
-    ${comCompleteOpen ? `<div class="inline-form" style="margin-top:12px;">
-        <div class="op-title" style="font-weight:700; margin-bottom:10px;">Complete the case</div>
-        <div class="field"><label for="comLender">Lender</label><input type="text" id="comLender" maxlength="120" value="${esc(c.lender||'')}" placeholder="e.g. Shawbrook"></div>
-        <div class="field"><label for="comValue">Value</label><div class="money-wrap"><span>£</span><input type="number" id="comValue" min="0" step="1" value="${c.value!=null ? esc(c.value) : ''}" placeholder="e.g. 850000"></div></div>
-        <div style="display:flex; gap:8px;"><button class="btn btn-primary btn-sm" id="comCompleteSave">Save: Complete</button><button class="btn btn-ghost btn-sm" id="comCompleteCancel">Cancel</button></div>
-      </div>` : ''}
+    <div class="ld-track"><ol class="ld-steps" aria-label="Stage">${steps}</ol>${nextHtml ? `<div class="ld-next">${nextHtml}</div>` : ''}</div>
+    ${actsHtml}
+    <div id="comDynArea">${dyn}</div>
+    ${nextBookHtml}
+    ${canEdit && open && !due ? `<div class="com-move" style="margin-top:12px;"><span class="mt-sub" style="margin:0;">Or move to:</span>${moveBtns}${next && next[0]!=='complete' ? '<button type="button" class="btn btn-secondary btn-sm" id="comCompleteBtn2">Complete</button>' : ''}</div>` : ''}
     ${canEdit ? `<div class="inline-form" style="margin-top:12px;"><div class="field" style="margin-bottom:8px;"><label for="comNote">Add a note</label><textarea id="comNote" maxlength="2000" placeholder="e.g. Chased the accountant for 2 years' accounts"></textarea></div><button class="btn btn-secondary btn-sm" id="comNoteSave">Add note</button></div>` : ''}
     ${comEditOpen ? `<div class="inline-form" style="margin-top:12px;">
         <div class="op-title" style="font-weight:700; margin-bottom:10px;">Edit details</div>
@@ -11178,8 +11373,8 @@ function renderComCase(){
         <div class="field"><label for="ceSource">Lead source</label><select id="ceSource">${COM_SOURCES.map(x=> `<option ${c.source===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
         <div class="field ${c.source==='Referral' || c.source==='Other' ? '' : 'hidden'}" id="ceSourceTextWrap"><label for="ceSourceText" id="ceSourceTextLbl">Who referred them?</label><input type="text" id="ceSourceText" maxlength="120" value="${esc(c.sourceDetail||'')}"></div>
         <div class="field"><label for="ceCat">Category</label><select id="ceCat">${COM_CATEGORIES.map(x=> `<option ${c.category===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
-        ${comSeesAll() ? `<div class="field"><label for="ceAdv">Adviser</label><select id="ceAdv">${comAdvisers().map(([id, u])=> `<option value="${esc(id)}" ${c.advisorId===id?'selected':''}>${esc(u.name)}</option>`).join('')}</select></div>` : ''}
-        ${c.stage==='complete' ? `<div class="field"><label for="ceLender">Lender</label><input type="text" id="ceLender" maxlength="120" value="${esc(c.lender||'')}"></div><div class="field"><label for="ceValue">Value</label><div class="money-wrap"><span>£</span><input type="number" id="ceValue" min="0" step="1" value="${c.value!=null ? esc(c.value) : ''}"></div></div>` : ''}
+        ${comSeesAll() ? `<div class="field"><label for="ceAdv">Adviser</label><select id="ceAdv">${comAdvisers().map(([uid, u])=> `<option value="${esc(uid)}" ${c.advisorId===uid?'selected':''}>${esc(u.name)}</option>`).join('')}</select></div>` : ''}
+        ${done ? `<div class="field"><label for="ceLender">Lender</label><input type="text" id="ceLender" maxlength="120" value="${esc(c.lender||'')}"></div><div class="field"><label for="ceValue">Value</label><div class="money-wrap"><span>£</span><input type="number" id="ceValue" min="0" step="1" value="${c.value!=null ? esc(c.value) : ''}"></div></div>` : ''}
         <div style="display:flex; gap:8px;"><button class="btn btn-primary btn-sm" id="ceSave">Save details</button><button class="btn btn-ghost btn-sm" id="ceCancel">Cancel</button></div>
       </div>` : ''}
     <div class="sib-box"><div class="sib-box-hd">Client &amp; case details ${canEdit && !comEditOpen ? '<button type="button" class="linkish" id="comEditBtn">✎ Edit</button>' : ''}</div>
@@ -11188,56 +11383,137 @@ function renderComCase(){
         ${kv('Email', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '—')}${kv('Telephone', c.phone ? `<a href="${esc(telHref(c.phone))}" class="tel-link">${esc(c.phone)}</a>` : '—')}
         ${kv('Lead source', esc(comSourceLabel(c)))}${kv('Category', esc(c.category||'—'))}
         ${kv('Adviser', esc(c.advisorName||'—'))}${kv('Created by', esc(c.createdByName||'—'))}
-        ${c.stage==='complete' ? kv('Lender', esc(c.lender||'—')) + kv('Value', `<span class="com-done">${esc(comMoney(c.value))}</span>`) : ''}
+        ${done ? kv('Lender', esc(c.lender||'—')) + kv('Value', `<span class="com-done">${esc(comMoney(c.value))}</span>`) : ''}
       </div></div>`;
-  const entries = Object.values(c.audit||{}).filter(Boolean).sort((a,b)=> b.at-a.at);
-  document.getElementById('comAudit').innerHTML = entries.length ? entries.map(a=> `<div class="audit-item"><div class="audit-icon t-${esc(a.type)}">${auditIcon(a.type)}</div><div class="audit-line"></div><div class="audit-content"><div class="audit-text">${esc(a.text)}</div><div class="audit-meta">${esc(a.byName||'')} · ${fmtDateTime(a.at)}</div></div></div>`).join('') : '<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>';
+  Object.entries(keep).forEach(([k, v])=>{ const el = document.getElementById(k); if(el && el.closest('#comLeft')) el.value = v; });
+  const entries = Object.values(c.audit||{}).filter(Boolean).sort((x,y)=> y.at-x.at);
+  document.getElementById('comAudit').innerHTML = entries.length ? entries.map(e=> `<div class="audit-item"><div class="audit-icon t-${esc(e.type)}">${auditIcon(e.type)}</div><div class="audit-line"></div><div class="audit-content"><div class="audit-text">${esc(e.text)}</div><div class="audit-meta">${esc(e.byName||'')} · ${fmtDateTime(e.at)}</div></div></div>`).join('') : '<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>';
+
   const left = document.getElementById('comLeft');
+  const on = (sel, fn)=>{ const el = document.getElementById(sel); if(el) el.addEventListener('click', fn); };
+  const fail = (btns)=> err=>{ toast('Could not save: '+err.message,'error'); [].concat(btns).forEach(x=> x && (x.disabled = false)); };
+  const noteOk = elId=>{ const el = document.getElementById(elId), v = el.value.trim(); if(v.length >= MEETING_NOTE_MIN) return v; el.classList.add('missing'); el.focus(); toast(`Please add a note of at least ${MEETING_NOTE_MIN} characters about what happened.`,'error'); return null; };
+  left.querySelectorAll('input, select, textarea').forEach(el=> ['input','change'].forEach(ev=> el.addEventListener(ev, ()=> el.classList.remove('missing'))));
   left.querySelectorAll('[data-com-move]').forEach(b=> b.addEventListener('click', ()=>{
     const to = b.dataset.comMove, lbl = COM_STAGES.find(s=> s[0]===to)[1];
     b.disabled = true;
-    comWrite(comOpenId, {stage:to, ...(c.stage==='complete' ? {completedAt:null} : {})}, c.stage==='complete' ? `Reopened: moved to ${lbl}` : `Moved to ${lbl}`)
-      .then(()=> toast(`Moved to ${lbl}.`,'success')).catch(err=>{ toast('Could not save: '+err.message,'error'); b.disabled = false; });
+    comWrite(id, {stage:to, ...(done ? {completedAt:null} : {})}, done ? `Reopened: moved to ${lbl}` : `Moved to ${lbl}`)
+      .then(()=> toast(`Moved to ${lbl}.`,'success')).catch(fail(b));
   }));
-  ['comCompleteBtn','comCompleteBtn2'].forEach(id=>{ const b = document.getElementById(id); if(b) b.addEventListener('click', ()=>{ comCompleteOpen = true; renderComCase(); const l = document.getElementById('comLender'); if(l) l.focus(); }); });
-  const on = (id, fn)=>{ const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
-  on('comCompleteCancel', ()=>{ comCompleteOpen = false; renderComCase(); });
+  on('comReopenLost', function(){
+    const to = c.lostFromStage && COM_STAGES.some(s=> s[0]===c.lostFromStage && s[0]!=='complete') ? c.lostFromStage : 'new', lbl = COM_STAGES.find(s=> s[0]===to)[1];
+    this.disabled = true;
+    comWrite(id, {stage:to, lostReason:null, lostDetail:null, lostAt:null, lostFromStage:null}, `Reopened: back to ${lbl}`).then(()=> toast(`Reopened in ${lbl}. Book its next step.`,'success')).catch(fail(this));
+  });
+  left.querySelectorAll('[data-cact]').forEach(b=> b.addEventListener('click', ()=>{
+    const k = b.dataset.cact;
+    if(k==='lost') comAct = comAct && comAct.stage==='lost' ? null : {stage:'lost'};
+    else comAct = comAct && comAct.stage==='schedule' && comAct.kind===k && !comAct.prelude ? null : {stage:'schedule', kind:k};
+    renderComCase();
+  }));
+  ['comCompleteBtn','comCompleteBtn2'].forEach(bid=> on(bid, ()=>{ comAct = {stage:'complete'}; renderComCase(); const l = document.getElementById('comLender'); if(l) l.focus(); }));
+  // Outcome of meeting
+  left.querySelectorAll('input[name="comMtRes"]').forEach(r=> r.addEventListener('change', ()=>{ comAct.note = document.getElementById('comMtNote').value; comAct.res = r.value; comAct.choice = ''; renderComCase(); }));
+  const resLabel = {spoke:'Spoke to client', noanswer:'No answer', notattempted:'Not attempted'};
+  // "Not attempted" is recorded but isn't a contact attempt.
+  const meetPrelude = note=> ({type: comAct.res==='notattempted' ? 'status' : 'call', via:'appointment', meeting:comAct.res, dueAt: callDueAt(c.followUpDate, c.followUpTime).getTime(), apptType: c.apptType || null,
+    text:`Outcome of meeting (${APPT_TYPES[c.apptType] || 'Appointment'} ${bookingWhen(c)}): ${resLabel[comAct.res]} - ${note}`});
+  left.querySelectorAll('[data-cmt]').forEach(b=> b.addEventListener('click', ()=>{
+    const note = noteOk('comMtNote'); if(!note) return;
+    const k = b.dataset.cmt;
+    if(k==='followup'){ comAct.choice = comAct.choice==='followup' ? '' : 'followup'; comAct.note = note; renderComCase(); return; }
+    comAct = {stage:k, prelude:meetPrelude(note), back:{...comAct, note}};
+    renderComCase();
+  }));
+  left.querySelectorAll('[data-cmt-next]').forEach(b=> b.addEventListener('click', ()=>{
+    const note = noteOk('comMtNote'); if(!note) return;
+    const sel = document.getElementById('comMtStage');
+    comAct = {stage:'schedule', kind:b.dataset.cmtNext, prelude:meetPrelude(note), stageTo: sel ? sel.value : null, back:{...comAct, note}};
+    renderComCase();
+  }));
+  // Reminder due
+  left.querySelectorAll('[data-crd]').forEach(b=> b.addEventListener('click', ()=>{
+    const note = noteOk('comRdNote'); if(!note) return;
+    const prelude = {type:'call', via:'reminder', dueAt: callDueAt(c.followUpDate, c.followUpTime).getTime(), text:`Reminder chase (${bookingWhen(c)}): ${note}`};
+    comAct = b.dataset.crd==='lost' ? {stage:'lost', prelude, back:{...comAct}} : {stage:'schedule', kind:b.dataset.crd, prelude, back:{...comAct}};
+    renderComCase();
+  }));
+  const back = ()=>{ comAct = comAct && comAct.back || null; renderComCase(); };
+  // Book appointment / set reminder
+  const dynArea = document.getElementById('comDynArea');
+  dynArea.querySelectorAll('[data-cbk]').forEach(b=> b.addEventListener('click', ()=>{
+    const mode = b.dataset.cbk; if(mode==='cancel'){ back(); return; }
+    const appt = comAct.kind==='appointment', date = document.getElementById('comFuDate').value, time = document.getElementById('comFuTime').value;
+    const note = document.getElementById('comFuNote').value.trim(), type = appt ? document.getElementById('comApType').value : null;
+    const miss = [!date && 'comFuDate', !time && 'comFuTime'].filter(Boolean);
+    if(miss.length){ miss.forEach(x=> document.getElementById(x).classList.add('missing')); document.getElementById(miss[0]).focus(); toast('Choose a date and time.','error'); return; }
+    if(callDueAt(date, time).getTime() <= Date.now()){ document.getElementById('comFuTime').classList.add('missing'); toast('Choose a date and time in the future.','error'); return; }
+    const gTab = mode!=='save' ? window.open('about:blank', '_blank') : null;
+    const btns = Array.from(dynArea.querySelectorAll('[data-cbk]')); btns.forEach(x=> x.disabled = true);
+    const when = fmtDateSlash(date) + ` at ${time}`;
+    const calNote = mode==='invite' ? ' - Calendar invite prepared for the client' : mode==='calendar' ? ' - Added to calendar' : '';
+    const moveTo = comAct.stageTo && comAct.stageTo!==c.stage ? comAct.stageTo : null;
+    const patch = {followUpDate:date, followUpTime:time, followUpKind:comAct.kind, apptType:type, followUpNote:note||null, ...(moveTo ? {stage:moveTo} : {})};
+    const list = [...(comAct.prelude ? [comAct.prelude] : []), ...(moveTo ? [{type:'status', text:`Moved to ${COM_STAGES.find(s=> s[0]===moveTo)[1]}`}] : []),
+      appt ? {type:'followup', via:'appointment', apptType:type, text:`Appointment booked (${APPT_TYPES[type]}) - ${when}${note ? ' - '+note : ''}${calNote}`}
+           : {type:'reminder', text:`Reminder set - ${when}${note ? ' - '+note : ''}${calNote}`}];
+    comUpdate(id, patch, list).then(()=>{
+      if(gTab){
+        const url = googleCalUrl(comCalLead({...(COM[id] || c0), id, ...patch}), {invite: mode==='invite'});
+        try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
+      }
+      const cal = mode==='invite' ? ' In Google, click Save, then Send to invite the client.' : mode==='calendar' ? ' Google Calendar opened: click Save there.' : '';
+      toast(`${appt ? 'Appointment booked' : 'Reminder set'} for ${fmtDate(date)} at ${time}.${moveTo ? ' Moved to '+COM_STAGES.find(s=> s[0]===moveTo)[1]+'.' : ''}${cal}`,'success');
+      comAct = null; renderComCase();
+    }).catch(err=>{ if(gTab) gTab.close(); fail(btns)(err); });
+  }));
+  // Not proceeding
+  on('comLostCancel', back);
+  on('comLostSave', function(){
+    const reason = document.getElementById('comLostReason').value, detail = document.getElementById('comLostNote').value.trim();
+    if(!reason){ document.getElementById('comLostReason').classList.add('missing'); toast('Choose a reason.','error'); return; }
+    this.disabled = true;
+    comUpdate(id, {...COM_CLEAR_BOOKING, stage:'lost', lostFromStage:c.stage, lostReason:reason, lostDetail:detail||null, lostAt:Date.now()},
+      [...(comAct.prelude ? [comAct.prelude] : []), {type:'decline', text:`Not proceeding: ${reason}${detail ? ' - '+detail : ''}`}])
+      .then(()=>{ comAct = null; renderComCase(); toast('Marked as not proceeding.','success'); }).catch(fail(this));
+  });
+  // Complete
+  on('comCompleteCancel', back);
   on('comCompleteSave', function(){
     const lender = document.getElementById('comLender').value.trim(), raw = document.getElementById('comValue').value;
     const bad = [!lender && 'comLender', (raw==='' || isNaN(raw) || Number(raw) <= 0) && 'comValue'].filter(Boolean);
-    if(bad.length){ bad.forEach(id=> document.getElementById(id).classList.add('missing')); document.getElementById(bad[0]).focus(); toast('Please add the lender and the value.','error'); return; }
+    if(bad.length){ bad.forEach(x=> document.getElementById(x).classList.add('missing')); document.getElementById(bad[0]).focus(); toast('Please add the lender and the value.','error'); return; }
     this.disabled = true;
-    comWrite(comOpenId, {stage:'complete', lender, value:Number(raw), completedAt:Date.now()}, `Complete: ${lender}, ${comMoney(raw)}`)
-      .then(()=>{ comCompleteOpen = false; renderComCase(); celebrate(`${comMoney(raw)} completed! 🎉`); toast('Case completed.','success'); })
-      .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    comUpdate(id, {...COM_CLEAR_BOOKING, stage:'complete', lender, value:Number(raw), completedAt:Date.now()},
+      [...(comAct.prelude ? [comAct.prelude] : []), {type:'signup', text:`Complete: ${lender}, ${comMoney(raw)}`}])
+      .then(()=>{ comAct = null; renderComCase(); celebrate(`${comMoney(raw)} completed! 🎉`); toast('Case completed.','success'); }).catch(fail(this));
   });
   on('comNoteSave', function(){
     const t = document.getElementById('comNote').value.trim();
     if(!t){ toast('Write a note first.','error'); return; }
     this.disabled = true;
-    db.ref(`commercial/cases/${comOpenId}/audit/${db.ref().push().key}`).set({type:'note', text:`Note: ${t}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
-      .then(()=> toast('Note added.','success')).catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    comUpdate(id, {}, [{type:'note', text:`Note: ${t}`}])
+      .then(()=>{ const n = document.getElementById('comNote'); if(n) n.value = ''; toast('Note added.','success'); }).catch(fail(this));
   });
   on('comEditBtn', ()=>{ comEditOpen = true; renderComCase(); });
   on('ceCancel', ()=>{ comEditOpen = false; renderComCase(); });
   const ceSrc = document.getElementById('ceSource');
   if(ceSrc){ ceSrc.addEventListener('change', ()=> comSourceSync('ce')); comSourceSync('ce'); }
   on('ceSave', function(){
-    const v = id=>{ const el = document.getElementById(id); return el ? el.value.trim() : undefined; };
+    const v = x=>{ const el = document.getElementById(x); return el ? el.value.trim() : undefined; };
     const f = {clientName:v('ceClient'), businessName:v('ceBiz'), email:v('ceEmail2'), phone:v('cePhone2'), source:v('ceSource'), sourceDetail:v('ceSourceText'), category:v('ceCat')};
     if(!f.clientName && !f.businessName){ toast('Add a client or business name.','error'); return; }
     if(f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)){ toast("That email doesn't look right.",'error'); return; }
     if((f.source==='Referral' || f.source==='Other') && !f.sourceDetail){ document.getElementById('ceSourceText').classList.add('missing'); toast(f.source==='Referral' ? 'Add who referred them.' : 'Add where the lead came from.','error'); return; }
     if(f.source!=='Referral' && f.source!=='Other') f.sourceDetail = '';
     const adv = v('ceAdv'); if(adv && adv!==c.advisorId){ f.advisorId = adv; f.advisorName = USERS[adv].name; }
-    if(c.stage==='complete'){ const lv = v('ceLender'), vv = v('ceValue'); if(!lv || vv==='' || isNaN(vv) || Number(vv) <= 0){ toast('A completed case needs its lender and value.','error'); return; } f.lender = lv; f.value = Number(vv); }
+    if(done){ const lv = v('ceLender'), vv = v('ceValue'); if(!lv || vv==='' || isNaN(vv) || Number(vv) <= 0){ toast('A completed case needs its lender and value.','error'); return; } f.lender = lv; f.value = Number(vv); }
     const LBL = {clientName:'Client', businessName:'Business', email:'Email', phone:'Telephone', source:'Lead source', sourceDetail:'Source detail', category:'Category', advisorName:'Adviser', lender:'Lender', value:'Value'};
     const changed = Object.keys(f).filter(k=> k!=='advisorId' && String(f[k]||'')!==String(c[k]||''));
     if(!changed.length){ comEditOpen = false; renderComCase(); return; }
     this.disabled = true;
-    comWrite(comOpenId, f, 'Details updated: ' + changed.map(k=> `${LBL[k]} "${c[k]||''}" → "${f[k]||''}"`).join('; '))
-      .then(()=>{ comEditOpen = false; renderComCase(); toast('Details saved.','success'); })
-      .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    comWrite(id, f, 'Details updated: ' + changed.map(k=> `${LBL[k]} "${c[k]||''}" → "${f[k]||''}"`).join('; '))
+      .then(()=>{ comEditOpen = false; renderComCase(); toast('Details saved.','success'); }).catch(fail(this));
   });
 }
 document.getElementById('comDeleteBtn').addEventListener('click', ()=>{

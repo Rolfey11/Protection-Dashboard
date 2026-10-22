@@ -1029,6 +1029,8 @@ body:not(.mode-com) .com-only{display:none !important;}
 .rc-status.rc-signedup{background:var(--green-bg); color:var(--green);} .rc-status.rc-decline,.rc-status.rc-completed{background:var(--red-bg); color:var(--red);}
 #leadOverlay.ro .ld-next button, #leadOverlay.ro .cal-btns{display:none !important;}
 .audit-icon.t-thanks{color:#DB2777; background:color-mix(in srgb, #F472B6 18%, transparent); border-color:transparent;}
+.sib-acts .action-btn.ld-signup-btn{color:var(--green); border-color:color-mix(in srgb, var(--green) 45%, var(--border-2));}
+.sib-acts .action-btn.ld-signup-btn.on{background:var(--green-bg);}
 .sib-acts .action-btn.ld-thanks-btn{color:#DB2777; border-color:color-mix(in srgb, #DB2777 40%, var(--border-2));}
 /* Thank-you cards */
 .tcard{position:relative; overflow:hidden; border-radius:16px; color:#fff; padding:26px 18px 16px; background:var(--tc-bg); box-shadow:0 14px 30px -14px rgba(0,0,0,.45); text-align:center; isolation:isolate;}
@@ -6331,6 +6333,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22k', date:'2026-10-22', items:[
+    {text:"<b>Sign Up from Appointments / Research</b>: cases in Appointments / Research now have a <b>Sign Up</b> button next to Decline, with the same choices: <b>On Risk</b> or <b>Submitted to underwriting</b>. No need to wait for the appointment's outcome.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-22j', date:'2026-10-22', items:[
     {text:"<b>Business Loan</b> is now a category for Commercial leads, in New lead, Edit details and the category filter.", roles:['mapa','management','admin']},
   ]},
@@ -8605,7 +8610,7 @@ const HELP = [
     {t:'Overdue reminders and appointments', roles:['mapa'], h:`When you open the protection dashboard, any overdue reminders or appointments pop up first, and you can't use the dashboard until each one is dealt with. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment. A reminder or appointment that goes overdue while you're working pops up as soon as you close what you're doing.`},
     {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>Appointments / Research</b> must have its next step booked; you can't close it until it does. <b>New Cases</b> can be closed without one (it shows <i>Nothing booked yet</i> until you book).<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li><li><b>Decline</b> (Appointments / Research only): opens the decline form with the reason, detail and decline steps.</li></ul>`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
-    {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the total commission, choose each policy sold (DTA, LTA, FIB, CIC, IP, WOL) and tick which client it covers. Tick more than one client for a joint policy; use <b>+ Add another policy</b> for more.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission and policies are filled in for you: check them and change anything that's different.</li></ol>`},
+    {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`On a case in <b>Appointments / Research</b> you can press <b>Sign Up</b> (next to Decline) at any time, or choose Sign Up from the Outcome of meeting.<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the total commission, choose each policy sold (DTA, LTA, FIB, CIC, IP, WOL) and tick which client it covers. Tick more than one client for a joint policy; use <b>+ Add another policy</b> for more.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission and policies are filled in for you: check them and change anything that's different.</li></ol>`},
     {t:'Mark quotes as sent', roles:['mapa','management'], h:`Open a case in <b>Appointments / Research</b> and press <b>Quotes Sent</b> once the client has their quotes. The card turns pale green with a ✓, and it's recorded in the case history. Pressed it by mistake? Press <b>Undo</b> on the case.`},
     {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
     {t:'Client has a medical condition', roles:['mapa','management'], h:`Open <b>Useful Info → Medical Conditions Guide</b>. Search for the condition (e.g. "diabetes" or "back") to see how insurers usually treat it for Life, CI and IP, and the questions to ask before you go to market. It's general guidance: always get an indicative decision from the insurer.`},
@@ -8904,7 +8909,8 @@ function renderLeadModal(){
     <div class="sib-acts" id="actionBar">
       ${booking ? (due ? '' : `<button type="button" class="action-btn ${actionUIState && actionUIState.kind==='appointment' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="bookappt">${ico('calendar')}Book appointment</button>
       <button type="button" class="action-btn ${actionUIState && actionUIState.kind==='reminder' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="setreminder">${ico('clock')}Set reminder</button>
-      ${lead.status==='existing' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>` : ''}
+      ${lead.status==='existing' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>
+      <button type="button" class="action-btn ld-signup-btn ${actionUIState && actionUIState.stage==='signupchoice' ? 'on' : ''}" data-act="signup">${ico('checkCircle')}Sign Up</button>` : ''}
       ${canReferToPA(lead) ? `<button type="button" class="action-btn ld-refer-btn ${actionUIState && actionUIState.stage==='refer' ? 'on' : ''}" data-act="refer">${ico('send')}Refer to protection adviser</button>` : ''}`)
       : canAction(lead) ? `<button type="button" class="action-btn primary" data-act="call">${ico('phone')}Call</button>
       <button type="button" class="action-btn" data-act="text">${ico('message')}Text</button>
@@ -9225,6 +9231,10 @@ function handleActionClick(lead, type){
     actionUIState = actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? null : {stage:'decline'};
     refreshLeadModal(true); return;
   }
+  if(type==='signup'){ // Appointments / Research: sign up straight from the case
+    actionUIState = actionUIState && actionUIState.stage==='signupchoice' ? null : {stage:'signupchoice'};
+    refreshLeadModal(true); return;
+  }
   if(type==='refer'){
     actionUIState = actionUIState && actionUIState.stage==='refer' ? null : {stage:'refer'};
     refreshLeadModal(true); return;
@@ -9243,6 +9253,11 @@ function renderDynamicArea(lead){
   if(!area) return;
   if(actionUIState && ['schedule','meeting','reminderdue'].includes(actionUIState.stage)){ renderBookingArea(lead, area); return; }
   if(actionUIState && actionUIState.stage==='refer'){ renderReferArea(lead, area); return; }
+  if(actionUIState && actionUIState.stage==='signupchoice'){
+    area.innerHTML = `<div class="signup-choice"><div class="op-title">Sign Up: where is the case now?</div><div class="outcome-buttons"><button class="ob-onrisk" data-su="onrisk">On Risk</button><button class="ob-uw" data-su="underwriting">Submitted to underwriting</button></div></div>`;
+    area.querySelectorAll('[data-su]').forEach(b=> b.addEventListener('click', ()=> openSignup(lead.id, '', b.dataset.su)));
+    return;
+  }
 
   if(actionUIState && actionUIState.kind && !actionUIState.stage){
     const label = ACTION_LABELS[actionUIState.kind] || 'Contact';

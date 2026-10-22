@@ -1008,6 +1008,10 @@ body:not(.mode-com) .com-only{display:none !important;}
 .sib-acts .action-btn svg{width:16px; height:16px;}
 .sib-acts .action-btn.on{border-color:var(--brand); background:var(--brand-tint); color:var(--brand);}
 .sib-acts .action-btn.on svg{stroke:var(--brand);}
+.sib-acts .action-btn.ld-refer-btn{color:var(--green); border-color:color-mix(in srgb, var(--green) 45%, var(--border-2));}
+.handover-box{border-color:color-mix(in srgb, var(--green) 35%, var(--border)); background:color-mix(in srgb, var(--green-bg) 55%, var(--surface));}
+.handover-text{font-size:13px; line-height:1.5; white-space:pre-wrap; color:var(--text);}
+.lc-ref{flex:none; font-size:10.5px; font-weight:700; color:var(--green); background:var(--green-bg); border-radius:999px; padding:1px 7px; white-space:nowrap;}
 .sib-acts .action-btn.ld-decline-btn{color:var(--red); border-color:color-mix(in srgb, var(--red) 45%, var(--border-2));}
 .sib-acts .action-btn.ld-decline-btn svg{stroke:var(--red);}
 .sib-acts .action-btn.ld-decline-btn:hover,.sib-acts .action-btn.ld-decline-btn.on{background:var(--red-bg); border-color:var(--red); color:var(--red);}
@@ -1491,6 +1495,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 .role-badge{font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:99px; text-transform:uppercase; letter-spacing:.3px;}
 .role-badge.admin{background:var(--brand-tint); color:var(--brand-dark);}
 .role-badge.mapa{background:var(--blue-bg); color:var(--blue);}
+.role-badge.pa{background:var(--green-bg); color:var(--green);}
 .role-badge.management{background:var(--brand-tint); color:var(--brand);}
 .pin-mono{font-family:'DM Mono',monospace; letter-spacing:2px; font-weight:600; color:var(--text-muted);}
 .row-actions{display:flex; gap:6px; justify-content:flex-end;}
@@ -2925,6 +2930,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <div class="role-select-row" id="uRoleRow">
           <div class="role-opt" data-role="admin">Admin</div>
           <div class="role-opt" data-role="mapa">MAPA</div>
+          <div class="role-opt" data-role="pa">Protection Adviser</div>
           <div class="role-opt" data-role="management">Management</div>
         </div>
       </div>
@@ -3370,6 +3376,12 @@ function bootFromCache(){
 let actionUIState = null;
 
 const ROLE_LABEL = {admin:'Admin', mapa:'MAPA', management:'Management'};
+/* A Protection Adviser is a MAPA (same pots, booking rules, locks and
+   insights) flagged protAdviser: they only work Protection (no Send in
+   Blue), and MAPAs can refer cases to them. */
+function isProtAdviser(id){ const u = USERS[id]; return !!u && u.role==='mapa' && u.protAdviser===true; }
+function roleLabelFor(id){ const u = USERS[id]; return !u ? '' : isProtAdviser(id) ? 'Protection Adviser' : (ROLE_LABEL[u.role] || u.role); }
+function protAdvisers(){ return Object.entries(USERS).filter(([id])=> isProtAdviser(id)).sort((a,b)=> String(a[1].name).localeCompare(String(b[1].name))); }
 
 /* ----------------------------------------------------------------------------
    3) UTILITIES
@@ -4027,7 +4039,8 @@ function enterApp(){
 
   document.getElementById('userAvatar').textContent = initials(currentUser.name);
   document.getElementById('userNameLbl').textContent = currentUser.name;
-  document.getElementById('userRoleLbl').textContent = ROLE_LABEL[currentUser.role]||currentUser.role;
+  document.getElementById('userRoleLbl').textContent = roleLabelFor(currentUser.id) || ROLE_LABEL[currentUser.role] || currentUser.role;
+  syncSibAccess();
 
   document.getElementById('newTaskBtn').classList.remove('hidden');
   document.getElementById('uploadLeadsShortcut').classList.toggle('hidden', currentUser.role!=='management');
@@ -4758,8 +4771,15 @@ function sibOutcomeCls(c){ return c.retentionKey==='Retained' ? 'out-ret' : c.re
 function sibChasePending(c){ return !!c.chaseAt && !c.chaseAnswer; }
 function sibMoney(v){ return '£' + Number(v).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2}); }
 
+function sibAccess(){ return !currentUser || !isProtAdviser(currentUser.id); }
+function syncSibAccess(){
+  document.querySelector('#modeSwitch [data-mode="sib"]').classList.toggle('hidden', !sibAccess());
+  // Only Protection left (no Commercial tick): no need for the switch at all.
+  document.getElementById('modeSwitch').classList.toggle('hidden', !sibAccess() && !comAccess());
+  if(!sibAccess() && APP_MODE==='sib') setAppMode('protection');
+}
 function setAppMode(mode, go=true){
-  APP_MODE = mode==='sib' ? 'sib' : mode==='com' && (!currentUser || comAccess()) ? 'com' : 'protection';
+  APP_MODE = mode==='sib' && sibAccess() ? 'sib' : mode==='com' && (!currentUser || comAccess()) ? 'com' : 'protection';
   try{ localStorage.setItem('plt_mode', APP_MODE); }catch(e){}
   document.body.classList.toggle('mode-sib', APP_MODE==='sib');
   document.body.classList.toggle('mode-com', APP_MODE==='com');
@@ -6208,6 +6228,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-22f', date:'2026-10-22', items:[
+    {text:"<b>New: Protection Adviser</b>. A new user level in Settings → Colleagues for a standalone protection adviser. They get the same protection pots, bookings and rules as MAPAs, without Send in Blue.", roles:['management']},
+    {text:"<b>Refer to protection adviser</b>: on a case in New Cases or Appointments / Research you can do the protection yourself, or press <b>Refer to protection adviser</b>. Add the appointment if you've agreed one with the client (or leave it blank) and a detailed handover note. The case moves to the protection adviser.", roles:['mapa','management']},
+  ]},
   {id:'2026-10-22e', date:'2026-10-22', items:[
     {text:"<b>Tidier Commercial filters</b>: the search box and filters above the Commercial lanes are now the same size as everywhere else.", roles:['mapa','management','admin']},
   ]},
@@ -6928,7 +6952,8 @@ db.ref('users').on('value', snap=>{
   if(currentUser){
     const me = USERS[currentUser.id];
     if(!me){ logout(); toast('Your account has been removed. Please speak to Management.', 'error'); return; }
-    syncComAccess();
+    syncComAccess(); syncSibAccess();
+    document.getElementById('userRoleLbl').textContent = roleLabelFor(currentUser.id);
     // Pick up name/role changes made in Settings without needing to log out
     if(me.role !== currentUser.role){
       Object.assign(currentUser, {name:me.name, role:me.role});
@@ -8277,6 +8302,7 @@ function leadCardHtml(lead, potKey){
         : `<span class="lc-avatar none" title="Unassigned">?</span>`)
     : '';
   let sub = [lead.clientSource ? esc(lead.clientSource) : '', fmtDate(lead.appDate)].filter(Boolean).join('<span class="lc-sep">·</span>');
+  const refTag = lead.referredByName ? `<span class="lc-ref" title="Referred by ${esc(lead.referredByName)}">↪ ${esc(lead.referredByName.split(' ')[0])}</span>` : '';
   // Keep every card the same three-row shape: extra details for Contacted
   // and Sign Ups replace the second line rather than adding new rows.
   if((potKey==='existing' || potKey==='new') && lead.followUpDate){
@@ -8292,7 +8318,7 @@ function leadCardHtml(lead, potKey){
   return `
     <div class="lead-card ${isOverdue?'overdue':''} ${quoted?'quoted':''}" data-id="${esc(lead.id)}">
       <div class="lc-top">
-        <div class="lc-name">${esc(lead.clientName)}</div>
+        <div class="lc-name">${esc(lead.clientName)}</div>${refTag}
         ${quoted ? `<span class="lc-quoted" title="Quotes sent ${esc(fmtDate(lead.quotesSentAt))}" aria-label="Quotes sent">${ico('check')}</span>` : ''}
         ${(potKey==='new' || potKey==='existing') ? (()=>{ const n = contactAttempts(lead); return n ? `<span class="lc-att" title="${n} contact attempt${n===1?'':'s'}">${ico('phone')}${n}</span>` : ''; })() : ''}
         ${advisor}
@@ -8450,6 +8476,7 @@ const HELP = [
     {t:'Commercial', h:`<b>Commercial</b> sits next to Protection and Send in Blue at the top, for colleagues ticked <b>Commercial</b> in Settings → Colleagues (Management ticks the box). Press <b>New lead</b> for the client name, business name, email, telephone, lead source (Referral and Other ask for detail) and category, and choose the adviser. Cases move through <b>New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete</b>; Complete asks for the lender and value. Open a case to move it, add notes or edit its details. Every open case needs its next step booked: <b>Book appointment</b> (phone, video or face to face) or <b>Set reminder</b>, with one-click Google Calendar. When an appointment's time has passed, record the <b>Outcome of meeting</b>; a due reminder needs a note and a new booking. <b>Not proceeding</b> takes a case off the board (see the <b>Not proceeding</b> button above the lanes; it can be reopened). MAPAs can't leave a case without its next step booked, and overdue items must be cleared when they open Commercial. The Commercial <b>Calendar</b> tab shows every booking. MAPAs see their own cases; Management and Admin see everyone's.`},
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
+    {t:'Refer to a protection adviser', roles:['mapa','management'], h:`On a case in <b>New Cases</b> or <b>Appointments / Research</b> you can do the protection yourself, or press <b>Refer to protection adviser</b>. Choose the adviser, add the appointment type, date and time if you've agreed one with the client (leave the date blank if not), and write a detailed handover note (at least 20 characters): the mortgage, completion date, family, health and what cover they want. The case moves to the protection adviser: into Appointments / Research if you booked a time, otherwise New Cases for them to book. They'll see your handover at the top of the case and a <b>↪ your name</b> tag on the card.`},
     {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b>, <b>No answer</b> or <b>Not attempted</b> (the appointment didn't go ahead from our side).</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer or Not attempted: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. Not attempted doesn't count as a contact attempt.</li></ol>`},
     {t:'Overdue reminders and appointments', roles:['mapa'], h:`When you open the protection dashboard, any overdue reminders or appointments pop up first, and you can't use the dashboard until each one is dealt with. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment. A reminder or appointment that goes overdue while you're working pops up as soon as you close what you're doing.`},
     {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>New Cases</b> and <b>Appointments / Research</b> must have its next step booked; you can't close it until it does.<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li><li><b>Decline</b> (Appointments / Research only): opens the decline form with the reason, detail and decline steps.</li></ul>`},
@@ -8752,7 +8779,8 @@ function renderLeadModal(){
     <div class="sib-acts" id="actionBar">
       ${booking ? (due ? '' : `<button type="button" class="action-btn ${actionUIState && actionUIState.kind==='appointment' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="bookappt">${ico('calendar')}Book appointment</button>
       <button type="button" class="action-btn ${actionUIState && actionUIState.kind==='reminder' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="setreminder">${ico('clock')}Set reminder</button>
-      ${lead.status==='existing' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>` : ''}`)
+      ${lead.status==='existing' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>` : ''}
+      ${canReferToPA(lead) ? `<button type="button" class="action-btn ld-refer-btn ${actionUIState && actionUIState.stage==='refer' ? 'on' : ''}" data-act="refer">${ico('send')}Refer to protection adviser</button>` : ''}`)
       : canAction(lead) ? `<button type="button" class="action-btn primary" data-act="call">${ico('phone')}Call</button>
       <button type="button" class="action-btn" data-act="text">${ico('message')}Text</button>
       <button type="button" class="action-btn" data-act="email">${ico('mail')}Email</button>
@@ -8801,7 +8829,8 @@ function renderLeadModal(){
       <div style="display:flex; gap:8px; flex-wrap:wrap;">${names.length < MAX_CLIENTS ? '<button type="button" class="btn btn-secondary btn-sm" id="cnAdd">+ Add a client</button>' : ''}<button type="button" class="btn btn-primary btn-sm" id="cnSave">Save names</button><button type="button" class="btn btn-ghost btn-sm" id="cnCancel">Cancel</button></div>
       <div class="field-hint">Policies keep their client: changing Client 1's name updates it on their policies too.</div>
     </div>` : '';
-  document.getElementById('leadLeftPane').innerHTML = trackerHtml + (due ? '' : nextCallHtml) + actionHtml + clientEditHtml + outcomeHtml + infoHtml;
+  const handoverHtml = lead.referralNote ? `<div class="sib-box handover-box"><div class="sib-box-hd">Handover from ${esc(lead.referredByName||'MAPA')} · ${esc(fmtDate(lead.referredAt))}</div><div class="handover-text">${esc(lead.referralNote)}</div></div>` : '';
+  document.getElementById('leadLeftPane').innerHTML = trackerHtml + (due ? '' : nextCallHtml) + actionHtml + handoverHtml + clientEditHtml + outcomeHtml + infoHtml;
 
   bindClientEmailCell(lead);
   bindClientPhoneCell(lead);
@@ -9062,6 +9091,10 @@ function handleActionClick(lead, type){
     actionUIState = actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? null : {stage:'decline'};
     refreshLeadModal(true); return;
   }
+  if(type==='refer'){
+    actionUIState = actionUIState && actionUIState.stage==='refer' ? null : {stage:'refer'};
+    refreshLeadModal(true); return;
+  }
   if(type==='bookappt' || type==='setreminder'){
     const kind = type==='bookappt' ? 'appointment' : 'reminder';
     actionUIState = actionUIState && actionUIState.stage==='schedule' && actionUIState.kind===kind && !actionUIState.prelude ? null : {kind, stage:'schedule'};
@@ -9075,6 +9108,7 @@ function renderDynamicArea(lead){
   const area = document.getElementById('dynamicActionArea');
   if(!area) return;
   if(actionUIState && ['schedule','meeting','reminderdue'].includes(actionUIState.stage)){ renderBookingArea(lead, area); return; }
+  if(actionUIState && actionUIState.stage==='refer'){ renderReferArea(lead, area); return; }
 
   if(actionUIState && actionUIState.kind && !actionUIState.stage){
     const label = ACTION_LABELS[actionUIState.kind] || 'Contact';
@@ -9286,6 +9320,58 @@ function renderDynamicArea(lead){
   }
 
   area.innerHTML = '';
+}
+
+/* ---- Refer to a Protection Adviser ----
+   A MAPA can do the protection themselves or hand the case to a Protection
+   Adviser: optionally with an appointment already agreed with the client,
+   and always with a handover note (20+ characters). The case moves to the
+   adviser (Appointments / Research if booked, otherwise New Cases for them
+   to book), and records who referred it. */
+function canReferToPA(lead){
+  return !!lead && canAction(lead) && inBookingPot(lead) && !fuDue(lead) && !isProtAdviser(lead.advisorId) && !isProtAdviser(currentUser.id) && protAdvisers().length > 0;
+}
+function renderReferArea(lead, area){
+  const pas = protAdvisers(), tmr = new Date(Date.now() + 86400000);
+  area.innerHTML = `<div class="inline-form bk-form refer-form">
+      <div class="op-title" style="font-weight:700; margin-bottom:4px;">${ico('send')} Refer to protection adviser</div>
+      <p class="mt-sub" style="margin:0 0 10px;">The case moves to the protection adviser. If you've agreed a time with the client, book it here; otherwise leave it blank and they'll arrange it.</p>
+      <div class="field"><label for="refPA">Protection adviser</label><select id="refPA">${pas.length > 1 ? '<option value="">Choose…</option>' : ''}${pas.map(([id, u])=> `<option value="${esc(id)}">${esc(u.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="refType">Appointment <span class="label-opt">(optional: leave the date blank if not agreed)</span></label><select id="refType">${Object.entries(APPT_TYPES).map(([k, v])=> `<option value="${k}">${esc(v)}</option>`).join('')}</select></div>
+      <div class="field-row">
+        <div class="field"><label for="refDate">Date</label><input type="date" id="refDate" min="${isoDay(new Date())}" value=""></div>
+        <div class="field"><label for="refTime">Time</label><input type="time" id="refTime" step="300" value=""></div>
+      </div>
+      <div class="field"><label for="refNote">Handover note (required)</label><textarea id="refNote" rows="4" placeholder="Please give a detailed handover to the protection adviser, e.g. Buying a £320k house with Halifax, completing 14 Nov. Married, 2 children (4 and 7), both non-smokers. Wants the mortgage covered and some CIC; worried about cost."></textarea><div class="req-hint">Please give a detailed handover to the protection adviser (at least ${MEETING_NOTE_MIN} characters).</div></div>
+      <div class="fu-actions"><button class="btn btn-primary btn-sm" id="refSave">${ico('send')} Refer</button><button class="btn btn-ghost btn-sm" id="refCancel">Cancel</button></div>
+    </div>`;
+  document.getElementById('refCancel').addEventListener('click', ()=>{ actionUIState = null; refreshLeadModal(true); });
+  document.getElementById('refSave').addEventListener('click', function(){
+    const paId = document.getElementById('refPA').value, date = document.getElementById('refDate').value, time = document.getElementById('refTime').value;
+    const type = document.getElementById('refType').value, note = document.getElementById('refNote').value.trim();
+    const bad = (elId, msg)=>{ const el = document.getElementById(elId); el.classList.add('missing'); el.focus(); toast(msg,'error'); };
+    if(!paId) return bad('refPA', 'Choose the protection adviser.');
+    if(date && !time) return bad('refTime', 'Add the time of the appointment, or clear the date if nothing is agreed.');
+    if(time && !date) return bad('refDate', 'Add the date of the appointment, or clear the time if nothing is agreed.');
+    if(date && callDueAt(date, time).getTime() <= Date.now()) return bad('refTime', 'Choose a date and time in the future.');
+    if(note.length < MEETING_NOTE_MIN) return bad('refNote', `Please give a detailed handover to the protection adviser (at least ${MEETING_NOTE_MIN} characters).`);
+    this.disabled = true;
+    const pa = USERS[paId], now = Date.now(), booked = !!date;
+    const when = booked ? `${APPT_TYPES[type]} ${fmtDateSlash(date)} at ${time}` : '';
+    const patch = {advisorId:paId, advisorName:pa.name, referredById:currentUser.id, referredByName:currentUser.name, referredAt:now, referralNote:note,
+      ...(booked ? {followUpDate:date, followUpTime:time, followUpKind:'appointment', apptType:type, followUpNote:null, status:'existing'}
+                 : {...CLEAR_CALLBACK, followUpKind:null, apptType:null, followUpNote:null, status:'new'})};
+    logAudit(lead.id, {type:'assigned', referral:true, text:`Referred to protection adviser ${pa.name} by ${currentUser.name}${booked ? ` - appointment booked (${when})` : ' - no appointment agreed yet'}. Handover: ${note}`,
+      byId:currentUser.id, byName:currentUser.name, at:now}, patch)
+      .then(()=>{
+        db.ref('notifications').push({leadId:lead.id, leadName:lead.clientName, toUserId:paId, toRole:null, kind:'reassigned', byId:currentUser.id,
+          message:`${currentUser.name} referred a client to you: ${lead.clientName}${booked ? ` (${when})` : ''}`, at:now, readBy:{}}).catch(()=>{});
+        actionUIState = null;
+        toast(`${lead.clientName} referred to ${pa.name}${booked ? ` with a ${APPT_TYPES[type].toLowerCase()} on ${fmtDate(date)} at ${time}` : ''}.`,'success');
+        closeModal('leadOverlay');
+      })
+      .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+  });
 }
 
 /* ---- Reminders, appointments and the outcome of meeting ---- */
@@ -10925,7 +11011,7 @@ function openUserModal(userId=null){
   document.getElementById('uName').value = userId? USERS[userId].name : '';
   document.getElementById('uPin').value = userId? (pinFor(userId) || '') : '';
   document.getElementById('uSubmit').disabled = false;
-  selectedRole = userId? USERS[userId].role : 'mapa';
+  selectedRole = userId? (isProtAdviser(userId) ? 'pa' : USERS[userId].role) : 'mapa';
   updateRoleUI();
   openModal('userOverlay');
 }
@@ -10950,7 +11036,9 @@ document.getElementById('uSubmit').addEventListener('click', function(){
 
   const btn = this;
   btn.disabled = true;
-  const payload = {name, role:selectedRole};
+  // Keep anything else on their record (e.g. the Commercial tick). A
+  // Protection Adviser is saved as a MAPA with protAdviser set.
+  const payload = {...(editingUserId && USERS[editingUserId] ? USERS[editingUserId] : {}), name, role: selectedRole==='pa' ? 'mapa' : selectedRole, protAdviser: selectedRole==='pa' ? true : null};
   const isNew = !editingUserId;
   const userId = editingUserId || db.ref('users').push().key;
   const oldPin = isNew ? null : pinFor(editingUserId);
@@ -11025,7 +11113,7 @@ function renderUsersTable(){
   body.innerHTML = list.map(([id,u])=> `
     <tr>
       <td style="font-weight:600;">${esc(u.name)}</td>
-      <td><span class="role-badge ${esc(u.role)}">${esc(ROLE_LABEL[u.role]||u.role)}</span></td>
+      <td><span class="role-badge ${isProtAdviser(id) ? 'pa' : esc(u.role)}">${esc(roleLabelFor(id))}</span></td>
       <td>${pinsLoaded && pinFor(id)==null ? `<span style="color:var(--amber); font-weight:600; font-size:12.5px;">Not set, edit to add</span>` : `<span class="pin-mono">••••</span>`}</td>
       <td><input type="checkbox" class="com-tick" data-com-user="${esc(id)}" ${u.commercial ? 'checked' : ''} aria-label="${esc(u.name)} does commercial"></td>
       <td>

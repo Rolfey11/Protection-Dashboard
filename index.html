@@ -22,6 +22,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script async src="https://accounts.google.com/gsi/client"></script>
 
 <style>
 /* ==========================================================================
@@ -1553,6 +1554,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 .role-badge.admin{background:var(--brand-tint); color:var(--brand-dark);}
 .role-badge.mapa{background:var(--blue-bg); color:var(--blue);}
 .role-badge.pa{background:var(--green-bg); color:var(--green);}
+.fu-invite.g-on{color:var(--green);} .meet-link{font-weight:700; color:var(--blue);}
 .u-google{font-size:11.5px; font-weight:500; color:var(--text-muted); margin-top:2px;}
 .role-badge.management{background:var(--brand-tint); color:var(--brand);}
 .pin-mono{font-family:'DM Mono',monospace; letter-spacing:2px; font-weight:600; color:var(--text-muted);}
@@ -3209,10 +3211,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <label for="emBody">Message</label>
         <textarea id="emBody" style="min-height:200px;"></textarea>
       </div>
-      <div class="field-hint">Opens Gmail in a new window with this filled in. Click Send there, then close that window to come back here. A copy is saved to the audit trail so anyone can view what was sent.</div>
+      <div class="field-hint" id="emHint">Opens Gmail in a new window with this filled in. Click Send there, then close that window to come back here. A copy is saved to the audit trail so anyone can view what was sent.</div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="emailComposeOverlay">Cancel</button>
+      <button class="btn btn-ghost hidden" id="emSendDraft">Open in Gmail instead</button>
       <button class="btn btn-primary" id="emSend">Send in Gmail</button>
     </div>
   </div>
@@ -4010,6 +4013,7 @@ function logout(){
   notifsQuery().off();
   db.ref('clientSources').off();
   db.ref('config').off(); CONFIG = {};
+  gTok = null; gTokClient = null; gTokWait = null;
   db.ref('pins').off(); db.ref('googleLogins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {}; GLOGINS = {}; googleResolving = false;
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
   db.ref('sib/cases').off(); sibListening = false; sibLoaded = false; SIB = {}; sibOpenKey = null;
@@ -5543,8 +5547,8 @@ function renderSibCase(){
   if(act==='email') f.innerHTML = `<div class="inline-form">
       <div class="field"><label for="sibEmSubject">Subject</label><input type="text" id="sibEmSubject" value="Your mortgage rate is coming to an end"></div>
       <div class="field"><label for="sibEmBody">Message</label><textarea id="sibEmBody" style="min-height:200px;">${esc(`Dear ${c.salutation || c.mailingName || ''},\n\nI hope you're well. Your current mortgage product is due to end in ${sibMonthLong(c.month)}, so now is a good time to look at your options.\n\n[Add your message]\n\nKind regards,\n${currentUser.name}`)}</textarea></div>
-      <div class="field-hint">Opens Gmail with this filled in. Anything left in [square brackets] must be filled in first. A copy is saved to the history.</div>
-      <button class="btn btn-primary btn-sm" id="sibEmSend" style="margin-top:10px;">Open in Gmail</button></div>`;
+      <div class="field-hint">${gApiOn() ? `Sends straight from your Gmail (${esc(gEmail())}).` : 'Opens Gmail with this filled in.'} Anything left in [square brackets] must be filled in first. A copy is saved to the history.</div>
+      <button class="btn btn-primary btn-sm" id="sibEmSend" style="margin-top:10px;">${gApiOn() ? 'Send email' : 'Open in Gmail'}</button></div>`;
   if(act==='appt') f.innerHTML = sibApptFormHtml(c);
   if(act==='note') f.innerHTML = `<div class="inline-form"><div class="field"><label for="sibNoteText">Note</label><textarea id="sibNoteText"></textarea></div><button class="btn btn-primary btn-sm" id="sibNoteSave">Add note</button></div>`;
   if(act==='outcome') f.innerHTML = `<div class="inline-form">
@@ -5774,6 +5778,16 @@ function renderSibCase(){
     if(!subject || !body){ toast('Please add a subject and message.','error'); return; }
     const leftover = (subject+'\n'+body).match(/\[[^\]\n]{1,300}\]/);
     if(leftover){ toast(`Please fill in or remove "${leftover[0]}" before sending.`,'error'); return; }
+    if(gApiOn()){
+      const tokP = gToken(G_MAIL), btnEl = this;
+      btnEl.disabled = true; btnEl.textContent = 'Sending…';
+      const inRev = sibPot(c)==='reviews';
+      tokP.then(tok=> gmailSend(tok, {to:[c.email], subject, body}))
+        .then(res=> sibWrite({lastContact: Date.now(), ...(inRev ? {sibStage:'reviews'} : {})}, {type:'email', text:`Email sent to client - ${subject}`, emailVia:'gmail', gmailId:res.id || null, emailTo:c.email, emailSubject:subject, emailBody:body}))
+        .then(ok=>{ if(ok){ sibAction = inRev ? 'snooze' : null; renderSibCase(); } toast(`Email sent from your Gmail to ${c.email}. A copy is in the history.`,'success'); })
+        .catch(err=>{ toast(`Could not send through Gmail: ${err.message}`,'error'); btnEl.disabled = false; btnEl.textContent = 'Send email'; });
+      return;
+    }
     const p = new URLSearchParams({view:'cm', fs:'1', to:c.email, su:subject, body});
     const gmail = window.open('https://mail.google.com/mail/?' + p.toString(), 'pltGmail', 'popup,width=980,height=760');
     if(!gmail){ toast('Your browser blocked the Gmail window. Allow pop-ups for this site, then try again.','error'); return; }
@@ -6408,6 +6422,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-27b', date:'2026-10-27', items:[
+    {text:"<b>Google Calendar and Gmail, built in</b> (when you sign in with Google): booking an appointment or reminder now puts it straight into your Google Calendar, with no extra Save step. <b>Book &amp; invite client</b> sends the client the invite, and video calls get a <b>Google Meet</b> link. Rebooking moves the same event. <b>Email client</b> now sends straight from your Gmail, and a copy is saved on the case. The first time, Google asks you to <b>Allow</b> access. Signed in with your PIN? Everything works as before."},
+  ]},
   {id:'2026-10-27', date:'2026-10-27', items:[
     {text:"<b>Sign in with Google</b>: colleagues can now sign in with their work Google account instead of a PIN. Add each person's Google email in <b>Settings → Colleagues</b> (Edit). PINs still work as well.", roles:['management']},
   ]},
@@ -7903,9 +7920,9 @@ function clientEventText(lead){
   const adv = lead.advisorName || 'your adviser';
   const first = adv.split(' ')[0];
   return [
-    `Your protection follow-up call with ${adv} from ${COMPANY_NAME}.`,
+    `Your protection ${lead.apptType==='video' ? 'video call' : lead.apptType==='f2f' ? 'meeting' : 'follow-up call'} with ${adv} from ${COMPANY_NAME}.`,
     '',
-    `${first} will call you at the time shown. If this time no longer suits you, please reply to this invitation and we'll rearrange.`,
+    `${lead.apptType==='video' ? `Join with the Google Meet link in this invitation at the time shown.` : lead.apptType==='f2f' ? `${first} looks forward to seeing you.` : `${first} will call you at the time shown.`} If this time no longer suits you, please reply to this invitation and we'll rearrange.`,
     '',
     `Kind regards,`,
     COMPANY_NAME
@@ -8137,11 +8154,20 @@ function openEmailCompose(leadId, fromAction=false){
   renderTemplateOptions(); emLastTemplate = null;
   resetDeclineReason(false);
   document.getElementById('emSend').disabled = false;
+  const gOn = gApiOn();
+  document.getElementById('emSend').textContent = gOn ? 'Send email' : 'Send in Gmail';
+  document.getElementById('emSendDraft').classList.toggle('hidden', !gOn);
+  document.getElementById('emHint').textContent = gOn
+    ? `Sends straight from your Gmail (${gEmail()}), so it's in your Sent items and replies come to you. A copy is saved to the audit trail so anyone can view what was sent.`
+    : 'Opens Gmail in a new window with this filled in. Click Send there, then close that window to come back here. A copy is saved to the audit trail so anyone can view what was sent.';
   openModal('emailComposeOverlay');
   setTimeout(()=> document.getElementById('emSubject').focus(), 50);
 }
 
-document.getElementById('emSend').addEventListener('click', function(){
+document.getElementById('emSendDraft').addEventListener('click', ()=> emSendClick(document.getElementById('emSend'), true));
+document.getElementById('emSend').addEventListener('click', function(){ emSendClick(this, false); });
+function emSendClick(btn, asDraft){
+  const self = btn;
   const l = LEADS[emailLeadId]; if(!l) return;
   const to = parseEmails(document.getElementById('emTo').value);
   const subject = document.getElementById('emSubject').value.trim();
@@ -8159,13 +8185,37 @@ document.getElementById('emSend').addEventListener('click', function(){
   }
   const leftover = (subject+'\n'+body).match(/\[[^\]\n]{1,300}\]/);
   if(leftover){ toast(`Please fill in or remove "${leftover[0]}" before sending.`,'error'); return; }
+  const leadId = emailLeadId;
+  // Signed in with Google: send it from their Gmail, then log it.
+  if(!asDraft && gApiOn()){
+    const tokP = gToken(G_MAIL);
+    self.disabled = true; self.textContent = 'Sending…';
+    const patchG = {}, onFileG = leadEmails(l);
+    if(to.join(',').toLowerCase() !== onFileG.join(',').toLowerCase()) patchG.clientEmails = to;
+    const showOutcomeG = emailFromAction && activeLeadId === leadId;
+    tokP.then(tok=> gmailSend(tok, {to, subject, body}))
+      .then(res=> logAudit(leadId, {
+        type:'email', text:`Email sent to client - ${subject}`, emailVia:'gmail', gmailId: res.id || null,
+        emailTo: to.join(', '), emailSubject: subject, emailBody: body,
+        ...(emLastTemplate ? {emailTemplate: emLastTemplate.name} : {}),
+        ...(declineReason ? {emailDeclineReason: declineReason} : {}),
+        byId:currentUser.id, byName:currentUser.name, at:Date.now()
+      }, patchG).catch(()=>{ toast('Email sent, but the copy could not be saved to the audit trail.','error'); }))
+      .then(()=>{
+        closeModal('emailComposeOverlay');
+        if(showOutcomeG){ actionUIState = {kind:'email'}; refreshLeadModal(); }
+        toast(`Email sent from your Gmail to ${to.join(', ')}.${showOutcomeG ? ' Choose the outcome below.' : ''} A copy is in the audit trail.`,'success');
+      })
+      .catch(err=> toast(`Could not send through Gmail: ${err.message} You can try again, or use "Open in Gmail instead".`,'error'))
+      .finally(()=>{ self.disabled = false; self.textContent = 'Send email'; });
+    return;
+  }
   // Open Gmail straight from the click so the browser doesn't block it,
   // in its own window so closing it after sending lands back on the case.
   const p = new URLSearchParams({view:'cm', fs:'1', to:to.join(','), su:subject, body});
   const gmail = window.open('https://mail.google.com/mail/?' + p.toString(), 'pltGmail', 'popup,width=980,height=760');
   if(!gmail){ toast('Your browser blocked the Gmail window. Allow pop-ups for this site, then try again.','error'); return; }
-  this.disabled = true;
-  const leadId = emailLeadId;
+  self.disabled = true;
   // From the Email action: once it's sent, show the outcome buttons (Sign Up,
   // Follow Up, Decline) on the case, as the other actions do.
   const showOutcome = emailFromAction && activeLeadId === leadId;
@@ -8193,8 +8243,8 @@ document.getElementById('emSend').addEventListener('click', function(){
     } else {
       toast('Gmail opened. Click Send there. A copy is in the audit trail.','success');
     }
-  }).catch(err=>{ if(showOutcome) actionUIState = null; toast('Could not save to the audit trail: '+err.message,'error'); this.disabled = false; });
-});
+  }).catch(err=>{ if(showOutcome) actionUIState = null; toast('Could not save to the audit trail: '+err.message,'error'); self.disabled = false; });
+}
 
 function whenWindowCloses(win, cb){
   const timer = setInterval(()=>{ if(win.closed){ clearInterval(timer); cb(); } }, 500);
@@ -8313,7 +8363,9 @@ function bindClientEmailCell(lead){
 
 function calButtonsHtml(lead, compact=false){
   return `<div class="cal-btns ${compact?'compact':''}">
-    <a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Add to Google Calendar</span></a>
+    ${lead.calEventLink && currentUser && lead.calEventOwner===currentUser.id
+      ? `<a class="cal-btn google" href="${esc(lead.calEventLink)}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendarCheck')}<span>In your Google Calendar</span></a>`
+      : `<a class="cal-btn google" href="${esc(googleCalUrl(lead))}" target="_blank" rel="noopener" data-cal-google="${esc(lead.id)}">${ico('calendar')}<span>Add to Google Calendar</span></a>`}
     <button type="button" class="cal-btn" data-cal-ics="${esc(lead.id)}" ${lead._com ? 'data-cal-com="1"' : ''}>${ico('calendarCheck')}<span>Calendar file</span></button>
     ${compact ? `<button type="button" class="cal-btn mail" data-email-client="${esc(lead.id)}" title="Write an email to the client and open it in Gmail">${ico('mail')}<span>Email client</span></button>` : ''}
   </div>`;
@@ -8683,6 +8735,7 @@ const HELP = [
   {group:'Protection cases', items:[
     {t:'Commercial', h:`<b>Commercial</b> sits next to Protection and Send in Blue at the top, for colleagues ticked <b>Commercial</b> in Settings → Colleagues (Management ticks the box). Press <b>New lead</b> for the client name, business name, email, telephone, lead source (Referral and Other ask for detail) and category, and choose the adviser. Cases move through <b>New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete</b>; Complete asks for the lender and value. Open a case to move it, add notes or edit its details. Every open case needs its next step booked: <b>Book appointment</b> (phone, video or face to face) or <b>Set reminder</b>, with one-click Google Calendar. When an appointment's time has passed, record the <b>Outcome of meeting</b>; a due reminder needs a note and a new booking. <b>Not proceeding</b> takes a case off the board (see the <b>Not proceeding</b> button above the lanes; it can be reopened). MAPAs can't leave a case without its next step booked, and overdue items must be cleared when they open Commercial. The Commercial <b>Calendar</b> tab shows every booking. MAPAs see their own cases; Management and Admin see everyone's.`},
     {t:'Sign in with Google', roles:['management'], h:`Colleagues can sign in with their work Google account (e.g. @mu-mortgages.com or @gurkhamortgages) instead of their PIN. In <b>Settings → Colleagues</b>, edit the colleague and add their <b>Google email</b>. They then press <b>Sign in with Google</b> on the login screen and pick that account. Only emails added here can get in. Remove the email to stop Google sign-in; their PIN keeps working either way.`},
+    {t:'Google Calendar and Gmail', roles:['mapa','management','admin'], h:`When you've signed in with Google:<ul><li><b>Booking</b> an appointment or reminder puts it straight into your Google Calendar. <b>Book &amp; invite client</b> also sends the client the invite, and <b>video calls</b> get a Google Meet link (shown on the case as <b>Join Google Meet</b>). Rebooking moves the same event and updates the client.</li><li><b>Email client</b> sends straight from your Gmail, so it's in your Sent items and replies come to you. A copy is saved on the case. If Google has a problem, use <b>Open in Gmail instead</b>.</li></ul>The first time, Google shows a window asking you to allow access to your calendar and to send email: tick both and press <b>Continue</b>. Signed in with your PIN, everything works as before (the Google Calendar link and a Gmail draft).`},
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
     {t:'Refer to a protection adviser', roles:['mapa','management'], h:`On a case in <b>New Cases</b> or <b>Appointments / Research</b> you can do the protection yourself, or press <b>Refer to protection adviser</b>. Choose the adviser, add the appointment type, date and time if you've agreed one with the client (leave the date blank if not), and write a detailed handover note (at least 20 characters): the mortgage, completion date, family, health and what cover they want. The case moves to the protection adviser: into Appointments / Research if you booked a time, otherwise New Cases for them to book. They'll see your handover at the top of the case and a <b>↪ your name</b> tag on the card.`},
@@ -9005,7 +9058,7 @@ function renderLeadModal(){
     <div id="dynamicActionArea"></div>
     ${canFb && ldFeedbackOpen ? feedbackFormHtml(lead) : ''}${canFb && ldThanksOpen ? thanksFormHtml(lead) : ''}` : '';
 
-  const nextCallHtml = hasBookedCall(lead) && !due ? `<div class="sib-next ${inBookingPot(lead) && fuKind(lead)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${inBookingPot(lead) && fuKind(lead)==='reminder' ? '🔔' : '⏰'}</span><div><b>${inBookingPot(lead) && lead.followUpKind ? esc(fuKindLabel(lead))+': ' : ''}${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${inBookingPot(lead) && lead.followUpKind ? (fuKind(lead)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened') : 'Next call due'}${lead.followUpNote ? ' · '+esc(lead.followUpNote) : ''}</small></div>${calButtonsHtml({id:lead.id, ...lead}, canAction(lead))}</div>`
+  const nextCallHtml = hasBookedCall(lead) && !due ? `<div class="sib-next ${inBookingPot(lead) && fuKind(lead)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${inBookingPot(lead) && fuKind(lead)==='reminder' ? '🔔' : '⏰'}</span><div><b>${inBookingPot(lead) && lead.followUpKind ? esc(fuKindLabel(lead))+': ' : ''}${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${inBookingPot(lead) && lead.followUpKind ? (fuKind(lead)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened') : 'Next call due'}${lead.followUpNote ? ' · '+esc(lead.followUpNote) : ''}${lead.meetLink && inBookingPot(lead) ? ` · <a href="${esc(lead.meetLink)}" target="_blank" rel="noopener" class="meet-link">Join Google Meet</a>` : ''}</small></div>${calButtonsHtml({id:lead.id, ...lead}, canAction(lead))}</div>`
     : booking && !lead.followUpDate ? `<div class="sib-next bad"><span class="ic" aria-hidden="true">⚠️</span><div><b>Nothing booked yet</b><small>${lead.status==='new' ? 'Set a reminder or book an appointment when you\'re ready.' : 'Set a reminder or book an appointment: every case here needs its next step booked.'}</small></div></div>` : '';
 
   // Outcome details (terms, policies, commission, decline reason) in one box.
@@ -9775,6 +9828,86 @@ function openThanksWall(){
   renderAdvisorFilter();
 }
 
+/* ---- Google Calendar + Gmail ----
+   For colleagues signed in with Google: bookings go straight into their
+   own Google Calendar (with the client invite and a Meet link for video
+   calls) and emails send from their own Gmail. Access comes from Google
+   Identity Services (a short-lived token, asked for from a click; Google
+   shows its "Allow" screen the first time). Anyone else, or if Google
+   isn't available, keeps the Google Calendar link and Gmail draft. */
+const GOOGLE_CLIENT_ID = '92970534570-msaquejoji02tuq2ds7c7hmle06ud7jh.apps.googleusercontent.com';
+const G_CAL = 'https://www.googleapis.com/auth/calendar.events', G_MAIL = 'https://www.googleapis.com/auth/gmail.send';
+const GCAL_API = 'https://www.googleapis.com/calendar/v3/calendars/primary';
+let gTok = null, gTokClient = null, gTokWait = null;
+function gApiOn(){
+  const u = auth.currentUser;
+  return !!currentUser && !!u && isGoogleUser(u) && !!(window.google && google.accounts && google.accounts.oauth2);
+}
+function gEmail(){ return auth.currentUser ? String(auth.currentUser.email||'') : ''; }
+// Call straight from a click (Google may need to show its window).
+function gToken(scope){
+  if(gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(scope)) return Promise.resolve(gTok.token);
+  return new Promise((resolve, reject)=>{
+    if(gTokWait) gTokWait.reject(new Error('Superseded'));
+    gTokWait = {resolve, reject, scope};
+    try{
+      if(!gTokClient) gTokClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID, scope: [G_CAL, G_MAIL].join(' '), include_granted_scopes: true, login_hint: gEmail(),
+        callback: r=>{
+          const w = gTokWait; gTokWait = null; if(!w) return;
+          if(r.error){ w.reject(new Error(r.error_description || r.error)); return; }
+          gTok = {token:r.access_token, exp: Date.now() + (Number(r.expires_in)||3600)*1000, scopes:String(r.scope||'').split(' ')};
+          if(gTok.scopes.includes(w.scope)) w.resolve(gTok.token);
+          else w.reject(new Error(w.scope===G_MAIL ? "Google didn't give permission to send email. Tick the Gmail box when Google asks." : "Google didn't give permission for your calendar. Tick the Calendar box when Google asks."));
+        },
+        error_callback: e=>{ const w = gTokWait; gTokWait = null; if(w) w.reject(new Error(e && e.type==='popup_closed' ? 'The Google window was closed.' : e && e.type==='popup_failed_to_open' ? 'Your browser blocked the Google window. Allow pop-ups for this site.' : 'Google access was not granted.')); }
+      });
+      gTokClient.requestAccessToken();
+    }catch(e){ gTokWait = null; reject(e); }
+  });
+}
+async function gFetch(tok, url, {method='GET', body}={}){
+  const r = await fetch(url, {method, headers:{Authorization:'Bearer '+tok, ...(body ? {'Content-Type':'application/json'} : {})}, body: body ? JSON.stringify(body) : undefined});
+  if(r.status===204) return {};
+  const j = await r.json().catch(()=> ({}));
+  if(!r.ok){ if(r.status===401) gTok = null; const e = new Error((j.error && j.error.message) || ('Google returned an error ('+r.status+')')); e.status = r.status; throw e; }
+  return j;
+}
+/* Put a booking in the signed-in colleague's calendar, or move the event
+   they already made for this case. l: the case with its new booking. */
+async function gcalUpsert(tok, l, invite){
+  const appt = l.followUpKind!=='reminder';
+  const start = callDueAt(l.followUpDate, l.followUpTime), end = new Date(start.getTime() + 60*60*1000);
+  const mine = !!l.calEventId && l.calEventOwner===currentUser.id;
+  const emails = invite ? leadEmails(l) : [];
+  const where = appt ? (APPT_TYPES[l.apptType] || 'Phone call') : '';
+  const wantMeet = appt && l.apptType==='video';
+  const body = {
+    summary: calTitle(l),
+    description: invite ? clientEventText(l) : calEventText(l).details,
+    location: !appt || wantMeet ? '' : invite && where==='Phone call' ? `Phone call: ${l.advisorName || 'your adviser'} will call you` : where,
+    start:{dateTime:start.toISOString()}, end:{dateTime:end.toISOString()},
+    attendees: emails.map(email=> ({email})),
+    reminders:{useDefault:false, overrides:[{method:'popup', minutes: appt ? 15 : 0}]},
+    ...(wantMeet && !(mine && l.meetLink) ? {conferenceData:{createRequest:{requestId:'plt-'+Date.now().toString(36)+Math.random().toString(36).slice(2,8), conferenceSolutionKey:{type:'hangoutsMeet'}}}} : {}),
+  };
+  const q = `?sendUpdates=${invite || (mine && l.calInvited) ? 'all' : 'none'}&conferenceDataVersion=1`;
+  let ev = null;
+  if(mine){ try{ ev = await gFetch(tok, `${GCAL_API}/events/${encodeURIComponent(l.calEventId)}${q}`, {method:'PATCH', body}); }catch(e){ if(e.status!==404 && e.status!==410) throw e; } }
+  if(!ev) ev = await gFetch(tok, `${GCAL_API}/events${q}`, {method:'POST', body});
+  return {id:ev.id, link:ev.htmlLink || null, meet: wantMeet ? (ev.hangoutLink || (mine ? l.meetLink : null) || null) : null, invited: emails.length > 0};
+}
+// Fields saved on the case for its calendar event.
+function gcalFields(r){ return r ? {calEventId:r.id, calEventOwner:currentUser.id, calEventLink:r.link, meetLink:r.meet, calInvited:r.invited || null} : {}; }
+function gcalNote(r, invite){ return !r ? '' : ` - In ${currentUser.name.split(' ')[0]}'s Google Calendar${r.invited ? ', invite sent to the client' : ''}${r.meet ? ' - Google Meet: '+r.meet : ''}`; }
+// Send an email from the signed-in colleague's Gmail.
+function b64url(str){ const bytes = new TextEncoder().encode(str); let bin = ''; for(let i=0; i<bytes.length; i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000)); return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function b64(str){ const bytes = new TextEncoder().encode(str); let bin = ''; for(let i=0; i<bytes.length; i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000)); return btoa(bin); }
+async function gmailSend(tok, {to, subject, body}){
+  const mime = [`To: ${to.join(', ')}`, `Subject: =?UTF-8?B?${b64(subject)}?=`, 'MIME-Version: 1.0', 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', b64(body).replace(/.{76}/g, '$&\r\n')].join('\r\n');
+  return gFetch(tok, 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {method:'POST', body:{raw: b64url(mime)}});
+}
+
 /* ---- Reminders, appointments and the outcome of meeting ---- */
 const MEETING_NOTE_MIN = 20;
 // Once something is typed or picked, its red "missing" outline goes.
@@ -9848,7 +9981,7 @@ function renderBookingArea(lead, area){
     return;
   }
   // schedule: book an appointment or set a reminder
-  const appt = st.kind==='appointment';
+  const appt = st.kind==='appointment', gOn = gApiOn();
   const tmr = new Date(Date.now() + 86400000);
   area.innerHTML = `<div class="inline-form bk-form">
       <div class="op-title" style="font-weight:700; margin-bottom:10px;">${appt ? 'Book an appointment' : 'Set a reminder'}${st.prelude ? ' <span class="mt-sub" style="font-weight:500;">(your note is saved with it)</span>' : ''}</div>
@@ -9859,14 +9992,15 @@ function renderBookingArea(lead, area){
       </div>
       <div class="field"><label for="fuComment">Note (optional)</label><textarea id="fuComment" placeholder="${appt ? 'e.g. Go through LTA quotes with Sarah and James' : 'e.g. Try again after 5pm'}"></textarea></div>
       <div class="fu-actions">
-        ${appt ? `<button class="btn btn-primary btn-sm" data-bk="invite" ${leadEmails(l).length ? '' : 'disabled title="Add the client\'s email to the case first"'}>${ico('calendar')} Add to Calendar – Client invite</button>
-        <button class="btn btn-secondary btn-sm" data-bk="calendar">${ico('calendar')} Add to Calendar – No invite</button>`
-        : `<button class="btn btn-primary btn-sm" data-bk="calendar">${ico('calendar')} Save &amp; add to Google Calendar</button>`}
+        ${appt ? `<button class="btn btn-primary btn-sm" data-bk="invite" ${leadEmails(l).length ? '' : 'disabled title="Add the client\'s email to the case first"'}>${ico('calendar')} ${gOn ? 'Book &amp; invite client' : 'Add to Calendar – Client invite'}</button>
+        <button class="btn btn-secondary btn-sm" data-bk="calendar">${ico('calendar')} ${gOn ? 'Book in my calendar only' : 'Add to Calendar – No invite'}</button>`
+        : `<button class="btn btn-primary btn-sm" data-bk="calendar">${ico('calendar')} ${gOn ? 'Save &amp; add to my calendar' : 'Save &amp; add to Google Calendar'}</button>`}
         <button class="btn btn-ghost btn-sm" data-bk="save">Save without adding to Calendar</button>
         <button class="btn btn-ghost btn-sm" data-bk="cancel">Cancel</button>
       </div>
       <div class="fu-hint">${appt ? 'Calendar title: <b>' + esc(calTitle({clientName:l.clientName})) + '</b>' : 'Calendar title: <b>' + esc(calTitle({clientName:l.clientName, followUpKind:'reminder'})) + '</b>. A reminder keeps a new case in New Cases until you speak to the client.'}</div>
-      ${appt ? (leadEmails(l).length ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(leadEmails(l).join(', '))}</b>. In Google, click <b>Save</b>, then <b>Send</b>.</span></div>`
+      ${gOn ? `<div class="fu-invite g-on">${ico('calendarCheck')}<span>Goes straight into your Google Calendar (${esc(gEmail())})${appt ? '; video calls get a Google Meet link' : ''}.</span></div>` : ''}
+      ${appt ? (leadEmails(l).length ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(leadEmails(l).join(', '))}</b>. ${gOn ? 'Google sends it automatically.' : 'In Google, click <b>Save</b>, then <b>Send</b>.'}</span></div>`
         : `<div class="fu-invite none">${ico('info')}<span>No client email on this case, so a client invite isn't available. <button type="button" class="linkish" id="bkAddEmail">Add an email</button></span></div>`) : ''}
     </div>`;
   const addEm = document.getElementById('bkAddEmail');
@@ -9878,24 +10012,32 @@ function renderBookingArea(lead, area){
     const miss = [!date && 'fuDate', !time && 'fuTime'].filter(Boolean);
     if(miss.length){ miss.forEach(id=> document.getElementById(id).classList.add('missing')); document.getElementById(miss[0]).focus(); toast('Choose a date and time.','error'); return; }
     if(callDueAt(date, time).getTime() <= Date.now()){ document.getElementById('fuTime').classList.add('missing'); toast('Choose a date and time in the future.','error'); return; }
-    const gTab = mode!=='save' ? window.open('about:blank', '_blank') : null;
+    // Signed in with Google: straight into their calendar. Otherwise the Google Calendar link as before.
+    const useG = mode!=='save' && gApiOn();
+    const tokP = useG ? gToken(G_CAL) : null;
+    const gTab = mode!=='save' && !useG ? window.open('about:blank', '_blank') : null;
     area.querySelectorAll('[data-bk]').forEach(x=> x.disabled = true);
     const when = fmtDateSlash(date) + ` at ${time}`;
-    const calNote = mode==='invite' ? ' - Calendar invite prepared for the client' : mode==='calendar' ? ' - Added to calendar' : '';
     const patch = {followUpDate:date, followUpTime:time, followUpKind:st.kind, apptType:type, followUpNote:note||null, ...(appt ? {status:'existing'} : {})};
+    const calP = useG ? tokP.then(tok=> gcalUpsert(tok, {...(LEADS[lead.id] || l), id:lead.id, ...patch}, mode==='invite')).then(r=> ({r}), err=> ({err})) : Promise.resolve(null);
+    calP.then(g=>{
+    const calNote = g ? (g.r ? gcalNote(g.r) : ' - Not added to Google Calendar') : mode==='invite' ? ' - Calendar invite prepared for the client' : mode==='calendar' ? ' - Added to calendar' : '';
+    if(g && g.r) Object.assign(patch, gcalFields(g.r));
     const entry = appt ? {type:'followup', via:'appointment', text:`Appointment booked (${APPT_TYPES[type]}) - ${when}${note ? ' - '+note : ''}${calNote}`}
       : {type:'reminder', text:`Reminder set - ${when}${note ? ' - '+note : ''}${calNote}`};
-    (st.prelude ? logAudit(lead.id, {...st.prelude, ...by()}) : Promise.resolve())
+    return (st.prelude ? logAudit(lead.id, {...st.prelude, ...by()}) : Promise.resolve())
       .then(()=> logAudit(lead.id, {...entry, ...by(), at:Date.now()+1}, patch))
       .then(()=>{
         if(gTab){
           const url = googleCalUrl({...(LEADS[lead.id] || l), id:lead.id, ...patch}, {invite: mode==='invite'});
           try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
         }
-        const cal = mode==='invite' ? ' In Google, click Save, then Send to invite the client.' : mode==='calendar' ? ' Google Calendar opened: click Save there.' : '';
-        toast(appt ? `Appointment booked for ${fmtDate(date)} at ${time}. ${l.status==='new' ? 'Moved to Appointments / Research.' : ''}${cal}` : `Reminder set for ${fmtDate(date)} at ${time}.${l.status==='new' ? ' Still in New Cases until you speak to the client.' : ''}${cal}`,'success');
+        const cal = g ? (g.r ? (g.r.invited ? ' Added to your Google Calendar and the client has been sent the invite.' : ' Added to your Google Calendar.') + (g.r.meet ? ' Google Meet link added.' : '') : ` Saved, but it couldn't go in your Google Calendar (${g.err.message}).`)
+          : mode==='invite' ? ' In Google, click Save, then Send to invite the client.' : mode==='calendar' ? ' Google Calendar opened: click Save there.' : '';
+        toast(appt ? `Appointment booked for ${fmtDate(date)} at ${time}. ${l.status==='new' ? 'Moved to Appointments / Research.' : ''}${cal}` : `Reminder set for ${fmtDate(date)} at ${time}.${l.status==='new' ? ' Still in New Cases until you speak to the client.' : ''}${cal}`, g && g.err ? 'info' : 'success');
         actionUIState = null; refreshLeadModal();
-      })
+      });
+    })
       .catch(err=>{ if(gTab) gTab.close(); toast('Could not save: '+err.message,'error'); area.querySelectorAll('[data-bk]').forEach(x=> x.disabled = false); });
   }));
 }
@@ -11985,7 +12127,7 @@ function comReminderDueHtml(c){
     </div>`;
 }
 function comScheduleHtml(c){
-  const appt = comAct.kind==='appointment', tmr = new Date(Date.now() + 86400000);
+  const appt = comAct.kind==='appointment', tmr = new Date(Date.now() + 86400000), gOn = gApiOn();
   return `<div class="inline-form bk-form">
       <div class="op-title" style="font-weight:700; margin-bottom:10px;">${appt ? 'Book an appointment' : 'Set a reminder'}${comAct.prelude ? ' <span class="mt-sub" style="font-weight:500;">(your note is saved with it)</span>' : ''}</div>
       ${appt ? `<div class="field"><label for="comApType">Type of appointment</label><select id="comApType">${Object.entries(APPT_TYPES).map(([k, v])=> `<option value="${k}">${esc(v)}</option>`).join('')}</select></div>` : ''}
@@ -11995,14 +12137,15 @@ function comScheduleHtml(c){
       </div>
       <div class="field"><label for="comFuNote">Note (optional)</label><textarea id="comFuNote" placeholder="${appt ? 'e.g. Go through the bridging terms with Sarah' : 'e.g. Chase the valuation report'}"></textarea></div>
       <div class="fu-actions">
-        ${appt ? `<button class="btn btn-primary btn-sm" data-cbk="invite" ${c.email ? '' : 'disabled title="Add the client\'s email to the case first"'}>${ico('calendar')} Add to Calendar – Client invite</button>
-        <button class="btn btn-secondary btn-sm" data-cbk="calendar">${ico('calendar')} Add to Calendar – No invite</button>`
-        : `<button class="btn btn-primary btn-sm" data-cbk="calendar">${ico('calendar')} Save &amp; add to Google Calendar</button>`}
+        ${appt ? `<button class="btn btn-primary btn-sm" data-cbk="invite" ${c.email ? '' : 'disabled title="Add the client\'s email to the case first"'}>${ico('calendar')} ${gOn ? 'Book &amp; invite client' : 'Add to Calendar – Client invite'}</button>
+        <button class="btn btn-secondary btn-sm" data-cbk="calendar">${ico('calendar')} ${gOn ? 'Book in my calendar only' : 'Add to Calendar – No invite'}</button>`
+        : `<button class="btn btn-primary btn-sm" data-cbk="calendar">${ico('calendar')} ${gOn ? 'Save &amp; add to my calendar' : 'Save &amp; add to Google Calendar'}</button>`}
         <button class="btn btn-ghost btn-sm" data-cbk="save">Save without adding to Calendar</button>
         <button class="btn btn-ghost btn-sm" data-cbk="cancel">Cancel</button>
       </div>
       <div class="fu-hint">Calendar title: <b>${esc(comCalTitle(comCalLead({...c, followUpKind:comAct.kind})))}</b></div>
-      ${appt ? (c.email ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(c.email)}</b>. In Google, click <b>Save</b>, then <b>Send</b>.</span></div>`
+      ${gOn ? `<div class="fu-invite g-on">${ico('calendarCheck')}<span>Goes straight into your Google Calendar (${esc(gEmail())})${appt ? '; video calls get a Google Meet link' : ''}.</span></div>` : ''}
+      ${appt ? (c.email ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(c.email)}</b>. ${gOn ? 'Google sends it automatically.' : 'In Google, click <b>Save</b>, then <b>Send</b>.'}</span></div>`
         : `<div class="fu-invite none">${ico('info')}<span>No client email on this case, so a client invite isn't available. Add one with <b>✎ Edit</b> on the details below.</span></div>`) : ''}
     </div>`;
 }
@@ -12057,7 +12200,7 @@ function renderComCase(){
       <button type="button" class="action-btn ld-decline-btn ${comAct && comAct.stage==='lost' ? 'on' : ''}" data-cact="lost">${ico('xCircle')}Not proceeding</button>
     </div>` : '';
   const nextBookHtml = !open ? '' : c.followUpDate && !due
-    ? `<div class="sib-next ${fuKind(c)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${fuKind(c)==='reminder' ? '🔔' : '⏰'}</span><div><b>${esc(fuKindLabel(c))}: ${esc(followUpBadge(c.followUpDate, c.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${fuKind(c)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened'}${c.followUpNote ? ' · '+esc(c.followUpNote) : ''}</small></div>${calButtonsHtml(comCalLead(c))}</div>`
+    ? `<div class="sib-next ${fuKind(c)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${fuKind(c)==='reminder' ? '🔔' : '⏰'}</span><div><b>${esc(fuKindLabel(c))}: ${esc(followUpBadge(c.followUpDate, c.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${fuKind(c)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened'}${c.followUpNote ? ' · '+esc(c.followUpNote) : ''}${c.meetLink ? ` · <a href="${esc(c.meetLink)}" target="_blank" rel="noopener" class="meet-link">Join Google Meet</a>` : ''}</small></div>${calButtonsHtml(comCalLead(c))}</div>`
     : !c.followUpDate ? `<div class="sib-next bad"><span class="ic" aria-hidden="true">⚠️</span><div><b>Nothing booked yet</b><small>Set a reminder or book an appointment: every open case needs its next step booked.</small></div></div>` : '';
   const dyn = !comAct ? '' : comAct.stage==='meeting' ? comMeetingHtml(c) : comAct.stage==='reminderdue' ? comReminderDueHtml(c)
     : comAct.stage==='schedule' ? comScheduleHtml(c) : comAct.stage==='lost' ? comLostHtml() : comAct.stage==='complete' ? comCompleteHtml(c) : '';
@@ -12153,23 +12296,31 @@ function renderComCase(){
     const miss = [!date && 'comFuDate', !time && 'comFuTime'].filter(Boolean);
     if(miss.length){ miss.forEach(x=> document.getElementById(x).classList.add('missing')); document.getElementById(miss[0]).focus(); toast('Choose a date and time.','error'); return; }
     if(callDueAt(date, time).getTime() <= Date.now()){ document.getElementById('comFuTime').classList.add('missing'); toast('Choose a date and time in the future.','error'); return; }
-    const gTab = mode!=='save' ? window.open('about:blank', '_blank') : null;
+    const useG = mode!=='save' && gApiOn();
+    const tokP = useG ? gToken(G_CAL) : null;
+    const gTab = mode!=='save' && !useG ? window.open('about:blank', '_blank') : null;
     const btns = Array.from(dynArea.querySelectorAll('[data-cbk]')); btns.forEach(x=> x.disabled = true);
     const when = fmtDateSlash(date) + ` at ${time}`;
-    const calNote = mode==='invite' ? ' - Calendar invite prepared for the client' : mode==='calendar' ? ' - Added to calendar' : '';
     const moveTo = comAct.stageTo && comAct.stageTo!==c.stage ? comAct.stageTo : null;
     const patch = {followUpDate:date, followUpTime:time, followUpKind:comAct.kind, apptType:type, followUpNote:note||null, ...(moveTo ? {stage:moveTo} : {})};
-    const list = [...(comAct.prelude ? [comAct.prelude] : []), ...(moveTo ? [{type:'status', text:`Moved to ${COM_STAGES.find(s=> s[0]===moveTo)[1]}`}] : []),
+    const act = comAct;
+    const calP = useG ? tokP.then(tok=> gcalUpsert(tok, comCalLead({...(COM[id] || c0), id, ...patch}), mode==='invite')).then(r=> ({r}), err=> ({err})) : Promise.resolve(null);
+    calP.then(g=>{
+    const calNote = g ? (g.r ? gcalNote(g.r) : ' - Not added to Google Calendar') : mode==='invite' ? ' - Calendar invite prepared for the client' : mode==='calendar' ? ' - Added to calendar' : '';
+    if(g && g.r) Object.assign(patch, gcalFields(g.r));
+    const list = [...(act.prelude ? [act.prelude] : []), ...(moveTo ? [{type:'status', text:`Moved to ${COM_STAGES.find(s=> s[0]===moveTo)[1]}`}] : []),
       appt ? {type:'followup', via:'appointment', apptType:type, text:`Appointment booked (${APPT_TYPES[type]}) - ${when}${note ? ' - '+note : ''}${calNote}`}
            : {type:'reminder', text:`Reminder set - ${when}${note ? ' - '+note : ''}${calNote}`}];
-    comUpdate(id, patch, list).then(()=>{
+    return comUpdate(id, patch, list).then(()=>{
       if(gTab){
         const url = googleCalUrl(comCalLead({...(COM[id] || c0), id, ...patch}), {invite: mode==='invite'});
         try{ gTab.location.href = url; } catch(e){ window.open(url, '_blank'); }
       }
-      const cal = mode==='invite' ? ' In Google, click Save, then Send to invite the client.' : mode==='calendar' ? ' Google Calendar opened: click Save there.' : '';
-      toast(`${appt ? 'Appointment booked' : 'Reminder set'} for ${fmtDate(date)} at ${time}.${moveTo ? ' Moved to '+COM_STAGES.find(s=> s[0]===moveTo)[1]+'.' : ''}${cal}`,'success');
+      const cal = g ? (g.r ? (g.r.invited ? ' Added to your Google Calendar and the client has been sent the invite.' : ' Added to your Google Calendar.') + (g.r.meet ? ' Google Meet link added.' : '') : ` Saved, but it couldn't go in your Google Calendar (${g.err.message}).`)
+        : mode==='invite' ? ' In Google, click Save, then Send to invite the client.' : mode==='calendar' ? ' Google Calendar opened: click Save there.' : '';
+      toast(`${appt ? 'Appointment booked' : 'Reminder set'} for ${fmtDate(date)} at ${time}.${moveTo ? ' Moved to '+COM_STAGES.find(s=> s[0]===moveTo)[1]+'.' : ''}${cal}`, g && g.err ? 'info' : 'success');
       comAct = null; renderComCase();
+    });
     }).catch(err=>{ if(gTab) gTab.close(); fail(btns)(err); });
   }));
   // Not proceeding

@@ -16,7 +16,15 @@
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid && newData.isString() && (!data.exists() || data.val() === newData.val()) && root.child('users').child(newData.val()).exists() && auth.token.email === newData.val().toLowerCase().replace(' ', '-').replace('\\'', '-').replace('--', '-').replace('--', '-') + '@plt.internal'"
+        ".write": "auth != null && auth.uid === $uid && newData.isString() && (!data.exists() || data.val() === newData.val()) && root.child('users').child(newData.val()).exists() && (auth.token.email === newData.val().toLowerCase().replace(' ', '-').replace('\\'', '-').replace('--', '-').replace('--', '-') + '@plt.internal' || (auth.token.firebase.sign_in_provider === 'google.com' && auth.token.email_verified === true && root.child('googleLogins').child(auth.token.email.toLowerCase().replace('.', ',')).val() === newData.val()))"
+      }
+    },
+
+    "googleLogins": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      "$key": {
+        ".read": "auth != null && auth.token.firebase.sign_in_provider === 'google.com' && auth.token.email_verified === true && $key === auth.token.email.toLowerCase().replace('.', ',')"
       }
     },
 

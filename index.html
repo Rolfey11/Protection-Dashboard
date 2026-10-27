@@ -1554,6 +1554,47 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 .role-badge.admin{background:var(--brand-tint); color:var(--brand-dark);}
 .role-badge.mapa{background:var(--blue-bg); color:var(--blue);}
 .role-badge.pa{background:var(--green-bg); color:var(--green);}
+.ai-btn{display:inline-flex; align-items:center; gap:6px; border:1.5px solid color-mix(in srgb, #7C3AED 40%, var(--border-2)); background:color-mix(in srgb, #7C3AED 7%, var(--surface)); color:#6D28D9; border-radius:10px; padding:7px 12px; font:inherit; font-size:13px; font-weight:700; cursor:pointer;}
+.ai-btn:hover{background:color-mix(in srgb, #7C3AED 13%, var(--surface));}
+.ai-sum{padding:12px 18px 0;}
+.ai-row{display:flex; gap:8px; flex-wrap:wrap;}
+.ai-foot .linkish{font-size:11px;}
+.ai-card{border:1px solid color-mix(in srgb, #7C3AED 30%, var(--border)); background:color-mix(in srgb, #7C3AED 5%, var(--surface)); border-radius:12px; padding:12px 14px; font-size:13px; line-height:1.5;}
+.ai-card p{margin:6px 0;}
+.ai-card ul{margin:6px 0 0; padding-left:18px;}
+.ai-hd{display:flex; align-items:center; justify-content:space-between; gap:8px; font-weight:700; color:#6D28D9;}
+.ai-next{margin-top:4px;}
+.ai-foot{margin-top:8px; font-size:11px; color:var(--text-faint);}
+.ai-loading{display:flex; align-items:center; gap:8px; font-size:13px; color:#6D28D9; padding:6px 0;}
+.ai-loading .spin{width:14px; height:14px; border-radius:50%; border:2px solid color-mix(in srgb, #7C3AED 30%, transparent); border-top-color:#7C3AED; animation:spin .7s linear infinite;}
+.ai-err{font-size:12.5px; color:var(--red);}
+.ai-write{margin:-4px 0 14px;}
+.ai-write-lbl{display:block; font-size:12.5px; font-weight:600; margin:10px 0 4px;}
+.ai-write textarea{width:100%; padding:9px 12px; border:1.5px solid color-mix(in srgb, #7C3AED 30%, var(--border-2)); border-radius:10px; font:inherit; font-size:13px; background:var(--surface); color:var(--text); margin-bottom:8px; resize:vertical;}
+.ai-note{font-size:11.5px; color:var(--text-faint);}
+.ai-tidy{display:none; margin:4px 0 2px; border:0; background:none; padding:0; font:inherit; font-size:12px; font-weight:700; color:#6D28D9; cursor:pointer;}
+body.ai-on .ai-tidy{display:inline-block;}
+.ai-tidy:disabled{opacity:.6; cursor:progress;}
+body:not(.ai-on) #askBtn{display:none;}
+#askBtn svg{stroke:#7C3AED;}
+.ask-panel{position:fixed; top:0; right:0; bottom:0; width:min(420px, 100vw); z-index:120; display:flex; flex-direction:column; background:var(--surface); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(46,15,35,.18); transform:translateX(105%); visibility:hidden; transition:transform .22s ease, visibility 0s .22s;}
+.ask-panel.open{transform:none; visibility:visible; transition:transform .22s ease;}
+.ask-hd{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); color:#6D28D9; font-size:15px;}
+.ask-log{flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px;}
+.ask-msg{max-width:88%; padding:9px 12px; border-radius:12px; font-size:13.5px; line-height:1.5; overflow-wrap:anywhere;}
+.ask-msg p{margin:0 0 6px;} .ask-msg p:last-child{margin:0;}
+.ask-msg ul{margin:4px 0 6px; padding-left:18px;}
+.ask-msg.me{align-self:flex-end; background:var(--brand); color:#fff; white-space:pre-wrap;}
+.ask-msg.ai{align-self:flex-start; background:color-mix(in srgb, #7C3AED 6%, var(--surface)); border:1px solid color-mix(in srgb, #7C3AED 22%, var(--border));}
+.ask-case{display:block; font-size:11px; opacity:.8; margin-top:4px;}
+.ask-empty{color:var(--text-muted); font-size:13px;}
+.ask-empty .ask-eg{display:block; width:100%; text-align:left; margin-top:8px; padding:8px 11px; border:1px solid var(--border); border-radius:10px; background:var(--surface); font:inherit; font-size:12.5px; color:var(--text); cursor:pointer;}
+.ask-empty .ask-eg:hover{border-color:#7C3AED;}
+.ask-foot{border-top:1px solid var(--border); padding:10px 16px 14px;}
+.ask-ctx{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); margin-bottom:6px;}
+.ask-ctx b{color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.ask-foot textarea{width:100%; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; font:inherit; font-size:13.5px; background:var(--surface); color:var(--text); resize:none;}
+.ask-row{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px;}
 .em-sig{margin:2px 0 10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--bg); font-size:12.5px;}
 .em-sig-lbl{display:flex; align-items:center; gap:7px; font-weight:600; color:var(--green); flex-wrap:wrap;} .em-sig-lbl.warn{color:var(--amber);}
 .em-sig-lbl .ico{width:15px; height:15px;}
@@ -1947,6 +1988,9 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       </div>
 
       <div class="topbar-right">
+        <button class="bell-btn" id="askBtn" title="Ask Claude anything" aria-label="Ask Claude">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+        </button>
         <button class="bell-btn" id="helpBtn" title="Help: how to use the tracker" aria-label="Help">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
         </button>
@@ -2674,6 +2718,16 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <p class="sub">Update what colleagues see without a code change. Changes apply to everyone straight away.</p>
           </div>
         </div>
+        <div class="insights-card" id="aiSettingsCard" style="margin-bottom:18px;">
+          <div class="section-lbl" style="margin-top:0;">✨ AI assistant (Claude)</div>
+          <p class="sub" style="margin:0 0 10px;">Paste the address of your Claude assistant (the Cloudflare Worker) to turn on <b>✨ Ask Claude</b>, <b>✨ Summarise</b>, <b>✨ Write with AI</b> and <b>✨ Tidy up</b> for everyone. Leave it blank to turn them off.</p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <input type="url" id="aiUrlInput" placeholder="https://protection-ai.yourname.workers.dev" style="flex:1; min-width:260px; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; font:inherit; font-size:13px; background:var(--surface); color:var(--text);">
+            <button type="button" class="btn btn-secondary btn-sm" id="aiUrlTest">Test</button>
+            <button type="button" class="btn btn-primary btn-sm" id="aiUrlSave">Save</button>
+          </div>
+          <div class="field-hint" id="aiUrlStatus"></div>
+        </div>
         <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start;">
           <div class="insights-card" style="flex:1; min-width:300px;">
             <div class="section-lbl" style="margin-top:0;">Email templates</div>
@@ -2855,6 +2909,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="lead-left" id="comLeft"></div>
       <div class="lead-right">
         <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> History</div>
+        <div class="ai-sum hidden" id="aiSum_com"></div>
         <div class="audit-list" id="comAudit"></div>
       </div>
     </div>
@@ -3144,6 +3199,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="lead-left" id="sibLeft"></div>
       <div class="lead-right">
         <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> History</div>
+        <div class="ai-sum hidden" id="aiSum_sib"></div>
         <div class="audit-list" id="sibAudit"></div>
       </div>
     </div>
@@ -3168,6 +3224,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="lead-left" id="leadLeftPane"><!-- populated by JS --></div>
       <div class="lead-right">
         <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail</div>
+        <div class="ai-sum hidden" id="aiSum_lead"></div>
         <div class="audit-list" id="auditList"></div>
       </div>
     </div>
@@ -3237,6 +3294,14 @@ table.users-table tr:hover td{background:var(--brand-tint);}
       <div class="field">
         <label for="emTemplate">Email Templates</label>
         <select id="emTemplate"></select>
+      </div>
+      <div class="ai-write hidden" id="aiWrite">
+        <button type="button" class="ai-btn" id="aiWriteBtn">✨ Write with AI</button>
+        <div class="hidden" id="aiWriteForm">
+          <label for="aiWriteAsk" class="ai-write-lbl">What should the email say?</label>
+          <textarea id="aiWriteAsk" rows="2" maxlength="1000" placeholder="e.g. Chase the GP report and offer a call on Thursday afternoon. (Pick a template first and AI will fill it in.)"></textarea>
+          <div style="display:flex; gap:8px; align-items:center;"><button type="button" class="btn btn-primary btn-sm" id="aiWriteGo">✨ Write it</button><span class="ai-note">You'll check it before it's sent.</span></div>
+        </div>
       </div>
       <div class="field hidden em-decline" id="emDeclineWrap">
         <label>Reason for declining <span class="em-req">required</span></label>
@@ -3383,6 +3448,18 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 </div>
 
 <div id="toastHost"></div>
+<aside class="ask-panel" id="askPanel" aria-label="Ask Claude" aria-hidden="true">
+  <div class="ask-hd">
+    <b>✨ Ask Claude</b>
+    <div style="display:flex; gap:12px; align-items:center;"><button type="button" class="linkish" id="askNew">New chat</button><button type="button" class="modal-close" id="askClose" aria-label="Close">✕</button></div>
+  </div>
+  <div class="ask-log" id="askLog"></div>
+  <div class="ask-foot">
+    <label class="ask-ctx hidden" id="askCtxWrap"><input type="checkbox" id="askCtx" checked> Include the case I have open: <b id="askCtxName"></b></label>
+    <textarea id="askInput" rows="2" maxlength="4000" placeholder="Ask anything… (Enter to send, Shift+Enter for a new line)"></textarea>
+    <div class="ask-row"><span class="ai-note">AI can make mistakes. Check anything important.</span><button type="button" class="btn btn-primary btn-sm" id="askSend">Send</button></div>
+  </div>
+</aside>
 
 <script>
 // Runs after the (deferred) Firebase libraries above have loaded.
@@ -4060,7 +4137,7 @@ function logout(){
   db.ref('leads').off();
   notifsQuery().off();
   db.ref('clientSources').off();
-  db.ref('config').off(); CONFIG = {};
+  db.ref('config').off(); CONFIG = {}; document.body.classList.remove('ai-on'); askReset();
   gTok = null; gTokClient = null; gTokWait = null; gAsked = new Set(); gSig = undefined; gSigState = ''; gcalEvents = {};
   db.ref('pins').off(); db.ref('googleLogins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {}; GLOGINS = {}; googleResolving = false;
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
@@ -4253,6 +4330,7 @@ function celebrate(msg, big=true){
 let entryFromPin = false; // the sign-in animation plays after typing a PIN, not on a refresh
 function enterApp(){
   if(forcePinActive) return;
+  aiSync();
   const ls = document.getElementById('loginScreen'), shell = document.getElementById('appShell');
   const fromLogin = !ls.classList.contains('hidden');
   const animate = fromLogin && entryFromPin && motionOK();
@@ -4754,6 +4832,8 @@ document.getElementById('reasonsResetBtn').addEventListener('click', ()=>{
   db.ref('config/sibOutcomeReasons').remove().then(()=> toast('Standard reasons restored','success')).catch(err=> toast('Could not save: '+err.message,'error'));
 });
 function renderContentSettings(){
+  const aiIn = document.getElementById('aiUrlInput');
+  if(document.activeElement!==aiIn) aiIn.value = CONFIG.aiUrl || '';
   convoDraft = null; renderConvoPrompts();
   renderReasonsEditor();
   const custom = savedTemplates();
@@ -6470,6 +6550,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-27f', date:'2026-10-27', items:[
+    {text:"<b>✨ AI assistant (Claude)</b>, once Management has switched it on: the <b>✨ Ask Claude</b> button at the top opens a chat where you can ask anything, and the one in a case window asks about that case; <b>✨ Summarise this case</b> above the history gives where the case stands, the next step and anything to watch out for; <b>✨ Write with AI</b> in the email window drafts the email (or fills in a template) for you to check; and <b>✨ Tidy up</b> under note boxes turns rough notes into clear ones (with Undo). Always read what it writes before using it."},
+  ]},
   {id:'2026-10-27e', date:'2026-10-27', items:[
     {text:"<b>Day, Week, Work week and Month views</b> on the Calendar, like Google Calendar. Day and week views show each appointment at its time, with your Google Calendar alongside (if you sign in with Google) and a red line for now. Click a day's date to open that day, or a booking to open the case. Your choice is remembered."},
   ]},
@@ -6736,7 +6819,7 @@ const SETTINGS_SECTIONS = [
   ['settingsColleagueSection', 'Colleagues', 'team', 'Add colleagues, user levels and PINs, and client sources.'],
   ['settingsUploadSection', 'Upload leads', 'upload', 'Add protection leads in bulk from a spreadsheet, or restore a backup.'],
   ['settingsAppSection', 'App, alerts & reminders', 'bell', 'Install the desktop app, and turn on new lead alerts and call reminders.'],
-  ['settingsContentSection', 'Templates & prompts', 'mail', 'Email templates, Send in Blue protection prompts and outcome reasons, and Useful Info tables.'],
+  ['settingsContentSection', 'Templates & prompts', 'mail', 'Email templates, the AI assistant, Send in Blue protection prompts and outcome reasons, and Useful Info tables.'],
   ['settingsSibSection', 'Send in Blue data', 'sheet', 'Upload, download, back up and bulk delete Send in Blue cases.'],
   ['settingsBulkDeleteSection', 'Bulk delete', 'trash', 'Delete protection leads by Task Created date.'],
   ['settingsRecycleBinSection', 'Recycle Bin', 'restore', 'Restore protection leads deleted in the last 30 days.'],
@@ -7362,6 +7445,7 @@ function startAuthedListeners(){
 
   db.ref('config').on('value', snap=>{
     CONFIG = snap.val() || {};
+    aiSync();
     resetReferenceData();
     if(currentUser && currentUser.role==='management' && !document.getElementById('page-settings').classList.contains('hidden')) renderContentSettings();
   }, ()=>{ CONFIG = {}; }); // older rules without /config: the standard versions are used
@@ -8275,6 +8359,8 @@ function openEmailCompose(leadId, fromAction=false){
   document.getElementById('emSend').textContent = gOn ? 'Send email' : 'Send in Gmail';
   document.getElementById('emSendDraft').classList.toggle('hidden', !gOn);
   renderEmSig();
+  document.getElementById('aiWrite').classList.toggle('hidden', !aiOn());
+  document.getElementById('aiWriteForm').classList.add('hidden'); document.getElementById('aiWriteAsk').value = '';
   document.getElementById('emHint').textContent = gOn
     ? `Sends straight from your Gmail (${gEmail()}) with your Gmail signature added, so it's in your Sent items and replies come to you. A copy is saved to the audit trail so anyone can view what was sent.`
     : 'Opens Gmail in a new window with this filled in. Click Send there, then close that window to come back here. A copy is saved to the audit trail so anyone can view what was sent.';
@@ -8889,6 +8975,7 @@ const HELP = [
     {t:'Commercial', h:`<b>Commercial</b> sits next to Protection and Send in Blue at the top, for colleagues ticked <b>Commercial</b> in Settings → Colleagues (Management ticks the box). Press <b>New lead</b> for the client name, business name, email, telephone, lead source (Referral and Other ask for detail) and category, and choose the adviser. Cases move through <b>New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete</b>; Complete asks for the lender and value. Open a case to move it, add notes or edit its details. Every open case needs its next step booked: <b>Book appointment</b> (phone, video or face to face) or <b>Set reminder</b>, with one-click Google Calendar. When an appointment's time has passed, record the <b>Outcome of meeting</b>; a due reminder needs a note and a new booking. <b>Not proceeding</b> takes a case off the board (see the <b>Not proceeding</b> button above the lanes; it can be reopened). MAPAs can't leave a case without its next step booked, and overdue items must be cleared when they open Commercial. The Commercial <b>Calendar</b> tab shows every booking. MAPAs see their own cases; Management and Admin see everyone's.`},
     {t:'Sign in with Google', roles:['management'], h:`Colleagues can sign in with their work Google account (e.g. @mu-mortgages.com or @gurkhamortgages) instead of their PIN. In <b>Settings → Colleagues</b>, edit the colleague and add their <b>Google email</b>. They then press <b>Sign in with Google</b> on the login screen and pick that account. Only emails added here can get in. Remove the email to stop Google sign-in; their PIN keeps working either way.`},
     {t:'Google Calendar and Gmail', roles:['mapa','management','admin'], h:`When you've signed in with Google:<ul><li><b>Booking</b> an appointment or reminder puts it straight into your Google Calendar. <b>Book &amp; invite client</b> also sends the client the invite, and <b>video calls</b> get a Google Meet link (shown on the case as <b>Join Google Meet</b>). Rebooking moves the same event and updates the client.</li><li>The <b>Calendar</b> tab also shows everything in your own Google Calendar (in grey), alongside your bookings. Untick <b>My Google Calendar</b> to hide it.</li><li><b>Email client</b> sends straight from your Gmail with your <b>Gmail signature</b> added, so it's in your Sent items and replies come to you. A copy is saved on the case. If Google has a problem, use <b>Open in Gmail instead</b>.</li></ul>The first time, Google shows a window asking you to allow access to your calendar and to send email: tick both and press <b>Continue</b>. Signed in with your PIN, everything works as before (the Google Calendar link and a Gmail draft).`},
+    {t:'AI assistant (Claude)', h:`When Management has switched it on (Settings → Templates &amp; prompts → AI assistant):<ul><li><b>✨ Ask Claude</b>, the sparkle button at the top, opens a chat. Ask anything: about mortgages or protection, help wording something, or about a case. To ask about a case, press <b>✨ Ask Claude</b> in the case window (above the history); <b>Include the case I have open</b> is ticked for you. <b>New chat</b> starts again; chats aren't saved.</li><li><b>✨ Summarise this case</b>, above the history on any case, gives a short summary, the next step and anything to watch out for. Press <b>Update</b> after new activity.</li><li><b>✨ Write with AI</b>, in the email window: say what the email should cover (or pick a template first) and it drafts the subject and message for you to check and change.</li><li><b>✨ Tidy up</b>, under note boxes, turns a rough note into clear notes without adding anything; <b>Undo tidy</b> puts yours back.</li></ul>It only uses what's on the case, and phone numbers and email addresses aren't sent. It can still get things wrong, so always read it before relying on it or sending it.`},
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
     {t:'Refer to a protection adviser', roles:['mapa','management'], h:`On a case in <b>New Cases</b> or <b>Appointments / Research</b> you can do the protection yourself, or press <b>Refer to protection adviser</b>. Choose the adviser, add the appointment type, date and time if you've agreed one with the client (leave the date blank if not), and write a detailed handover note (at least 20 characters): the mortgage, completion date, family, health and what cover they want. The case moves to the protection adviser: into Appointments / Research if you booked a time, otherwise New Cases for them to book. They'll see your handover at the top of the case and a <b>↪ your name</b> tag on the card.`},
@@ -10160,6 +10247,205 @@ document.getElementById('gcalToggle').addEventListener('change', function(){
   try{ localStorage.setItem('plt_gcalView_'+currentUser.id, this.checked ? '1' : '0'); }catch(e){}
   if(this.checked) gcalLoad(true);
   renderCalendar();
+});
+
+/* ---- AI assistant (Claude) ----
+   Switched on by Management pasting the assistant's address (a Cloudflare
+   Worker holding the Claude API key, see claude-worker.js) into Settings.
+   The browser sends the task and the case details with the colleague's
+   Firebase sign-in token; nothing is saved. Everything Claude writes is
+   shown for the adviser to check: summaries, email drafts, tidied notes. */
+function aiUrl(){ return String((CONFIG && CONFIG.aiUrl) || '').trim(); }
+function aiOn(){ return !!currentUser && !!aiUrl() && !!auth.currentUser; }
+function aiSync(){ const on = aiOn(); document.body.classList.toggle('ai-on', on); if(!on) askClose(); ['lead','com','sib'].forEach(k=> aiSumRender(k)); }
+async function aiAsk(task, input, url){
+  const tok = await auth.currentUser.getIdToken();
+  let r;
+  try{ r = await fetch(url || aiUrl(), {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+tok}, body: JSON.stringify(Array.isArray(input) ? {task, messages:input} : {task, input})}); }
+  catch(e){ throw new Error("Couldn't reach the AI assistant. Check its address in Settings → Templates & prompts."); }
+  const j = await r.json().catch(()=> ({}));
+  if(!r.ok) throw new Error(j.error || `The AI assistant returned an error (${r.status}).`);
+  return j.result;
+}
+function aiHistory(audit, max=120){
+  return Object.values(audit||{}).filter(a=> a && a.at).sort((a,b)=> a.at-b.at).slice(-max)
+    .map(a=> `${fmtDateTime(a.at)} · ${a.byName || 'System'}: ${a.text || ''}`).join('\n');
+}
+// Case details for Claude: what's needed to understand the case, without phone numbers or email addresses.
+function aiLeadContext(l){
+  const pols = leadPolicies(l);
+  return ['Protection case', `Client(s): ${l.clientName}`, `Stage: ${STATUS_LABELS[potOf(l)] || l.status}`, `Adviser: ${l.advisorName || 'Unassigned'}`,
+    l.clientSource ? `Lead source: ${l.clientSource}` : '', l.appDate ? `Task created: ${fmtDate(l.appDate)}` : '',
+    l.followUpDate ? `Next booked: ${l.followUpKind ? fuKindLabel(l) : 'Call'} ${bookingWhen(l)}${l.followUpNote ? ' ('+l.followUpNote+')' : ''}` : 'Nothing booked',
+    l.referralNote ? `Referred by ${l.referredByName || 'a MAPA'}: ${l.referralNote}` : '',
+    pols.length ? `Policies: ${policiesText(pols)}` : '', l.commission!=null ? `Commission: £${l.commission}` : '',
+    l.quotesSentAt ? `Quotes sent: ${fmtDate(l.quotesSentAt)}` : '', l.termsNote ? `Terms: ${l.termsNote}` : '',
+    l.declineReason ? `Declined: ${l.declineReason}${l.declineDetail ? ' - '+l.declineDetail : ''}` : '',
+    `Today: ${fmtDate(Date.now())}`, '', 'History (oldest first):', aiHistory(l.audit)].filter(x=> x!=='').join('\n');
+}
+function aiComContext(c){
+  return ['Commercial finance case', `Client: ${c.clientName || ''}`, c.businessName ? `Business: ${c.businessName}` : '', `Category: ${c.category || ''}`,
+    `Stage: ${c.stage==='lost' ? 'Not proceeding' : comStage(c)[1]}`, `Adviser: ${c.advisorName || ''}`, `Lead source: ${comSourceLabel(c)}`,
+    c.followUpDate ? `Next booked: ${comBookingLabel(c)} ${bookingWhen(c)}${c.followUpNote ? ' ('+c.followUpNote+')' : ''}` : 'Nothing booked',
+    c.stage==='complete' ? `Completed with ${c.lender || ''}, ${comMoney(c.value)}` : '', c.lostReason ? `Not proceeding: ${c.lostReason}${c.lostDetail ? ' - '+c.lostDetail : ''}` : '',
+    `Today: ${fmtDate(Date.now())}`, '', 'History (oldest first):', aiHistory(c.audit)].filter(x=> x!=='').join('\n');
+}
+function aiSibContext(c){
+  return ['Send in Blue mortgage retention case (client coming to the end of their mortgage product)', `Client: ${c.mailingName || ''}`, c.month ? `Month: ${sibMonthLong ? sibMonthLong(c.month) : c.month}` : '',
+    c.servicingAdviser ? `Servicing adviser: ${c.servicingAdviser}` : '', c.lender ? `Lender: ${c.lender}` : '', `Outcome: ${sibOutcome(c)}${c.outcomeReason ? ' - '+c.outcomeReason : ''}`,
+    c.letterDate ? `Letter date: ${fmtDate(c.letterDate)}` : '', c.notes ? `Case notes: ${c.notes}` : '',
+    `Today: ${fmtDate(Date.now())}`, '', 'History (oldest first):', aiHistory(c.audit)].filter(x=> x!=='').join('\n');
+}
+// ✨ Summarise: a box above each case window's history.
+const aiSumState = {}; // 'kind:id' → {loading} | {err} | {data, n}
+function aiSumOpen(kind){
+  if(kind==='lead') return activeLeadId && LEADS[activeLeadId] && document.getElementById('leadOverlay').classList.contains('open') ? {id:activeLeadId, rec:LEADS[activeLeadId], ctx:aiLeadContext} : null;
+  if(kind==='com') return comOpenId && COM[comOpenId] && document.getElementById('comOverlay').classList.contains('open') ? {id:comOpenId, rec:COM[comOpenId], ctx:aiComContext} : null;
+  return sibOpenKey && SIB[sibOpenKey] && document.getElementById('sibOverlay').classList.contains('open') ? {id:sibOpenKey, rec:SIB[sibOpenKey], ctx:aiSibContext} : null;
+}
+function aiSumRender(kind){
+  const box = document.getElementById('aiSum_'+kind); if(!box) return;
+  const cur = aiOn() ? aiSumOpen(kind) : null;
+  if(!cur){ box.classList.add('hidden'); box.innerHTML = ''; return; }
+  box.classList.remove('hidden');
+  const key = kind+':'+cur.id, st = aiSumState[key], n = Object.keys(cur.rec.audit||{}).length;
+  const askB = `<button type="button" class="ai-btn" data-ai-ask>✨ Ask Claude</button>`;
+  const html = !st ? `<div class="ai-row"><button type="button" class="ai-btn" data-ai-sum>✨ Summarise this case</button>${askB}</div>`
+    : st.loading ? `<div class="ai-loading"><span class="spin"></span>Reading the case…</div>`
+    : st.err ? `<div class="ai-err">${esc(st.err)} <button type="button" class="linkish" data-ai-sum>Try again</button></div><div class="ai-row">${askB}</div>`
+    : `<div class="ai-card"><div class="ai-hd"><span>✨ Summary</span><button type="button" class="linkish" data-ai-sum>${st.n!==n ? 'Update (new activity)' : 'Refresh'}</button></div>
+        <p>${esc(st.data.summary || '')}</p>${st.data.next_step ? `<div class="ai-next"><b>Next step:</b> ${esc(st.data.next_step)}</div>` : ''}
+        ${(st.data.watch_outs||[]).length ? `<ul>${st.data.watch_outs.map(w=> `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
+        <div class="ai-foot">Written by AI from the case history. Check before relying on it. <button type="button" class="linkish" data-ai-ask>✨ Ask Claude about this case</button></div></div>`;
+  if(box.dataset.html === html) return; // nothing changed (the history list redraws often)
+  box.dataset.html = html; box.innerHTML = html;
+  const a = box.querySelector('[data-ai-ask]');
+  if(a) a.addEventListener('click', ()=>{ document.getElementById('askCtx').checked = true; askOpen(); });
+  const b = box.querySelector('[data-ai-sum]');
+  if(b) b.addEventListener('click', ()=>{
+    aiSumState[key] = {loading:true}; aiSumRender(kind);
+    aiAsk('summary', cur.ctx(cur.rec)).then(data=>{ aiSumState[key] = {data, n}; }, e=>{ aiSumState[key] = {err:e.message}; }).finally(()=> aiSumRender(kind));
+  });
+}
+['auditList','comAudit','sibAudit'].forEach((id, i)=>{
+  const el = document.getElementById(id); if(!el) return;
+  new MutationObserver(()=> aiSumRender(['lead','com','sib'][i])).observe(el, {childList:true});
+});
+// ✨ Write with AI in the email window
+document.getElementById('aiWriteBtn').addEventListener('click', ()=>{ document.getElementById('aiWriteForm').classList.toggle('hidden'); document.getElementById('aiWriteAsk').focus(); });
+document.getElementById('aiWriteGo').addEventListener('click', function(){
+  const l = LEADS[emailLeadId]; if(!l) return;
+  const ask = document.getElementById('aiWriteAsk').value.trim();
+  const subj = document.getElementById('emSubject').value.trim(), body = document.getElementById('emBody').value.trim();
+  if(!ask && !body){ toast('Say what the email should cover, or pick a template first.','error'); document.getElementById('aiWriteAsk').focus(); return; }
+  const input = [aiLeadContext(l), '', `Adviser sending the email: ${currentUser.name}`, `Client's name(s): ${l.clientName}`,
+    ask ? `What the adviser wants to say: ${ask}` : 'Fill in this template for the client.',
+    body ? `\nCurrent draft / template:\nSubject: ${subj}\n${body}` : ''].join('\n');
+  this.disabled = true; this.textContent = '✨ Writing…';
+  aiAsk('email', input).then(r=>{
+    if(r && r.subject) document.getElementById('emSubject').value = r.subject;
+    if(r && r.body) document.getElementById('emBody').value = r.body;
+    document.getElementById('aiWriteForm').classList.add('hidden');
+    toast('Draft written. Read it through and change anything before sending.','success');
+  }).catch(e=> toast(e.message,'error')).finally(()=>{ this.disabled = false; this.textContent = '✨ Write it'; });
+});
+// ✨ Tidy up under note boxes
+const AI_TIDY = ['mtNote','rdNote','refNote','fbNote','spFbNote','tcNote','quickNote','dcDetail','chNote','fuComment','comMtNote','comRdNote','comNote','comLostNote','comFuNote','cnwNote','sibCallNote','sibNoteText','sibOutNote','sibRefNote','sibApNote','sibEdNotes'];
+function aiDecorate(){
+  AI_TIDY.forEach(id=>{ const t = document.getElementById(id); if(!t || t.dataset.aiTidy) return; t.dataset.aiTidy = '1'; t.insertAdjacentHTML('afterend', `<button type="button" class="ai-tidy" data-ai-tidy-for="${id}">✨ Tidy up</button>`); });
+}
+let aiDecoPending = false;
+new MutationObserver(()=>{ if(aiDecoPending) return; aiDecoPending = true; requestAnimationFrame(()=>{ aiDecoPending = false; aiDecorate(); }); }).observe(document.body, {childList:true, subtree:true});
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-ai-tidy-for]'); if(!b) return;
+  e.preventDefault();
+  const t = document.getElementById(b.dataset.aiTidyFor); if(!t) return;
+  if(b.dataset.undo != null){ t.value = b.dataset.undo; delete b.dataset.undo; t.dispatchEvent(new Event('input', {bubbles:true})); b.textContent = '✨ Tidy up'; return; }
+  const before = t.value.trim();
+  if(before.length < 10){ toast('Write a few words first, then tidy them up.','error'); t.focus(); return; }
+  b.disabled = true; b.textContent = '✨ Tidying…';
+  aiAsk('tidy', before).then(txt=>{
+    if(!document.body.contains(t)) return;
+    t.value = String(txt || '').trim() || before; t.dispatchEvent(new Event('input', {bubbles:true}));
+    b.dataset.undo = before; b.textContent = '↶ Undo tidy';
+  }).catch(err=>{ toast(err.message,'error'); b.textContent = '✨ Tidy up'; }).finally(()=>{ b.disabled = false; });
+});
+// ✨ Ask Claude: a chat panel from the top bar. The conversation lives only in this tab.
+let askMsgs = [], askBusy = false; // {role, content (what Claude gets), show (what's on screen), caseName}
+function aiMd(t){ // Claude's plain-text reply: paragraphs, "- " bullets and **bold**
+  return String(t||'').split(/\n{2,}/).map(block=>{
+    const lines = block.split('\n'), fmt = x=> esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    if(lines.every(x=> /^\s*[-*•] /.test(x))) return `<ul>${lines.map(x=> `<li>${fmt(x.replace(/^\s*[-*•] /,''))}</li>`).join('')}</ul>`;
+    return lines.map(x=> /^\s*[-*•] /.test(x) ? `<ul><li>${fmt(x.replace(/^\s*[-*•] /,''))}</li></ul>` : `<p>${fmt(x)}</p>`).join('');
+  }).join('');
+}
+function askCase(){
+  for(const k of ['sib','com','lead']){ const cur = aiSumOpen(k); if(cur) return {name: cur.rec.clientName || cur.rec.mailingName || 'this case', ctx: cur.ctx(cur.rec)}; }
+  return null;
+}
+function askCtxRender(){
+  const c = askCase();
+  document.getElementById('askCtxWrap').classList.toggle('hidden', !c);
+  document.getElementById('askCtxName').textContent = c ? c.name : '';
+}
+function askRender(){
+  const log = document.getElementById('askLog');
+  if(!askMsgs.length){
+    const egs = ['What should I do next on the case I have open?', "Explain the difference between level and decreasing term cover in plain English.", "Help me word a message to a client who's gone quiet after quotes."];
+    log.innerHTML = `<div class="ask-empty">Ask anything: about a case, mortgages or protection, or help wording something. Open a case first to ask about it.${egs.map(e=> `<button type="button" class="ask-eg">${esc(e)}</button>`).join('')}</div>`;
+    return;
+  }
+  log.innerHTML = askMsgs.map(m=> m.role==='user'
+    ? `<div class="ask-msg me">${esc(m.show)}${m.caseName ? `<span class="ask-case">with ${esc(m.caseName)}'s case</span>` : ''}</div>`
+    : `<div class="ask-msg ai">${aiMd(m.content)}</div>`).join('')
+    + (askBusy ? `<div class="ask-msg ai"><div class="ai-loading" style="padding:0;"><span class="spin"></span>Thinking…</div></div>` : '');
+  log.scrollTop = log.scrollHeight;
+}
+function askOpen(){
+  const p = document.getElementById('askPanel'); p.classList.add('open'); p.setAttribute('aria-hidden','false');
+  askCtxRender(); askRender(); setTimeout(()=> document.getElementById('askInput').focus(), 60);
+}
+function askClose(){ const p = document.getElementById('askPanel'); if(!p) return; p.classList.remove('open'); p.setAttribute('aria-hidden','true'); }
+function askReset(){ askMsgs = []; askBusy = false; document.getElementById('askInput').value = ''; askClose(); }
+function askSend(){
+  const inp = document.getElementById('askInput'), q = inp.value.trim();
+  if(!q || askBusy) return;
+  const c = document.getElementById('askCtx').checked ? askCase() : null;
+  askMsgs.push({role:'user', show:q, caseName: c ? c.name : '', content: c ? `The case I have open:\n${c.ctx}\n\nMy question (I'm ${currentUser.name}): ${q}` : `(I'm ${currentUser.name}.) ${q}`});
+  inp.value = ''; askBusy = true; askRender();
+  aiAsk('ask', askMsgs.map(m=> ({role:m.role, content:m.content}))).then(r=>{
+    askMsgs.push({role:'assistant', content: String(r || '').trim() || '(No answer.)'});
+  }, e=>{
+    const last = askMsgs.pop(); if(!inp.value) inp.value = last.show; // put the question back to try again
+    toast(e.message,'error');
+  }).finally(()=>{ askBusy = false; askRender(); });
+}
+document.getElementById('askBtn').addEventListener('click', ()=> document.getElementById('askPanel').classList.contains('open') ? askClose() : askOpen());
+document.getElementById('askClose').addEventListener('click', askClose);
+document.getElementById('askNew').addEventListener('click', ()=>{ if(askBusy) return; askMsgs = []; askRender(); document.getElementById('askInput').focus(); });
+document.getElementById('askSend').addEventListener('click', askSend);
+document.getElementById('askInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); askSend(); }
+  else if(e.key==='Escape'){ e.stopPropagation(); askClose(); }
+});
+document.getElementById('askInput').addEventListener('focus', askCtxRender);
+document.getElementById('askLog').addEventListener('click', e=>{
+  const b = e.target.closest('.ask-eg'); if(!b) return;
+  const inp = document.getElementById('askInput'); inp.value = b.textContent; inp.focus();
+});
+
+// Settings: the assistant's address
+function aiUrlValid(u){ return /^https:\/\/[^\s/]+(\/\S*)?$/.test(u); }
+document.getElementById('aiUrlSave').addEventListener('click', ()=>{
+  const u = document.getElementById('aiUrlInput').value.trim();
+  if(u && !aiUrlValid(u)){ toast('That address should start with https://','error'); return; }
+  db.ref('config/aiUrl').set(u || null).then(()=> toast(u ? 'AI assistant switched on for everyone.' : 'AI assistant switched off.','success')).catch(err=> toast('Could not save: '+err.message,'error'));
+});
+document.getElementById('aiUrlTest').addEventListener('click', function(){
+  const u = document.getElementById('aiUrlInput').value.trim(), st = document.getElementById('aiUrlStatus');
+  if(!aiUrlValid(u)){ st.textContent = 'Paste the address first (it starts with https://).'; return; }
+  this.disabled = true; st.textContent = 'Testing…';
+  aiAsk('tidy', 'spoke to clnt re LTA, sending quotes tmrw', u).then(r=>{ st.textContent = `✓ Working. Claude tidied a test note to: "${r}"`; }, e=>{ st.textContent = '✗ ' + e.message; }).finally(()=>{ this.disabled = false; });
 });
 
 /* ---- Reminders, appointments and the outcome of meeting ---- */

@@ -1554,6 +1554,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 .role-badge.admin{background:var(--brand-tint); color:var(--brand-dark);}
 .role-badge.mapa{background:var(--blue-bg); color:var(--blue);}
 .role-badge.pa{background:var(--green-bg); color:var(--green);}
+.em-sig{margin:2px 0 10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--bg); font-size:12.5px;}
+.em-sig-lbl{display:flex; align-items:center; gap:7px; font-weight:600; color:var(--green); flex-wrap:wrap;} .em-sig-lbl.warn{color:var(--amber);}
+.em-sig-lbl .ico{width:15px; height:15px;}
+.em-sig-help{margin-top:6px; color:var(--text-muted); line-height:1.5;}
+.em-sig-frame{display:block; width:100%; height:130px; margin-top:8px; border:1px solid var(--border); border-radius:8px; background:#fff;}
 .fu-invite.g-on{color:var(--green);} .meet-link{font-weight:700; color:var(--blue);}
 .u-google{font-size:11.5px; font-weight:500; color:var(--text-muted); margin-top:2px;}
 .role-badge.management{background:var(--brand-tint); color:var(--brand);}
@@ -3253,6 +3258,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
         <label for="emBody">Message</label>
         <textarea id="emBody" style="min-height:200px;"></textarea>
       </div>
+      <div class="em-sig hidden" id="emSigBox"></div>
       <div class="field-hint" id="emHint">Opens Gmail in a new window with this filled in. Click Send there, then close that window to come back here. A copy is saved to the audit trail so anyone can view what was sent.</div>
     </div>
     <div class="modal-foot">
@@ -4055,7 +4061,7 @@ function logout(){
   notifsQuery().off();
   db.ref('clientSources').off();
   db.ref('config').off(); CONFIG = {};
-  gTok = null; gTokClient = null; gTokWait = null; gAsked = new Set(); gSig = undefined; gcalEvents = {};
+  gTok = null; gTokClient = null; gTokWait = null; gAsked = new Set(); gSig = undefined; gSigState = ''; gcalEvents = {};
   db.ref('pins').off(); db.ref('googleLogins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {}; GLOGINS = {}; googleResolving = false;
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
   db.ref('sib/cases').off(); sibListening = false; sibLoaded = false; SIB = {}; sibOpenKey = null;
@@ -8268,6 +8274,7 @@ function openEmailCompose(leadId, fromAction=false){
   const gOn = gApiOn();
   document.getElementById('emSend').textContent = gOn ? 'Send email' : 'Send in Gmail';
   document.getElementById('emSendDraft').classList.toggle('hidden', !gOn);
+  renderEmSig();
   document.getElementById('emHint').textContent = gOn
     ? `Sends straight from your Gmail (${gEmail()}) with your Gmail signature added, so it's in your Sent items and replies come to you. A copy is saved to the audit trail so anyone can view what was sent.`
     : 'Opens Gmail in a new window with this filled in. Click Send there, then close that window to come back here. A copy is saved to the audit trail so anyone can view what was sent.';
@@ -9994,8 +10001,8 @@ function gApiOn(){
 function gEmail(){ return auth.currentUser ? String(auth.currentUser.email||'') : ''; }
 // Call straight from a click (Google may need to show its window). want: extra
 // permissions that are nice to have (asked for once; carry on without them).
-function gToken(scope, want=[]){
-  if(gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(scope) && want.every(w=> gTok.scopes.includes(w) || gAsked.has(w))) return Promise.resolve(gTok.token);
+function gToken(scope, want=[], {force=false}={}){
+  if(!force && gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(scope) && want.every(w=> gTok.scopes.includes(w) || gAsked.has(w))) return Promise.resolve(gTok.token);
   [scope, ...want].forEach(w=> gAsked.add(w));
   return new Promise((resolve, reject)=>{
     if(gTokWait) gTokWait.reject(new Error('Superseded'));
@@ -10012,7 +10019,7 @@ function gToken(scope, want=[]){
         },
         error_callback: e=>{ const w = gTokWait; gTokWait = null; if(w) w.reject(new Error(e && e.type==='popup_closed' ? 'The Google window was closed.' : e && e.type==='popup_failed_to_open' ? 'Your browser blocked the Google window. Allow pop-ups for this site.' : 'Google access was not granted.')); }
       });
-      gTokClient.requestAccessToken();
+      gTokClient.requestAccessToken(force ? {prompt:'consent'} : undefined);
     }catch(e){ gTokWait = null; reject(e); }
   });
 }
@@ -10054,15 +10061,36 @@ function gcalNote(r, invite){ return !r ? '' : ` - In ${currentUser.name.split('
 function b64url(str){ const bytes = new TextEncoder().encode(str); let bin = ''; for(let i=0; i<bytes.length; i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000)); return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function b64(str){ const bytes = new TextEncoder().encode(str); let bin = ''; for(let i=0; i<bytes.length; i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000)); return btoa(bin); }
 // Their default Gmail signature (HTML), fetched once per sign-in; '' if none or not allowed.
+let gSigState = ''; // '' not checked · 'ok' · 'empty' · 'noperm' · 'error: …'
 async function gSignature(tok){
   if(gSig !== undefined) return gSig;
-  if(!(gTok && gTok.scopes.includes(G_SET))) return '';
+  if(!(gTok && gTok.scopes.includes(G_SET))){ gSigState = 'noperm'; return ''; }
   try{
     const r = await gFetch(tok, 'https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs');
-    const list = r.sendAs || [], me = list.find(a=> a.isDefault) || list.find(a=> a.isPrimary) || list[0];
+    const list = r.sendAs || [], mine = gEmail().toLowerCase();
+    const me = list.find(a=> String(a.sendAsEmail||'').toLowerCase()===mine && a.signature) || list.find(a=> a.isDefault && a.signature) || list.find(a=> a.isPrimary && a.signature) || list.find(a=> a.signature);
     gSig = (me && me.signature) || '';
-  }catch(e){ return ''; }
+    gSigState = gSig ? 'ok' : 'empty';
+  }catch(e){ gSigState = 'error: '+e.message; return ''; }
   return gSig;
+}
+// The signature line in the email window: a preview, or why there isn't one.
+function renderEmSig(){
+  const box = document.getElementById('emSigBox'); if(!box) return;
+  if(!gApiOn()){ box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  const st = gSig !== undefined ? gSigState : (gTok && gAsked.has(G_SET) && !gTok.scopes.includes(G_SET)) ? 'noperm' : gSigState;
+  const how = `In Gmail: <b>Settings → See all settings → General → Signature</b>. Create your signature, then under <b>Signature defaults</b> set <b>For new emails use</b> to it, and press <b>Save changes</b> at the bottom.`;
+  box.innerHTML = st==='ok' ? `<div class="em-sig-lbl">${ico('checkCircle')} Your Gmail signature will be added:</div><iframe class="em-sig-frame" sandbox="" title="Your Gmail signature"></iframe>`
+    : st==='empty' ? `<div class="em-sig-lbl warn">${ico('alert')} Gmail has no signature set for new emails, so none will be added.</div><div class="em-sig-help">${how} Then press <button type="button" class="linkish" id="emSigRecheck">Check again</button>.</div>`
+    : st==='noperm' ? `<div class="em-sig-lbl warn">${ico('alert')} The tracker doesn't have permission to read your Gmail signature.</div><div class="em-sig-help"><button type="button" class="btn btn-secondary btn-sm" id="emSigAllow">Allow signature</button> Google will ask again: tick the box about your <b>Gmail settings</b>, then Continue.</div>`
+    : st.startsWith('error') ? `<div class="em-sig-lbl warn">${ico('alert')} Couldn't read your Gmail signature (${esc(st.slice(7))}).</div><div class="em-sig-help"><button type="button" class="linkish" id="emSigRecheck">Try again</button></div>`
+    : `<div class="em-sig-lbl">${ico('mail')} Your Gmail signature is added when you send. <button type="button" class="linkish" id="emSigRecheck">Preview it</button></div>`;
+  const fr = box.querySelector('.em-sig-frame');
+  if(fr) fr.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:8px; font:13px Arial, sans-serif; color:#222;} img{max-width:100%; height:auto;}</style></head><body>${gSig}</body></html>`;
+  const check = force=>{ gSig = undefined; gSigState = ''; gToken(G_MAIL, [G_SET], {force}).then(tok=> gSignature(tok)).catch(e=>{ gSigState = 'error: '+e.message; }).finally(renderEmSig); };
+  const rc = document.getElementById('emSigRecheck'); if(rc) rc.addEventListener('click', ()=> check(false));
+  const al = document.getElementById('emSigAllow'); if(al) al.addEventListener('click', ()=> check(true));
 }
 function htmlToText(html){
   const d = new DOMParser().parseFromString(String(html).replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|tr|li|h\d)>/gi, '$&\n'), 'text/html');

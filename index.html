@@ -1596,7 +1596,7 @@ body:not(.ai-on) #askBtn{display:none;}
 .ask-foot textarea{width:100%; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; font:inherit; font-size:13.5px; background:var(--surface); color:var(--text); resize:none;}
 .ask-row{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px;}
 .em-sig{margin:2px 0 10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--bg); font-size:12.5px;}
-.em-sig-lbl{display:flex; align-items:center; gap:7px; font-weight:600; color:var(--green); flex-wrap:wrap;} .em-sig-lbl.warn{color:var(--amber);}
+.em-sig-lbl{display:flex; align-items:center; gap:7px; font-weight:600; color:var(--green); flex-wrap:wrap;} .em-sig-lbl.warn{color:var(--amber);} .em-sig-lbl.muted{color:var(--text-muted);}
 .em-sig-lbl .ico{width:15px; height:15px;}
 .em-sig-help{margin-top:6px; color:var(--text-muted); line-height:1.5;}
 .em-sig-own{margin-top:6px; color:var(--text-muted);}
@@ -10178,6 +10178,7 @@ async function gSignature(tok){
 // read or change it). Used instead of Gmail's: for signatures that a Chrome
 // extension or a company signature tool adds, which Gmail can't hand over.
 let MYSIG = '', mySigFor = null, sigEditing = false;
+let emSigChecking = false;
 function mySigListen(){
   if(!currentUser || mySigFor===currentUser.id) return;
   if(mySigFor) db.ref('signatures/'+mySigFor).off();
@@ -10242,7 +10243,13 @@ function renderEmSig(){
     : st==='empty' ? `<div class="em-sig-lbl warn">${ico('alert')} Gmail has no signature set for new emails, so none will be added.</div><div class="em-sig-help">${how} Then press <button type="button" class="linkish" id="emSigRecheck">Check again</button>.</div>`
     : st==='noperm' ? `<div class="em-sig-lbl warn">${ico('alert')} The tracker doesn't have permission to read your Gmail signature.</div><div class="em-sig-help"><button type="button" class="btn btn-secondary btn-sm" id="emSigAllow">Allow signature</button> Google will ask again: tick the box about your <b>Gmail settings</b>, then Continue.</div>`
     : st.startsWith('error') ? `<div class="em-sig-lbl warn">${ico('alert')} Couldn't read your Gmail signature (${esc(st.slice(7))}).</div><div class="em-sig-help"><button type="button" class="linkish" id="emSigRecheck">Try again</button></div>`
-    : `<div class="em-sig-lbl">${ico('mail')} Your Gmail signature is added when you send. <button type="button" class="linkish" id="emSigRecheck">Preview it</button></div>`;
+    : (gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(G_SET)) ? `<div class="em-sig-lbl muted">${ico('mail')} Checking your Gmail signature…</div>`
+    : `<div class="em-sig-lbl muted">${ico('mail')} Your Gmail signature will be added if you have one. <button type="button" class="linkish" id="emSigRecheck">Check it</button></div>`;
+  // Already allowed to read it: check straight away rather than showing a guess.
+  if(!st && gSig===undefined && gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(G_SET) && !emSigChecking){
+    emSigChecking = true;
+    gSignature(gTok.token).finally(()=>{ emSigChecking = false; renderEmSig(); });
+  }
   box.insertAdjacentHTML('beforeend', own);
   document.getElementById('emSigOwn').addEventListener('click', openSigEditor);
   const fr = box.querySelector('.em-sig-frame');

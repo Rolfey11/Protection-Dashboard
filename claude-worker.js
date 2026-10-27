@@ -23,7 +23,7 @@
    has no build step to install the Anthropic SDK with.
    ============================================================================ */
 
-const MODEL = 'claude-opus-5-5';
+const MODEL = 'claude-sonnet-5-5';
 const MAX_INPUT_CHARS = 60000;
 
 const HOUSE = `You help advisers at Michael Usher Mortgage Services, a UK mortgage and protection brokerage, with their case tracker.

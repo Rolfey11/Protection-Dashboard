@@ -1658,6 +1658,11 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 .cal-btn .ico{width:14px; height:14px;}
 .cal-btn:hover{border-color:var(--brand-light); color:var(--brand); background:var(--brand-tint);}
 .cal-btn.google{flex:1.5; background:var(--brand); border-color:var(--brand); color:#fff;}
+.cal-chip.gcal{background:color-mix(in srgb, #64748B 12%, transparent); color:#475569;} .cal-chip.gcal i{background:#64748B;}
+.gcal-toggle{display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600; color:var(--text-muted); padding:8px 12px; border:1.5px solid var(--border-2); border-radius:10px; background:var(--surface); cursor:pointer; user-select:none;}
+.gcal-toggle input{width:16px; height:16px; margin:0; accent-color:var(--brand);}
+.cal-item.gcal{display:block; text-decoration:none; color:inherit; border-left:3px solid #64748B;}
+.gcal-note{font-size:12.5px; color:var(--text-muted); margin:6px 0 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .cal-chip b{font-weight:700; margin-right:4px; font-variant-numeric:tabular-nums;}
 .cal-btn.google:hover{background:var(--brand-dark); border-color:var(--brand-dark); color:#fff;}
 .cal-btns.compact{margin-top:10px;}
@@ -2145,6 +2150,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
             <button class="cal-today" id="calToday">Today</button>
             <button class="cal-navbtn" id="calNext" aria-label="Next month"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
           </div>
+          <label class="gcal-toggle hidden" id="gcalToggleWrap" title="Show everything in your own Google Calendar here too"><input type="checkbox" id="gcalToggle"> My Google Calendar</label>
           <button class="btn btn-secondary" id="calExportAll" title="Download every upcoming call as one calendar file, then import it into Google Calendar or Outlook">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
             Download upcoming
@@ -2162,6 +2168,7 @@ table.users-table tr:hover td{background:var(--brand-tint);}
               <span><i style="background:var(--red)"></i>Overdue</span>
               <span><i style="background:var(--amber)"></i>Today</span>
               <span><i style="background:var(--brand)"></i>Upcoming</span>
+              <span class="hidden" id="gcalLegend"><i style="background:#64748B"></i>Google Calendar</span>
             </div>
           </div>
           <div class="cal-dow"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
@@ -4013,7 +4020,7 @@ function logout(){
   notifsQuery().off();
   db.ref('clientSources').off();
   db.ref('config').off(); CONFIG = {};
-  gTok = null; gTokClient = null; gTokWait = null;
+  gTok = null; gTokClient = null; gTokWait = null; gAsked = new Set(); gSig = undefined; gcalEvents = {};
   db.ref('pins').off(); db.ref('googleLogins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {}; GLOGINS = {}; googleResolving = false;
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
   db.ref('sib/cases').off(); sibListening = false; sibLoaded = false; SIB = {}; sibOpenKey = null;
@@ -5547,7 +5554,7 @@ function renderSibCase(){
   if(act==='email') f.innerHTML = `<div class="inline-form">
       <div class="field"><label for="sibEmSubject">Subject</label><input type="text" id="sibEmSubject" value="Your mortgage rate is coming to an end"></div>
       <div class="field"><label for="sibEmBody">Message</label><textarea id="sibEmBody" style="min-height:200px;">${esc(`Dear ${c.salutation || c.mailingName || ''},\n\nI hope you're well. Your current mortgage product is due to end in ${sibMonthLong(c.month)}, so now is a good time to look at your options.\n\n[Add your message]\n\nKind regards,\n${currentUser.name}`)}</textarea></div>
-      <div class="field-hint">${gApiOn() ? `Sends straight from your Gmail (${esc(gEmail())}).` : 'Opens Gmail with this filled in.'} Anything left in [square brackets] must be filled in first. A copy is saved to the history.</div>
+      <div class="field-hint">${gApiOn() ? `Sends straight from your Gmail (${esc(gEmail())}) with your Gmail signature.` : 'Opens Gmail with this filled in.'} Anything left in [square brackets] must be filled in first. A copy is saved to the history.</div>
       <button class="btn btn-primary btn-sm" id="sibEmSend" style="margin-top:10px;">${gApiOn() ? 'Send email' : 'Open in Gmail'}</button></div>`;
   if(act==='appt') f.innerHTML = sibApptFormHtml(c);
   if(act==='note') f.innerHTML = `<div class="inline-form"><div class="field"><label for="sibNoteText">Note</label><textarea id="sibNoteText"></textarea></div><button class="btn btn-primary btn-sm" id="sibNoteSave">Add note</button></div>`;
@@ -5779,7 +5786,7 @@ function renderSibCase(){
     const leftover = (subject+'\n'+body).match(/\[[^\]\n]{1,300}\]/);
     if(leftover){ toast(`Please fill in or remove "${leftover[0]}" before sending.`,'error'); return; }
     if(gApiOn()){
-      const tokP = gToken(G_MAIL), btnEl = this;
+      const tokP = gToken(G_MAIL, [G_SET]), btnEl = this;
       btnEl.disabled = true; btnEl.textContent = 'Sending…';
       const inRev = sibPot(c)==='reviews';
       tokP.then(tok=> gmailSend(tok, {to:[c.email], subject, body}))
@@ -6422,6 +6429,12 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-27d', date:'2026-10-27', items:[
+    {text:"<b>Your Google Calendar in the Calendar tab</b> (when you sign in with Google): the Calendar now shows everything in your own Google Calendar, in grey, alongside your tracker bookings. Click a day to see it all, with Google Meet links. Untick <b>My Google Calendar</b> to hide it."},
+  ]},
+  {id:'2026-10-27c', date:'2026-10-27', items:[
+    {text:"<b>Your Gmail signature on emails</b>: emails sent from the tracker now include your Gmail signature (logo, links and formatting). The next time you send one, Google asks to allow one more permission: tick it and press <b>Continue</b>. (The tracker only reads your signature.)"},
+  ]},
   {id:'2026-10-27b', date:'2026-10-27', items:[
     {text:"<b>Google Calendar and Gmail, built in</b> (when you sign in with Google): booking an appointment or reminder now puts it straight into your Google Calendar, with no extra Save step. <b>Book &amp; invite client</b> sends the client the invite, and video calls get a <b>Google Meet</b> link. Rebooking moves the same event. <b>Email client</b> now sends straight from your Gmail, and a copy is saved on the case. The first time, Google asks you to <b>Allow</b> access. Signed in with your PIN? Everything works as before."},
   ]},
@@ -8158,7 +8171,7 @@ function openEmailCompose(leadId, fromAction=false){
   document.getElementById('emSend').textContent = gOn ? 'Send email' : 'Send in Gmail';
   document.getElementById('emSendDraft').classList.toggle('hidden', !gOn);
   document.getElementById('emHint').textContent = gOn
-    ? `Sends straight from your Gmail (${gEmail()}), so it's in your Sent items and replies come to you. A copy is saved to the audit trail so anyone can view what was sent.`
+    ? `Sends straight from your Gmail (${gEmail()}) with your Gmail signature added, so it's in your Sent items and replies come to you. A copy is saved to the audit trail so anyone can view what was sent.`
     : 'Opens Gmail in a new window with this filled in. Click Send there, then close that window to come back here. A copy is saved to the audit trail so anyone can view what was sent.';
   openModal('emailComposeOverlay');
   setTimeout(()=> document.getElementById('emSubject').focus(), 50);
@@ -8188,14 +8201,14 @@ function emSendClick(btn, asDraft){
   const leadId = emailLeadId;
   // Signed in with Google: send it from their Gmail, then log it.
   if(!asDraft && gApiOn()){
-    const tokP = gToken(G_MAIL);
+    const tokP = gToken(G_MAIL, [G_SET]);
     self.disabled = true; self.textContent = 'Sending…';
     const patchG = {}, onFileG = leadEmails(l);
     if(to.join(',').toLowerCase() !== onFileG.join(',').toLowerCase()) patchG.clientEmails = to;
     const showOutcomeG = emailFromAction && activeLeadId === leadId;
     tokP.then(tok=> gmailSend(tok, {to, subject, body}))
       .then(res=> logAudit(leadId, {
-        type:'email', text:`Email sent to client - ${subject}`, emailVia:'gmail', gmailId: res.id || null,
+        type:'email', text:`Email sent to client - ${subject}`, emailVia:'gmail', gmailId: res.id || null, emailSignature: res.withSignature || null,
         emailTo: to.join(', '), emailSubject: subject, emailBody: body,
         ...(emLastTemplate ? {emailTemplate: emLastTemplate.name} : {}),
         ...(declineReason ? {emailDeclineReason: declineReason} : {}),
@@ -8452,6 +8465,14 @@ function renderCalendar(){
   const calls = calendarCalls();
   const byDay = {};
   calls.forEach(c=> (byDay[c.day] = byDay[c.day] || []).push(c));
+  // Their own Google Calendar alongside
+  const gOn = gApiOn();
+  document.getElementById('gcalToggleWrap').classList.toggle('hidden', !gOn);
+  document.getElementById('gcalToggle').checked = gcalWanted();
+  document.getElementById('gcalLegend').classList.toggle('hidden', !gcalWanted());
+  gcalLoad(false);
+  const gEv = gcalForMonth(), gByDay = {};
+  gEv.forEach(e=> (gByDay[e.day] = gByDay[e.day] || []).push(e));
   const today = isoDay(new Date());
   if(!calSelected) calSelected = today;
 
@@ -8472,15 +8493,17 @@ function renderCalendar(){
     const d = new Date(start); d.setDate(start.getDate()+i);
     if(i>=35 && d.getMonth()!==m) break; // drop a 6th row that's entirely next month
     const iso = isoDay(d);
-    const list = byDay[iso] || [];
-    const cls = ['cal-cell', d.getMonth()!==m?'out':'', iso===today?'today':'', iso===calSelected?'sel':'', (d.getDay()%6===0)?'wkend':'', list.length?'has':''].join(' ');
-    const chips = list.slice(0,3).map(c=>{
-      const t = callInfo(c).tone;
-      return `<span class="cal-chip ${t}" style="--av:${advisorTone(c.advisorId)}"><i></i>${c.followUpTime ? `<b>${esc(c.followUpTime)}</b>` : ''}${esc(c.clientName)}</span>`;
-    }).join('');
-    const more = list.length>3 ? `<span class="cal-more">+${list.length-3} more</span>` : '';
-    const dots = list.length ? `<span class="cal-dots ${list.some(c=> isCallOverdue(c.followUpDate, c.followUpTime)) ? 'bad' : dueInfo(iso).tone}">${list.length}</span>` : '';
-    cells.push(`<button type="button" class="${cls}" data-day="${iso}" aria-label="${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}, ${list.length} call${list.length===1?'':'s'}">
+    const list = byDay[iso] || [], glist = gByDay[iso] || [];
+    const total = list.length + glist.length;
+    const cls = ['cal-cell', d.getMonth()!==m?'out':'', iso===today?'today':'', iso===calSelected?'sel':'', (d.getDay()%6===0)?'wkend':'', total?'has':''].join(' ');
+    const chipItems = [
+      ...list.map(c=> ({t: c.followUpTime || '99', html:`<span class="cal-chip ${callInfo(c).tone}" style="--av:${advisorTone(c.advisorId)}"><i></i>${c.followUpTime ? `<b>${esc(c.followUpTime)}</b>` : ''}${esc(c.clientName)}</span>`})),
+      ...glist.map(e=> ({t: e.time || '00', html:`<span class="cal-chip gcal" title="Google Calendar: ${esc(e.title)}"><i></i>${e.time ? `<b>${esc(e.time)}</b>` : ''}${esc(e.title)}</span>`}))
+    ].sort((a,b)=> a.t.localeCompare(b.t));
+    const chips = chipItems.slice(0,3).map(x=> x.html).join('');
+    const more = total>3 ? `<span class="cal-more">+${total-3} more</span>` : '';
+    const dots = total ? `<span class="cal-dots ${list.some(c=> isCallOverdue(c.followUpDate, c.followUpTime)) ? 'bad' : dueInfo(iso).tone}">${total}</span>` : '';
+    cells.push(`<button type="button" class="${cls}" data-day="${iso}" aria-label="${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}, ${list.length} call${list.length===1?'':'s'}${glist.length ? `, ${glist.length} in your Google Calendar` : ''}">
       <span class="cal-num">${d.getDate()}</span>${dots}
       <span class="cal-chips">${chips}${more}</span>
     </button>`);
@@ -8509,13 +8532,25 @@ function renderCalendar(){
   document.getElementById('calDayLabel').textContent = sd.toLocaleDateString('en-GB',{day:'numeric', month:'long', year:'numeric'});
   const dayCalls = calSelected < today ? [] : (byDay[calSelected] || []);
   const pastDay = calSelected < today ? (byDay[calSelected]||[]) : [];
-  document.getElementById('calDayCount').textContent = (byDay[calSelected]||[]).length;
+  document.getElementById('calDayCount').textContent = (byDay[calSelected]||[]).length + (gByDay[calSelected]||[]).length;
   const upcoming = calls.filter(c=> c.day > calSelected).slice(0,5);
   document.getElementById('calDayList').innerHTML =
     dayCalls.length ? dayCalls.map(calItemHtml).join('') :
     pastDay.length ? `<div class="cal-empty">${ico('alert')}<span>${pastDay.length} call${pastDay.length>1?'s':''} from this day ${pastDay.length>1?'are':'is'} overdue. See above.</span></div>` :
     `<div class="cal-empty">${ico('calendar')}<span>No calls booked for this day.</span></div>` +
     (upcoming.length ? `<div class="cal-next-lbl">Coming up</div>` + upcoming.map(calItemHtml).join('') : '');
+  // Their Google Calendar for the chosen day
+  if(gOn && gcalWanted()){
+    const st = gcalEvents[gcalKey()] || {}, gday = gByDay[calSelected] || [];
+    const note = st.loading ? `<div class="gcal-note">Loading your Google Calendar…</div>`
+      : st.err ? `<div class="gcal-note" style="color:var(--red);">Couldn't load your Google Calendar (${esc(st.err)}). <button type="button" class="linkish" id="gcalRetry">Try again</button></div>`
+      : !st.list ? `<div class="gcal-note"><button type="button" class="btn btn-secondary btn-sm" id="gcalConnect">${ico('calendar')} Show my Google Calendar</button></div>` : '';
+    const items = gday.map(e=> `<a class="cal-item gcal" ${e.link ? `href="${esc(e.link)}" target="_blank" rel="noopener"` : ''}><div class="cal-item-top"><div class="cal-item-name">${esc(e.title)}</div><span class="cal-due soon">${e.allDay ? 'All day' : esc(e.time)}</span></div><div class="cal-item-sub">Google Calendar${e.meet ? ` · <span class="meet-link" data-meet="${esc(e.meet)}">Join Google Meet</span>` : ''}</div></a>`).join('');
+    document.getElementById('calDayList').insertAdjacentHTML('beforeend', `<div class="cal-next-lbl">From your Google Calendar</div>${note}${items || (st.list ? '<div class="gcal-note">Nothing else in your Google Calendar this day.</div>' : '')}`);
+    const cb = document.getElementById('gcalConnect') || document.getElementById('gcalRetry');
+    if(cb) cb.addEventListener('click', ()=>{ delete gcalEvents[gcalKey()]; gcalLoad(true); renderCalendar(); });
+    document.querySelectorAll('#calDayList [data-meet]').forEach(x=> x.addEventListener('click', ev=>{ ev.preventDefault(); ev.stopPropagation(); window.open(x.dataset.meet, '_blank', 'noopener'); }));
+  }
 
   document.querySelectorAll('#page-calendar .cal-item').forEach(it=> it.addEventListener('click', (e)=>{
     if(e.target.closest('.cal-btns')) return;
@@ -8735,7 +8770,7 @@ const HELP = [
   {group:'Protection cases', items:[
     {t:'Commercial', h:`<b>Commercial</b> sits next to Protection and Send in Blue at the top, for colleagues ticked <b>Commercial</b> in Settings → Colleagues (Management ticks the box). Press <b>New lead</b> for the client name, business name, email, telephone, lead source (Referral and Other ask for detail) and category, and choose the adviser. Cases move through <b>New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete</b>; Complete asks for the lender and value. Open a case to move it, add notes or edit its details. Every open case needs its next step booked: <b>Book appointment</b> (phone, video or face to face) or <b>Set reminder</b>, with one-click Google Calendar. When an appointment's time has passed, record the <b>Outcome of meeting</b>; a due reminder needs a note and a new booking. <b>Not proceeding</b> takes a case off the board (see the <b>Not proceeding</b> button above the lanes; it can be reopened). MAPAs can't leave a case without its next step booked, and overdue items must be cleared when they open Commercial. The Commercial <b>Calendar</b> tab shows every booking. MAPAs see their own cases; Management and Admin see everyone's.`},
     {t:'Sign in with Google', roles:['management'], h:`Colleagues can sign in with their work Google account (e.g. @mu-mortgages.com or @gurkhamortgages) instead of their PIN. In <b>Settings → Colleagues</b>, edit the colleague and add their <b>Google email</b>. They then press <b>Sign in with Google</b> on the login screen and pick that account. Only emails added here can get in. Remove the email to stop Google sign-in; their PIN keeps working either way.`},
-    {t:'Google Calendar and Gmail', roles:['mapa','management','admin'], h:`When you've signed in with Google:<ul><li><b>Booking</b> an appointment or reminder puts it straight into your Google Calendar. <b>Book &amp; invite client</b> also sends the client the invite, and <b>video calls</b> get a Google Meet link (shown on the case as <b>Join Google Meet</b>). Rebooking moves the same event and updates the client.</li><li><b>Email client</b> sends straight from your Gmail, so it's in your Sent items and replies come to you. A copy is saved on the case. If Google has a problem, use <b>Open in Gmail instead</b>.</li></ul>The first time, Google shows a window asking you to allow access to your calendar and to send email: tick both and press <b>Continue</b>. Signed in with your PIN, everything works as before (the Google Calendar link and a Gmail draft).`},
+    {t:'Google Calendar and Gmail', roles:['mapa','management','admin'], h:`When you've signed in with Google:<ul><li><b>Booking</b> an appointment or reminder puts it straight into your Google Calendar. <b>Book &amp; invite client</b> also sends the client the invite, and <b>video calls</b> get a Google Meet link (shown on the case as <b>Join Google Meet</b>). Rebooking moves the same event and updates the client.</li><li>The <b>Calendar</b> tab also shows everything in your own Google Calendar (in grey), alongside your bookings. Untick <b>My Google Calendar</b> to hide it.</li><li><b>Email client</b> sends straight from your Gmail with your <b>Gmail signature</b> added, so it's in your Sent items and replies come to you. A copy is saved on the case. If Google has a problem, use <b>Open in Gmail instead</b>.</li></ul>The first time, Google shows a window asking you to allow access to your calendar and to send email: tick both and press <b>Continue</b>. Signed in with your PIN, everything works as before (the Google Calendar link and a Gmail draft).`},
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
     {t:'Refer to a protection adviser', roles:['mapa','management'], h:`On a case in <b>New Cases</b> or <b>Appointments / Research</b> you can do the protection yourself, or press <b>Refer to protection adviser</b>. Choose the adviser, add the appointment type, date and time if you've agreed one with the client (leave the date blank if not), and write a detailed handover note (at least 20 characters): the mortgage, completion date, family, health and what cover they want. The case moves to the protection adviser: into Appointments / Research if you booked a time, otherwise New Cases for them to book. They'll see your handover at the top of the case and a <b>↪ your name</b> tag on the card.`},
@@ -9837,22 +9872,26 @@ function openThanksWall(){
    isn't available, keeps the Google Calendar link and Gmail draft. */
 const GOOGLE_CLIENT_ID = '92970534570-msaquejoji02tuq2ds7c7hmle06ud7jh.apps.googleusercontent.com';
 const G_CAL = 'https://www.googleapis.com/auth/calendar.events', G_MAIL = 'https://www.googleapis.com/auth/gmail.send';
+// Read-only use: just to fetch each person's Gmail signature for emails sent from here.
+const G_SET = 'https://www.googleapis.com/auth/gmail.settings.basic';
 const GCAL_API = 'https://www.googleapis.com/calendar/v3/calendars/primary';
-let gTok = null, gTokClient = null, gTokWait = null;
+let gTok = null, gTokClient = null, gTokWait = null, gAsked = new Set(), gSig;
 function gApiOn(){
   const u = auth.currentUser;
   return !!currentUser && !!u && isGoogleUser(u) && !!(window.google && google.accounts && google.accounts.oauth2);
 }
 function gEmail(){ return auth.currentUser ? String(auth.currentUser.email||'') : ''; }
-// Call straight from a click (Google may need to show its window).
-function gToken(scope){
-  if(gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(scope)) return Promise.resolve(gTok.token);
+// Call straight from a click (Google may need to show its window). want: extra
+// permissions that are nice to have (asked for once; carry on without them).
+function gToken(scope, want=[]){
+  if(gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(scope) && want.every(w=> gTok.scopes.includes(w) || gAsked.has(w))) return Promise.resolve(gTok.token);
+  [scope, ...want].forEach(w=> gAsked.add(w));
   return new Promise((resolve, reject)=>{
     if(gTokWait) gTokWait.reject(new Error('Superseded'));
     gTokWait = {resolve, reject, scope};
     try{
       if(!gTokClient) gTokClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID, scope: [G_CAL, G_MAIL].join(' '), include_granted_scopes: true, login_hint: gEmail(),
+        client_id: GOOGLE_CLIENT_ID, scope: [G_CAL, G_MAIL, G_SET].join(' '), include_granted_scopes: true, login_hint: gEmail(),
         callback: r=>{
           const w = gTokWait; gTokWait = null; if(!w) return;
           if(r.error){ w.reject(new Error(r.error_description || r.error)); return; }
@@ -9903,10 +9942,87 @@ function gcalNote(r, invite){ return !r ? '' : ` - In ${currentUser.name.split('
 // Send an email from the signed-in colleague's Gmail.
 function b64url(str){ const bytes = new TextEncoder().encode(str); let bin = ''; for(let i=0; i<bytes.length; i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000)); return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function b64(str){ const bytes = new TextEncoder().encode(str); let bin = ''; for(let i=0; i<bytes.length; i+=0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000)); return btoa(bin); }
-async function gmailSend(tok, {to, subject, body}){
-  const mime = [`To: ${to.join(', ')}`, `Subject: =?UTF-8?B?${b64(subject)}?=`, 'MIME-Version: 1.0', 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', b64(body).replace(/.{76}/g, '$&\r\n')].join('\r\n');
-  return gFetch(tok, 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {method:'POST', body:{raw: b64url(mime)}});
+// Their default Gmail signature (HTML), fetched once per sign-in; '' if none or not allowed.
+async function gSignature(tok){
+  if(gSig !== undefined) return gSig;
+  if(!(gTok && gTok.scopes.includes(G_SET))) return '';
+  try{
+    const r = await gFetch(tok, 'https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs');
+    const list = r.sendAs || [], me = list.find(a=> a.isDefault) || list.find(a=> a.isPrimary) || list[0];
+    gSig = (me && me.signature) || '';
+  }catch(e){ return ''; }
+  return gSig;
 }
+function htmlToText(html){
+  const d = new DOMParser().parseFromString(String(html).replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|tr|li|h\d)>/gi, '$&\n'), 'text/html');
+  return (d.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+const mimeB64 = str=> b64(str).replace(/.{76}/g, '$&\r\n');
+async function gmailSend(tok, {to, subject, body}){
+  const sig = await gSignature(tok);
+  const head = [`To: ${to.join(', ')}`, `Subject: =?UTF-8?B?${b64(subject)}?=`, 'MIME-Version: 1.0'];
+  let mime;
+  if(sig){
+    // With their signature: an HTML version (logo, links) and a plain-text one.
+    const bd = 'plt' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const html = `<div dir="ltr">${esc(body).replace(/\n/g, '<br>')}</div><br><div class="gmail_signature" data-smartmail="gmail_signature">${sig}</div>`;
+    mime = [...head, `Content-Type: multipart/alternative; boundary="${bd}"`, '',
+      `--${bd}`, 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', mimeB64(body + '\n\n-- \n' + htmlToText(sig)),
+      `--${bd}`, 'Content-Type: text/html; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', mimeB64(html),
+      `--${bd}--`, ''].join('\r\n');
+  } else {
+    mime = [...head, 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', mimeB64(body)].join('\r\n');
+  }
+  const res = await gFetch(tok, 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {method:'POST', body:{raw: b64url(mime)}});
+  return {...res, withSignature: !!sig};
+}
+
+/* ---- Their Google Calendar on the Calendar page ----
+   Signed in with Google: the month's events from their own calendar show
+   alongside the tracker's bookings (events the tracker made itself aren't
+   shown twice). Loaded with the same Google access as bookings; the first
+   time it needs a click so Google can ask. */
+let gcalEvents = {}; // 'YYYY-M' → {at, list, err, loading}
+function gcalWanted(){ if(!gApiOn()) return false; try{ return localStorage.getItem('plt_gcalView_'+currentUser.id)!=='0'; }catch(e){ return true; } }
+function gcalConnected(){ try{ return localStorage.getItem('plt_gcalOk_'+currentUser.id)==='1'; }catch(e){ return false; } }
+function gcalKey(){ return calCursor.getFullYear()+'-'+calCursor.getMonth(); }
+function gcalHaveToken(){ return !!gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(G_CAL); }
+// Ask for this month's events. Without a live Google token it only goes ahead from a click.
+function gcalLoad(fromClick){
+  if(!gcalWanted()) return;
+  const key = gcalKey(), cached = gcalEvents[key];
+  if(cached && (cached.loading || (!cached.err && Date.now() - cached.at < 5*60000))) return;
+  const clicked = fromClick || !!(navigator.userActivation && navigator.userActivation.isActive && gcalConnected());
+  if(!gcalHaveToken() && !clicked) return;
+  const y = calCursor.getFullYear(), m = calCursor.getMonth(), first = new Date(y, m, 1);
+  const start = new Date(first); start.setDate(1 - ((first.getDay()+6)%7));
+  const end = new Date(start); end.setDate(start.getDate() + 42);
+  gcalEvents[key] = {...(cached||{}), loading:true};
+  gToken(G_CAL)
+    .then(tok=> gFetch(tok, `${GCAL_API}/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(start.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}`))
+    .then(r=>{
+      gcalEvents[key] = {at:Date.now(), list:(r.items||[]).filter(e=> e && e.status!=='cancelled' && e.start).map(e=>{
+        const allDay = !e.start.dateTime, st = allDay ? new Date(e.start.date+'T00:00:00') : new Date(e.start.dateTime);
+        return {id:e.id, title:e.summary || '(No title)', allDay, start:st, day:isoDay(st), time: allDay ? '' : `${String(st.getHours()).padStart(2,'0')}:${String(st.getMinutes()).padStart(2,'0')}`, link:e.htmlLink || null, meet:e.hangoutLink || null};
+      })};
+      try{ localStorage.setItem('plt_gcalOk_'+currentUser.id, '1'); }catch(e){}
+    })
+    .catch(err=>{ gcalEvents[key] = {at:Date.now(), list:[], err:err.message}; })
+    .finally(()=>{ if(!document.getElementById('page-calendar').classList.contains('hidden')) renderCalendar(); });
+}
+// This month's Google events, less the ones the tracker put there itself.
+function gcalForMonth(){
+  if(!gcalWanted()) return [];
+  const c = gcalEvents[gcalKey()]; if(!c || !c.list) return [];
+  const mine = new Set();
+  [LEADS, COM].forEach(src=> Object.values(src||{}).forEach(x=>{ if(x && x.calEventId) mine.add(x.calEventId); }));
+  return c.list.filter(e=> !mine.has(e.id));
+}
+document.getElementById('gcalToggle').addEventListener('change', function(){
+  try{ localStorage.setItem('plt_gcalView_'+currentUser.id, this.checked ? '1' : '0'); }catch(e){}
+  if(this.checked) gcalLoad(true);
+  renderCalendar();
+});
 
 /* ---- Reminders, appointments and the outcome of meeting ---- */
 const MEETING_NOTE_MIN = 20;

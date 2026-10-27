@@ -1595,9 +1595,10 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 .cal-legend{display:flex; gap:14px; font-size:12px; color:var(--text-muted);}
 .cal-legend span{display:inline-flex; align-items:center; gap:6px;}
 .cal-legend i{width:8px; height:8px; border-radius:50%;}
-.cal-dow{display:grid; grid-template-columns:repeat(7,1fr); border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--bg);}
+.cal-dow{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--bg);}
 .cal-dow span{padding:8px 10px; font-size:11.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;}
-.cal-grid{display:grid; grid-template-columns:repeat(7,1fr);}
+.cal-grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr));}
+.cal-cell{min-width:0;} .cal-chip .cc-t{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .cal-cell{
   position:relative; min-height:108px; padding:8px 8px 10px; text-align:left; font:inherit; color:inherit;
   background:var(--surface); border:0; border-right:1px solid var(--border); border-bottom:1px solid var(--border);
@@ -1658,12 +1659,42 @@ table.users-table tr:hover td{background:var(--brand-tint);}
 .cal-btn .ico{width:14px; height:14px;}
 .cal-btn:hover{border-color:var(--brand-light); color:var(--brand); background:var(--brand-tint);}
 .cal-btn.google{flex:1.5; background:var(--brand); border-color:var(--brand); color:#fff;}
+.cal-views{display:inline-flex; border:1.5px solid var(--border-2); border-radius:10px; overflow:hidden; background:var(--surface);}
+.cal-views button{border:0; background:transparent; padding:8px 12px; font:inherit; font-size:13px; font-weight:600; color:var(--text-muted); cursor:pointer;}
+.cal-views button + button{border-left:1px solid var(--border);}
+.cal-views button.on{background:var(--brand); color:#fff;}
+/* Day / week time grid */
+.ct-wrap{overflow-x:auto; border-top:1px solid var(--border);}
+.ct-inner{min-width:var(--ct-min, 0);}
+.ct-row{display:grid; grid-template-columns:56px repeat(var(--cols), minmax(0,1fr));}
+.ct-head{border-bottom:1px solid var(--border); background:var(--bg);}
+.ct-dayhead{border:0; border-left:1px solid var(--border); background:transparent; padding:8px 4px; font:inherit; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--text-muted);}
+.ct-dayhead span{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;}
+.ct-dayhead b{font-size:20px; font-weight:700; color:var(--text); width:36px; height:36px; display:grid; place-items:center; border-radius:50%;}
+.ct-dayhead.today b{background:var(--brand); color:#fff;} .ct-dayhead.sel span{color:var(--brand);}
+.ct-gutter{font-size:10.5px; color:var(--text-faint); padding:6px 6px 0 0; text-align:right;}
+.ct-allday{border-bottom:1px solid var(--border); min-height:30px;}
+.ct-allcell{border-left:1px solid var(--border); padding:3px; display:flex; flex-direction:column; gap:3px; min-width:0;}
+.ct-body{max-height:620px; overflow-y:auto; position:relative;}
+.ct-hours{position:relative;}
+.ct-hour{height:var(--hh); font-size:10.5px; color:var(--text-faint); text-align:right; padding-right:6px; transform:translateY(-6px);}
+.ct-col{position:relative; border-left:1px solid var(--border); height:calc(var(--hh) * 24); background-image:linear-gradient(to bottom, var(--border) 1px, transparent 1px); background-size:100% var(--hh); cursor:pointer;}
+.ct-col.wkend{background-color:color-mix(in srgb, var(--bg) 60%, transparent);}
+.ct-ev{position:absolute; border:0; text-align:left; border-radius:7px; padding:3px 6px; font:inherit; font-size:11.5px; line-height:1.25; overflow:hidden; cursor:pointer; color:#fff; background:var(--brand); box-shadow:0 1px 2px rgba(0,0,0,.12); text-decoration:none; display:block;}
+.ct-ev b{display:block; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ct-ev small{display:block; opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ct-ev.bad{background:var(--red);} .ct-ev.warn{background:var(--amber);}
+.ct-ev.gcal{background:#E2E8F0; color:#334155; border-left:3px solid #64748B;}
+.ct-ev.all{position:static;}
+.ct-now{position:absolute; left:0; right:0; height:2px; background:var(--red); z-index:2; pointer-events:none;}
+.ct-now::before{content:''; position:absolute; left:-5px; top:-4px; width:10px; height:10px; border-radius:50%; background:var(--red);}
+@media (max-width:700px){ .cal-views button{padding:7px 8px; font-size:12px;} }
 .cal-chip.gcal{background:color-mix(in srgb, #64748B 12%, transparent); color:#475569;} .cal-chip.gcal i{background:#64748B;}
 .gcal-toggle{display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600; color:var(--text-muted); padding:8px 12px; border:1.5px solid var(--border-2); border-radius:10px; background:var(--surface); cursor:pointer; user-select:none;}
 .gcal-toggle input{width:16px; height:16px; margin:0; accent-color:var(--brand);}
 .cal-item.gcal{display:block; text-decoration:none; color:inherit; border-left:3px solid #64748B;}
 .gcal-note{font-size:12.5px; color:var(--text-muted); margin:6px 0 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-.cal-chip b{font-weight:700; margin-right:4px; font-variant-numeric:tabular-nums;}
+.cal-chip b{flex:none; font-weight:700; margin-right:4px; font-variant-numeric:tabular-nums;}
 .cal-btn.google:hover{background:var(--brand-dark); border-color:var(--brand-dark); color:#fff;}
 .cal-btns.compact{margin-top:10px;}
 .cal-btns.compact .cal-btn{flex:0 0 auto;}
@@ -2145,6 +2176,9 @@ table.users-table tr:hover td{background:var(--brand-tint);}
           <p class="sub" id="calSub">Booked follow-up calls. Add any call to your own calendar in one click.</p>
         </div>
         <div class="cal-toolbar">
+          <div class="cal-views" role="group" aria-label="Calendar view">
+            <button type="button" data-calview="day">Day</button><button type="button" data-calview="week">Week</button><button type="button" data-calview="workweek">Work week</button><button type="button" data-calview="month">Month</button>
+          </div>
           <div class="cal-nav">
             <button class="cal-navbtn" id="calPrev" aria-label="Previous month"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
             <button class="cal-today" id="calToday">Today</button>
@@ -2171,8 +2205,9 @@ table.users-table tr:hover td{background:var(--brand-tint);}
               <span class="hidden" id="gcalLegend"><i style="background:#64748B"></i>Google Calendar</span>
             </div>
           </div>
-          <div class="cal-dow"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          <div class="cal-dow" id="calDow"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
           <div class="cal-grid" id="calGrid"></div>
+          <div class="ct-wrap hidden" id="calTime"></div>
         </div>
 
         <aside class="cal-side">
@@ -6429,6 +6464,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-27e', date:'2026-10-27', items:[
+    {text:"<b>Day, Week, Work week and Month views</b> on the Calendar, like Google Calendar. Day and week views show each appointment at its time, with your Google Calendar alongside (if you sign in with Google) and a red line for now. Click a day's date to open that day, or a booking to open the case. Your choice is remembered."},
+  ]},
   {id:'2026-10-27d', date:'2026-10-27', items:[
     {text:"<b>Your Google Calendar in the Calendar tab</b> (when you sign in with Google): the Calendar now shows everything in your own Google Calendar, in grey, alongside your tracker bookings. Click a day to see it all, with Google Meet links. Untick <b>My Google Calendar</b> to hide it."},
   ]},
@@ -7878,6 +7916,66 @@ function renderDashKpis(){
    button downloads a standard .ics that Outlook, Apple and Google all open.
    ---------------------------------------------------------------------------- */
 let calCursor = (()=>{ const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+// Day / Week / Work week / Month, remembered per browser like Google Calendar.
+let calView = (()=>{ try{ const v = localStorage.getItem('plt_calView'); return ['day','week','workweek','month'].includes(v) ? v : 'month'; }catch(e){ return 'month'; } })();
+const CT_HOUR = 48; // px per hour in the day / week grid
+function calRange(){
+  if(calView==='month'){ const first = new Date(calCursor.getFullYear(), calCursor.getMonth(), 1); const st = new Date(first); st.setDate(1 - ((first.getDay()+6)%7)); return {start:st, days:42}; }
+  const a = new Date((calSelected || isoDay(new Date()))+'T00:00:00');
+  if(calView==='day') return {start:a, days:1};
+  const mon = new Date(a); mon.setDate(a.getDate() - ((a.getDay()+6)%7));
+  return {start:mon, days: calView==='workweek' ? 5 : 7};
+}
+function setCalView(v){
+  calView = v; try{ localStorage.setItem('plt_calView', v); }catch(e){}
+  if(calSelected){ const d = new Date(calSelected+'T12:00:00'); calCursor = new Date(d.getFullYear(), d.getMonth(), 1); }
+  calScrolled = false; renderCalendar();
+}
+let calScrolled = false;
+document.querySelectorAll('[data-calview]').forEach(b=> b.addEventListener('click', ()=> setCalView(b.dataset.calview)));
+function calShift(n){
+  if(calView==='month') calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+n, 1);
+  else { const d = new Date((calSelected || isoDay(new Date()))+'T12:00:00'); d.setDate(d.getDate() + n*(calView==='day' ? 1 : 7)); calSelected = isoDay(d); calCursor = new Date(d.getFullYear(), d.getMonth(), 1); }
+  renderCalendar();
+}
+// Lay out one day's timed events side by side where they overlap.
+function ctLayout(evs){
+  evs.sort((a,b)=> a.s - b.s || b.e - a.e);
+  const out = []; let group = [], groupEnd = -1;
+  const flush = ()=>{ const lanes = []; group.forEach(ev=>{ let i = lanes.findIndex(end=> end <= ev.s); if(i<0){ i = lanes.length; lanes.push(0); } lanes[i] = ev.e; ev.lane = i; }); group.forEach(ev=> ev.lanes = lanes.length); out.push(...group); group = []; };
+  evs.forEach(ev=>{ if(group.length && ev.s >= groupEnd){ flush(); groupEnd = -1; } group.push(ev); groupEnd = Math.max(groupEnd, ev.e); });
+  if(group.length) flush();
+  return out;
+}
+function renderCalTime(byDay, gByDay, today){
+  const rg = calRange(), days = Array.from({length:rg.days}, (_, i)=>{ const d = new Date(rg.start); d.setDate(rg.start.getDate()+i); return d; });
+  const box = document.getElementById('calTime'), prevScroll = box.querySelector('.ct-body') ? box.querySelector('.ct-body').scrollTop : null;
+  const cols = days.length, nowD = new Date(), nowMin = nowD.getHours()*60 + nowD.getMinutes();
+  const head = days.map(d=>{ const iso = isoDay(d); return `<button type="button" class="ct-dayhead ${iso===today ? 'today' : ''} ${iso===calSelected ? 'sel' : ''}" data-ctday="${iso}" title="Open ${esc(d.toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'}))}"><span>${d.toLocaleDateString('en-GB',{weekday:'short'})}</span><b>${d.getDate()}</b></button>`; }).join('');
+  const allday = days.map(d=>{ const iso = isoDay(d);
+    const items = [...(gByDay[iso]||[]).filter(e=> e.allDay).map(e=> `<a class="ct-ev gcal all" ${e.link ? `href="${esc(e.link)}" target="_blank" rel="noopener"` : ''}><b>${esc(e.title)}</b></a>`),
+      ...(byDay[iso]||[]).filter(c=> !c.followUpTime).map(c=> `<button type="button" class="ct-ev all ${callInfo(c).tone}" data-open="${esc(c.id)}" ${c._com ? 'data-com="1"' : ''}><b>${esc(c.clientName)}</b></button>`)];
+    return `<div class="ct-allcell">${items.join('')}</div>`; }).join('');
+  const hours = Array.from({length:24}, (_, h)=> `<div class="ct-hour">${h ? String(h).padStart(2,'0')+':00' : ''}</div>`).join('');
+  const colsHtml = days.map(d=>{ const iso = isoDay(d);
+    const evs = [
+      ...(byDay[iso]||[]).filter(c=> c.followUpTime).map(c=>{ const [h, mi] = c.followUpTime.split(':').map(Number), st = h*60 + (mi||0); return {s:st, e:st+60, html:(st2, w, l)=> `<button type="button" class="ct-ev ${callInfo(c).tone}" data-open="${esc(c.id)}" ${c._com ? 'data-com="1"' : ''} style="top:${st2}px; height:${CT_HOUR-2}px; left:calc(${l}% + 2px); width:calc(${w}% - 4px);" title="${esc(c.clientName)} · ${esc(c.followUpTime)}"><b>${esc(c.followUpTime)} ${esc(c.clientName)}</b><small>${esc(c._com ? comBookingLabel(c) : (c.followUpKind ? fuKindLabel(c) : 'Call'))}${calView!=='day' || !c.advisorName || currentUser.role==='mapa' ? '' : ' · '+esc(c.advisorName)}</small></button>`}; }),
+      ...(gByDay[iso]||[]).filter(e=> !e.allDay).map(e=>{ const st = e.start.getHours()*60 + e.start.getMinutes(); return {s:st, e:st+e.mins, html:(st2, w, l)=> `<a class="ct-ev gcal" ${e.link ? `href="${esc(e.link)}" target="_blank" rel="noopener"` : ''} style="top:${st2}px; height:${Math.max(18, e.mins/60*CT_HOUR - 2)}px; left:calc(${l}% + 2px); width:calc(${w}% - 4px);" title="${esc(e.title)} · ${esc(e.time)}"><b>${esc(e.time)} ${esc(e.title)}</b>${e.meet ? '<small>Google Meet</small>' : ''}</a>`}; })
+    ];
+    const placed = ctLayout(evs).map(ev=> ev.html(ev.s/60*CT_HOUR, 100/ev.lanes, 100/ev.lanes*ev.lane)).join('');
+    const now = iso===today ? `<div class="ct-now" style="top:${nowMin/60*CT_HOUR}px"></div>` : '';
+    return `<div class="ct-col ${(d.getDay()%6===0) ? 'wkend' : ''}" data-ctcol="${iso}">${placed}${now}</div>`; }).join('');
+  box.innerHTML = `<div class="ct-inner" style="--cols:${cols}; --hh:${CT_HOUR}px; --ct-min:${cols > 1 ? cols*96 + 56 : 0}px;">
+    <div class="ct-row ct-head"><div class="ct-gutter"></div>${head}</div>
+    <div class="ct-row ct-allday"><div class="ct-gutter">All day</div>${allday}</div>
+    <div class="ct-body"><div class="ct-row"><div class="ct-hours">${hours}</div>${colsHtml}</div></div></div>`;
+  const body = box.querySelector('.ct-body');
+  body.scrollTop = prevScroll!=null && calScrolled ? prevScroll : 7.5*CT_HOUR; calScrolled = true;
+  box.querySelectorAll('[data-ctday]').forEach(b=> b.addEventListener('click', ()=>{ calSelected = b.dataset.ctday; setCalView('day'); }));
+  box.querySelectorAll('[data-ctcol]').forEach(c=> c.addEventListener('click', e=>{ if(e.target.closest('.ct-ev')) return; calSelected = c.dataset.ctcol; renderCalendar(); }));
+  box.querySelectorAll('.ct-ev[data-open]').forEach(b=> b.addEventListener('click', e=>{ e.stopPropagation(); if(b.dataset.com) openComCase(b.dataset.open); else openLead(b.dataset.open); }));
+  box.querySelectorAll('a.ct-ev').forEach(a=> a.addEventListener('click', e=> e.stopPropagation()));
+}
 let calSelected = null; // 'YYYY-MM-DD'
 
 function isoDay(d){ const x = toDate(d); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; }
@@ -8470,11 +8568,16 @@ function renderCalendar(){
   document.getElementById('gcalToggleWrap').classList.toggle('hidden', !gOn);
   document.getElementById('gcalToggle').checked = gcalWanted();
   document.getElementById('gcalLegend').classList.toggle('hidden', !gcalWanted());
+  const today = isoDay(new Date());
+  if(!calSelected) calSelected = today;
   gcalLoad(false);
   const gEv = gcalForMonth(), gByDay = {};
   gEv.forEach(e=> (gByDay[e.day] = gByDay[e.day] || []).push(e));
-  const today = isoDay(new Date());
-  if(!calSelected) calSelected = today;
+  document.querySelectorAll('[data-calview]').forEach(b=> b.classList.toggle('on', b.dataset.calview===calView));
+  const timeView = calView!=='month';
+  document.getElementById('calTime').classList.toggle('hidden', !timeView);
+  document.getElementById('calGrid').classList.toggle('hidden', timeView);
+  document.getElementById('calDow').classList.toggle('hidden', timeView);
 
   document.getElementById('calSub').textContent = APP_MODE==='com' ? (comSeesAll()
     ? 'Commercial appointments and reminders across the team. Add any of them to your own calendar in one click.'
@@ -8483,6 +8586,13 @@ function renderCalendar(){
     ? 'Your booked follow-up calls. Add any call to your own calendar in one click.'
     : 'Booked follow-up calls across the team. Add any call to your own calendar in one click.';
 
+  if(timeView){
+    const rg = calRange(), last = new Date(rg.start); last.setDate(rg.start.getDate() + rg.days - 1);
+    document.getElementById('calMonthLabel').textContent = calView==='day'
+      ? rg.start.toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long', year:'numeric'})
+      : `${rg.start.toLocaleDateString('en-GB',{day:'numeric', month:'short'})} – ${last.toLocaleDateString('en-GB',{day:'numeric', month:'short', year:'numeric'})}`;
+    renderCalTime(byDay, gByDay, today);
+  } else {
   // Month grid (weeks start Monday)
   const y = calCursor.getFullYear(), m = calCursor.getMonth();
   document.getElementById('calMonthLabel').textContent = calCursor.toLocaleDateString('en-GB',{month:'long', year:'numeric'});
@@ -8497,8 +8607,8 @@ function renderCalendar(){
     const total = list.length + glist.length;
     const cls = ['cal-cell', d.getMonth()!==m?'out':'', iso===today?'today':'', iso===calSelected?'sel':'', (d.getDay()%6===0)?'wkend':'', total?'has':''].join(' ');
     const chipItems = [
-      ...list.map(c=> ({t: c.followUpTime || '99', html:`<span class="cal-chip ${callInfo(c).tone}" style="--av:${advisorTone(c.advisorId)}"><i></i>${c.followUpTime ? `<b>${esc(c.followUpTime)}</b>` : ''}${esc(c.clientName)}</span>`})),
-      ...glist.map(e=> ({t: e.time || '00', html:`<span class="cal-chip gcal" title="Google Calendar: ${esc(e.title)}"><i></i>${e.time ? `<b>${esc(e.time)}</b>` : ''}${esc(e.title)}</span>`}))
+      ...list.map(c=> ({t: c.followUpTime || '99', html:`<span class="cal-chip ${callInfo(c).tone}" style="--av:${advisorTone(c.advisorId)}"><i></i>${c.followUpTime ? `<b>${esc(c.followUpTime)}</b>` : ''}<span class="cc-t">${esc(c.clientName)}</span></span>`})),
+      ...glist.map(e=> ({t: e.time || '00', html:`<span class="cal-chip gcal" title="Google Calendar: ${esc(e.title)}"><i></i>${e.time ? `<b>${esc(e.time)}</b>` : ''}<span class="cc-t">${esc(e.title)}</span></span>`}))
     ].sort((a,b)=> a.t.localeCompare(b.t));
     const chips = chipItems.slice(0,3).map(x=> x.html).join('');
     const more = total>3 ? `<span class="cal-more">+${total-3} more</span>` : '';
@@ -8516,6 +8626,7 @@ function renderCalendar(){
     if(d.getMonth()!==calCursor.getMonth() || d.getFullYear()!==calCursor.getFullYear()) calCursor = new Date(d.getFullYear(), d.getMonth(), 1);
     renderCalendar();
   }));
+  }
 
   // Overdue panel
   const overdue = calls.filter(c=> isCallOverdue(c.followUpDate, c.followUpTime));
@@ -8558,8 +8669,8 @@ function renderCalendar(){
   }));
 }
 
-document.getElementById('calPrev').addEventListener('click', ()=>{ calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1); renderCalendar(); });
-document.getElementById('calNext').addEventListener('click', ()=>{ calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1); renderCalendar(); });
+document.getElementById('calPrev').addEventListener('click', ()=> calShift(-1));
+document.getElementById('calNext').addEventListener('click', ()=> calShift(1));
 document.getElementById('calToday').addEventListener('click', ()=>{ const d = new Date(); calCursor = new Date(d.getFullYear(), d.getMonth(), 1); calSelected = isoDay(d); renderCalendar(); });
 document.getElementById('calExportAll').addEventListener('click', ()=>{
   const today = isoDay(new Date());
@@ -9982,10 +10093,10 @@ async function gmailSend(tok, {to, subject, body}){
    alongside the tracker's bookings (events the tracker made itself aren't
    shown twice). Loaded with the same Google access as bookings; the first
    time it needs a click so Google can ask. */
-let gcalEvents = {}; // 'YYYY-M' → {at, list, err, loading}
+let gcalEvents = {}; // visible range ('YYYY-MM-DD|days') → {at, list, err, loading}
 function gcalWanted(){ if(!gApiOn()) return false; try{ return localStorage.getItem('plt_gcalView_'+currentUser.id)!=='0'; }catch(e){ return true; } }
 function gcalConnected(){ try{ return localStorage.getItem('plt_gcalOk_'+currentUser.id)==='1'; }catch(e){ return false; } }
-function gcalKey(){ return calCursor.getFullYear()+'-'+calCursor.getMonth(); }
+function gcalKey(){ const r = calRange(); return isoDay(r.start)+'|'+r.days; }
 function gcalHaveToken(){ return !!gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(G_CAL); }
 // Ask for this month's events. Without a live Google token it only goes ahead from a click.
 function gcalLoad(fromClick){
@@ -9994,23 +10105,22 @@ function gcalLoad(fromClick){
   if(cached && (cached.loading || (!cached.err && Date.now() - cached.at < 5*60000))) return;
   const clicked = fromClick || !!(navigator.userActivation && navigator.userActivation.isActive && gcalConnected());
   if(!gcalHaveToken() && !clicked) return;
-  const y = calCursor.getFullYear(), m = calCursor.getMonth(), first = new Date(y, m, 1);
-  const start = new Date(first); start.setDate(1 - ((first.getDay()+6)%7));
-  const end = new Date(start); end.setDate(start.getDate() + 42);
+  const rg = calRange(), start = rg.start, end = new Date(start); end.setDate(start.getDate() + rg.days);
   gcalEvents[key] = {...(cached||{}), loading:true};
   gToken(G_CAL)
     .then(tok=> gFetch(tok, `${GCAL_API}/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(start.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}`))
     .then(r=>{
       gcalEvents[key] = {at:Date.now(), list:(r.items||[]).filter(e=> e && e.status!=='cancelled' && e.start).map(e=>{
         const allDay = !e.start.dateTime, st = allDay ? new Date(e.start.date+'T00:00:00') : new Date(e.start.dateTime);
-        return {id:e.id, title:e.summary || '(No title)', allDay, start:st, day:isoDay(st), time: allDay ? '' : `${String(st.getHours()).padStart(2,'0')}:${String(st.getMinutes()).padStart(2,'0')}`, link:e.htmlLink || null, meet:e.hangoutLink || null};
+        const en = !allDay && e.end && e.end.dateTime ? new Date(e.end.dateTime) : new Date(st.getTime() + 3600e3);
+        return {id:e.id, title:e.summary || '(No title)', allDay, start:st, mins: Math.max(15, Math.round((en - st)/60000)), day:isoDay(st), time: allDay ? '' : `${String(st.getHours()).padStart(2,'0')}:${String(st.getMinutes()).padStart(2,'0')}`, link:e.htmlLink || null, meet:e.hangoutLink || null};
       })};
       try{ localStorage.setItem('plt_gcalOk_'+currentUser.id, '1'); }catch(e){}
     })
     .catch(err=>{ gcalEvents[key] = {at:Date.now(), list:[], err:err.message}; })
     .finally(()=>{ if(!document.getElementById('page-calendar').classList.contains('hidden')) renderCalendar(); });
 }
-// This month's Google events, less the ones the tracker put there itself.
+// The visible range's Google events, less the ones the tracker put there itself.
 function gcalForMonth(){
   if(!gcalWanted()) return [];
   const c = gcalEvents[gcalKey()]; if(!c || !c.list) return [];

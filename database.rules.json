@@ -110,6 +110,15 @@
     "clientSources": {
       ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists() && (root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management' || root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'admin')"
+    },
+
+    "signatures": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
+      "$userId": {
+        ".read": "auth != null && (root.child('members').child(auth.uid).val() === $userId || root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management')",
+        ".write": "auth != null && (root.child('members').child(auth.uid).val() === $userId || root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management')",
+        ".validate": "newData.isString() && newData.val().length <= 100000"
+      }
     }
   }
 }

@@ -1412,6 +1412,8 @@ body:not(.mode-com) .com-only{display:none !important;}
 /* Audit trail */
 .audit-head{padding:16px 18px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700; color:var(--ink-2); display:flex; align-items:center; gap:7px; flex-shrink:0;}
 .audit-list{flex:1; overflow-y:auto; padding:16px 18px;}
+.ld-note-form{padding:12px 18px; border-bottom:1px solid var(--border); flex-shrink:0;}
+.ld-note-form textarea{width:100%; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; font:inherit; font-size:13px; background:var(--surface); color:var(--text); resize:vertical;}
 .audit-item{display:flex; gap:11px; margin-bottom:16px; position:relative;}
 .audit-item:last-child{margin-bottom:0;}
 .audit-icon{
@@ -1596,9 +1598,14 @@ body:not(.ai-on) #askBtn{display:none;}
 .ask-foot textarea{width:100%; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; font:inherit; font-size:13.5px; background:var(--surface); color:var(--text); resize:none;}
 .ask-row{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px;}
 .em-sig{margin:2px 0 10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--bg); font-size:12.5px;}
-.em-sig-lbl{display:flex; align-items:center; gap:7px; font-weight:600; color:var(--green); flex-wrap:wrap;} .em-sig-lbl.warn{color:var(--amber);}
+.em-sig-lbl{display:flex; align-items:center; gap:7px; font-weight:600; color:var(--green); flex-wrap:wrap;} .em-sig-lbl.warn{color:var(--amber);} .em-sig-lbl.muted{color:var(--text-muted);}
 .em-sig-lbl .ico{width:15px; height:15px;}
 .em-sig-help{margin-top:6px; color:var(--text-muted); line-height:1.5;}
+.em-sig-own{margin-top:6px; color:var(--text-muted);}
+.sig-ed{min-height:90px; max-height:260px; overflow:auto; margin-top:8px; padding:10px; border:1.5px dashed var(--border-2); border-radius:8px; background:#fff; color:#222; font:13px Arial, sans-serif;}
+.sig-ed:focus{outline:none; border-color:var(--brand);}
+.sig-ed:empty::before{content:'Paste your signature here (Ctrl+V)'; color:#999;}
+.sig-ed-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;}
 .em-sig-frame{display:block; width:100%; height:130px; margin-top:8px; border:1px solid var(--border); border-radius:8px; background:#fff;}
 .fu-invite.g-on{color:var(--green);} .meet-link{font-weight:700; color:var(--blue);}
 .u-google{font-size:11.5px; font-weight:500; color:var(--text-muted); margin-top:2px;}
@@ -3135,6 +3142,11 @@ body:not(.ai-on) #askBtn{display:none;}
         <input type="email" id="uGoogle" placeholder="e.g. joe@mu-mortgages.com" autocomplete="off">
         <div class="field-hint">Their work Google account, so they can use <b>Sign in with Google</b>. Leave blank to sign in with their PIN only.</div>
       </div>
+      <div class="field">
+        <label>Email signature <span class="label-opt">(optional)</span> <button type="button" class="linkish" id="uSigClear" style="font-size:12px; margin-left:6px;">Clear</button></label>
+        <div class="sig-ed" id="uSig" contenteditable="true" style="margin-top:0;"></div>
+        <div class="field-hint">Open an email they've sent you in Gmail, select their whole signature, copy it (<b>Ctrl+C</b>) and paste it here (<b>Ctrl+V</b>). Logos and links are kept. It's added to emails they send from the tracker. Leave it empty to use their Gmail signature.</div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="userOverlay">Cancel</button>
@@ -3223,7 +3235,11 @@ body:not(.ai-on) #askBtn{display:none;}
     <div class="lead-detail-grid">
       <div class="lead-left" id="leadLeftPane"><!-- populated by JS --></div>
       <div class="lead-right">
-        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail</div>
+        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail<button type="button" class="btn btn-secondary btn-sm hidden" id="ldAddNoteBtn" style="margin-left:auto;">+ Add note</button></div>
+        <div class="ld-note-form hidden" id="ldNoteForm">
+          <textarea id="ldNoteText" rows="3" maxlength="4000" placeholder="e.g. Client called to say they're away until the 14th; prefers email."></textarea>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:8px;"><button type="button" class="btn btn-primary btn-sm" id="ldNoteSave">Save note</button><button type="button" class="linkish" id="ldNoteCancel" style="font-size:13px;">Cancel</button></div>
+        </div>
         <div class="ai-sum hidden" id="aiSum_lead"></div>
         <div class="audit-list" id="auditList"></div>
       </div>
@@ -4137,7 +4153,7 @@ function logout(){
   db.ref('leads').off();
   notifsQuery().off();
   db.ref('clientSources').off();
-  db.ref('config').off(); CONFIG = {}; document.body.classList.remove('ai-on'); askReset();
+  db.ref('config').off(); CONFIG = {}; document.body.classList.remove('ai-on'); askReset(); mySigStop();
   gTok = null; gTokClient = null; gTokWait = null; gAsked = new Set(); gSig = undefined; gSigState = ''; gcalEvents = {};
   db.ref('pins').off(); db.ref('googleLogins').off(); pinsListenerStarted = false; pinsLoaded = false; PINS = {}; GLOGINS = {}; googleResolving = false;
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
@@ -4330,7 +4346,7 @@ function celebrate(msg, big=true){
 let entryFromPin = false; // the sign-in animation plays after typing a PIN, not on a refresh
 function enterApp(){
   if(forcePinActive) return;
-  aiSync();
+  aiSync(); mySigListen();
   const ls = document.getElementById('loginScreen'), shell = document.getElementById('appShell');
   const fromLogin = !ls.classList.contains('hidden');
   const animate = fromLogin && entryFromPin && motionOK();
@@ -6550,6 +6566,12 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-28a', date:'2026-10-28', items:[
+    {text:"<b>+ Add note</b> on Protection cases: next to the <b>Audit trail</b> heading, so you can add a note to a case at any time, whatever stage it's at."},
+  ]},
+  {id:'2026-10-27g', date:'2026-10-27', items:[
+    {text:"<b>Email signatures from your signature tool.</b> If your signature is added by a Chrome extension or a company signature tool (so it isn't in Gmail's settings), the tracker can now use it: Management can paste each colleague's signature in <b>Settings → Colleagues</b>, or you can press <b>Use my own signature instead</b> under the message in the email window. It's then added to every email you send from the tracker."},
+  ]},
   {id:'2026-10-27f', date:'2026-10-27', items:[
     {text:"<b>✨ AI assistant (Claude)</b>, once Management has switched it on: the <b>✨ Ask Claude</b> button at the top opens a chat where you can ask anything, and the one in a case window asks about that case; <b>✨ Summarise this case</b> above the history gives where the case stands, the next step and anything to watch out for; <b>✨ Write with AI</b> in the email window drafts the email (or fills in a template) for you to check; and <b>✨ Tidy up</b> under note boxes turns rough notes into clear ones (with Undo). Always read what it writes before using it."},
   ]},
@@ -8974,7 +8996,7 @@ const HELP = [
   {group:'Protection cases', items:[
     {t:'Commercial', h:`<b>Commercial</b> sits next to Protection and Send in Blue at the top, for colleagues ticked <b>Commercial</b> in Settings → Colleagues (Management ticks the box). Press <b>New lead</b> for the client name, business name, email, telephone, lead source (Referral and Other ask for detail) and category, and choose the adviser. Cases move through <b>New Case → Research → Waiting for docs/info → Terms issued / Application submitted → Complete</b>; Complete asks for the lender and value. Open a case to move it, add notes or edit its details. Every open case needs its next step booked: <b>Book appointment</b> (phone, video or face to face) or <b>Set reminder</b>, with one-click Google Calendar. When an appointment's time has passed, record the <b>Outcome of meeting</b>; a due reminder needs a note and a new booking. <b>Not proceeding</b> takes a case off the board (see the <b>Not proceeding</b> button above the lanes; it can be reopened). MAPAs can't leave a case without its next step booked, and overdue items must be cleared when they open Commercial. The Commercial <b>Calendar</b> tab shows every booking. MAPAs see their own cases; Management and Admin see everyone's.`},
     {t:'Sign in with Google', roles:['management'], h:`Colleagues can sign in with their work Google account (e.g. @mu-mortgages.com or @gurkhamortgages) instead of their PIN. In <b>Settings → Colleagues</b>, edit the colleague and add their <b>Google email</b>. They then press <b>Sign in with Google</b> on the login screen and pick that account. Only emails added here can get in. Remove the email to stop Google sign-in; their PIN keeps working either way.`},
-    {t:'Google Calendar and Gmail', roles:['mapa','management','admin'], h:`When you've signed in with Google:<ul><li><b>Booking</b> an appointment or reminder puts it straight into your Google Calendar. <b>Book &amp; invite client</b> also sends the client the invite, and <b>video calls</b> get a Google Meet link (shown on the case as <b>Join Google Meet</b>). Rebooking moves the same event and updates the client.</li><li>The <b>Calendar</b> tab also shows everything in your own Google Calendar (in grey), alongside your bookings. Untick <b>My Google Calendar</b> to hide it.</li><li><b>Email client</b> sends straight from your Gmail with your <b>Gmail signature</b> added, so it's in your Sent items and replies come to you. A copy is saved on the case. If Google has a problem, use <b>Open in Gmail instead</b>.</li></ul>The first time, Google shows a window asking you to allow access to your calendar and to send email: tick both and press <b>Continue</b>. Signed in with your PIN, everything works as before (the Google Calendar link and a Gmail draft).`},
+    {t:'Google Calendar and Gmail', roles:['mapa','management','admin'], h:`When you've signed in with Google:<ul><li><b>Booking</b> an appointment or reminder puts it straight into your Google Calendar. <b>Book &amp; invite client</b> also sends the client the invite, and <b>video calls</b> get a Google Meet link (shown on the case as <b>Join Google Meet</b>). Rebooking moves the same event and updates the client.</li><li>The <b>Calendar</b> tab also shows everything in your own Google Calendar (in grey), alongside your bookings. Untick <b>My Google Calendar</b> to hide it.</li><li><b>Email client</b> sends straight from your Gmail with your <b>Gmail signature</b> added, so it's in your Sent items and replies come to you. If your signature comes from a Chrome extension or a signature tool instead, Management can paste it into your colleague details (<b>Settings → Colleagues</b>), or press <b>Use my own signature instead</b> in the email window and paste it yourself. A copy is saved on the case. If Google has a problem, use <b>Open in Gmail instead</b>.</li></ul>The first time, Google shows a window asking you to allow access to your calendar and to send email: tick both and press <b>Continue</b>. Signed in with your PIN, everything works as before (the Google Calendar link and a Gmail draft).`},
     {t:'AI assistant (Claude)', h:`When Management has switched it on (Settings → Templates &amp; prompts → AI assistant):<ul><li><b>✨ Ask Claude</b>, the sparkle button at the top, opens a chat. Ask anything: about mortgages or protection, help wording something, or about a case. To ask about a case, press <b>✨ Ask Claude</b> in the case window (above the history); <b>Include the case I have open</b> is ticked for you. <b>New chat</b> starts again; chats aren't saved.</li><li><b>✨ Summarise this case</b>, above the history on any case, gives a short summary, the next step and anything to watch out for. Press <b>Update</b> after new activity.</li><li><b>✨ Write with AI</b>, in the email window: say what the email should cover (or pick a template first) and it drafts the subject and message for you to check and change.</li><li><b>✨ Tidy up</b>, under note boxes, turns a rough note into clear notes without adding anything; <b>Undo tidy</b> puts yours back.</li></ul>It only uses what's on the case, and phone numbers and email addresses aren't sent. It can still get things wrong, so always read it before relying on it or sending it.`},
     {t:'The case window', roles:['mapa','management','admin'], h:`The line under the client's name shows the status, advisor, source, when it was assigned and how many contact attempts there have been. The <b>stage tracker</b> shows where the case is (New → In progress → Quotes sent → Submitted → Terms issued → On risk) with the button for the next step underneath (<b>Quotes Sent</b>, <b>Terms issued</b>, <b>On Risk</b> or the decline steps). On <b>New Cases</b> and <b>Appointments / Research</b> the actions are <b>Book appointment</b> and <b>Set reminder</b>; on later stages they're <b>Call</b>, <b>Text</b>, <b>Email</b> and <b>Appointment</b>. <b>More</b> has Reassign, Edit client source and Change status.`},
     {t:'Correct a typo on a case', roles:['mapa','management','admin'], h:`<ul><li><b>Commission and policies</b>: on a Submitted, Terms issued or On Risk case, click <b>✎ Edit commission &amp; policies</b> on the Case outcome box.</li><li><b>Client name(s)</b>: <b>More → Edit client name(s)</b>. Policies move with the client's name.</li><li><b>Phone and email</b>: the Edit buttons in the Contact box. <b>Client source</b>: More → Edit client source.</li></ul>Every change is recorded in the case history with who made it.`},
@@ -9141,6 +9163,7 @@ function openLead(id){
   if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
+  ldNoteClose();
   actionUIState = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldFeedbackSeenBase = LEADS[id].refFeedbackSeenAt || 0; ldEditClient = false; ldEditNames = null;
   // Tidy a left-over callback away for good (it's already hidden everywhere).
   if(['underwriting','terms'].includes(LEADS[id].status) && staleCallback(LEADS[id]) && canManageLead(LEADS[id])) db.ref('leads/'+id).update(CLEAR_CALLBACK).catch(()=>{});
@@ -9226,6 +9249,7 @@ function renderLeadModal(){
   if(!raw){ closeModal('leadOverlay'); return; }
   lastRenderedLead = JSON.stringify(raw);
   const lead = {id: activeLeadId, ...raw};
+  document.getElementById('ldAddNoteBtn').classList.toggle('hidden', !canManageLead(lead));
   document.getElementById('ldClientName').textContent = lead.clientName;
 
   const potKey = potOf(lead);
@@ -9567,6 +9591,24 @@ document.getElementById('csSubmit').addEventListener('click', function(){
     .finally(()=>{ btn.disabled = false; });
 });
 
+// "+ Add note" next to the Audit trail heading: a note on the case at any time.
+function ldNoteClose(){ document.getElementById('ldNoteForm').classList.add('hidden'); document.getElementById('ldNoteText').value = ''; }
+document.getElementById('ldAddNoteBtn').addEventListener('click', ()=>{
+  const f = document.getElementById('ldNoteForm');
+  if(!f.classList.contains('hidden')){ ldNoteClose(); return; }
+  f.classList.remove('hidden'); document.getElementById('ldNoteText').focus();
+});
+document.getElementById('ldNoteCancel').addEventListener('click', ldNoteClose);
+document.getElementById('ldNoteSave').addEventListener('click', function(){
+  const note = document.getElementById('ldNoteText').value.trim(), lead = LEADS[activeLeadId];
+  if(!note){ toast('Write your note first.','error'); document.getElementById('ldNoteText').focus(); return; }
+  if(!lead || !canManageLead(lead)) return;
+  this.disabled = true;
+  logAudit(activeLeadId, {type:'note', text:`Note: ${note}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+    .then(()=>{ ldNoteClose(); toast('Note added','success'); })
+    .catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ this.disabled = false; });
+});
 function logAudit(leadId, entry, patch={}){
   const auditId = uidShort()+Date.now().toString(36);
   const updates = {};
@@ -10161,18 +10203,84 @@ async function gSignature(tok){
   }catch(e){ gSigState = 'error: '+e.message; return ''; }
   return gSig;
 }
+// Their own signature saved in the tracker (/signatures/{userId}, only they can
+// read or change it). Used instead of Gmail's: for signatures that a Chrome
+// extension or a company signature tool adds, which Gmail can't hand over.
+let MYSIG = '', mySigFor = null, sigEditing = false;
+let emSigChecking = false;
+function mySigListen(){
+  if(!currentUser || mySigFor===currentUser.id) return;
+  if(mySigFor) db.ref('signatures/'+mySigFor).off();
+  mySigFor = currentUser.id; MYSIG = '';
+  db.ref('signatures/'+mySigFor).on('value', snap=>{ MYSIG = typeof snap.val()==='string' ? snap.val() : ''; if(!sigEditing) renderEmSig(); }, ()=>{ MYSIG = ''; });
+}
+function mySigStop(){ if(mySigFor) db.ref('signatures/'+mySigFor).off(); mySigFor = null; MYSIG = ''; sigEditing = false; }
+// Keep what makes a signature (text, links, pictures, formatting); drop anything that could run.
+function cleanSigHtml(html){
+  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
+  doc.body.querySelectorAll('script,style,iframe,frame,object,embed,form,input,button,textarea,select,link,meta,base,svg,math,template,noscript').forEach(e=> e.remove());
+  doc.body.querySelectorAll('*').forEach(el=>{
+    [...el.attributes].forEach(a=>{
+      const n = a.name.toLowerCase(), v = a.value.replace(/[\s\u0000-\u001f]/g,'').toLowerCase();
+      if(n.startsWith('on') || n==='srcdoc' || n==='contenteditable' || n==='id' || (n==='class' && !/gmail|sig/i.test(a.value))) el.removeAttribute(a.name);
+      else if((n==='href' || n==='src' || n==='action' || n==='formaction' || n==='xlink:href') && /^(javascript|vbscript):/.test(v)) el.removeAttribute(a.name);
+      else if(n==='href' && v.startsWith('data:')) el.removeAttribute(a.name);
+    });
+  });
+  return doc.body.innerHTML.replace(/^(\s|<br\s*\/?>)+|(\s|<br\s*\/?>)+$/gi, '').trim();
+}
+function sigEditorHtml(){
+  return `<div class="em-sig-lbl">${ico('mail')} Your email signature</div>
+    <div class="em-sig-help">In Gmail, start a <b>new email</b> so your signature appears. Select the whole signature, copy it (<b>Ctrl+C</b>), then click the box below and paste (<b>Ctrl+V</b>). Logos and links are kept. It's saved for you only and added to emails you send from the tracker.</div>
+    <div class="sig-ed" id="sigEd" contenteditable="true"></div>
+    <div class="sig-ed-row"><button type="button" class="btn btn-primary btn-sm" id="sigEdSave">Save signature</button>${MYSIG ? `<button type="button" class="btn btn-secondary btn-sm" id="sigEdDel">Remove</button>` : ''}<button type="button" class="linkish" id="sigEdCancel">Cancel</button></div>`;
+}
+function openSigEditor(){
+  sigEditing = true; renderEmSig();
+  const ed = document.getElementById('sigEd'); ed.innerHTML = cleanSigHtml(MYSIG); ed.focus();
+  document.getElementById('sigEdCancel').addEventListener('click', ()=>{ sigEditing = false; renderEmSig(); });
+  document.getElementById('sigEdSave').addEventListener('click', function(){
+    const html = cleanSigHtml(ed.innerHTML);
+    if(!ed.textContent.trim() && !/<img/i.test(html)){ toast('Paste your signature into the box first.','error'); ed.focus(); return; }
+    if(html.length > 100000){ toast("That signature is too big to save. It usually means a picture was pasted in as a file: copy it from a new Gmail email instead.",'error'); return; }
+    this.disabled = true;
+    db.ref('signatures/'+currentUser.id).set(html).then(()=>{ MYSIG = html; sigEditing = false; renderEmSig(); toast('Signature saved. It will be added to emails you send from the tracker.','success'); })
+      .catch(err=>{ this.disabled = false; toast('Could not save your signature: '+err.message,'error'); });
+  });
+  const del = document.getElementById('sigEdDel');
+  if(del) del.addEventListener('click', ()=>{
+    db.ref('signatures/'+currentUser.id).remove().then(()=>{ MYSIG = ''; sigEditing = false; gSig = undefined; gSigState = ''; renderEmSig(); toast('Signature removed. Your Gmail signature is used again, if you have one.','success'); })
+      .catch(err=> toast('Could not remove it: '+err.message,'error'));
+  });
+}
 // The signature line in the email window: a preview, or why there isn't one.
 function renderEmSig(){
   const box = document.getElementById('emSigBox'); if(!box) return;
   if(!gApiOn()){ box.classList.add('hidden'); return; }
   box.classList.remove('hidden');
+  if(sigEditing){ if(!box.querySelector('#sigEd')) box.innerHTML = sigEditorHtml(); return; }
+  const own = `<div class="em-sig-own">Signature added by a Chrome extension or a company tool? <button type="button" class="linkish" id="emSigOwn">Use my own signature instead</button></div>`;
+  if(MYSIG){
+    box.innerHTML = `<div class="em-sig-lbl">${ico('checkCircle')} Your signature saved in the tracker will be added: <button type="button" class="linkish" id="emSigEdit">Change it</button></div><iframe class="em-sig-frame" sandbox="" title="Your email signature"></iframe>`;
+    box.querySelector('.em-sig-frame').srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:8px; font:13px Arial, sans-serif; color:#222;} img{max-width:100%; height:auto;}</style></head><body>${MYSIG}</body></html>`;
+    document.getElementById('emSigEdit').addEventListener('click', openSigEditor);
+    return;
+  }
   const st = gSig !== undefined ? gSigState : (gTok && gAsked.has(G_SET) && !gTok.scopes.includes(G_SET)) ? 'noperm' : gSigState;
   const how = `In Gmail: <b>Settings → See all settings → General → Signature</b>. Create your signature, then under <b>Signature defaults</b> set <b>For new emails use</b> to it, and press <b>Save changes</b> at the bottom.`;
   box.innerHTML = st==='ok' ? `<div class="em-sig-lbl">${ico('checkCircle')} Your Gmail signature will be added:</div><iframe class="em-sig-frame" sandbox="" title="Your Gmail signature"></iframe>`
-    : st==='empty' ? `<div class="em-sig-lbl warn">${ico('alert')} Gmail has no signature set for new emails, so none will be added.</div><div class="em-sig-help">${how} Then press <button type="button" class="linkish" id="emSigRecheck">Check again</button>.</div>`
+    : st==='empty' ? `<div class="em-sig-lbl warn">${ico('alert')} No signature is saved in your Gmail settings, so the tracker won't add one.</div><div class="em-sig-help">If your company's signature tool adds it as emails are sent, it will still arrive with your signature: send yourself a test to check. Otherwise, ${how.charAt(0).toLowerCase()+how.slice(1)} Then press <button type="button" class="linkish" id="emSigRecheck">Check again</button>.</div>`
     : st==='noperm' ? `<div class="em-sig-lbl warn">${ico('alert')} The tracker doesn't have permission to read your Gmail signature.</div><div class="em-sig-help"><button type="button" class="btn btn-secondary btn-sm" id="emSigAllow">Allow signature</button> Google will ask again: tick the box about your <b>Gmail settings</b>, then Continue.</div>`
     : st.startsWith('error') ? `<div class="em-sig-lbl warn">${ico('alert')} Couldn't read your Gmail signature (${esc(st.slice(7))}).</div><div class="em-sig-help"><button type="button" class="linkish" id="emSigRecheck">Try again</button></div>`
-    : `<div class="em-sig-lbl">${ico('mail')} Your Gmail signature is added when you send. <button type="button" class="linkish" id="emSigRecheck">Preview it</button></div>`;
+    : (gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(G_SET)) ? `<div class="em-sig-lbl muted">${ico('mail')} Checking your Gmail signature…</div>`
+    : `<div class="em-sig-lbl muted">${ico('mail')} Your Gmail signature will be added if you have one. <button type="button" class="linkish" id="emSigRecheck">Check it</button></div>`;
+  // Already allowed to read it: check straight away rather than showing a guess.
+  if(!st && gSig===undefined && gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(G_SET) && !emSigChecking){
+    emSigChecking = true;
+    gSignature(gTok.token).finally(()=>{ emSigChecking = false; renderEmSig(); });
+  }
+  box.insertAdjacentHTML('beforeend', own);
+  document.getElementById('emSigOwn').addEventListener('click', openSigEditor);
   const fr = box.querySelector('.em-sig-frame');
   if(fr) fr.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:8px; font:13px Arial, sans-serif; color:#222;} img{max-width:100%; height:auto;}</style></head><body>${gSig}</body></html>`;
   const check = force=>{ gSig = undefined; gSigState = ''; gToken(G_MAIL, [G_SET], {force}).then(tok=> gSignature(tok)).catch(e=>{ gSigState = 'error: '+e.message; }).finally(renderEmSig); };
@@ -10185,7 +10293,7 @@ function htmlToText(html){
 }
 const mimeB64 = str=> b64(str).replace(/.{76}/g, '$&\r\n');
 async function gmailSend(tok, {to, subject, body}){
-  const sig = await gSignature(tok);
+  const sig = MYSIG || await gSignature(tok);
   const head = [`To: ${to.join(', ')}`, `Subject: =?UTF-8?B?${b64(subject)}?=`, 'MIME-Version: 1.0'];
   let mime;
   if(sig){
@@ -10350,7 +10458,7 @@ document.getElementById('aiWriteGo').addEventListener('click', function(){
   }).catch(e=> toast(e.message,'error')).finally(()=>{ this.disabled = false; this.textContent = '✨ Write it'; });
 });
 // ✨ Tidy up under note boxes
-const AI_TIDY = ['mtNote','rdNote','refNote','fbNote','spFbNote','tcNote','quickNote','dcDetail','chNote','fuComment','comMtNote','comRdNote','comNote','comLostNote','comFuNote','cnwNote','sibCallNote','sibNoteText','sibOutNote','sibRefNote','sibApNote','sibEdNotes'];
+const AI_TIDY = ['ldNoteText','mtNote','rdNote','refNote','fbNote','spFbNote','tcNote','quickNote','dcDetail','chNote','fuComment','comMtNote','comRdNote','comNote','comLostNote','comFuNote','cnwNote','sibCallNote','sibNoteText','sibOutNote','sibRefNote','sibApNote','sibEdNotes'];
 function aiDecorate(){
   AI_TIDY.forEach(id=>{ const t = document.getElementById(id); if(!t || t.dataset.aiTidy) return; t.dataset.aiTidy = '1'; t.insertAdjacentHTML('afterend', `<button type="button" class="ai-tidy" data-ai-tidy-for="${id}">✨ Tidy up</button>`); });
 }
@@ -12249,6 +12357,8 @@ document.getElementById('alertTestBtn').addEventListener('click', ()=>{
    ---------------------------------------------------------------------------- */
 let editingUserId = null;
 let selectedRole = 'mapa';
+let uSigOrig = ''; // their saved signature when the window opened
+document.getElementById('uSigClear').addEventListener('click', ()=>{ document.getElementById('uSig').innerHTML = ''; });
 
 document.getElementById('addUserBtn').addEventListener('click', ()=> openUserModal());
 function openUserModal(userId=null){
@@ -12257,6 +12367,12 @@ function openUserModal(userId=null){
   document.getElementById('uName').value = userId? USERS[userId].name : '';
   document.getElementById('uPin').value = userId? (pinFor(userId) || '') : '';
   document.getElementById('uGoogle').value = userId ? googleEmailFor(userId) : '';
+  const sigEl = document.getElementById('uSig'); sigEl.innerHTML = ''; uSigOrig = '';
+  if(userId) db.ref('signatures/'+userId).once('value').then(snap=>{
+    if(editingUserId!==userId) return;
+    uSigOrig = typeof snap.val()==='string' ? snap.val() : '';
+    if(!sigEl.innerHTML) sigEl.innerHTML = cleanSigHtml(uSigOrig);
+  }).catch(()=>{});
   document.getElementById('uSubmit').disabled = false;
   selectedRole = userId? (isProtAdviser(userId) ? 'pa' : USERS[userId].role) : 'mapa';
   updateRoleUI();
@@ -12278,6 +12394,9 @@ document.getElementById('uSubmit').addEventListener('click', function(){
   const gEmail = document.getElementById('uGoogle').value.trim().toLowerCase();
   if(gEmail && !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(gEmail)){ toast("That Google email doesn't look right.",'error'); return; }
   if(gEmail && /[#$\[\]\/]/.test(gEmail)){ toast("That Google email has a character the tracker can't store.",'error'); return; }
+  const sigEl = document.getElementById('uSig');
+  const sigHtml = (sigEl.textContent.trim() || /<img/i.test(sigEl.innerHTML)) ? cleanSigHtml(sigEl.innerHTML) : '';
+  if(sigHtml.length > 100000){ toast("That signature is too big to save. Copy it from an email in Gmail rather than a file.",'error'); return; }
   const gOwner = gEmail ? GLOGINS[googleKey(gEmail)] : null;
   if(gOwner && gOwner!==editingUserId && USERS[gOwner]){ toast(`${gEmail} is already linked to ${USERS[gOwner].name}.`,'error'); return; }
   const dupe = Object.entries(USERS).find(([id,u])=> id!==editingUserId && u && String(u.name||'').toLowerCase()===name.toLowerCase());
@@ -12345,6 +12464,7 @@ document.getElementById('uSubmit').addEventListener('click', function(){
       const u = {['users/'+userId]: payload, ['pins/'+userId]: pin};
       if(!isNew && USERS[userId] && USERS[userId].name !== name)
         Object.entries(LEADS).forEach(([id,l])=>{ if(l && l.advisorId===userId) u['leads/'+id+'/advisorName'] = name; });
+      if(sigHtml !== cleanSigHtml(uSigOrig)) u['signatures/'+userId] = sigHtml || null;
       // Google email: replace any old link for this colleague.
       const oldG = isNew ? '' : googleEmailFor(userId);
       if(oldG !== gEmail){

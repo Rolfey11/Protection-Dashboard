@@ -1412,6 +1412,11 @@ body:not(.mode-com) .com-only{display:none !important;}
 /* Audit trail */
 .audit-head{padding:16px 18px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700; color:var(--ink-2); display:flex; align-items:center; gap:7px; flex-shrink:0;}
 .audit-list{flex:1; overflow-y:auto; padding:16px 18px;}
+.ld-ma{margin-top:8px; font-size:13px; color:var(--text-muted);}
+.ld-ma b{color:var(--text);}
+.ld-ma-form{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:2px;}
+.ld-ma-form select, .ld-ma-form input{padding:7px 10px; border:1.5px solid var(--border-2); border-radius:9px; font:inherit; font-size:13px; background:var(--surface); color:var(--text);}
+.ld-ma-form input{flex:1; min-width:200px;}
 .ld-head-btns{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
 .ld-act-lbl{font-size:12px; font-weight:700; color:var(--text-muted); margin:2px 0 6px;}
 .ld-act-lbl + .ld-chips{margin-bottom:10px;}
@@ -3231,6 +3236,7 @@ body:not(.ai-on) #askBtn{display:none;}
       <div style="min-width:0;">
         <h2 id="ldClientName">Client name</h2>
         <div class="sib-sum" id="ldSum"></div>
+        <div class="ld-ma hidden" id="ldMa"></div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="icon-btn del hidden" id="leadDeleteBtn" title="Delete this case">
@@ -6583,6 +6589,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-28c', date:'2026-10-28', items:[
+    {text:"<b>+ Assign Mortgage Advisor</b> at the top of a Protection case: for clients a MAPA passed over without using <b>Refer to protection adviser</b>. Pick the MAPA (and add a handover note if you like) and the case counts as their referral: it shows in their <b>Referred Clients</b>, in the referral insights, and you can send them feedback and thanks."},
+  ]},
   {id:'2026-10-28b', date:'2026-10-28', items:[
     {text:"<b>No more choosing your Google account each time</b> you open the Calendar (or book or email from the tracker): once you've allowed it, Google signs you in by itself. A Google window may flash up for a second and close on its own."},
   ]},
@@ -9184,7 +9193,7 @@ function openLead(id){
   if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
-  ldNoteClose();
+  ldNoteClose(); ldMa = {open:false, sel:'', note:''};
   actionUIState = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldFeedbackSeenBase = LEADS[id].refFeedbackSeenAt || 0; ldEditClient = false; ldEditNames = null;
   // Tidy a left-over callback away for good (it's already hidden everywhere).
   if(['underwriting','terms'].includes(LEADS[id].status) && staleCallback(LEADS[id]) && canManageLead(LEADS[id])) db.ref('leads/'+id).update(CLEAR_CALLBACK).catch(()=>{});
@@ -9264,6 +9273,70 @@ function canChangeStatus(lead){
 }
 
 let ldMoreOpen = false; // the lead window's "More" row of buttons
+/* ---- Assign Mortgage Advisor ----
+   For a case a MAPA passed over without using "Refer to protection adviser":
+   records that MAPA as the referrer, so it counts in referral insights and
+   shows in their Referred Clients, with feedback and thanks. Dated from when
+   the case was created. */
+let ldMa = {open:false, sel:'', note:''};
+function maCandidates(lead){
+  return Object.entries(USERS).filter(([id, u])=> u && u.role==='mapa' && !isProtAdviser(id) && id!==lead.advisorId)
+    .sort((a, b)=> String(a[1].name).localeCompare(String(b[1].name)));
+}
+function canAssignMa(lead){ return !!lead && !lead.deleted && canManageLead(lead) && !isReferrerView(lead); }
+function renderLdMa(lead){
+  const box = document.getElementById('ldMa');
+  const mg = currentUser.role==='management';
+  if(!ldMa.open){
+    if(lead.referredById){
+      box.innerHTML = `↪ Mortgage advisor: <b>${esc(lead.referredByName || (USERS[lead.referredById]||{}).name || '')}</b>${mg && !isReferrerView(lead) ? ` <button type="button" class="linkish" data-ma="open" style="font-size:12.5px;">Change</button>` : ''}`;
+    } else if(canAssignMa(lead)){
+      box.innerHTML = `<button type="button" class="btn btn-secondary btn-sm" data-ma="open">+ Assign Mortgage Advisor</button>`;
+    } else { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  } else {
+    const opts = maCandidates(lead);
+    box.innerHTML = `<div class="ld-ma-form">
+      <select id="ldMaSel" aria-label="Mortgage advisor"><option value="">Choose the mortgage advisor…</option>${opts.map(([id, u])=> `<option value="${esc(id)}"${id===ldMa.sel ? ' selected' : ''}>${esc(u.name)}</option>`).join('')}</select>
+      <input type="text" id="ldMaNote" maxlength="1000" placeholder="Handover note (optional)" value="${esc(ldMa.note)}">
+      <button type="button" class="btn btn-primary btn-sm" data-ma="save">Save</button>${lead.referredById && mg ? `<button type="button" class="linkish" data-ma="remove" style="font-size:12.5px;">Remove</button>` : ''}<button type="button" class="linkish" data-ma="cancel" style="font-size:12.5px;">Cancel</button></div>`;
+  }
+  box.classList.remove('hidden');
+}
+document.getElementById('ldMa').addEventListener('input', e=>{
+  if(e.target.id==='ldMaSel') ldMa.sel = e.target.value;
+  if(e.target.id==='ldMaNote') ldMa.note = e.target.value;
+});
+document.getElementById('ldMa').addEventListener('change', e=>{ if(e.target.id==='ldMaSel') ldMa.sel = e.target.value; });
+document.getElementById('ldMa').addEventListener('click', e=>{
+  const b = e.target.closest('[data-ma]'); if(!b) return;
+  const raw = LEADS[activeLeadId]; if(!raw) return;
+  const lead = {id:activeLeadId, ...raw}, act = b.dataset.ma;
+  if(act==='open'){ ldMa = {open:true, sel: lead.referredById || '', note:''}; renderLdMa(lead); const s = document.getElementById('ldMaSel'); if(s) s.focus(); return; }
+  if(act==='cancel'){ ldMa = {open:false, sel:'', note:''}; renderLdMa(lead); return; }
+  const by = {byId:currentUser.id, byName:currentUser.name, at:Date.now()};
+  if(act==='remove'){
+    if(currentUser.role!=='management') return;
+    b.disabled = true;
+    logAudit(lead.id, {type:'assigned', text:`Mortgage advisor removed (was ${lead.referredByName || 'unknown'})`, ...by}, {referredById:null, referredByName:null, referredAt:null, referralNote:null, referralBooked:null, refFeedbackSeenAt:null})
+      .then(()=>{ ldMa = {open:false, sel:'', note:''}; toast('Mortgage advisor removed.','success'); refreshLeadModal(true); })
+      .catch(err=>{ b.disabled = false; toast('Could not save: '+err.message,'error'); });
+    return;
+  }
+  if(act==='save'){
+    const u = USERS[ldMa.sel];
+    if(!u){ toast('Choose the mortgage advisor first.','error'); return; }
+    if(!(canAssignMa(lead) && (!lead.referredById || currentUser.role==='management'))) return;
+    const note = ldMa.note.trim(), changing = !!lead.referredById;
+    if(changing && ldMa.sel===lead.referredById && !note){ ldMa = {open:false, sel:'', note:''}; renderLdMa(lead); return; }
+    const patch = {referredById:ldMa.sel, referredByName:u.name, referredAt: lead.referredAt || lead.createdAt || by.at};
+    if(note) patch.referralNote = note;
+    if(changing && ldMa.sel!==lead.referredById) patch.refFeedbackSeenAt = null;
+    b.disabled = true;
+    logAudit(lead.id, {type:'assigned', mortgageAdvisor:true, text:`Mortgage advisor ${changing ? 'changed to' : 'set:'} ${u.name}${changing ? ` (was ${lead.referredByName || 'unknown'})` : ''}${note ? '. Handover: '+note : ''}`, ...by}, patch)
+      .then(()=>{ ldMa = {open:false, sel:'', note:''}; toast(`${u.name} recorded as the mortgage advisor. It now shows in their Referred Clients.`,'success'); refreshLeadModal(true); })
+      .catch(err=>{ b.disabled = false; toast('Could not save: '+err.message,'error'); });
+  }
+});
 let ldEditClient = false, ldEditNames = null; // the "Edit client name(s)" form
 function renderLeadModal(){
   const raw = LEADS[activeLeadId];
@@ -9282,6 +9355,7 @@ function renderLeadModal(){
     esc(lead.advisorName||'Unassigned'), esc(lead.clientSource||'No source'), `Assigned <b>${esc(fmtDate(lead.createdAt))}</b>`,
     `<b>${attempts.length}</b> contact attempt${attempts.length===1?'':'s'}${attempts.length ? ', last '+esc(timeAgo(attempts[0].at)) : ''}`,
   ].join(' · ');
+  renderLdMa(lead);
 
   // Stage tracker: where the case is, plus the button for the next stage of the workflow.
   // Signing up and declining are only done through the action buttons below.

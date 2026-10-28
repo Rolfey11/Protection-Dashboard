@@ -1412,6 +1412,8 @@ body:not(.mode-com) .com-only{display:none !important;}
 /* Audit trail */
 .audit-head{padding:16px 18px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700; color:var(--ink-2); display:flex; align-items:center; gap:7px; flex-shrink:0;}
 .audit-list{flex:1; overflow-y:auto; padding:16px 18px;}
+.ld-note-form{padding:12px 18px; border-bottom:1px solid var(--border); flex-shrink:0;}
+.ld-note-form textarea{width:100%; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; font:inherit; font-size:13px; background:var(--surface); color:var(--text); resize:vertical;}
 .audit-item{display:flex; gap:11px; margin-bottom:16px; position:relative;}
 .audit-item:last-child{margin-bottom:0;}
 .audit-icon{
@@ -3233,7 +3235,11 @@ body:not(.ai-on) #askBtn{display:none;}
     <div class="lead-detail-grid">
       <div class="lead-left" id="leadLeftPane"><!-- populated by JS --></div>
       <div class="lead-right">
-        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail</div>
+        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail<button type="button" class="btn btn-secondary btn-sm hidden" id="ldAddNoteBtn" style="margin-left:auto;">+ Add note</button></div>
+        <div class="ld-note-form hidden" id="ldNoteForm">
+          <textarea id="ldNoteText" rows="3" maxlength="4000" placeholder="e.g. Client called to say they're away until the 14th; prefers email."></textarea>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:8px;"><button type="button" class="btn btn-primary btn-sm" id="ldNoteSave">Save note</button><button type="button" class="linkish" id="ldNoteCancel" style="font-size:13px;">Cancel</button></div>
+        </div>
         <div class="ai-sum hidden" id="aiSum_lead"></div>
         <div class="audit-list" id="auditList"></div>
       </div>
@@ -6560,6 +6566,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-28a', date:'2026-10-28', items:[
+    {text:"<b>+ Add note</b> on Protection cases: next to the <b>Audit trail</b> heading, so you can add a note to a case at any time, whatever stage it's at."},
+  ]},
   {id:'2026-10-27g', date:'2026-10-27', items:[
     {text:"<b>Email signatures from your signature tool.</b> If your signature is added by a Chrome extension or a company signature tool (so it isn't in Gmail's settings), the tracker can now use it: Management can paste each colleague's signature in <b>Settings → Colleagues</b>, or you can press <b>Use my own signature instead</b> under the message in the email window. It's then added to every email you send from the tracker."},
   ]},
@@ -9154,6 +9163,7 @@ function openLead(id){
   if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
+  ldNoteClose();
   actionUIState = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldFeedbackSeenBase = LEADS[id].refFeedbackSeenAt || 0; ldEditClient = false; ldEditNames = null;
   // Tidy a left-over callback away for good (it's already hidden everywhere).
   if(['underwriting','terms'].includes(LEADS[id].status) && staleCallback(LEADS[id]) && canManageLead(LEADS[id])) db.ref('leads/'+id).update(CLEAR_CALLBACK).catch(()=>{});
@@ -9239,6 +9249,7 @@ function renderLeadModal(){
   if(!raw){ closeModal('leadOverlay'); return; }
   lastRenderedLead = JSON.stringify(raw);
   const lead = {id: activeLeadId, ...raw};
+  document.getElementById('ldAddNoteBtn').classList.toggle('hidden', !canManageLead(lead));
   document.getElementById('ldClientName').textContent = lead.clientName;
 
   const potKey = potOf(lead);
@@ -9580,6 +9591,24 @@ document.getElementById('csSubmit').addEventListener('click', function(){
     .finally(()=>{ btn.disabled = false; });
 });
 
+// "+ Add note" next to the Audit trail heading: a note on the case at any time.
+function ldNoteClose(){ document.getElementById('ldNoteForm').classList.add('hidden'); document.getElementById('ldNoteText').value = ''; }
+document.getElementById('ldAddNoteBtn').addEventListener('click', ()=>{
+  const f = document.getElementById('ldNoteForm');
+  if(!f.classList.contains('hidden')){ ldNoteClose(); return; }
+  f.classList.remove('hidden'); document.getElementById('ldNoteText').focus();
+});
+document.getElementById('ldNoteCancel').addEventListener('click', ldNoteClose);
+document.getElementById('ldNoteSave').addEventListener('click', function(){
+  const note = document.getElementById('ldNoteText').value.trim(), lead = LEADS[activeLeadId];
+  if(!note){ toast('Write your note first.','error'); document.getElementById('ldNoteText').focus(); return; }
+  if(!lead || !canManageLead(lead)) return;
+  this.disabled = true;
+  logAudit(activeLeadId, {type:'note', text:`Note: ${note}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+    .then(()=>{ ldNoteClose(); toast('Note added','success'); })
+    .catch(err=> toast('Could not save: '+err.message,'error'))
+    .finally(()=>{ this.disabled = false; });
+});
 function logAudit(leadId, entry, patch={}){
   const auditId = uidShort()+Date.now().toString(36);
   const updates = {};
@@ -10429,7 +10458,7 @@ document.getElementById('aiWriteGo').addEventListener('click', function(){
   }).catch(e=> toast(e.message,'error')).finally(()=>{ this.disabled = false; this.textContent = '✨ Write it'; });
 });
 // ✨ Tidy up under note boxes
-const AI_TIDY = ['mtNote','rdNote','refNote','fbNote','spFbNote','tcNote','quickNote','dcDetail','chNote','fuComment','comMtNote','comRdNote','comNote','comLostNote','comFuNote','cnwNote','sibCallNote','sibNoteText','sibOutNote','sibRefNote','sibApNote','sibEdNotes'];
+const AI_TIDY = ['ldNoteText','mtNote','rdNote','refNote','fbNote','spFbNote','tcNote','quickNote','dcDetail','chNote','fuComment','comMtNote','comRdNote','comNote','comLostNote','comFuNote','cnwNote','sibCallNote','sibNoteText','sibOutNote','sibRefNote','sibApNote','sibEdNotes'];
 function aiDecorate(){
   AI_TIDY.forEach(id=>{ const t = document.getElementById(id); if(!t || t.dataset.aiTidy) return; t.dataset.aiTidy = '1'; t.insertAdjacentHTML('afterend', `<button type="button" class="ai-tidy" data-ai-tidy-for="${id}">✨ Tidy up</button>`); });
 }

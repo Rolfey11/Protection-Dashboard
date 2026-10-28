@@ -6583,6 +6583,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-28b', date:'2026-10-28', items:[
+    {text:"<b>No more choosing your Google account each time</b> you open the Calendar (or book or email from the tracker): once you've allowed it, Google signs you in by itself. A Google window may flash up for a second and close on its own."},
+  ]},
   {id:'2026-10-28a', date:'2026-10-28', items:[
     {text:"<b>+ Add note</b> on Protection cases: next to the <b>Audit trail</b> heading, so you can add a note to a case at any time, whatever stage it's at."},
     {text:"<b>+ Record action</b>, next to it: pick <b>Call</b> (or Text / Other contact), choose how it went (Spoke to client, No answer, Left voicemail, Asked to call back, Wrong number) and add detail if you like. It goes in the audit trail and counts as a contact attempt, without changing the stage or what's booked."},
@@ -10203,7 +10206,8 @@ function gToken(scope, want=[], {force=false}={}){
         },
         error_callback: e=>{ const w = gTokWait; gTokWait = null; if(w) w.reject(new Error(e && e.type==='popup_closed' ? 'The Google window was closed.' : e && e.type==='popup_failed_to_open' ? 'Your browser blocked the Google window. Allow pop-ups for this site.' : 'Google access was not granted.')); }
       });
-      gTokClient.requestAccessToken(force ? {prompt:'consent'} : undefined);
+      // prompt '' : Google only asks the first time (its default shows the account chooser every time).
+      gTokClient.requestAccessToken({prompt: force ? 'consent' : ''});
     }catch(e){ gTokWait = null; reject(e); }
   });
 }

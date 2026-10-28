@@ -1412,6 +1412,13 @@ body:not(.mode-com) .com-only{display:none !important;}
 /* Audit trail */
 .audit-head{padding:16px 18px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700; color:var(--ink-2); display:flex; align-items:center; gap:7px; flex-shrink:0;}
 .audit-list{flex:1; overflow-y:auto; padding:16px 18px;}
+.ld-head-btns{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
+.ld-act-lbl{font-size:12px; font-weight:700; color:var(--text-muted); margin:2px 0 6px;}
+.ld-act-lbl + .ld-chips{margin-bottom:10px;}
+.ld-chips{display:flex; gap:6px; flex-wrap:wrap;}
+.ld-chip{border:1.5px solid var(--border-2); background:var(--surface); color:var(--text); border-radius:999px; padding:6px 12px; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;}
+.ld-chip:hover{border-color:var(--brand-light);}
+.ld-chip.sel{background:var(--brand); border-color:var(--brand); color:#fff;}
 .ld-note-form{padding:12px 18px; border-bottom:1px solid var(--border); flex-shrink:0;}
 .ld-note-form textarea{width:100%; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; font:inherit; font-size:13px; background:var(--surface); color:var(--text); resize:vertical;}
 .audit-item{display:flex; gap:11px; margin-bottom:16px; position:relative;}
@@ -3235,7 +3242,17 @@ body:not(.ai-on) #askBtn{display:none;}
     <div class="lead-detail-grid">
       <div class="lead-left" id="leadLeftPane"><!-- populated by JS --></div>
       <div class="lead-right">
-        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail<button type="button" class="btn btn-secondary btn-sm hidden" id="ldAddNoteBtn" style="margin-left:auto;">+ Add note</button></div>
+        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail<span class="ld-head-btns hidden" id="ldHeadBtns"><button type="button" class="btn btn-secondary btn-sm" id="ldRecordBtn">+ Record action</button><button type="button" class="btn btn-secondary btn-sm" id="ldAddNoteBtn">+ Add note</button></span></div>
+        <div class="ld-note-form hidden" id="ldActForm">
+          <div class="ld-act-lbl">What did you do?</div>
+          <div class="ld-chips" id="ldActKinds"></div>
+          <div class="hidden" id="ldActMore">
+            <div class="ld-act-lbl">Outcome</div>
+            <div class="ld-chips" id="ldActOutcomes"></div>
+            <textarea id="ldActNote" rows="2" maxlength="4000" placeholder="Add detail (optional), e.g. Spoke to Sarah, she'll check with her partner." style="margin-top:8px;"></textarea>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:8px;"><button type="button" class="btn btn-primary btn-sm" id="ldActSave" disabled>Save to audit trail</button><button type="button" class="linkish" id="ldActCancel" style="font-size:13px;">Cancel</button></div>
+        </div>
         <div class="ld-note-form hidden" id="ldNoteForm">
           <textarea id="ldNoteText" rows="3" maxlength="4000" placeholder="e.g. Client called to say they're away until the 14th; prefers email."></textarea>
           <div style="display:flex; gap:8px; align-items:center; margin-top:8px;"><button type="button" class="btn btn-primary btn-sm" id="ldNoteSave">Save note</button><button type="button" class="linkish" id="ldNoteCancel" style="font-size:13px;">Cancel</button></div>
@@ -6568,6 +6585,7 @@ function openSibFromLead(key){
 const WHATS_NEW = [
   {id:'2026-10-28a', date:'2026-10-28', items:[
     {text:"<b>+ Add note</b> on Protection cases: next to the <b>Audit trail</b> heading, so you can add a note to a case at any time, whatever stage it's at."},
+    {text:"<b>+ Record action</b>, next to it: pick <b>Call</b> (or Text / Other contact), choose how it went (Spoke to client, No answer, Left voicemail, Asked to call back, Wrong number) and add detail if you like. It goes in the audit trail and counts as a contact attempt, without changing the stage or what's booked."},
   ]},
   {id:'2026-10-27g', date:'2026-10-27', items:[
     {text:"<b>Email signatures from your signature tool.</b> If your signature is added by a Chrome extension or a company signature tool (so it isn't in Gmail's settings), the tracker can now use it: Management can paste each colleague's signature in <b>Settings → Colleagues</b>, or you can press <b>Use my own signature instead</b> under the message in the email window. It's then added to every email you send from the tracker."},
@@ -9249,7 +9267,7 @@ function renderLeadModal(){
   if(!raw){ closeModal('leadOverlay'); return; }
   lastRenderedLead = JSON.stringify(raw);
   const lead = {id: activeLeadId, ...raw};
-  document.getElementById('ldAddNoteBtn').classList.toggle('hidden', !canManageLead(lead));
+  document.getElementById('ldHeadBtns').classList.toggle('hidden', !canManageLead(lead));
   document.getElementById('ldClientName').textContent = lead.clientName;
 
   const potKey = potOf(lead);
@@ -9592,11 +9610,48 @@ document.getElementById('csSubmit').addEventListener('click', function(){
 });
 
 // "+ Add note" next to the Audit trail heading: a note on the case at any time.
-function ldNoteClose(){ document.getElementById('ldNoteForm').classList.add('hidden'); document.getElementById('ldNoteText').value = ''; }
+function ldNoteClose(){ document.getElementById('ldNoteForm').classList.add('hidden'); document.getElementById('ldNoteText').value = ''; ldActClose(); }
 document.getElementById('ldAddNoteBtn').addEventListener('click', ()=>{
   const f = document.getElementById('ldNoteForm');
   if(!f.classList.contains('hidden')){ ldNoteClose(); return; }
-  f.classList.remove('hidden'); document.getElementById('ldNoteText').focus();
+  ldActClose(); f.classList.remove('hidden'); document.getElementById('ldNoteText').focus();
+});
+// "+ Record action": log a call (or text / other contact) and how it went. It
+// counts as a contact attempt, without changing the case's stage or bookings.
+const REC_ACTIONS = {
+  call: {label:'Call', outcomes:['Spoke to client','No answer','Left voicemail','Asked to call back','Wrong number']},
+  text: {label:'Text', outcomes:['Text sent','Client replied']},
+  other: {label:'Other contact', outcomes:['Spoke to client','No response']},
+};
+let ldAct = {kind:'', outcome:''};
+function ldActRender(){
+  const chips = (list, sel, attr)=> list.map(([v, t])=> `<button type="button" class="ld-chip${v===sel ? ' sel' : ''}" ${attr}="${esc(v)}">${esc(t)}</button>`).join('');
+  document.getElementById('ldActKinds').innerHTML = chips(Object.entries(REC_ACTIONS).map(([k, a])=> [k, a.label]), ldAct.kind, 'data-rec-kind');
+  document.getElementById('ldActMore').classList.toggle('hidden', !ldAct.kind);
+  document.getElementById('ldActOutcomes').innerHTML = ldAct.kind ? chips(REC_ACTIONS[ldAct.kind].outcomes.map(o=> [o, o]), ldAct.outcome, 'data-rec-out') : '';
+  document.getElementById('ldActSave').disabled = !(ldAct.kind && ldAct.outcome);
+}
+function ldActClose(){ ldAct = {kind:'', outcome:''}; document.getElementById('ldActForm').classList.add('hidden'); document.getElementById('ldActNote').value = ''; }
+document.getElementById('ldRecordBtn').addEventListener('click', ()=>{
+  const f = document.getElementById('ldActForm');
+  if(!f.classList.contains('hidden')){ ldActClose(); return; }
+  document.getElementById('ldNoteForm').classList.add('hidden'); document.getElementById('ldNoteText').value = '';
+  ldAct = {kind:'call', outcome:''}; ldActRender(); f.classList.remove('hidden');
+});
+document.getElementById('ldActForm').addEventListener('click', e=>{
+  const k = e.target.closest('[data-rec-kind]'), o = e.target.closest('[data-rec-out]');
+  if(k){ ldAct = {kind:k.dataset.recKind, outcome:''}; ldActRender(); }
+  else if(o){ ldAct.outcome = o.dataset.recOut; ldActRender(); document.getElementById('ldActNote').focus(); }
+});
+document.getElementById('ldActCancel').addEventListener('click', ldActClose);
+document.getElementById('ldActSave').addEventListener('click', function(){
+  const lead = LEADS[activeLeadId], a = REC_ACTIONS[ldAct.kind];
+  if(!lead || !canManageLead(lead) || !a || !ldAct.outcome) return;
+  const note = document.getElementById('ldActNote').value.trim();
+  this.disabled = true;
+  logAudit(activeLeadId, {type:ldAct.kind, outcome:ldAct.outcome, text:`${a.label} - ${ldAct.outcome}${note ? ': '+note : ''}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+    .then(()=>{ ldActClose(); toast(`${a.label} recorded`,'success'); })
+    .catch(err=>{ this.disabled = false; toast('Could not save: '+err.message,'error'); });
 });
 document.getElementById('ldNoteCancel').addEventListener('click', ldNoteClose);
 document.getElementById('ldNoteSave').addEventListener('click', function(){
@@ -10458,7 +10513,7 @@ document.getElementById('aiWriteGo').addEventListener('click', function(){
   }).catch(e=> toast(e.message,'error')).finally(()=>{ this.disabled = false; this.textContent = '✨ Write it'; });
 });
 // ✨ Tidy up under note boxes
-const AI_TIDY = ['ldNoteText','mtNote','rdNote','refNote','fbNote','spFbNote','tcNote','quickNote','dcDetail','chNote','fuComment','comMtNote','comRdNote','comNote','comLostNote','comFuNote','cnwNote','sibCallNote','sibNoteText','sibOutNote','sibRefNote','sibApNote','sibEdNotes'];
+const AI_TIDY = ['ldNoteText','ldActNote','mtNote','rdNote','refNote','fbNote','spFbNote','tcNote','quickNote','dcDetail','chNote','fuComment','comMtNote','comRdNote','comNote','comLostNote','comFuNote','cnwNote','sibCallNote','sibNoteText','sibOutNote','sibRefNote','sibApNote','sibEdNotes'];
 function aiDecorate(){
   AI_TIDY.forEach(id=>{ const t = document.getElementById(id); if(!t || t.dataset.aiTidy) return; t.dataset.aiTidy = '1'; t.insertAdjacentHTML('afterend', `<button type="button" class="ai-tidy" data-ai-tidy-for="${id}">✨ Tidy up</button>`); });
 }

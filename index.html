@@ -6596,6 +6596,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-28e', date:'2026-10-28', items:[
+    {text:"<b>Decline on New Cases</b>: a <b>Decline</b> button now sits in the case window on New Cases too (next to the other buttons), with the same reasons and steps as before."},
+  ]},
   {id:'2026-10-28d', date:'2026-10-28', items:[
     {text:"<b>Faster tracker</b>, ready for years of cases: the dashboard opens quicker, isn't redrawn while you're on another page, and each column shows its first 50 cases with a <b>Show more</b> button at the bottom (the count at the top is still the full total, and search still looks at everything)."},
     {text:"<b>Notifications you won't miss</b>: the bell now keeps your own latest notifications, however busy the rest of the team is. Ones older than 90 days are tidied away."},
@@ -9456,6 +9459,7 @@ function renderLeadModal(){
       <button type="button" class="action-btn" data-act="appointment">${ico('calendar')}Appointment</button>` : ''}
       ${canFb ? `<button type="button" class="action-btn ld-refer-btn ${ldFeedbackOpen ? 'on' : ''}" id="fbBtn">${ico('message')}Feedback to ${esc(String(lead.referredByName||'MAPA').split(' ')[0])}</button>
       <button type="button" class="action-btn ld-thanks-btn ${ldThanksOpen ? 'on' : ''}" id="tcBtn"><span aria-hidden="true">💐</span>Send thanks</button>` : ''}
+      ${booking && !due && lead.status==='new' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>` : ''}
       ${moreItems.length ? `<button type="button" class="action-btn" id="ldMoreBtn" aria-expanded="${ldMoreOpen}" aria-controls="ldMoreRow">${ldMoreOpen ? 'Less ▴' : 'More ▾'}</button>` : ''}
     </div>
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
@@ -9820,7 +9824,7 @@ const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'App
 function handleActionClick(lead, type){
   // Email: write it first; the outcome buttons appear once it's sent.
   if(type==='email'){ openEmailCompose(lead.id, true); return; }
-  if(type==='decline'){ // Appointments / Research: decline straight from the case
+  if(type==='decline'){ // New Cases and Appointments / Research: decline straight from the case
     actionUIState = actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? null : {stage:'decline'};
     refreshLeadModal(true); return;
   }

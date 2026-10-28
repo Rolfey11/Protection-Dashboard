@@ -52,6 +52,7 @@
     },
 
     "notifications": {
+      ".indexOn": ["toUserId", "toRole", "at"],
       ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()",
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).exists()"
     },

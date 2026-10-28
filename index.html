@@ -247,6 +247,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .fun-badge.gold{background:color-mix(in srgb, #EAB308 18%, var(--surface)); color:#A16207;}
 :root[data-theme="dark"] .fun-badge.fire{color:#FDBA74;} :root[data-theme="dark"] .fun-badge.gold{color:#FDE047;}
 /* Celebration banner + confetti */
+.update-bar{position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:250; display:flex; align-items:center; gap:12px; padding:10px 12px 10px 18px; border-radius:14px; background:var(--surface); color:var(--text); border:1.5px solid var(--brand-light); box-shadow:0 18px 44px -12px rgba(0,0,0,.35); font-size:13.5px; font-weight:600; max-width:calc(100vw - 32px); flex-wrap:wrap;}
+.update-x{border:0; background:none; font:inherit; font-size:13px; color:var(--text-muted); cursor:pointer;}
 .celebrate-banner{position:fixed; left:50%; top:22%; z-index:300; transform:translate(-50%,0); padding:16px 28px; border-radius:18px; background:var(--surface); color:var(--text); font-family:var(--fh); font-size:24px; font-weight:700; letter-spacing:-.3px; box-shadow:0 24px 60px -12px rgba(0,0,0,.35); border:2px solid var(--brand-light); pointer-events:none; animation:celebIn .5s cubic-bezier(.3,1.5,.5,1) both, celebOut .45s ease-in 2.4s forwards; white-space:nowrap;}
 .celebrate-banner.small{font-size:18px; padding:12px 22px; border-color:var(--indigo,#3F51C7);}
 @keyframes celebIn{from{opacity:0; transform:translate(-50%,16px) scale(.8);}to{opacity:1; transform:translate(-50%,0) scale(1);}}
@@ -1149,6 +1151,9 @@ body:not(.mode-com) .com-only{display:none !important;}
 .kpi.skel-kpi .skel.w60{height:16px;}
 @keyframes skel{from{background-position:200% 0;}to{background-position:-200% 0;}}
 @media (prefers-reduced-motion: reduce){.skel{animation:none;}}
+.pot-more{display:block; width:100%; margin:4px 0 2px; padding:9px; border:1.5px dashed var(--border-2); border-radius:10px; background:none; font:inherit; font-size:12.5px; font-weight:700; color:var(--brand); cursor:pointer;}
+.pot-more:hover{border-color:var(--brand-light); background:var(--brand-tint);}
+.pot-more span{font-weight:500; color:var(--text-muted);}
 .pot-empty{padding:26px 12px 22px; text-align:center; color:var(--text-faint); font-size:12.5px; display:flex; flex-direction:column; align-items:center; gap:8px;}
 .pot-empty .pe-ic{width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--bg); color:var(--text-faint); border:1px dashed var(--border-2);}
 .pot-empty .pe-ic .ico{width:18px; height:18px;}
@@ -3630,14 +3635,16 @@ const BOOT_CACHE_KEY = 'plt_boot_v1';
 let bootCache = null;
 try{ const raw = sessionStorage.getItem(BOOT_CACHE_KEY); if(raw) bootCache = JSON.parse(raw); }catch(e){ bootCache = null; }
 let bootCacheTimer = null;
+let bootCacheTooBig = false; // the browser refused it once: stop preparing it (it's a big job with lots of cases)
 function saveBootCache(){
   clearTimeout(bootCacheTimer);
+  if(bootCacheTooBig) return;
   bootCacheTimer = setTimeout(()=>{
-    if(!currentUser || !leadsLive || !auth.currentUser) return;
+    if(!currentUser || !leadsLive || !auth.currentUser || bootCacheTooBig) return;
     const users = {};
     Object.entries(USERS).forEach(([id,u])=>{ if(u && u.name) users[id] = {name:u.name, role:u.role}; }); // never keep PINs
     try{ sessionStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({uid:auth.currentUser.uid, colleagueId:currentUser.id, at:Date.now(), users, leads:LEADS, notifs:NOTIFS})); }
-    catch(e){ try{ sessionStorage.removeItem(BOOT_CACHE_KEY); }catch(e2){} } // too big for this browser: just load normally
+    catch(e){ bootCacheTooBig = true; try{ sessionStorage.removeItem(BOOT_CACHE_KEY); }catch(e2){} } // too big for this browser: just load normally
   }, 1500);
 }
 function clearBootCache(){ bootCache = null; clearTimeout(bootCacheTimer); try{ sessionStorage.removeItem(BOOT_CACHE_KEY); }catch(e){} }
@@ -4174,7 +4181,7 @@ function logout(){
   overdueGateActive = false;
   closeAllModals(true);
   db.ref('leads').off();
-  notifsQuery().off();
+  stopNotifs(); NOTIFS = {};
   db.ref('clientSources').off();
   db.ref('config').off(); CONFIG = {}; document.body.classList.remove('ai-on'); askReset(); mySigStop();
   gTok = null; gTokClient = null; gTokWait = null; gAsked = new Set(); gSig = undefined; gSigState = ''; gcalEvents = {};
@@ -6589,6 +6596,14 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-28e', date:'2026-10-28', items:[
+    {text:"<b>Decline on New Cases</b>: a <b>Decline</b> button now sits in the case window on New Cases too (next to the other buttons), with the same reasons and steps as before."},
+  ]},
+  {id:'2026-10-28d', date:'2026-10-28', items:[
+    {text:"<b>Faster tracker</b>, ready for years of cases: the dashboard opens quicker, isn't redrawn while you're on another page, and each column shows its first 50 cases with a <b>Show more</b> button at the bottom (the count at the top is still the full total, and search still looks at everything)."},
+    {text:"<b>Notifications you won't miss</b>: the bell now keeps your own latest notifications, however busy the rest of the team is. Ones older than 90 days are tidied away."},
+    {text:"<b>\"A new version is ready\"</b>: if the tracker has been open a while when an update is published, a small bar at the bottom offers to refresh (nothing reloads by itself)."},
+  ]},
   {id:'2026-10-28c', date:'2026-10-28', items:[
     {text:"<b>+ Assign Mortgage Advisor</b> at the top of a Protection case: for clients a MAPA passed over without using <b>Refer to protection adviser</b>. Pick the MAPA (and add a handover note if you like) and the case counts as their referral: it shows in their <b>Referred Clients</b>, in the referral insights, and you can send them feedback and thanks."},
   ]},
@@ -7445,13 +7460,40 @@ function onListenError(showError){
   linkingPromise.then(()=> setTimeout(()=>{
     if(!currentUser) return;
     listenRetry = 'done';
-    db.ref('leads').off(); notifsQuery().off(); db.ref('clientSources').off(); db.ref('pins').off(); db.ref('config').off();
+    db.ref('leads').off(); stopNotifs(); db.ref('clientSources').off(); db.ref('pins').off(); db.ref('config').off();
     realtimeListenersStarted = false; pinsListenerStarted = false;
     startAuthedListeners();
   }, 300));
 }
-// Push keys are time-ordered, so this is the newest notifications only.
-function notifsQuery(){ return db.ref('notifications').limitToLast(300); }
+// Each person's own notifications plus their role's (the newest 300 of each),
+// so a busy team never pushes someone's unread ones out of the bell.
+// Needs ".indexOn": ["toUserId","toRole","at"] on /notifications in the rules.
+let notifQs = null, notifParts = [{}, {}];
+function stopNotifs(){ if(notifQs) notifQs.forEach(q=> q.off()); notifQs = null; notifParts = [{}, {}]; }
+function startNotifs(){
+  stopNotifs();
+  const base = db.ref('notifications');
+  notifQs = [base.orderByChild('toUserId').equalTo(currentUser.id).limitToLast(300), base.orderByChild('toRole').equalTo(currentUser.role).limitToLast(300)];
+  notifQs.forEach((q, i)=> q.on('value', snap=>{
+    notifParts[i] = snap.val() || {};
+    NOTIFS = {...notifParts[0], ...notifParts[1]};
+    if(currentUser){ renderNotifs(); checkLeadAlerts(); saveBootCache(); }
+    refreshInsightsIfVisible();
+  }, err=>{
+    onListenError(()=> toast('Could not load notifications — check Firebase rules.', 'error'));
+  }));
+  setTimeout(pruneOldNotifs, 20000);
+}
+// Management's browser clears notifications over 90 days old, once a day, a batch at a time.
+function pruneOldNotifs(){
+  if(!currentUser || currentUser.role!=='management') return;
+  const today = isoDay(new Date());
+  try{ if(localStorage.getItem('plt_notifPrune')===today) return; localStorage.setItem('plt_notifPrune', today); }catch(e){ return; }
+  db.ref('notifications').orderByChild('at').endAt(Date.now() - 90*86400000).limitToFirst(500).once('value').then(snap=>{
+    const u = {}; snap.forEach(c=>{ u[c.key] = null; });
+    if(Object.keys(u).length) return db.ref('notifications').update(u);
+  }).catch(()=>{});
+}
 function startAuthedListeners(){
   if(realtimeListenersStarted) return;
   realtimeListenersStarted = true;
@@ -7484,13 +7526,7 @@ function startAuthedListeners(){
     onListenError(()=> toast('Could not load cases. Your sign-in may not be linked to your colleague record: sign out and back in, or ask Management to re-save your PIN in Settings.', 'error'));
   });
 
-  notifsQuery().on('value', snap=>{
-    NOTIFS = snap.val() || {};
-    if(currentUser){ renderNotifs(); checkLeadAlerts(); saveBootCache(); }
-    refreshInsightsIfVisible();
-  }, err=>{
-    onListenError(()=> toast('Could not load notifications — check Firebase rules.', 'error'));
-  });
+  startNotifs();
 
   const DEFAULT_CLIENT_SOURCES = ['Resi Purchase','Resi Remo','Resi FA','Resi PT','BTL Purchase','BTL Remo','BTL FA','BTL PT','Equity Release','Bridge'];
   startPinsListener();
@@ -7748,10 +7784,17 @@ function renderDashLoading(){
   document.getElementById('myDaySection').classList.add('hidden');
 }
 
+const POT_STEP = 50; // cards drawn per column; "Show more" adds the next lot
+let potShown = {};
 function renderDashboard(){
   renderAlertPrompt();
   renderDateRangeLabel();
   renderAdvisorFilter();
+  // Not on screen (another page or section): it's drawn when it's next shown (goPage does that).
+  if(document.getElementById('page-dashboard').classList.contains('hidden')){
+    if(leadsLoaded && !document.getElementById('page-calendar').classList.contains('hidden')) renderCalendar();
+    return;
+  }
   if(!leadsLoaded){ renderDashLoading(); return; }
   renderOverdueBanner();
   renderMyDay();
@@ -7783,17 +7826,22 @@ function renderDashboard(){
       body.innerHTML = `<div class="pot-empty"><div class="pe-ic">${ico('inbox')}</div>${searchTerm ? 'No matches here' : 'Nothing here right now'}</div>`;
       return;
     }
-    body.innerHTML = buckets[potKey].map(l=> leadCardHtml(l, potKey)).join('');
-  });
-
-  // Protection cards only (Send in Blue cards share the look but open their own case window).
-  document.querySelectorAll('.lead-card[data-id]').forEach(card=>{
-    card.addEventListener('click', ()=> openLead(card.dataset.id));
+    // Long columns (years of On Risk cases) draw the first lot only; the count above is the full total.
+    const list = buckets[potKey], n = Math.max(POT_STEP, potShown[potKey] || 0), rest = list.length - n;
+    body.innerHTML = list.slice(0, n).map(l=> leadCardHtml(l, potKey)).join('')
+      + (rest > 0 ? `<button type="button" class="pot-more" data-pot-more="${potKey}">Show ${Math.min(POT_STEP, rest)} more <span>(${rest} not shown)</span></button>` : '');
   });
   sizePots();
   if(!document.getElementById('page-calendar').classList.contains('hidden')) renderCalendar();
 }
 
+// Protection cards only (Send in Blue cards share the look but open their own case window).
+document.getElementById('page-dashboard').addEventListener('click', e=>{
+  const more = e.target.closest('[data-pot-more]');
+  if(more){ const k = more.dataset.potMore; potShown[k] = Math.max(POT_STEP, potShown[k] || 0) + POT_STEP; renderDashboard(); return; }
+  const card = e.target.closest('.pots-grid .lead-card[data-id]');
+  if(card) openLead(card.dataset.id);
+});
 /* Fit the board to the window: each column's list gets whatever height is
    left below it (min 220px), and scrolls inside itself. Six-across only;
    on narrow screens the columns wrap and keep their default height.
@@ -9411,6 +9459,7 @@ function renderLeadModal(){
       <button type="button" class="action-btn" data-act="appointment">${ico('calendar')}Appointment</button>` : ''}
       ${canFb ? `<button type="button" class="action-btn ld-refer-btn ${ldFeedbackOpen ? 'on' : ''}" id="fbBtn">${ico('message')}Feedback to ${esc(String(lead.referredByName||'MAPA').split(' ')[0])}</button>
       <button type="button" class="action-btn ld-thanks-btn ${ldThanksOpen ? 'on' : ''}" id="tcBtn"><span aria-hidden="true">💐</span>Send thanks</button>` : ''}
+      ${booking && !due && lead.status==='new' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>` : ''}
       ${moreItems.length ? `<button type="button" class="action-btn" id="ldMoreBtn" aria-expanded="${ldMoreOpen}" aria-controls="ldMoreRow">${ldMoreOpen ? 'Less ▴' : 'More ▾'}</button>` : ''}
     </div>
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
@@ -9775,7 +9824,7 @@ const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'App
 function handleActionClick(lead, type){
   // Email: write it first; the outcome buttons appear once it's sent.
   if(type==='email'){ openEmailCompose(lead.id, true); return; }
-  if(type==='decline'){ // Appointments / Research: decline straight from the case
+  if(type==='decline'){ // New Cases and Appointments / Research: decline straight from the case
     actionUIState = actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? null : {stage:'decline'};
     refreshLeadModal(true); return;
   }
@@ -10029,7 +10078,7 @@ function canReferToPA(lead){
   return !!lead && canAction(lead) && inBookingPot(lead) && !fuDue(lead) && !isProtAdviser(lead.advisorId) && !isProtAdviser(currentUser.id) && protAdvisers().length > 0;
 }
 function renderReferArea(lead, area){
-  const pas = protAdvisers(), tmr = new Date(Date.now() + 86400000);
+  const pas = protAdvisers();
   area.innerHTML = `<div class="inline-form bk-form refer-form">
       <div class="op-title" style="font-weight:700; margin-bottom:4px;">${ico('send')} Refer to protection adviser</div>
       <p class="mt-sub" style="margin:0 0 10px;">The case moves to the protection adviser. If you've agreed a time with the client, book it here; otherwise leave it blank and they'll arrange it.</p>
@@ -11553,7 +11602,7 @@ document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `protection-lead-tracker-export-${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `protection-lead-tracker-export-${todayISO()}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -12218,6 +12267,32 @@ document.getElementById('maSavePin').addEventListener('click', function(){
    the notification itself comes from the operating system.
    ---------------------------------------------------------------------------- */
 let swReg = null;
+/* ---- New version check ----
+   A tab left open for days keeps running the old version after an update is
+   published. Every 10 minutes (and when the tab is looked at again) peek at
+   the published page: if its newest What's New entry is different, offer a
+   refresh. Nothing reloads by itself, so nobody loses what they're typing. */
+const APP_VERSION = (WHATS_NEW[0] || {}).id || '';
+let updateShown = false, updateCheckedAt = 0;
+function checkForUpdate(){
+  if(updateShown || !APP_VERSION || !/^https?:/.test(location.protocol) || document.hidden || Date.now() - updateCheckedAt < 120000) return;
+  updateCheckedAt = Date.now();
+  fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'}).then(r=> r.ok ? r.text() : '').then(t=>{
+    const m = t.match(/const WHATS_NEW = \[\s*\{id:'([^']+)'/);
+    if(m && m[1] !== APP_VERSION && !updateShown){
+      updateShown = true;
+      const bar = document.createElement('div');
+      bar.className = 'update-bar'; bar.setAttribute('role', 'status');
+      bar.innerHTML = `<span>A new version of the tracker is ready.</span><button type="button" class="btn btn-primary btn-sm">Refresh now</button><button type="button" class="update-x" aria-label="Later">Later</button>`;
+      bar.querySelector('.btn').addEventListener('click', ()=> location.reload());
+      bar.querySelector('.update-x').addEventListener('click', ()=>{ bar.remove(); updateShown = false; updateCheckedAt = Date.now() + 30*60000; }); // ask again in about half an hour
+      document.body.appendChild(bar);
+    }
+  }).catch(()=>{});
+}
+setInterval(checkForUpdate, 10*60000);
+document.addEventListener('visibilitychange', checkForUpdate);
+
 if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
   navigator.serviceWorker.register('sw.js').then(r=>{ swReg = r; }).catch(()=>{});
   // Clicking a reminder while the tracker is open

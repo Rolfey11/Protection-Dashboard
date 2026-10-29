@@ -1509,18 +1509,66 @@ body:not(.mode-com) .com-only{display:none !important;}
 .insights-card h4{font-size:13px; font-weight:700; margin-bottom:14px; color:var(--text);}
 .insights-empty{font-size:12.5px; color:var(--text-faint); padding:10px 0;}
 
-#myDayCard{max-height:150px; overflow-y:auto; padding-top:6px; padding-bottom:6px;}
+#myDayCard{max-height:118px; overflow-y:auto; padding-top:3px; padding-bottom:3px;}
 .alert-prompt{display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--brand-tint); border:1px solid color-mix(in srgb, var(--brand) 25%, transparent); border-radius:var(--radius); padding:12px 16px; margin-bottom:16px;}
 .alert-prompt-ic{display:grid; place-items:center; width:36px; height:36px; border-radius:10px; background:var(--surface); color:var(--brand); flex-shrink:0;}
 .alert-prompt-ic svg{width:19px; height:19px;}
 .alert-prompt-text{flex:1 1 260px; min-width:0; display:grid; gap:2px; font-size:13.5px; color:var(--text);}
 .alert-prompt-text span{font-size:12.5px; color:var(--text-muted);}
 .alert-prompt-actions{display:flex; gap:8px; flex-wrap:wrap;}
-.myday-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 6px; border-bottom:1px solid var(--border); cursor:pointer; transition:.12s;}
+.myday-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:5px 6px; border-bottom:1px solid var(--border); cursor:pointer; transition:.12s;}
 .myday-row:last-child{border-bottom:none;}
 .myday-row:hover{background:var(--brand-tint); margin:0 -10px; padding-left:16px; padding-right:16px; border-radius:8px;}
 .myday-name{font-size:13.5px; font-weight:700; color:var(--text);}
-.myday-sub{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+.myday-sub{font-size:11.5px; color:var(--text-faint); margin-top:1px;}
+/* ---- Compact dashboard top: greeting, numbers and My Day take as little height as possible ---- */
+.dash-head{align-items:center; margin-bottom:12px;}
+.dash-hello{display:flex; align-items:baseline; flex-wrap:wrap; gap:2px 12px; min-width:0;}
+.dash-head h1{font-size:20px;}
+.dash-head .sub{margin:0; font-size:12.5px;}
+.dash-head .fun-badges{margin:0; align-self:center;}
+#page-dashboard .filter-row{margin-bottom:12px;}
+#page-dashboard .overdue-banner{margin-bottom:12px;}
+.dash-stats{display:flex; align-items:center; gap:10px 16px; flex-wrap:wrap; margin-bottom:12px;}
+.dash-stats .kpi-row{display:flex; flex-wrap:wrap; gap:8px; margin:0; flex:1 1 auto; min-width:0;}
+.dash-stats .kpi{padding:6px 12px 6px 8px; border-radius:10px; box-shadow:none; grid-template-columns:28px auto auto; column-gap:8px; row-gap:0; flex:0 1 auto; min-width:0;}
+.dash-stats .kpi::after{display:none;}
+.dash-stats .kpi:hover{transform:none; border-color:var(--brand-light); box-shadow:none;}
+.dash-stats .kpi-ic{width:28px; height:28px; border-radius:8px;}
+.dash-stats .kpi-ic .ico{width:14px; height:14px;}
+.dash-stats .kpi-lbl{font-size:11px;}
+.dash-stats .kpi-val{font-size:17px; line-height:1.1;}
+.dash-stats .kpi-sub{font-size:11px;}
+.dash-stats .kpi.skel-kpi{min-height:44px; min-width:150px;}
+.dash-quick{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-left:auto;}
+.dash-quick:empty{display:none;}
+.myday-head{display:flex; align-items:center; gap:8px; width:100%; border:0; background:none; padding:2px 0 6px; font:inherit; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); cursor:pointer; text-align:left;}
+.myday-head:hover{color:var(--text);}
+.myday-chev{display:inline-block; transition:transform .15s; font-size:11px;}
+.myday-head[aria-expanded="false"] .myday-chev{transform:rotate(-90deg);}
+.myday-row > div:first-child{display:flex; align-items:baseline; gap:10px; min-width:0;}
+.myday-row .myday-sub{margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.myday-row .tag{flex-shrink:0;}
+.myday-count{margin-left:auto; text-transform:none; letter-spacing:0; font-size:12.5px; color:var(--brand);}
+.myday-count .od{color:var(--red);}
+#myDayCard{margin-bottom:12px;}
+#myDaySection.folded #myDayCard{display:none;}
+#myDaySection.folded{margin-bottom:6px;}
+/* "Turn on alerts": a small card in the corner, not a strip across the page */
+#page-dashboard .alert-prompt{position:fixed; left:16px; bottom:16px; z-index:200; max-width:400px; margin:0; box-shadow:0 18px 40px -14px rgba(46,20,38,.35); background:var(--surface); padding:12px 14px;}
+#page-dashboard .alert-prompt{max-width:340px; gap:10px; padding:10px 12px;}
+#page-dashboard .alert-prompt-ic{width:30px; height:30px;}
+#page-dashboard .alert-prompt-text{font-size:12.5px; flex-basis:200px;}
+#page-dashboard .alert-prompt-text span{font-size:11.5px;}
+@media (max-width:560px){ #page-dashboard .alert-prompt{left:8px; right:8px; bottom:8px; max-width:none;} }
+@media (max-width:700px){
+  .dash-stats .kpi-row{display:grid; grid-template-columns:1fr 1fr; gap:8px; flex-basis:100%;}
+  .dash-stats .kpi-sub{display:none;}
+  .dash-stats .kpi{grid-template-columns:28px minmax(0,1fr);}
+  .dash-quick{margin-left:0; justify-content:flex-start;}
+  .myday-row{flex-wrap:wrap; gap:4px 10px;}
+  .myday-row > div:first-child{flex:1 1 100%;}
+}
 
 .source-row{display:flex; align-items:center; justify-content:space-between; padding:9px 4px; border-bottom:1px solid var(--border); font-size:13.5px; font-weight:600; color:var(--text);}
 .source-row:last-child{border-bottom:none;}
@@ -2058,8 +2106,8 @@ body:not(.ai-on) #askBtn{display:none;}
           <div class="ob-list" id="overdueBannerList"></div>
         </div>
       </div>
-      <div class="page-head">
-        <div>
+      <div class="page-head dash-head">
+        <div class="dash-hello">
           <h1 id="dashGreeting">Welcome back</h1>
           <p class="sub" id="dashSub">Here's what's happening across the workflow.</p>
           <div class="fun-badges" id="dashBadges"></div>
@@ -2091,14 +2139,17 @@ body:not(.ai-on) #askBtn{display:none;}
 
       <div class="filter-row hidden" id="advisorFilterRow"></div>
 
-      <div class="kpi-row" id="dashKpis"></div>
+      <div class="dash-stats">
+        <div class="kpi-row" id="dashKpis"></div>
+        <div class="dash-quick" id="dashQuick"></div>
+      </div>
 
       <div id="myDaySection" class="hidden">
-        <div class="section-lbl" style="margin-top:0; display:flex; align-items:center; justify-content:space-between;">
-          <span>My Day</span>
-          <span id="myDayCount" style="font-weight:700; color:var(--brand);"></span>
-        </div>
-        <div class="insights-card" id="myDayCard" style="margin-bottom:20px;"></div>
+        <button type="button" class="myday-head" id="myDayToggle" aria-expanded="true" aria-controls="myDayCard">
+          <span class="myday-chev" aria-hidden="true">▾</span><span>My Day</span>
+          <span id="myDayCount" class="myday-count"></span>
+        </button>
+        <div class="insights-card" id="myDayCard"></div>
       </div>
 
       <div class="pots-grid">
@@ -6599,6 +6650,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-29d', date:'2026-10-29', items:[
+    {text:"<b>A more compact dashboard</b>: the greeting, your numbers and My Day take up much less room, so your case columns sit higher up the screen. Click <b>My Day</b> to fold it away to one line (it remembers), overdue items show in My Day instead of a separate red banner, and the alerts prompt is a small card in the corner.", roles:['mapa']},
+    {text:"<b>A more compact dashboard</b>: the greeting and numbers take up much less room, so the case columns sit higher up the screen.", roles:['management','admin']},
+  ]},
   {id:'2026-10-29c', date:'2026-10-29', items:[
     {text:"<b>Sign Up and Decline on New Cases</b>: New Cases now have <b>Sign Up</b> next to <b>Decline</b>, and when a reminder is due the reminder box has <b>Sign Up</b> and <b>Decline</b> next to Book appointment and Set reminder (anything you've typed in \"What happened?\" is kept on the case)."},
   ]},
@@ -7676,8 +7731,12 @@ function renderAdvisorFilter(){
   const nDeclined = leadsLoaded ? fullyDeclinedLeads().length : 0;
   const declinedBtn = `<button type="button" class="filter-chip declined-chip" id="fullyDeclinedBtn" title="Declined cases with every step done (reasoning sent, HLP email, NPW)">Fully Declined Leads${nDeclined ? ' ('+nDeclined+')' : ''}</button>`;
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa').sort((a,b)=>a[1].name.localeCompare(b[1].name));
+  const quick = document.getElementById('dashQuick');
+  quick.innerHTML = '';
   if((currentUser.role!=='management' && currentUser.role!=='admin') || mapas.length===0){
-    row.innerHTML = referredBtnHtml() + thanksBtnHtml() + declinedBtn;
+    // MAPAs: these sit beside the numbers rather than on a row of their own.
+    row.innerHTML = ''; row.classList.add('hidden');
+    quick.innerHTML = referredBtnHtml() + thanksBtnHtml() + declinedBtn;
     document.getElementById('fullyDeclinedBtn').addEventListener('click', openFullyDeclined);
     const rb = document.getElementById('referredBtn'); if(rb) rb.addEventListener('click', openReferredList);
     const tw = document.getElementById('thanksWallBtn'); if(tw) tw.addEventListener('click', openThanksWall);
@@ -7951,6 +8010,7 @@ function overdueExistingLeads(){
 
 function renderOverdueBanner(){
   const banner = document.getElementById('overdueBanner');
+  if(currentUser.role==='mapa'){ banner.classList.add('hidden'); return; } // shown in My Day instead
   const list = overdueExistingLeads();
   if(list.length===0){ banner.classList.add('hidden'); return; }
   banner.classList.remove('hidden');
@@ -8023,13 +8083,26 @@ function myDayItems(){
   return items;
 }
 
+// My Day can be folded away to its one-line header; remembered per person on this computer.
+function myDayFolded(){ try{ return localStorage.getItem('plt_myDayFolded_'+currentUser.id)==='1'; }catch(e){ return false; } }
+document.getElementById('myDayToggle').addEventListener('click', ()=>{
+  const f = !myDayFolded();
+  try{ localStorage.setItem('plt_myDayFolded_'+currentUser.id, f ? '1' : '0'); }catch(e){}
+  document.getElementById('myDaySection').classList.toggle('folded', f);
+  document.getElementById('myDayToggle').setAttribute('aria-expanded', String(!f));
+  sizePots();
+});
 function renderMyDay(){
   const section = document.getElementById('myDaySection');
   if(currentUser.role!=='mapa'){ section.classList.add('hidden'); return; }
   section.classList.remove('hidden');
 
   const items = myDayItems();
-  document.getElementById('myDayCount').textContent = items.length ? `${items.length} to do` : '';
+  const nLate = items.filter(it=> it.tone==='bad').length;
+  document.getElementById('myDayCount').innerHTML = items.length ? `${items.length} to do${nLate ? ` · <span class="od">${nLate} overdue</span>` : ''}` : '';
+  const folded = myDayFolded();
+  section.classList.toggle('folded', folded);
+  document.getElementById('myDayToggle').setAttribute('aria-expanded', String(!folded));
   const card = document.getElementById('myDayCard');
   if(items.length===0){
     card.innerHTML = `<div class="insights-empty">Nothing needs your attention right now — nice work.</div>`;

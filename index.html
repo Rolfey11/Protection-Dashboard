@@ -1217,7 +1217,7 @@ body:not(.mode-com) .com-only{display:none !important;}
 /* Cards scrolled out of view inside a column aren't laid out until they're
    scrolled to, which keeps switching back to a busy board quick. */
 .pot-body > .lead-card{content-visibility:auto; contain-intrinsic-size:auto 76px;}
-.lead-card.overdue{border-color:color-mix(in srgb, var(--red) 40%, var(--border)); box-shadow:inset 3px 0 0 var(--red);}
+.lead-card.overdue{border-color:color-mix(in srgb, var(--red) 55%, var(--border)); background:color-mix(in srgb, var(--red) 9%, var(--surface)); box-shadow:inset 4px 0 0 var(--red);}
 .lead-card.overdue:hover{border-color:var(--red); box-shadow:inset 3px 0 0 var(--red), 0 10px 24px -10px color-mix(in srgb, var(--red) 45%, transparent);}
 .lead-card .lc-top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
 .lead-card .lc-name{font-size:12.5px; font-weight:600; color:var(--text); line-height:1.25; letter-spacing:-.1px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -6596,6 +6596,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-29a', date:'2026-10-29', items:[
+    {text:"<b>Overdue items turn red first</b>: when a reminder or appointment goes past its time, the case turns red in its column. If it still hasn't been dealt with by <b>8am the next morning</b>, it pops up and has to be dealt with before you can use the dashboard.", roles:['mapa']},
+    {text:"<b>MAPAs get until 8am the next morning</b>: overdue reminders and appointments now turn red straight away, and only pop up as mandatory if they're still not dealt with by 8am the following morning.", roles:['management','admin']},
+  ]},
   {id:'2026-10-28e', date:'2026-10-28', items:[
     {text:"<b>Decline on New Cases</b>: a <b>Decline</b> button now sits in the case window on New Cases too (next to the other buttons), with the same reasons and steps as before."},
   ]},
@@ -7611,10 +7615,14 @@ function fuKind(l){ return l && l.followUpKind==='reminder' ? 'reminder' : 'appo
 function fuKindLabel(l){ return fuKind(l)==='reminder' ? 'Reminder' : `Appointment${l.apptType && APPT_TYPES[l.apptType] ? ' ('+APPT_TYPES[l.apptType]+')' : ''}`; }
 function inBookingPot(l){ return !!l && (l.status==='new' || l.status==='existing'); }
 function fuDue(l){ return inBookingPot(l) && !!l.followUpDate && isCallOverdue(l.followUpDate, l.followUpTime); }
+// Overdue Protection bookings show red straight away; anything still not dealt with
+// by 8am the next morning becomes mandatory (the pop-up, and the case can't be left).
+function fuLockAt(l){ const d = toDate(l.followUpDate); d.setDate(d.getDate() + 1); d.setHours(8, 0, 0, 0); return d.getTime(); }
+function fuLocked(l){ return fuDue(l) && Date.now() >= fuLockAt(l); }
 // Why the assigned MAPA can't leave this case yet ('' = they can).
 function leadCloseBlock(l){
   if(!l || !currentUser || currentUser.role!=='mapa' || l.advisorId!==currentUser.id || l.deleted || !inBookingPot(l)) return '';
-  if(fuDue(l)) return fuKind(l)==='reminder' ? 'Deal with the reminder first: add a note, then set a new reminder or book an appointment.' : 'Record the outcome of the meeting first.';
+  if(fuLocked(l)) return fuKind(l)==='reminder' ? 'Deal with the reminder first: add a note, then set a new reminder or book an appointment.' : 'Record the outcome of the meeting first.';
   // New Cases can be left without a booking; Appointments / Research can't.
   if(!l.followUpDate && l.status!=='new') return 'Set a reminder or book an appointment before leaving this case.';
   return '';
@@ -9081,7 +9089,7 @@ const HELP = [
     {t:'Refer to a protection adviser', roles:['mapa','management'], h:`On a case in <b>New Cases</b> or <b>Appointments / Research</b> you can do the protection yourself, or press <b>Refer to protection adviser</b>. Choose the adviser, add the appointment type, date and time if you've agreed one with the client (leave the date blank if not), and write a detailed handover note (at least 20 characters): the mortgage, completion date, family, health and what cover they want. The case moves to the protection adviser: into Appointments / Research if you booked a time, otherwise New Cases for them to book. They'll see your handover at the top of the case and a <b>↪ your name</b> tag on the card.`},
     {t:'Referred Clients and feedback', roles:['mapa','management'], h:`<b>MAPAs:</b> the <b>Referred Clients</b> button on the dashboard lists every client you've referred to a protection adviser: who has it, its status, the next appointment and the latest feedback (new feedback is highlighted). Click a client to see the case, notes and history. It's view only, so you can't change anything. <b>Protection advisers:</b> on a referred case, press <b>Feedback to …</b>, choose how it's going and write at least 20 characters. The MAPA gets a notification, and the feedback shows in a box on the case. <b>💐 Send thanks</b> sends an animated thank-you card that pops up on the MAPA's screen; MAPAs keep all their cards under the <b>💐 Thank You's</b> button on the dashboard. When you submit a referred case to underwriting or put it on risk, the sign-up window has a <b>Send feedback to …</b> box and an optional card too.`},
     {t:'Outcome of meeting', roles:['mapa','management'], h:`Once a booked appointment's time has passed, the case shows <b>Outcome of meeting</b> and can't be closed until it's done.<ol><li>Choose <b>Spoke to client</b>, <b>No answer</b> or <b>Not attempted</b> (the appointment didn't go ahead from our side).</li><li>Write what happened (at least 20 characters).</li><li>Spoke to client: <b>Sign Up</b> (On Risk or Submitted to underwriting), <b>Follow Up</b> (book another appointment or set a reminder) or <b>Decline</b>. No answer or Not attempted: <b>Try again</b> (book another appointment or set a reminder) or <b>Decline</b>. Not attempted doesn't count as a contact attempt.</li></ol>`},
-    {t:'Overdue reminders and appointments', roles:['mapa'], h:`When you open the protection dashboard, any overdue reminders or appointments pop up first, and you can't use the dashboard until each one is dealt with. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment. A reminder or appointment that goes overdue while you're working pops up as soon as you close what you're doing.`},
+    {t:'Overdue reminders and appointments', roles:['mapa'], h:`As soon as a reminder or appointment goes past its date and time, the case turns <b>red</b> in its column so you can see it needs dealing with. If it still hasn't been dealt with by <b>8am the next morning</b>, it pops up and you can't use the dashboard until each one is done. Appointments need their <b>Outcome of meeting</b>; reminders need a note of what happened (at least 20 characters), then a new reminder or an appointment.`},
     {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>Appointments / Research</b> must have its next step booked; you can't close it until it does. <b>New Cases</b> can be closed without one (it shows <i>Nothing booked yet</i> until you book).<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li><li><b>Decline</b> (Appointments / Research only): opens the decline form with the reason, detail and decline steps.</li></ul>`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
     {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`On a case in <b>Appointments / Research</b> you can press <b>Sign Up</b> (next to Decline) at any time, or choose Sign Up from the Outcome of meeting.<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the total commission, choose each policy sold (DTA, LTA, FIB, CIC, IP, WOL) and tick which client it covers. Tick more than one client for a joint policy; use <b>+ Add another policy</b> for more.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission and policies are filled in for you: check them and change anything that's different.</li></ol>`},
@@ -10872,12 +10880,14 @@ function renderBookingArea(lead, area){
   }));
 }
 
-/* ---- Overdue lock: a MAPA with overdue reminders or appointments deals with
-   them before using the protection dashboard (one at a time, in the case window). ---- */
+/* ---- Overdue lock: a MAPA with reminders or appointments still not dealt with
+   by 8am the morning after they were due deals with them before using the
+   protection dashboard (one at a time, in the case window). Until then the
+   case just shows red. ---- */
 let overdueGateActive = false;
 function myOverdueBookings(){
   if(!currentUser || currentUser.role!=='mapa') return [];
-  return Object.entries(LEADS).map(([id, l])=> ({id, ...l})).filter(l=> !l.deleted && l.advisorId===currentUser.id && fuDue(l))
+  return Object.entries(LEADS).map(([id, l])=> ({id, ...l})).filter(l=> !l.deleted && l.advisorId===currentUser.id && fuLocked(l))
     .sort((a,b)=> callDueAt(a.followUpDate, a.followUpTime) - callDueAt(b.followUpDate, b.followUpTime));
 }
 // Protection and Commercial each have their own lock; Send in Blue has none.

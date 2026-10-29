@@ -6599,6 +6599,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-29c', date:'2026-10-29', items:[
+    {text:"<b>Sign Up and Decline on New Cases</b>: New Cases now have <b>Sign Up</b> next to <b>Decline</b>, and when a reminder is due the reminder box has <b>Sign Up</b> and <b>Decline</b> next to Book appointment and Set reminder (anything you've typed in \"What happened?\" is kept on the case)."},
+  ]},
   {id:'2026-10-29b', date:'2026-10-29', items:[
     {text:"<b>Client replies on the case</b>: when a client replies to an email you sent from the tracker, the reply is copied onto their case's audit trail (press <b>View email</b> to read it) and you get a notification. It still arrives in your Gmail as normal. The first time, Google asks you to allow the tracker to read your email: it only ever opens the replies to emails sent from here."},
   ]},
@@ -9479,7 +9482,8 @@ function renderLeadModal(){
       <button type="button" class="action-btn" data-act="appointment">${ico('calendar')}Appointment</button>` : ''}
       ${canFb ? `<button type="button" class="action-btn ld-refer-btn ${ldFeedbackOpen ? 'on' : ''}" id="fbBtn">${ico('message')}Feedback to ${esc(String(lead.referredByName||'MAPA').split(' ')[0])}</button>
       <button type="button" class="action-btn ld-thanks-btn ${ldThanksOpen ? 'on' : ''}" id="tcBtn"><span aria-hidden="true">💐</span>Send thanks</button>` : ''}
-      ${booking && !due && lead.status==='new' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>` : ''}
+      ${booking && !due && lead.status==='new' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>
+      <button type="button" class="action-btn ld-signup-btn ${actionUIState && actionUIState.stage==='signupchoice' ? 'on' : ''}" data-act="signup">${ico('checkCircle')}Sign Up</button>` : ''}
       ${moreItems.length ? `<button type="button" class="action-btn" id="ldMoreBtn" aria-expanded="${ldMoreOpen}" aria-controls="ldMoreRow">${ldMoreOpen ? 'Less ▴' : 'More ▾'}</button>` : ''}
     </div>
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
@@ -9872,7 +9876,9 @@ function renderDynamicArea(lead){
   if(actionUIState && actionUIState.stage==='refer'){ renderReferArea(lead, area); return; }
   if(actionUIState && actionUIState.stage==='signupchoice'){
     area.innerHTML = `<div class="signup-choice"><div class="op-title">Sign Up: where is the case now?</div><div class="outcome-buttons"><button class="ob-onrisk" data-su="onrisk">On Risk</button><button class="ob-uw" data-su="underwriting">Submitted to underwriting</button></div></div>`;
+    if(actionUIState.back) area.insertAdjacentHTML('beforeend', `<button type="button" class="linkish" data-ui-back style="font-size:13px; margin-top:8px;">← Back to the reminder</button>`);
     area.querySelectorAll('[data-su]').forEach(b=> b.addEventListener('click', ()=> openSignup(lead.id, '', b.dataset.su)));
+    const bk = area.querySelector('[data-ui-back]'); if(bk) bk.addEventListener('click', ()=>{ actionUIState = actionUIState.back; refreshLeadModal(true); });
     return;
   }
 
@@ -10046,7 +10052,7 @@ function renderDynamicArea(lead){
           <div class="check-tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
           <label>${st.ask}</label>
         </div>`).join('')}
-        <button class="btn btn-primary btn-sm" id="dcSave">Submit decline</button>
+        <button class="btn btn-primary btn-sm" id="dcSave">Submit decline</button>${actionUIState.back ? ` <button type="button" class="linkish" data-ui-back style="font-size:13px; margin-left:8px;">← Back to the reminder</button>` : ''}
       </div>`;
 
     document.getElementById('dcReason').addEventListener('change', function(){
@@ -10062,6 +10068,7 @@ function renderDynamicArea(lead){
       row.querySelector('label').addEventListener('click', toggle);
     });
 
+    const dcBack = area.querySelector('[data-ui-back]'); if(dcBack) dcBack.addEventListener('click', ()=>{ actionUIState = actionUIState.back; refreshLeadModal(true); });
     document.getElementById('dcSave').addEventListener('click', function(){
       const reason = document.getElementById('dcReason').value;
       const detail = document.getElementById('dcDetail').value.trim();
@@ -10917,8 +10924,17 @@ function renderBookingArea(lead, area){
         <div class="op-title">${ico('clock')} Reminder due · chase ${esc(l.clientName||'the client')} (${esc(bookingWhen(l))})</div>
         ${l.followUpNote ? `<p class="mt-sub">Reminder note: ${esc(l.followUpNote)}</p>` : ''}
         <div class="field" style="margin:8px 0 10px;"><label for="rdNote">What happened? (required)</label><textarea id="rdNote" placeholder="e.g. Called twice, no answer; left a voicemail and sent a text…"></textarea>${noteHint('rdNote')}</div>
-        <div class="outcome-buttons"><button class="ob-uw" data-rd="appointment">Book appointment</button><button class="ob-followup" data-rd="reminder">Set reminder</button></div>
+        <div class="outcome-buttons"><button class="ob-uw" data-rd="appointment">Book appointment</button><button class="ob-followup" data-rd="reminder">Set reminder</button><button class="ob-signup" data-rdx="signup">Sign Up</button><button class="ob-decline" data-rdx="decline">Decline</button></div>
       </div>`;
+    // Sign Up / Decline straight from the reminder: anything typed in "What happened?" is kept on the case too.
+    area.querySelectorAll('[data-rdx]').forEach(b=> b.addEventListener('click', ()=>{
+      const note = (document.getElementById('rdNote').value || '').trim();
+      const go = ()=>{ actionUIState = {stage: b.dataset.rdx==='decline' ? 'decline' : 'signupchoice', back:{...st, auto:true}}; refreshLeadModal(true); };
+      if(!note) return go();
+      b.disabled = true;
+      logAudit(lead.id, {type:'call', via:'reminder', text:`Reminder chase (${bookingWhen(l)}): ${note}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()})
+        .then(go).catch(err=>{ b.disabled = false; toast('Could not save: '+err.message,'error'); });
+    }));
     area.querySelectorAll('[data-rd]').forEach(b=> b.addEventListener('click', ()=>{
       const note = noteOk('rdNote'); if(!note) return;
       actionUIState = {kind:b.dataset.rd, stage:'schedule', prelude:{type:'call', via:'reminder', dueAt: callDueAt(l.followUpDate, l.followUpTime).getTime(), text:`Reminder chase (${bookingWhen(l)}): ${note}`}, back:{...st, auto:true}};

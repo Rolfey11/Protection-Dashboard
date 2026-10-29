@@ -1429,6 +1429,8 @@ body:not(.mode-com) .com-only{display:none !important;}
 .ld-chip{border:1.5px solid var(--border-2); background:var(--surface); color:var(--text); border-radius:999px; padding:6px 12px; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;}
 .ld-chip:hover{border-color:var(--brand-light);}
 .ld-chip.sel{background:var(--brand); border-color:var(--brand); color:#fff;}
+.ld-reply-row{padding:8px 18px 0; font-size:12.5px;}
+.ld-reply-row .linkish{font-size:12.5px;}
 .ld-note-form{padding:12px 18px; border-bottom:1px solid var(--border); flex-shrink:0;}
 .ld-note-form textarea{width:100%; padding:9px 12px; border:1.5px solid var(--border-2); border-radius:10px; font:inherit; font-size:13px; background:var(--surface); color:var(--text); resize:vertical;}
 .audit-item{display:flex; gap:11px; margin-bottom:16px; position:relative;}
@@ -3268,6 +3270,7 @@ body:not(.ai-on) #askBtn{display:none;}
           <textarea id="ldNoteText" rows="3" maxlength="4000" placeholder="e.g. Client called to say they're away until the 14th; prefers email."></textarea>
           <div style="display:flex; gap:8px; align-items:center; margin-top:8px;"><button type="button" class="btn btn-primary btn-sm" id="ldNoteSave">Save note</button><button type="button" class="linkish" id="ldNoteCancel" style="font-size:13px;">Cancel</button></div>
         </div>
+        <div class="ld-reply-row hidden" id="ldReplyRow"><button type="button" class="linkish" id="ldReplyCheck">↻ Check Gmail for client replies</button></div>
         <div class="ai-sum hidden" id="aiSum_lead"></div>
         <div class="audit-list" id="auditList"></div>
       </div>
@@ -3452,11 +3455,11 @@ body:not(.ai-on) #askBtn{display:none;}
 
 <div class="modal-overlay" id="viewEmailOverlay">
   <div class="modal" style="max-width:560px;">
-    <div class="modal-head"><h2>Email to client</h2><button class="modal-close" data-close="viewEmailOverlay">✕</button></div>
+    <div class="modal-head"><h2 id="veTitle">Email to client</h2><button class="modal-close" data-close="viewEmailOverlay">✕</button></div>
     <div class="modal-body">
       <div class="em-head" id="veHead"></div>
       <div class="em-body" id="veBody"></div>
-      <p class="em-note">This is the email as written in the tracker before opening Gmail. Any changes made in Gmail itself aren't captured here.</p>
+      <p class="em-note" id="veNote"></p>
     </div>
     <div class="modal-foot"><button class="btn btn-secondary" data-close="viewEmailOverlay">Close</button></div>
   </div>
@@ -6596,6 +6599,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-10-29b', date:'2026-10-29', items:[
+    {text:"<b>Client replies on the case</b>: when a client replies to an email you sent from the tracker, the reply is copied onto their case's audit trail (press <b>View email</b> to read it) and you get a notification. It still arrives in your Gmail as normal. The first time, Google asks you to allow the tracker to read your email: it only ever opens the replies to emails sent from here."},
+  ]},
   {id:'2026-10-29a', date:'2026-10-29', items:[
     {text:"<b>Overdue items turn red first</b>: when a reminder or appointment goes past its time, the case turns red in its column. If it still hasn't been dealt with by <b>8am the next morning</b>, it pops up and has to be dealt with before you can use the dashboard.", roles:['mapa']},
     {text:"<b>MAPAs get until 8am the next morning</b>: overdue reminders and appointments now turn red straight away, and only pop up as mandatory if they're still not dealt with by 8am the following morning.", roles:['management','admin']},
@@ -8507,7 +8513,7 @@ function emSendClick(btn, asDraft){
     const showOutcomeG = emailFromAction && activeLeadId === leadId;
     tokP.then(tok=> gmailSend(tok, {to, subject, body}))
       .then(res=> logAudit(leadId, {
-        type:'email', text:`Email sent to client - ${subject}`, emailVia:'gmail', gmailId: res.id || null, emailSignature: res.withSignature || null,
+        type:'email', text:`Email sent to client - ${subject}`, emailVia:'gmail', gmailId: res.id || null, gmailThread: res.threadId || null, emailSignature: res.withSignature || null,
         emailTo: to.join(', '), emailSubject: subject, emailBody: body,
         ...(emLastTemplate ? {emailTemplate: emLastTemplate.name} : {}),
         ...(declineReason ? {emailDeclineReason: declineReason} : {}),
@@ -8591,13 +8597,16 @@ document.getElementById('deleteNoteConfirmBtn').addEventListener('click', functi
 
 function openViewEmail(auditId){
   const l = LEADS[activeLeadId]; if(!l || !l.audit || !l.audit[auditId]) return;
-  const a = l.audit[auditId];
+  const a = l.audit[auditId], inbound = a.type==='emailIn';
+  document.getElementById('veTitle').textContent = inbound ? 'Email from client' : 'Email to client';
   document.getElementById('veHead').innerHTML =
+    `<div><span class="k">From</span><span class="v">${esc(inbound ? a.emailFrom||a.byName||'' : a.byName||'')}</span></div>` +
     `<div><span class="k">To</span><span class="v">${esc(a.emailTo||'')}</span></div>` +
     `<div><span class="k">Subject</span><span class="v">${esc(a.emailSubject||'')}</span></div>` +
-    `<div><span class="k">From</span><span class="v">${esc(a.byName||'')}</span></div>` +
     `<div><span class="k">Date</span><span class="v">${fmtDateTime(a.at)}</span></div>`;
   document.getElementById('veBody').textContent = a.emailBody || '';
+  document.getElementById('veNote').textContent = inbound ? "Copied from the Gmail of the person who emailed them, with the earlier emails underneath left out. The full email is in Gmail."
+    : a.emailVia==='gmail' ? 'Sent from Gmail through the tracker.' : "This is the email as written in the tracker before opening Gmail. Any changes made in Gmail itself aren't captured here.";
   openModal('viewEmailOverlay');
 }
 
@@ -9250,6 +9259,7 @@ function openLead(id){
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
   ldNoteClose(); ldMa = {open:false, sel:'', note:''};
+  setTimeout(()=> gmailReplySync(), 300);
   actionUIState = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldFeedbackSeenBase = LEADS[id].refFeedbackSeenAt || 0; ldEditClient = false; ldEditNames = null;
   // Tidy a left-over callback away for good (it's already hidden everywhere).
   if(['underwriting','terms'].includes(LEADS[id].status) && staleCallback(LEADS[id]) && canManageLead(LEADS[id])) db.ref('leads/'+id).update(CLEAR_CALLBACK).catch(()=>{});
@@ -9400,6 +9410,8 @@ function renderLeadModal(){
   lastRenderedLead = JSON.stringify(raw);
   const lead = {id: activeLeadId, ...raw};
   document.getElementById('ldHeadBtns').classList.toggle('hidden', !canManageLead(lead));
+  const sentFromGmail = gApiOn() && Object.values(lead.audit||{}).some(a=> a && a.type==='email' && a.emailVia==='gmail' && a.byId===currentUser.id && (a.at||0) > Date.now() - 60*86400000);
+  document.getElementById('ldReplyRow').classList.toggle('hidden', !sentFromGmail);
   document.getElementById('ldClientName').textContent = lead.clientName;
 
   const potKey = potOf(lead);
@@ -9635,7 +9647,7 @@ function renderLeadModal(){
 
 function auditIcon(type){
   const map = {
-    assigned:'pin', call:'phone', text:'message', email:'mail', appointment:'calendar', other:'note',
+    assigned:'pin', call:'phone', text:'message', email:'mail', emailIn:'mail', appointment:'calendar', other:'note',
     feedback:'message', thanks:'send', signup:'checkCircle', underwriting:'clock', terms:'note', quotes:'send', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
   };
   return map[type] ? ico(map[type]) : '•';
@@ -10310,6 +10322,9 @@ const GOOGLE_CLIENT_ID = '92970534570-msaquejoji02tuq2ds7c7hmle06ud7jh.apps.goog
 const G_CAL = 'https://www.googleapis.com/auth/calendar.events', G_MAIL = 'https://www.googleapis.com/auth/gmail.send';
 // Read-only use: just to fetch each person's Gmail signature for emails sent from here.
 const G_SET = 'https://www.googleapis.com/auth/gmail.settings.basic';
+// Read: to copy clients' replies to emails sent from here onto their case (only those conversations are opened).
+const G_READ = 'https://www.googleapis.com/auth/gmail.readonly';
+const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const GCAL_API = 'https://www.googleapis.com/calendar/v3/calendars/primary';
 let gTok = null, gTokClient = null, gTokWait = null, gAsked = new Set(), gSig;
 function gApiOn(){
@@ -10327,13 +10342,14 @@ function gToken(scope, want=[], {force=false}={}){
     gTokWait = {resolve, reject, scope};
     try{
       if(!gTokClient) gTokClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID, scope: [G_CAL, G_MAIL, G_SET].join(' '), include_granted_scopes: true, login_hint: gEmail(),
+        client_id: GOOGLE_CLIENT_ID, scope: [G_CAL, G_MAIL, G_SET, G_READ].join(' '), include_granted_scopes: true, login_hint: gEmail(),
         callback: r=>{
           const w = gTokWait; gTokWait = null; if(!w) return;
           if(r.error){ w.reject(new Error(r.error_description || r.error)); return; }
           gTok = {token:r.access_token, exp: Date.now() + (Number(r.expires_in)||3600)*1000, scopes:String(r.scope||'').split(' ')};
+          setTimeout(()=> gmailReplySync(), 2000); // any fresh Google access: pick up client replies too
           if(gTok.scopes.includes(w.scope)) w.resolve(gTok.token);
-          else w.reject(new Error(w.scope===G_MAIL ? "Google didn't give permission to send email. Tick the Gmail box when Google asks." : "Google didn't give permission for your calendar. Tick the Calendar box when Google asks."));
+          else w.reject(new Error(w.scope===G_MAIL ? "Google didn't give permission to send email. Tick the Gmail box when Google asks." : w.scope===G_READ ? "Google didn't give permission to read replies. Tick the box about reading your email when Google asks." : "Google didn't give permission for your calendar. Tick the Calendar box when Google asks."));
         },
         error_callback: e=>{ const w = gTokWait; gTokWait = null; if(w) w.reject(new Error(e && e.type==='popup_closed' ? 'The Google window was closed.' : e && e.type==='popup_failed_to_open' ? 'Your browser blocked the Google window. Allow pop-ups for this site.' : 'Google access was not granted.')); }
       });
@@ -10342,6 +10358,98 @@ function gToken(scope, want=[], {force=false}={}){
     }catch(e){ gTokWait = null; reject(e); }
   });
 }
+/* ---- Client replies copied onto the case ----
+   For emails sent from here through someone's Gmail (the last 60 days), any
+   reply in the same Gmail conversation is copied onto the client's case
+   (type 'emailIn'), once: the audit key is the Gmail message id, so another
+   device or a second look can't add it twice. Only those conversations are
+   opened; the rest of the inbox is never read. Runs whenever there's Google
+   access with permission to read (it can't open Google's window by itself):
+   every 5 minutes, on opening a case, and after any Google action. */
+function gHasRead(){ return !!gTok && gTok.exp > Date.now() + 60000 && gTok.scopes.includes(G_READ); }
+let gReplySyncing = false, gReplyLastAt = 0;
+function gThreadCache(){ try{ return JSON.parse(localStorage.getItem('plt_gThreads')||'{}') || {}; }catch(e){ return {}; } }
+function gThreadCacheSave(c){ try{ const k = Object.keys(c); if(k.length > 2000) k.slice(0, k.length - 2000).forEach(x=> delete c[x]); localStorage.setItem('plt_gThreads', JSON.stringify(c)); }catch(e){} }
+function gmailMyThreads(){ // Gmail conversation → case, for emails I sent from here recently
+  const since = Date.now() - 60*86400000, cache = gThreadCache(), threads = new Map(), need = [];
+  Object.entries(LEADS).forEach(([id, l])=>{
+    if(!l || l.deleted) return;
+    Object.values(l.audit||{}).forEach(a=>{
+      if(!a || a.type!=='email' || a.emailVia!=='gmail' || a.byId!==currentUser.id || (a.at||0) < since) return;
+      const t = a.gmailThread || (a.gmailId && cache[a.gmailId]);
+      if(t && t!=='-') threads.set(t, id); else if(!t && a.gmailId) need.push([a.gmailId, id]);
+    });
+  });
+  return {threads, need, cache};
+}
+function b64urlText(data){
+  try{ const bin = atob(String(data||'').replace(/-/g,'+').replace(/_/g,'/')); return new TextDecoder('utf-8').decode(Uint8Array.from(bin, c=> c.charCodeAt(0))); }catch(e){ return ''; }
+}
+function gmailPartText(part, type){
+  if(!part) return '';
+  if(part.mimeType===type && part.body && part.body.data) return b64urlText(part.body.data);
+  for(const p of part.parts||[]){ const t = gmailPartText(p, type); if(t) return t; }
+  return '';
+}
+// The new part of a reply: drop the quoted earlier email underneath.
+function stripQuoted(t){
+  const lines = String(t||'').replace(/\r\n/g,'\n').split('\n'), out = [];
+  for(const ln of lines){
+    if(/^\s*On .{4,200}wrote:\s*$/i.test(ln) || /^-{2,}\s*Original Message/i.test(ln) || /^\s*From:\s.+/i.test(ln) && out.length > 1 || /^_{8,}/.test(ln)) break;
+    if(/^\s*>/.test(ln)) continue;
+    out.push(ln);
+  }
+  return out.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+function gmailReplyEntry(m){
+  const h = {}; ((m.payload||{}).headers||[]).forEach(x=> h[String(x.name).toLowerCase()] = x.value);
+  const raw = gmailPartText(m.payload, 'text/plain') || htmlToText(gmailPartText(m.payload, 'text/html'));
+  const body = (stripQuoted(raw) || raw || m.snippet || '').slice(0, 20000);
+  const from = h.from || '', name = from.replace(/<[^>]*>/g,'').replace(/"/g,'').trim() || from;
+  const subject = h.subject || '(no subject)';
+  return {type:'emailIn', text:`Email reply from client - ${subject}`, emailFrom: from, emailTo: h.to || '', emailSubject: subject, emailBody: body,
+    gmailId: m.id, gmailThread: m.threadId, byId: null, byName: name, at: Number(m.internalDate) || Date.now()};
+}
+async function gmailReplySync(force){
+  if(gReplySyncing || !currentUser || !leadsLive || !gHasRead()) return 0;
+  if(!force && Date.now() - gReplyLastAt < 60000) return 0;
+  gReplySyncing = true; gReplyLastAt = Date.now();
+  let added = 0;
+  try{
+    const tok = gTok.token, {threads, need, cache} = gmailMyThreads();
+    for(const [mid, id] of need.slice(0, 20)){ // older emails saved before the conversation was recorded
+      try{ const m = await gFetch(tok, `${GMAIL_API}/messages/${encodeURIComponent(mid)}?format=minimal`); if(m.threadId){ cache[mid] = m.threadId; threads.set(m.threadId, id); } }
+      catch(e){ if(e.status===404) cache[mid] = '-'; }
+    }
+    gThreadCacheSave(cache);
+    if(!threads.size) return 0;
+    // Recent emails from other people: just their ids, so only replies in our conversations get opened.
+    const found = []; let page = '';
+    for(let i = 0; i < 4; i++){
+      const r = await gFetch(tok, `${GMAIL_API}/messages?maxResults=500&q=${encodeURIComponent('-from:me newer_than:60d')}${page ? '&pageToken='+encodeURIComponent(page) : ''}`);
+      (r.messages||[]).forEach(m=>{ if(threads.has(m.threadId)) found.push(m); });
+      if(!r.nextPageToken) break; page = r.nextPageToken;
+    }
+    for(const m of found.reverse()){
+      const leadId = threads.get(m.threadId), l = LEADS[leadId], key = 'gm_' + m.id;
+      if(!l || l.deleted || (l.audit && l.audit[key])) continue;
+      const entry = gmailReplyEntry(await gFetch(tok, `${GMAIL_API}/messages/${encodeURIComponent(m.id)}?format=full`));
+      try{ await db.ref(`leads/${leadId}/audit/${key}`).set(entry); }catch(e){ continue; } // already copied (another device)
+      added++;
+      if(l.advisorId) db.ref('notifications').push({leadId, leadName:l.clientName, toUserId:l.advisorId, toRole:null, byId:currentUser.id, byName:currentUser.name, kind:'emailReply',
+        message:`${l.clientName} replied to your email: "${entry.emailSubject}"`, at:Date.now(), readBy:{}}).catch(()=>{});
+      toast(`New email reply from ${l.clientName}: added to their case.`, 'success');
+    }
+  }catch(e){ /* quiet: tried again next time */ }
+  finally{ gReplySyncing = false; }
+  return added;
+}
+setInterval(()=>{ gmailReplySync(); }, 5*60000);
+document.getElementById('ldReplyCheck').addEventListener('click', function(){
+  this.disabled = true; this.textContent = '↻ Checking Gmail…';
+  gToken(G_READ).then(()=> gmailReplySync(true)).then(n=>{ if(!n) toast('No new client replies yet.','info'); })
+    .catch(e=> toast(e.message,'error')).finally(()=>{ this.disabled = false; this.textContent = '↻ Check Gmail for client replies'; });
+});
 async function gFetch(tok, url, {method='GET', body}={}){
   const r = await fetch(url, {method, headers:{Authorization:'Bearer '+tok, ...(body ? {'Content-Type':'application/json'} : {})}, body: body ? JSON.stringify(body) : undefined});
   if(r.status===204) return {};

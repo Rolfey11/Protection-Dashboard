@@ -6662,6 +6662,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-02b', date:'2026-11-02', items:[
+    {text:"<b>No more \"Terms issued — chase the client\" in My Day</b>: cases with terms issued are often just waiting for exchange, so they no longer get a chase prompt.", roles:['mapa']},
+  ]},
   {id:'2026-11-02a', date:'2026-11-02', items:[
     {text:"<b>Contact details for each client</b>: on joint cases the Contact box now shows every client on their own line, with their phone and email and an <b>Edit</b> button to add or change them. Older joint cases share out the numbers and emails already saved in order, so check they're on the right person."},
   ]},
@@ -8052,7 +8055,7 @@ function renderOverdueBanner(){
    Management/Admin don't get this — it's specifically to replace scanning
    five pots every morning with one list. */
 /* How long before a quiet case is flagged in My Day. */
-const MYDAY_TERMS_DAYS = 7, MYDAY_UW_DAYS = 14;
+const MYDAY_UW_DAYS = 14;
 function daysSince(ts){ return ts ? Math.floor((Date.now() - ts) / 86400000) : 0; }
 function myDayItems(){
   if(currentUser.role!=='mapa') return [];
@@ -8079,11 +8082,7 @@ function myDayItems(){
     if((pot==='existing' || pot==='new') && !l.followUpDate){
       reasons.push([1,'warn','Nothing booked: set a reminder or book an appointment']);
     }
-    if(pot==='terms'){
-      const at = l.termsIssuedAt || (Object.values(l.audit||{}).filter(a=> a && a.type==='terms').sort((x,y)=> y.at-x.at)[0]||{}).at;
-      const d = daysSince(at);
-      if(at && d >= MYDAY_TERMS_DAYS) reasons.push([1,'warn',`Terms issued ${d} days ago — chase the client`]);
-    }
+    // Terms issued: no chase prompt, as the client may simply be waiting to exchange.
     if(pot==='underwriting'){
       const at = (Object.values(l.audit||{}).filter(a=> a && a.type==='underwriting').sort((x,y)=> y.at-x.at)[0]||{}).at;
       const d = daysSince(at);
@@ -9167,7 +9166,7 @@ function submitNewTask(another){
    roles: who sees the topic (omit = everyone). */
 const HELP = [
   {group:'Your day', items:[
-    {t:'What is My Day?', roles:['mapa'], h:`<b>My Day</b> at the top of the dashboard lists every case that needs you today, most urgent first:<ul><li>reminders and appointments overdue or due today</li><li>new cases with no contact yet</li><li>declines still waiting on their steps</li><li><b>Nothing booked</b>: a case with no reminder or appointment</li><li><b>Terms issued 7+ days ago</b>: chase the client</li><li><b>Submitted 14+ days ago</b>: check with the insurer</li></ul>Click a row to open the case.`},
+    {t:'What is My Day?', roles:['mapa'], h:`<b>My Day</b> at the top of the dashboard lists every case that needs you today, most urgent first:<ul><li>reminders and appointments overdue or due today</li><li>new cases with no contact yet</li><li>declines still waiting on their steps</li><li><b>Nothing booked</b>: a case with no reminder or appointment</li><li><b>Submitted 14+ days ago</b>: check with the insurer</li></ul>Click a row to open the case.`},
     {t:'Notifications and What\'s new', roles:['mapa','management'], h:`The <b>bell</b> shows new leads assigned to you and cases moved to you. Click one to open the case. <b>What's new</b> (inside the bell) lists recent changes to the tracker.`},
     {t:'Pop-up and sound for new leads', roles:['mapa','management'], h:`When a lead is added to your New Cases or reassigned to you, the tracker can show a Windows/Chrome pop-up and play a chime. Turn it on with <b>Turn on alerts</b> on the dashboard, or in <b>Settings → App, alerts &amp; reminders</b>, and choose <b>Allow</b> when the browser asks. Keep the tracker open (minimised is fine). Use <b>Send a test alert</b> to check it, and untick <b>Play a sound</b> if you only want the pop-up.`},
     {t:'Call reminders and installing the app', h:`<b>Settings → App &amp; reminders</b>: install the tracker as an app on your computer, and turn on pop-up reminders a few minutes before each booked call. Keep the tracker open (minimised is fine) to get them.`},

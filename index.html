@@ -1352,6 +1352,18 @@ body:not(.mode-com) .com-only{display:none !important;}
 .ld-next .stage-btn:disabled{background:var(--border-2) !important; color:var(--text-muted); cursor:default;}
 .ld-next .ld-decl{display:flex; flex-direction:column; gap:8px; width:100%;}
 .ld-contact{display:grid; grid-template-columns:1fr 1fr; gap:0 14px;}
+.ld-contacts{display:grid;}
+.cx-row{display:grid; grid-template-columns:150px minmax(0,1fr) auto; align-items:center; gap:6px 14px; padding:8px 0; border-top:1px solid var(--border);}
+.cx-row:first-child{border-top:0; padding-top:2px;}
+.cx-name{font-size:13px; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.cx-vals{display:flex; flex-wrap:wrap; align-items:center; gap:4px 18px; font-size:13.5px; min-width:0;}
+.cx-em{display:inline-flex; align-items:center; gap:6px; color:var(--text); font-weight:500; overflow-wrap:anywhere;}
+.cx-em .ico{width:14px; height:14px; color:var(--text-muted); flex:none;}
+.cx-none{color:var(--text-faint); font-weight:500; font-size:13px;}
+.cx-row.editing{grid-template-columns:150px minmax(0,1fr);}
+.cx-edit{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+.cx-edit input{flex:1 1 170px; min-width:0; padding:8px 11px; border:1.5px solid var(--border-2); border-radius:9px; font:inherit; font-size:13px; background:var(--surface); color:var(--text);}
+@media (max-width:640px){ .cx-row, .cx-row.editing{grid-template-columns:1fr auto;} .cx-vals, .cx-edit{grid-column:1 / -1;} }
 .ld-contact .info-cell{background:none; padding:2px 0; grid-column:auto !important;}
 @media (max-width:640px){ .ld-contact{grid-template-columns:1fr;} .ld-steps li:not(.now):not(.bad){font-size:0;} .ld-steps li{font-size:11px;} }
 #leadLeftPane .sib-next{flex-direction:row; align-items:center; flex-wrap:wrap; margin:12px 0 0;}
@@ -6650,6 +6662,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-02a', date:'2026-11-02', items:[
+    {text:"<b>Contact details for each client</b>: on joint cases the Contact box now shows every client on their own line, with their phone and email and an <b>Edit</b> button to add or change them. Older joint cases share out the numbers and emails already saved in order, so check they're on the right person."},
+  ]},
   {id:'2026-10-29d', date:'2026-10-29', items:[
     {text:"<b>A more compact dashboard</b>: the greeting, your numbers and My Day take up much less room, so your case columns sit higher up the screen. Click <b>My Day</b> to fold it away to one line (it remembers), overdue items show in My Day instead of a separate red banner, and the alerts prompt is a small card in the corner.", roles:['mapa']},
     {text:"<b>A more compact dashboard</b>: the greeting and numbers take up much less room, so the case columns sit higher up the screen.", roles:['management','admin']},
@@ -8686,76 +8701,64 @@ function openViewEmail(auditId){
   openModal('viewEmailOverlay');
 }
 
-function clientEmailCellHtml(lead){
-  const emails = leadEmails(lead);
-  const canEdit = canEditContact(lead);
-  return `
-      <div class="info-cell full" id="clientEmailCell">
-        <div class="lbl">Client email</div>
-        <div class="ce-view" id="ceView">
-          <div class="val">${emails.length ? esc(emails.join(', ')) : '<span style="color:var(--text-faint); font-weight:500;">Not added yet</span>'}</div>
-          ${canEdit ? `<button type="button" class="btn btn-secondary btn-sm" id="ceEditBtn">${emails.length ? 'Edit' : 'Add email'}</button>` : ''}
-        </div>
-        ${canEdit ? `<div class="ce-edit hidden" id="ceEdit">
-          <input type="email" id="ceInput" value="${esc(emails.join(', '))}" placeholder="client@email.com (separate joint clients with a comma)">
-          <button type="button" class="btn btn-primary btn-sm" id="ceSave">Save</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="ceCancel">Cancel</button>
-        </div>` : ''}
-      </div>`;
-}
 function canEditContact(lead){ return canManageLead(lead) || canAction(lead) || currentUser.role==='admin'; }
-function clientPhoneCellHtml(lead){
-  const phones = leadPhones(lead);
-  const canEdit = canEditContact(lead);
-  return `
-      <div class="info-cell full" id="clientPhoneCell">
-        <div class="lbl">Client phone</div>
-        <div class="ce-view" id="cpView">
-          <div class="val">${phones.length ? phones.map(p=> `<a href="${esc(telHref(p))}" class="tel-link" title="Call ${esc(p)}">${ico('phone')}${esc(p)}</a>`).join(' ') : '<span style="color:var(--text-faint); font-weight:500;">Not added yet</span>'}</div>
-          ${canEdit ? `<button type="button" class="btn btn-secondary btn-sm" id="cpEditBtn">${phones.length ? 'Edit' : 'Add phone'}</button>` : ''}
-        </div>
-        ${canEdit ? `<div class="ce-edit hidden" id="cpEdit">
-          <input type="tel" id="cpInput" value="${esc(phones.join(', '))}" placeholder="07700 900123 (separate joint clients with a comma)">
-          <button type="button" class="btn btn-primary btn-sm" id="cpSave">Save</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="cpCancel">Cancel</button>
-        </div>` : ''}
-      </div>`;
+/* Each client's own phone and email. Stored per person in `contacts` (same order
+   as the client names); cases from before only have the combined lists, which
+   are shared out in order (first number to the first client, and so on).
+   clientPhones / clientEmails stay as the combined lists for invites, emails and search. */
+function leadContacts(lead){
+  const names = leadClientList(lead).length ? leadClientList(lead) : ['Client'];
+  const stored = lead.contacts ? (Array.isArray(lead.contacts) ? lead.contacts : Object.values(lead.contacts)) : null;
+  if(stored) return names.map((name, i)=> ({name, phone: (stored[i] && stored[i].phone) || '', email: (stored[i] && stored[i].email) || ''}));
+  const ph = leadPhones(lead), em = leadEmails(lead), last = names.length - 1;
+  return names.map((name, i)=> ({name, phone: (i===last ? ph.slice(i) : ph.slice(i, i+1)).join(', '), email: (i===last ? em.slice(i) : em.slice(i, i+1)).join(', ')}));
 }
-function bindClientPhoneCell(lead){
-  const edit = document.getElementById('cpEditBtn'); if(!edit) return;
-  const view = document.getElementById('cpView'), box = document.getElementById('cpEdit'), input = document.getElementById('cpInput');
-  edit.addEventListener('click', ()=>{ view.classList.add('hidden'); box.classList.remove('hidden'); input.focus(); });
-  document.getElementById('cpCancel').addEventListener('click', ()=>{ box.classList.add('hidden'); view.classList.remove('hidden'); });
+function contactsPatch(list){
+  const split = (v, re)=> String(v||'').split(re).map(x=> x.trim()).filter(Boolean);
+  const phones = list.flatMap(c=> split(c.phone, /[,;]+/)), emails = list.flatMap(c=> split(c.email, /[\s,;]+/));
+  return {contacts: list.map(c=> ({phone: c.phone || null, email: c.email || null})), clientPhones: phones.length ? phones : null, clientEmails: emails.length ? emails : null};
+}
+let ctEditing = -1; // which client's contact details are open for editing in the case window
+function clientContactsHtml(lead){
+  const list = leadContacts(lead), canEdit = canEditContact(lead), joint = list.length > 1;
+  const none = t=> `<span class="cx-none">${t}</span>`;
+  return list.map((c, i)=> ctEditing===i && canEdit ? `<div class="cx-row editing">
+      <div class="cx-name">${esc(c.name)}</div>
+      <div class="cx-edit"><input type="tel" id="ctPhone" value="${esc(c.phone)}" placeholder="Phone, e.g. 07700 900123"><input type="email" id="ctEmail" value="${esc(c.email)}" placeholder="Email, e.g. name@email.com">
+      <button type="button" class="btn btn-primary btn-sm" id="ctSave">Save</button><button type="button" class="btn btn-ghost btn-sm" id="ctCancel">Cancel</button></div></div>`
+    : `<div class="cx-row">
+      <div class="cx-name">${joint ? esc(c.name) : 'Client'}</div>
+      <div class="cx-vals"><span>${c.phone ? c.phone.split(/\s*[,;]\s*/).filter(Boolean).map(p=> `<a href="${esc(telHref(p))}" class="tel-link" title="Call ${esc(p)}">${ico('phone')}${esc(p)}</a>`).join(' ') : none('No phone')}</span>
+        <span class="cx-em">${c.email ? `${ico('mail')}${esc(c.email)}` : none('No email')}</span></div>
+      ${canEdit ? `<button type="button" class="btn btn-secondary btn-sm" data-cx-edit="${i}">${c.phone || c.email ? 'Edit' : 'Add'}</button>` : ''}
+    </div>`).join('');
+}
+// "Add an email" links in the booking forms: open the first client's contact details.
+function openContactEdit(){
+  const b = document.querySelector('[data-cx-edit="0"]'); if(!b) return;
+  b.click();
+  setTimeout(()=>{ const f = document.getElementById('ctEmail'); if(f){ f.scrollIntoView({behavior:'smooth', block:'center'}); f.focus(); } }, 60);
+}
+function bindClientContacts(lead){
+  document.querySelectorAll('[data-cx-edit]').forEach(b=> b.addEventListener('click', ()=>{ ctEditing = Number(b.dataset.cxEdit); refreshLeadModal(true); const f = document.getElementById('ctPhone'); if(f) f.focus(); }));
+  const cancel = document.getElementById('ctCancel'); if(!cancel) return;
+  cancel.addEventListener('click', ()=>{ ctEditing = -1; refreshLeadModal(true); });
   const save = function(){
-    const phones = input.value.split(/[,;]+/).map(x=> x.trim()).filter(Boolean);
-    const bad = phones.find(x=> !isPhone(x));
-    if(bad){ toast(`"${bad}" doesn't look like a phone number.`,'error'); return; }
-    const btn = document.getElementById('cpSave'); btn.disabled = true;
-    const text = phones.length ? `Client phone updated to ${phones.join(', ')}` : 'Client phone removed';
-    logAudit(lead.id, {type:'detail', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {clientPhones: phones.length ? phones : null})
-      .then(()=>{ toast(phones.length ? 'Client phone saved' : 'Client phone removed', 'success'); refreshLeadModal(true); })
+    const phone = document.getElementById('ctPhone').value.trim(), email = document.getElementById('ctEmail').value.trim();
+    const badP = phone.split(/[,;]+/).map(x=> x.trim()).filter(Boolean).find(x=> !isPhone(x));
+    if(badP){ toast(`"${badP}" doesn't look like a phone number.`,'error'); return; }
+    const badE = parseEmails(email).find(x=> !isEmail(x));
+    if(badE){ toast(`"${badE}" doesn't look like an email address.`,'error'); return; }
+    const list = leadContacts(LEADS[lead.id] || lead), i = ctEditing, who = list[i]; if(!who) return;
+    const before = `${who.phone || 'no phone'}, ${who.email || 'no email'}`;
+    list[i] = {...who, phone, email: parseEmails(email).join(', ')};
+    const btn = document.getElementById('ctSave'); btn.disabled = true;
+    logAudit(lead.id, {type:'detail', text:`Contact details for ${who.name} updated: ${phone || 'no phone'}, ${list[i].email || 'no email'} (was ${before})`, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, contactsPatch(list))
+      .then(()=>{ ctEditing = -1; toast(`Contact details for ${who.name} saved.`, 'success'); refreshLeadModal(true); })
       .catch(err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; });
   };
-  document.getElementById('cpSave').addEventListener('click', save);
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); if(e.key==='Escape') document.getElementById('cpCancel').click(); });
-}
-function bindClientEmailCell(lead){
-  const edit = document.getElementById('ceEditBtn'); if(!edit) return;
-  const view = document.getElementById('ceView'), box = document.getElementById('ceEdit'), input = document.getElementById('ceInput');
-  edit.addEventListener('click', ()=>{ view.classList.add('hidden'); box.classList.remove('hidden'); input.focus(); });
-  document.getElementById('ceCancel').addEventListener('click', ()=>{ box.classList.add('hidden'); view.classList.remove('hidden'); });
-  const save = function(){
-    const emails = parseEmails(input.value);
-    const bad = emails.find(e=> !isEmail(e));
-    if(bad){ toast(`"${bad}" doesn't look like an email address.`,'error'); return; }
-    const btn = document.getElementById('ceSave'); btn.disabled = true;
-    const text = emails.length ? `Client email updated to ${emails.join(', ')}` : 'Client email removed';
-    logAudit(lead.id, {type:'detail', text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {clientEmails: emails.length ? emails : null})
-      .then(()=>{ toast(emails.length ? 'Client email saved' : 'Client email removed', 'success'); refreshLeadModal(true); })
-      .catch(err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; });
-  };
-  document.getElementById('ceSave').addEventListener('click', save);
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); if(e.key==='Escape') document.getElementById('ceCancel').click(); });
+  document.getElementById('ctSave').addEventListener('click', save);
+  ['ctPhone','ctEmail'].forEach(id=> document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') save(); if(e.key==='Escape') cancel.click(); }));
 }
 
 function calButtonsHtml(lead, compact=false){
@@ -9107,6 +9110,10 @@ function submitNewTask(another){
   if(!clientSource){ toast('Please choose a client source.','error'); return; }
   if(!advisorId){ toast('Please choose an advisor.','error'); return; }
   if(!appDate){ toast('Please choose a Task Created date.','error'); return; }
+  // Each client's own details, kept with them (a joint applicant with no name is left out).
+  const people = [{name:document.getElementById('ntName').value, email:document.getElementById('ntEmail').value, phone:document.getElementById('ntPhone').value},
+    ...Array.from(document.querySelectorAll('#ntExtraClients .field')).map(f=> ({name:(f.querySelector('.ntExtraName')||{}).value||'', email:(f.querySelector('.ntExtraEmail')||{}).value||'', phone:(f.querySelector('.ntExtraPhone')||{}).value||''}))]
+    .map(c=> ({name:c.name.trim(), email:c.email.trim(), phone:c.phone.trim()})).filter(c=> c.name);
   const emails = [document.getElementById('ntEmail').value, ...Array.from(document.querySelectorAll('.ntExtraEmail')).map(i=>i.value)]
     .map(e=> e.trim()).filter(Boolean);
   const badEmail = emails.find(e=> !isEmail(e));
@@ -9126,6 +9133,7 @@ function submitNewTask(another){
     clientName:name, clientNames:names, clientSource, advisorId, advisorName, appDate,
     ...(emails.length ? {clientEmails: emails} : {}),
     ...(phones.length ? {clientPhones: phones} : {}),
+    ...(people.length > 1 && people.some(c=> c.email || c.phone) ? {contacts: people.map(c=> ({phone:c.phone || null, email:c.email || null}))} : {}),
     status:'new', createdBy:currentUser.id, createdByName:currentUser.name, createdAt:now,
     audit:{ [auditId]: {type:'assigned', text:`Lead assigned to ${advisorName} by ${currentUser.name}`, byId:currentUser.id, byName:currentUser.name, at:now} }
   };
@@ -9334,7 +9342,7 @@ function openLead(id){
   if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
   activeLeadId = id;
-  ldNoteClose(); ldMa = {open:false, sel:'', note:''};
+  ldNoteClose(); ldMa = {open:false, sel:'', note:''}; ctEditing = -1;
   setTimeout(()=> gmailReplySync(), 300);
   actionUIState = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldFeedbackSeenBase = LEADS[id].refFeedbackSeenAt || 0; ldEditClient = false; ldEditNames = null;
   // Tidy a left-over callback away for good (it's already hidden everywhere).
@@ -9585,7 +9593,7 @@ function renderLeadModal(){
 
   const kv = (lbl, val)=> `<span>${lbl}</span><b>${val}</b>`;
   const infoHtml = `
-    <div class="sib-box"><div class="sib-box-hd">Contact</div><div class="ld-contact">${clientPhoneCellHtml(lead)}${clientEmailCellHtml(lead)}</div></div>
+    <div class="sib-box"><div class="sib-box-hd">Contact</div><div class="ld-contacts">${clientContactsHtml(lead)}</div></div>
     <div class="sib-box"><div class="sib-box-hd">Case details</div>
       <div class="sib-kv">
         ${kv('Advisor', esc(lead.advisorName||'—'))}${kv('Client source', esc(lead.clientSource||'—'))}
@@ -9611,8 +9619,7 @@ function renderLeadModal(){
   // The referring MAPA has now seen the latest feedback.
   if(ro && lead.lastFeedbackAt && (lead.refFeedbackSeenAt||0) < lead.lastFeedbackAt) db.ref('leads/'+lead.id+'/refFeedbackSeenAt').set(Date.now()).catch(()=>{});
 
-  bindClientEmailCell(lead);
-  bindClientPhoneCell(lead);
+  bindClientContacts(lead);
   const openSibBtn = document.getElementById('openSibFromLead');
   if(openSibBtn) openSibBtn.addEventListener('click', ()=> openSibFromLead(lead.sibKey));
 
@@ -9649,8 +9656,10 @@ function renderLeadModal(){
       // Policies point at clients by position: move them with the names (a removed client comes off its policies).
       const pols = leadPolicies(lead).map(p=>{ const clients = p.clients.map(i=> keep.indexOf(i)).filter(i=> i>=0); return {type:p.type, clients, who:clients.map(i=> names[i])}; });
       this.disabled = true;
+      const oldCt = leadContacts(lead), byName = new Map(oldCt.map(c=> [c.name.toLowerCase(), c]));
+      const ct = contactsPatch(names.map((n, i)=> byName.get(n.toLowerCase()) || (!names.some(x=> x.toLowerCase()===String((oldCt[i]||{}).name||'').toLowerCase()) && oldCt[i]) || {name:n, phone:'', email:''}));
       logAudit(lead.id, {type:'edit', text:`Client name(s) changed from "${before.join(' & ')}" to "${names.join(' & ')}"`, byId:currentUser.id, byName:currentUser.name, at:Date.now()},
-        {clientName:names.join(' & '), clientNames:names, ...(pols.length ? {policies:pols} : {})})
+        {clientName:names.join(' & '), clientNames:names, ...(pols.length ? {policies:pols} : {}), ...ct})
         .then(()=>{ toast('Client name(s) updated.','success'); ldEditClient = false; ldEditNames = null; refreshLeadModal(); })
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
     });
@@ -10042,7 +10051,7 @@ function renderDynamicArea(lead){
         ? (ready ? `<div class="fu-invite">${ico('mail')}<span>Client invite goes to <b>${esc(em.join(', '))}</b> (already in Guests). In Google, click <b>Save</b>, then <b>Send</b>. If a Google Meet link appears, click the <b>×</b> next to it first.</span></div>` : '')
         : `<div class="fu-invite none">${ico('info')}<span>No client email on this case, so a client invite isn't available. <button type="button" class="linkish" id="fuAddEmail">Add an email</button></span></div>`;
       const add = document.getElementById('fuAddEmail');
-      if(add) add.addEventListener('click', ()=>{ const b = document.getElementById('ceEditBtn'); if(b){ b.click(); b.closest('.info-cell').scrollIntoView({behavior:'smooth', block:'center'}); } });
+      if(add) add.addEventListener('click', openContactEdit);
     };
     fuDate.addEventListener('input', syncFuButtons); fuTime.addEventListener('input', syncFuButtons);
     syncFuButtons();
@@ -11039,7 +11048,7 @@ function renderBookingArea(lead, area){
         : `<div class="fu-invite none">${ico('info')}<span>No client email on this case, so a client invite isn't available. <button type="button" class="linkish" id="bkAddEmail">Add an email</button></span></div>`) : ''}
     </div>`;
   const addEm = document.getElementById('bkAddEmail');
-  if(addEm) addEm.addEventListener('click', ()=>{ const b = document.getElementById('ceEditBtn'); if(b){ b.click(); b.closest('.info-cell').scrollIntoView({behavior:'smooth', block:'center'}); } });
+  if(addEm) addEm.addEventListener('click', openContactEdit);
   area.querySelector('[data-bk="cancel"]').addEventListener('click', ()=>{ actionUIState = st.back || null; refreshLeadModal(true); });
   area.querySelectorAll('[data-bk]:not([data-bk="cancel"])').forEach(b=> b.addEventListener('click', ()=>{
     const mode = b.dataset.bk, date = document.getElementById('fuDate').value, time = document.getElementById('fuTime').value;

@@ -710,6 +710,10 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-tag{display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:999px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); vertical-align:1px;}
 .nbr-office{font-size:10px; font-weight:800; color:var(--text-faint);}
 .nbr-bib-note{margin:-6px 0 10px;}
+.nbr-h3{font-size:14px; font-weight:800; margin:18px 0 8px;}
+.nbr-my-h{margin-top:30px; padding-top:18px; border-top:2px solid var(--border);}
+.nbr-stat-2{grid-template-columns:repeat(auto-fit, minmax(220px, 320px));}
+.nbr-table tr.nbr-me td{background:color-mix(in srgb, var(--brand) 9%, var(--surface));}
 .nbr-callout-bad{background:color-mix(in srgb, var(--red) 8%, var(--surface)); border-color:color-mix(in srgb, var(--red) 30%, var(--border)); color:var(--red);}
 .nbr-callout{padding:14px 16px; border-radius:12px; background:color-mix(in srgb, #8A5A00 8%, var(--surface)); border:1px solid color-mix(in srgb, #8A5A00 25%, var(--border)); margin-bottom:16px; font-size:13.5px;}
 .nbr-months{display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:6px; margin-bottom:6px;}
@@ -6813,6 +6817,8 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05e', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: tidied up. The month for everyone is at the top (your row is highlighted), then <b>My figures</b>: what you've written and banked by month, by quarter and by year, compared with last year.", roles:['mapa']},
+    {text:"<b>New Business</b>: each advisor can now be linked to their <b>Dashboard login</b> (Advisors &amp; upload → Edit), so MAPAs see their own figures on the Salesboard. A login with exactly the same name is linked automatically.", roles:['admin','management']} ]},
   {id:'2026-11-05d', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: click <b>Salesboard</b> at the top to see the live sales figures: written and banked by advisor and month, the year by month against last year and the targets, and each advisor's year.", roles:['mapa']} ]},
   {id:'2026-11-05c', date:'2026-11-05', items:[ {text:"<b>New Business</b>: for a year with no NBR uploaded (e.g. 2025), the Advisor NBR and Salesboard now show what each advisor wrote that month, broken down by proc fee, mums fee, protection, sols and val, worked out from the Bible.", roles:['admin','management']} ]},
   {id:'2026-11-05b', date:'2026-11-05', items:[ {text:"<b>New Business</b>: the Bible table now fits on the screen, and its column headings stay at the top as you scroll down.", roles:['admin','management']} ]},
@@ -13730,7 +13736,7 @@ function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || cur
 function nbrViewer(){ return !!currentUser && currentUser.role==='mapa'; }
 function nbrSeeAccess(){ return nbrAccess() || nbrViewer(); }
 let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null, nbrShare = null;
-const NBR_SUM_VERSION = 1;
+const NBR_SUM_VERSION = 2;
 function nbrReady(){ return nbrViewer() ? nbrSumLoaded : Object.values(nbrLoaded).every(Boolean); }
 function syncNbrAccess(){
   const ok = nbrSeeAccess(), view = nbrViewer();
@@ -13757,7 +13763,7 @@ function nbrPublishSummary(){
   // Only keys the database accepts: advisor ids and YYYY-MM months.
   const okKey = k=> /^[^.#$\/\[\]]+$/.test(k), okYm = ym=> /^\d{4}-\d{2}$/.test(ym);
   const pack = (o, f)=>{ const out = {}; Object.entries(o).forEach(([adv, months])=>{ if(!okKey(key(adv))) return; const m = {}; Object.entries(months||{}).forEach(([ym, v])=>{ if(!okYm(ym)) return; const x = f(v); if(x!=null) m[ym] = x; }); if(Object.keys(m).length) out[key(adv)] = m; }); return out; };
-  const advisors = {}; Object.entries(NBR_ADV).forEach(([id,a])=>{ if(a && okKey(id)) advisors[id] = {name: String(a.name || ''), office: String(a.office || ''), active: a.active!==false}; });
+  const advisors = {}; Object.entries(NBR_ADV).forEach(([id,a])=>{ if(a && okKey(id)) advisors[id] = {name: String(a.name || ''), office: String(a.office || ''), active: a.active!==false, ...(a.userId ? {userId: String(a.userId)} : {})}; });
   const sum = {advisors,
     w: pack(A.w, v=>{ const x = {}; NBR_CATS.forEach(([k])=>{ if(r2(v[k])) x[k] = r2(v[k]); }); return Object.keys(x).length ? x : null; }),
     npw: pack(A.npw, v=> r2(v) || null), bank: pack(A.bank, v=> r2(v) || null),
@@ -13821,6 +13827,14 @@ function nbrToday(){ return todayISO(); }
 function nbrThisYm(){ return nbrToday().slice(0,7); }
 // The advisor list: the full one, or the Salesboard summary's for MAPAs.
 function nbrAdvMap(){ return nbrViewer() ? ((NBR_SUMMARY && NBR_SUMMARY.advisors) || {}) : NBR_ADV; }
+// The advisor record for a dashboard login: the one linked to it, or failing that the one with the same name.
+function nbrAdvForUser(uid){
+  const M = nbrAdvMap(), u = USERS[uid]; if(!uid) return '';
+  const linked = Object.keys(M).find(id=> M[id] && M[id].userId===uid); if(linked) return linked;
+  const nm = String(u && u.name || '').trim().toLowerCase();
+  return nm ? (Object.keys(M).find(id=> M[id] && !M[id].userId && String(M[id].name||'').trim().toLowerCase()===nm) || '') : '';
+}
+function nbrLoginOptions(){ return [['', '— not linked —'], ...Object.entries(USERS).filter(([,u])=> u && u.role==='mapa').sort((a,b)=> String(a[1].name).localeCompare(String(b[1].name))).map(([id,u])=> [id, u.name + (u.protAdviser ? ' (Protection Adviser)' : '')])]; }
 function nbrAdvName(id){ const M = nbrAdvMap(); return M[id] && M[id].name ? M[id].name : (id ? '(unknown advisor)' : '(no advisor)'); }
 function nbrAdvCodes(a){ return String(a && a.codes || '').split(',').map(s=> s.trim()).filter(Boolean); }
 function nbrAdvs(all){
@@ -14152,6 +14166,8 @@ function openNbrAdvisor(id){
     ${nfText('naCodes','Bible code(s)', a.codes, 'placeholder="e.g. SD, or SUJIT, Sujit"')}
     <p class="field-hint" style="margin:-10px 0 16px;">The initials used in the Bible's "Adv" column. Separate more than one with commas.</p>
     ${nfSelect('naOffice','Office', a.office||'', [['','—'], ...NBR_OFFICES])}
+    ${nfSelect('naUser','Dashboard login', a.userId||'', nbrLoginOptions())}
+    <p class="field-hint" style="margin:-10px 0 16px;">So they see their own figures on the Salesboard. If it's left blank, a login with exactly the same name is used.</p>
     <label class="nbr-check"><input type="checkbox" id="naActive" ${a.active!==false ? 'checked' : ''}> Active (shows on the NBR and Salesboard)</label>`;
   openNbrForm({title: id ? 'Edit advisor' : 'Add an advisor', body, wide:false, saveLabel: id ? 'Save' : 'Add advisor',
     onSave: ()=>{
@@ -14159,7 +14175,9 @@ function openNbrAdvisor(id){
       const codes = nfv('naCodes').split(',').map(s=> s.trim()).filter(Boolean);
       const clash = codes.find(c=> nbrAdvs(true).some(o=> o.id!==id && nbrAdvCodes(o).some(x=> x.toLowerCase()===c.toLowerCase())));
       if(clash){ toast(`The code "${clash}" is already used by another advisor.`, 'error'); return false; }
-      const data = nbrClean({name, codes: codes.join(', '), office: nfv('naOffice')}); data.active = !!nfv('naActive');
+      const uid = nfv('naUser'), taken = uid && nbrAdvs(true).find(o=> o.id!==id && o.userId===uid);
+      if(taken){ toast(`That login is already linked to ${taken.name}.`, 'error'); return false; }
+      const data = nbrClean({name, codes: codes.join(', '), office: nfv('naOffice'), userId: uid}); data.active = !!nfv('naActive');
       return nbrWrite({['advisors/'+(id || nbrKey())]: data}).then(()=> toast(id ? 'Advisor saved.' : 'Advisor added.', 'success'));
     },
     onDelete: id ? (()=>{
@@ -14200,7 +14218,7 @@ function renderNbrBoard(){
     const list = advs.filter(a=> (a.office||'')===code); if(!list.length) return '';
     const rows = list.map(a=> ({a, r: nbrRow(a.id, selYm)})); const tot = nbrSum(rows.map(x=> x.r));
     return `<tr class="nbr-group"><td colspan="10">${esc(label)}</td></tr>
-      ${rows.map(({a,r})=> `<tr><td>${view ? esc(a.name) : `<button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">${esc(a.name)}</button>`}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, tot.total)}</td><td class="num">${nbrPct(r.total, grand.total)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
+      ${rows.map(({a,r})=> `<tr class="${view && a.id===nbrAdvForUser(currentUser.id) ? 'nbr-me' : ''}"><td>${view ? (a.id===nbrAdvForUser(currentUser.id) ? `<b>${esc(a.name)}</b> <span class="nbr-tag">You</span>` : esc(a.name)) : `<button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">${esc(a.name)}</button>`}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, tot.total)}</td><td class="num">${nbrPct(r.total, grand.total)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
       <tr class="nbr-tot"><td>${esc(label)} total</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(tot[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(tot.total)}</td><td class="num">${tot.total ? '100%' : '–'}</td><td class="num">${nbrPct(tot.total, grand.total)}</td><td class="num">${nbrMoneyCell(tot.banked)}</td></tr>`;
   };
   const boardTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
@@ -14237,6 +14255,44 @@ function renderNbrBoard(){
   const unassigned = nbrSum(yms.map(ym=> nbrRow('', ym)));
   const fromBibleNames = advs.filter(a=> nbrAgg().fromBible.has(a.id+'|'+Y)).map(a=> a.name);
 
+  // MAPAs: the month for everyone at the top, then their own figures by month, quarter and year.
+  const me = view ? nbrAdvForUser(currentUser.id) : '';
+  let myHtml = '';
+  if(view){
+    if(!me) myHtml = `<h2 class="nbr-h2">My figures</h2><div class="nbr-callout">Your own figures will show here once Management link your login to your advisor record (New Business → Advisors &amp; upload → Edit the advisor → Dashboard login).</div>`;
+    else {
+      const mine = yms.map(ym=> nbrRow(me, ym)), mineLast = prev.map(ym=> nbrRow(me, ym));
+      const mt = nbrSum(mine), mSel = mine[nbrUI.boardMonth-1], mYtd = nbrSum(mine.slice(0, upTo)), mLytd = nbrSum(mineLast.slice(0, upTo));
+      const qs = [0,1,2,3].map(q=> ({q, r: nbrSum(mine.slice(q*3, q*3+3)), l: nbrSum(mineLast.slice(q*3, q*3+3))}));
+      const selQ = Math.floor((nbrUI.boardMonth-1)/3);
+      const yearsMine = nbrAgg().years.filter(y=> nbrYearHasData(me, y)).sort((a,b)=> b-a);
+      const yr = y=> nbrSum(nbrYearMonths(y).map(ym=> nbrRow(me, ym)));
+      const catHead = NBR_CATS.map(([,l])=> `<th class="num">${l}</th>`).join('');
+      const catCells = r=> NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('');
+      myHtml = `
+    <h2 class="nbr-h2 nbr-my-h">My figures · ${esc(nbrAdvName(me))}</h2>
+    <div class="stat-grid">
+      <div class="stat-card accent"><div class="sv">${nbrMoney(mSel.total)}</div><div class="sl">I wrote in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} · ${nbrPct(mSel.total, grand.total)} of all</div></div>
+      <div class="stat-card good"><div class="sv">${nbrMoney(mSel.banked)}</div><div class="sl">I banked in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
+      <div class="stat-card"><div class="sv">${nbrMoney(qs[selQ].r.total)}</div><div class="sl">Written in Q${selQ+1} ${Y}${qs[selQ].l.total ? ` · ${yoy(qs[selQ].r.total, qs[selQ].l.total)} on ${Y-1}` : ''}</div></div>
+      <div class="stat-card"><div class="sv">${nbrMoney(mYtd.total)}</div><div class="sl">Written ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y}${mLytd.total ? ` · ${yoy(mYtd.total, mLytd.total)} on ${Y-1}` : ''}</div></div>
+      <div class="stat-card good"><div class="sv">${nbrMoney(mYtd.banked)}</div><div class="sl">Banked ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y}</div></div>
+    </div>
+    <h3 class="nbr-h3">${Y} by month</h3>
+    <div class="nml-table-wrap"><table class="nml-table nbr-table">
+      <thead><tr><th>Month</th>${catHead}<th class="num">Total written</th><th class="num">NPW</th><th class="num">Exc NPW</th><th class="num">Banked</th><th class="num">Written ${Y-1}</th><th class="num">Year on year</th></tr></thead>
+      <tbody>${mine.map((r,i)=> `<tr class="${yms[i]===selYm ? 'nbr-sel' : ''}"><td>${NBR_MONTHS[i]}</td>${catCells(r)}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td><td class="num">${nbrMoneyCell(mineLast[i].total)}</td><td class="num">${yoy(r.total, mineLast[i].total)}</td></tr>`).join('')}
+        <tr class="nbr-grand"><td>Total</td>${catCells(mt)}<td class="num b">${nbrMoneyCell(mt.total)}</td><td class="num">${nbrMoneyCell(mt.npw)}</td><td class="num">${nbrMoneyCell(mt.excl)}</td><td class="num">${nbrMoneyCell(mt.banked)}</td><td class="num">${nbrMoneyCell(nbrSum(mineLast).total)}</td><td class="num">${yoy(mt.total, nbrSum(mineLast).total)}</td></tr></tbody></table></div>
+    <h3 class="nbr-h3">${Y} by quarter</h3>
+    <div class="nml-table-wrap"><table class="nml-table nbr-table">
+      <thead><tr><th>Quarter</th>${catHead}<th class="num">Total written</th><th class="num">NPW</th><th class="num">Exc NPW</th><th class="num">Banked</th><th class="num">Written ${Y-1}</th><th class="num">Year on year</th></tr></thead>
+      <tbody>${qs.map(({q,r,l})=> `<tr class="${q===selQ ? 'nbr-sel' : ''}"><td>Q${q+1} <span class="nbr-note">${NBR_MONTHS[q*3]}–${NBR_MONTHS[q*3+2]}</span></td>${catCells(r)}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td><td class="num">${nbrMoneyCell(l.total)}</td><td class="num">${yoy(r.total, l.total)}</td></tr>`).join('')}</tbody></table></div>
+    <h3 class="nbr-h3">By year</h3>
+    ${yearsMine.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+      <thead><tr><th>Year</th>${catHead}<th class="num">Total written</th><th class="num">NPW</th><th class="num">Exc NPW</th><th class="num">Banked</th><th class="num">Year on year</th></tr></thead>
+      <tbody>${yearsMine.map(y=>{ const r = yr(y), l = yr(y-1); return `<tr class="${y===Y ? 'nbr-sel' : ''}"><td>${y}</td>${catCells(r)}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td><td class="num">${yoy(r.total, l.total)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="nml-empty">Nothing yet.</div>'}`;
+    }
+  }
   const empty = view ? !Object.keys((NBR_SUMMARY && NBR_SUMMARY.w) || {}).length && !Object.keys((NBR_SUMMARY && NBR_SUMMARY.bank) || {}).length : !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
   el.innerHTML = `
     ${view && !(NBR_SUMMARY && NBR_SUMMARY.updatedAt) ? `<div class="nbr-callout">The Salesboard hasn't been filled in yet. It fills in automatically the next time someone in Admin or Management logs in, so check back shortly.</div>` : empty && view ? `<div class="nbr-callout">Nothing on the Salesboard yet.</div>` : ''}
@@ -14249,23 +14305,24 @@ function renderNbrBoard(){
       ${view && NBR_SUMMARY && NBR_SUMMARY.updatedAt ? `<span class="field-hint">Updated ${esc(new Date(NBR_SUMMARY.updatedAt).toLocaleDateString('en-GB'))} at ${esc(new Date(NBR_SUMMARY.updatedAt).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
       ${!view && nbrShare && nbrShare.at ? `<span class="field-hint">Shared with MAPAs and protection advisers · ${esc(new Date(nbrShare.at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
     </div>
-    <div class="stat-grid">
-      <div class="stat-card accent"><div class="sv">${nbrMoney(sel.total)}</div><div class="sl">Written in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
-      <div class="stat-card good"><div class="sv">${nbrMoney(sel.banked)}</div><div class="sl">Banked in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
-      <div class="stat-card"><div class="sv">${nbrMoney(ytd.total)}</div><div class="sl">Written ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y} · ${nbrPct(yt.total, T.written)} of target${lytd.total ? ` · ${yoy(ytd.total, lytd.total)} on ${Y-1}` : ''}</div></div>
+    ${view ? `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} · everyone</h2>` : ''}
+    <div class="stat-grid ${view ? 'nbr-stat-2' : ''}">
+      <div class="stat-card accent"><div class="sv">${nbrMoney(sel.total)}</div><div class="sl">${view ? 'Everyone wrote' : 'Written'} in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
+      <div class="stat-card good"><div class="sv">${nbrMoney(sel.banked)}</div><div class="sl">${view ? 'Everyone banked' : 'Banked'} in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
+      ${view ? '' : `<div class="stat-card"><div class="sv">${nbrMoney(ytd.total)}</div><div class="sl">Written ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y} · ${nbrPct(yt.total, T.written)} of target${lytd.total ? ` · ${yoy(ytd.total, lytd.total)} on ${Y-1}` : ''}</div></div>
       <div class="stat-card"><div class="sv">${nbrMoney(ytd.banked)}</div><div class="sl">Banked ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y} · ${nbrPct(yt.banked, T.banked)} of target</div></div>
-      <div class="stat-card warn"><div class="sv">${nbrMoney(yt.npw)}</div><div class="sl">NPW in ${Y}</div></div>
+      <div class="stat-card warn"><div class="sv">${nbrMoney(yt.npw)}</div><div class="sl">NPW in ${Y}</div></div>`}
     </div>
-    <h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} by advisor</h2>
+    ${view ? '' : `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} by advisor</h2>`}
     ${fromBibleNames.length ? `<p class="field-hint nbr-bib-note">Written figures for ${esc(fromBibleNames.length > 4 ? fromBibleNames.length+' advisors' : fromBibleNames.join(', '))} in ${Y} come from the Bible, as there's no NBR for them that year.</p>` : ''}
     ${boardTable}
-    ${unassigned.banked && !view ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
+    ${view ? myHtml : `${unassigned.banked ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
     <h2 class="nbr-h2">${Y} by month</h2>
     ${yearTable}
     <h2 class="nbr-h2">${Y} written by product</h2>
     ${prodTable}
     <h2 class="nbr-h2">Each advisor by month</h2>
-    <div class="nbr-adv-cards">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>`;
+    <div class="nbr-adv-cards">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>`}`;
   document.getElementById('nbrBoardYear').addEventListener('change', e=>{ nbrUI.boardYear = +e.target.value; nbrUI.boardMonth = +e.target.value===now.getFullYear() ? now.getMonth()+1 : 12; renderNbrBoard(); });
   document.getElementById('nbrBoardMonth').addEventListener('change', e=>{ nbrUI.boardMonth = +e.target.value; renderNbrBoard(); });
 }
@@ -14446,8 +14503,8 @@ function renderNbrSetup(){
     <div class="nbr-setup-grid">
       <section class="nbr-card">
         <div class="nbr-card-head"><h2>Advisors</h2><button type="button" class="btn btn-primary btn-sm" id="nbrAddAdv">+ Add advisor</button></div>
-        ${advs.length ? `<table class="nml-table nbr-table"><thead><tr><th>Name</th><th>Bible code(s)</th><th>Office</th><th class="num">NBR cases</th><th class="num">Bible lines</th><th></th></tr></thead><tbody>
-          ${advs.map(a=> `<tr class="nbr-click ${a.active===false ? 'nbr-inactive' : ''}" data-nbr-adv="${esc(a.id)}"><td><b>${esc(a.name)}</b>${a.active===false ? ' <span class="nbr-tag">inactive</span>' : ''}</td><td>${esc(a.codes||'—')}</td><td>${esc((NBR_OFFICES.find(o=> o[0]===a.office)||['','—'])[1])}</td><td class="num">${count(a.id)}</td><td class="num">${bcount(a.id)}</td><td><button type="button" class="linkish">Edit</button></td></tr>`).join('')}
+        ${advs.length ? `<table class="nml-table nbr-table"><thead><tr><th>Name</th><th>Bible code(s)</th><th>Office</th><th>Dashboard login</th><th class="num">NBR cases</th><th class="num">Bible lines</th><th></th></tr></thead><tbody>
+          ${advs.map(a=> `<tr class="nbr-click ${a.active===false ? 'nbr-inactive' : ''}" data-nbr-adv="${esc(a.id)}"><td><b>${esc(a.name)}</b>${a.active===false ? ' <span class="nbr-tag">inactive</span>' : ''}</td><td>${esc(a.codes||'—')}</td><td>${esc((NBR_OFFICES.find(o=> o[0]===a.office)||['','—'])[1])}</td><td>${(()=>{ const uid = a.userId || Object.keys(USERS).find(u=> nbrAdvForUser(u)===a.id); return uid && USERS[uid] ? esc(USERS[uid].name) + (a.userId ? '' : ' <span class="nbr-tag">same name</span>') : '<span class="nbr-zero">–</span>'; })()}</td><td class="num">${count(a.id)}</td><td class="num">${bcount(a.id)}</td><td><button type="button" class="linkish">Edit</button></td></tr>`).join('')}
         </tbody></table>` : '<div class="nml-empty">No advisors yet. Add them here, or upload an advisor\'s NBR or the Bible and they\'re added for you.</div>'}
       </section>
       <section class="nbr-card">

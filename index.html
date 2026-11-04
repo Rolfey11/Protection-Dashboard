@@ -710,6 +710,7 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-tag{display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:999px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); vertical-align:1px;}
 .nbr-office{font-size:10px; font-weight:800; color:var(--text-faint);}
 .nbr-bib-note{margin:-6px 0 10px;}
+.nbr-callout-bad{background:color-mix(in srgb, var(--red) 8%, var(--surface)); border-color:color-mix(in srgb, var(--red) 30%, var(--border)); color:var(--red);}
 .nbr-callout{padding:14px 16px; border-radius:12px; background:color-mix(in srgb, #8A5A00 8%, var(--surface)); border:1px solid color-mix(in srgb, #8A5A00 25%, var(--border)); margin-bottom:16px; font-size:13.5px;}
 .nbr-months{display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:6px; margin-bottom:6px;}
 @media (max-width:900px){ .nbr-months{grid-template-columns:repeat(6, minmax(0,1fr));} }
@@ -5372,7 +5373,7 @@ function ensureSibLoaded(){
    the first switch to Send in Blue or Commercial doesn't wait for a download. */
 function prefetchSections(){
   clearTimeout(prefetchSections.t);
-  prefetchSections.t = setTimeout(()=> (window.requestIdleCallback || (f=> f()))(()=>{ if(currentUser){ startSibListener(); startComListener(); } }), 3000);
+  prefetchSections.t = setTimeout(()=> (window.requestIdleCallback || (f=> f()))(()=>{ if(currentUser){ startSibListener(); startComListener(); nbrCheckSummary(); } }), 3000);
 }
 function startSibListener(){
   if(sibListening || !currentUser) return;
@@ -13728,7 +13729,8 @@ function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || cur
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
 function nbrViewer(){ return !!currentUser && currentUser.role==='mapa'; }
 function nbrSeeAccess(){ return nbrAccess() || nbrViewer(); }
-let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null;
+let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null, nbrShare = null;
+const NBR_SUM_VERSION = 1;
 function nbrReady(){ return nbrViewer() ? nbrSumLoaded : Object.values(nbrLoaded).every(Boolean); }
 function syncNbrAccess(){
   const ok = nbrSeeAccess(), view = nbrViewer();
@@ -13752,16 +13754,24 @@ function nbrPublishSoon(){ clearTimeout(nbrPublishTimer); nbrPublishTimer = setT
 function nbrPublishSummary(){
   if(!nbrAccess() || !nbrListening || !Object.values(nbrLoaded).every(Boolean)) return;
   const A = nbrAgg(), r2 = v=> Math.round(n0(v)*100)/100, key = k=> k || '_';
-  const pack = (o, f)=>{ const out = {}; Object.entries(o).forEach(([adv, months])=>{ const m = {}; Object.entries(months).forEach(([ym, v])=>{ const x = f(v); if(x!=null) m[ym] = x; }); if(Object.keys(m).length) out[key(adv)] = m; }); return out; };
-  const advisors = {}; Object.entries(NBR_ADV).forEach(([id,a])=>{ if(a) advisors[id] = {name: a.name || '', office: a.office || '', active: a.active!==false}; });
+  // Only keys the database accepts: advisor ids and YYYY-MM months.
+  const okKey = k=> /^[^.#$\/\[\]]+$/.test(k), okYm = ym=> /^\d{4}-\d{2}$/.test(ym);
+  const pack = (o, f)=>{ const out = {}; Object.entries(o).forEach(([adv, months])=>{ if(!okKey(key(adv))) return; const m = {}; Object.entries(months||{}).forEach(([ym, v])=>{ if(!okYm(ym)) return; const x = f(v); if(x!=null) m[ym] = x; }); if(Object.keys(m).length) out[key(adv)] = m; }); return out; };
+  const advisors = {}; Object.entries(NBR_ADV).forEach(([id,a])=>{ if(a && okKey(id)) advisors[id] = {name: String(a.name || ''), office: String(a.office || ''), active: a.active!==false}; });
   const sum = {advisors,
     w: pack(A.w, v=>{ const x = {}; NBR_CATS.forEach(([k])=>{ if(r2(v[k])) x[k] = r2(v[k]); }); return Object.keys(x).length ? x : null; }),
     npw: pack(A.npw, v=> r2(v) || null), bank: pack(A.bank, v=> r2(v) || null),
     fromBible: [...A.fromBible].map(k=> k.startsWith('|') ? '_'+k : k), years: A.years,
-    targets: {written: nbrTargets().written, banked: nbrTargets().banked}};
+    targets: {written: nbrTargets().written, banked: nbrTargets().banked}, v: NBR_SUM_VERSION};
   const json = JSON.stringify(sum);
   if(json===nbrPublished) return;
-  db.ref('nbrBoard').set({...sum, updatedAt: Date.now()}).then(()=>{ nbrPublished = json; }).catch(()=>{});
+  const done = err=>{ nbrShare = err ? {err: err.message || String(err)} : {at: Date.now()}; if(!err) nbrPublished = json; else console.warn('Salesboard summary not shared:', err); if(nbrPageShown('nbrBoard')) renderNbrBoard(); };
+  try{ db.ref('nbrBoard').set({...sum, updatedAt: Date.now()}).then(()=> done(null), done); }catch(err){ done(err); }
+}
+// On logging in, Admin / Management build the summary if it's missing or out of date (no need to open New Business).
+function nbrCheckSummary(){
+  if(!nbrAccess()) return;
+  db.ref('nbrBoard/v').once('value').then(s=>{ if(s.val()!==NBR_SUM_VERSION) startNbrListener(); }, ()=> startNbrListener());
 }
 function startNbrListener(){
   if(nbrViewer()){ startNbrSummary(); return; }
@@ -14229,11 +14239,15 @@ function renderNbrBoard(){
 
   const empty = view ? !Object.keys((NBR_SUMMARY && NBR_SUMMARY.w) || {}).length && !Object.keys((NBR_SUMMARY && NBR_SUMMARY.bank) || {}).length : !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
   el.innerHTML = `
-    ${empty && view ? `<div class="nbr-callout">Nothing on the Salesboard yet.</div>` : ''}
+    ${view && !(NBR_SUMMARY && NBR_SUMMARY.updatedAt) ? `<div class="nbr-callout">The Salesboard hasn't been filled in yet. It fills in automatically the next time someone in Admin or Management logs in, so check back shortly.</div>` : empty && view ? `<div class="nbr-callout">Nothing on the Salesboard yet.</div>` : ''}
+    ${!view && nbrShare && nbrShare.err ? `<div class="nbr-callout nbr-callout-bad"><b>MAPAs and protection advisers can't see these figures yet</b>: the Salesboard couldn't be shared with them (${esc(nbrShare.err)}). Publish the latest database rules in Firebase, then refresh this page.</div>` : ''}
     ${empty && !view ? `<div class="nbr-callout">Nothing here yet. Go to <button type="button" class="linkish" data-nbr-go="nbrSetup">Advisors &amp; upload</button> to upload the advisors' NBRs and the Bible, or add advisors and start adding cases on the <button type="button" class="linkish" data-nbr-go="nbrReg">Advisor NBR</button>.</div>` : ''}
     <div class="nbr-toolbar">
       <label>Year <select id="nbrBoardYear">${nbrYearOptions(Y)}</select></label>
       <label>Month <select id="nbrBoardMonth">${NBR_MONTHS_LONG.map((m,i)=> `<option value="${i+1}" ${i+1===nbrUI.boardMonth ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
+      <span class="nbr-spacer"></span>
+      ${view && NBR_SUMMARY && NBR_SUMMARY.updatedAt ? `<span class="field-hint">Updated ${esc(new Date(NBR_SUMMARY.updatedAt).toLocaleDateString('en-GB'))} at ${esc(new Date(NBR_SUMMARY.updatedAt).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
+      ${!view && nbrShare && nbrShare.at ? `<span class="field-hint">Shared with MAPAs and protection advisers · ${esc(new Date(nbrShare.at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
     </div>
     <div class="stat-grid">
       <div class="stat-card accent"><div class="sv">${nbrMoney(sel.total)}</div><div class="sl">Written in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>

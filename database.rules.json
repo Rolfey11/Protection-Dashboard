@@ -97,6 +97,11 @@
       ".write": "auth != null && root.child('members').child(auth.uid).exists() && (root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management' || root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'admin')"
     },
 
+    "nbrBoard": {
+      ".read": "auth != null && root.child('members').child(auth.uid).exists()",
+      ".write": "auth != null && root.child('members').child(auth.uid).exists() && (root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management' || root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'admin')"
+    },
+
     "logins": {
       ".read": "auth != null && root.child('members').child(auth.uid).exists() && root.child('users').child(root.child('members').child(auth.uid).val()).child('role').val() === 'management'",
       "$userId": {

@@ -724,6 +724,20 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-status-cards .stat-card.on{outline:2px solid #8A5A00;}
 .bl-chip{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--bg); color:var(--text-muted);}
 .bl-chip-offer{background:var(--blue-bg); color:var(--blue);} .bl-chip-comp{background:var(--amber-bg); color:var(--amber);} .bl-chip-paid{background:var(--green-bg); color:var(--green);} .bl-chip-npw{background:var(--bg); color:var(--text-faint); text-decoration:line-through;}
+.nbr-bib-wrap{max-height:calc(100vh - 150px); overflow:auto;}
+.nbr-bib-wrap thead th{position:sticky; top:0; z-index:1; background:var(--surface); box-shadow:inset 0 -1px 0 var(--border);}
+.nbr-bib-table th,.nbr-bib-table td{padding:7px 7px;}
+.nbr-bib-table td.wrap{white-space:normal; line-height:1.3;}
+.nbr-bib-table td.nbr-bib-client{min-width:140px;}
+.nbr-bib-st{white-space:nowrap;}
+.nbr-bib-st .btn{display:block; margin-top:4px; padding:2px 10px; font-size:11.5px;}
+.nbr-bib-table td.wrap{min-width:92px;}
+@media (max-width:1600px){
+  .nbr-bib-table{font-size:12px;}
+  .nbr-bib-table th,.nbr-bib-table td{padding:6px 5px;}
+  .nbr-bib-table th{font-size:10.5px;}
+  .nbr-bib-table .nbr-office{display:none;}
+}
 .nbr-bib-table tr.bl-comp td{background:color-mix(in srgb, var(--amber) 8%, var(--surface));}
 .nbr-bib-table tr.bl-paid td{background:color-mix(in srgb, var(--green) 7%, var(--surface));}
 .nbr-bib-table tr.bl-offer td{background:color-mix(in srgb, var(--blue) 5%, var(--surface));}
@@ -6795,6 +6809,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05b', date:'2026-11-05', items:[ {text:"<b>New Business</b>: the Bible table now fits on the screen, and its column headings stay at the top as you scroll down.", roles:['admin','management']} ]},
   {id:'2026-11-05a', date:'2026-11-05', items:[ {text:"<b>New Business</b>: uploading the Bible now has a <b>Fill in the blanks</b> option. Each row is matched to the NBR cases and Bible lines already here, and only what's missing is added (date paid, amount paid, offer and completion dates…). Nothing already entered is changed, and nothing is doubled.", roles:['admin','management']} ]},
   {id:'2026-11-04d', date:'2026-11-04', items:[ {text:"<b>New Business</b>: you can now upload several Advisor NBRs in one go (hold Ctrl and click each file). Each file gets its own preview where you choose whose NBR it is, then they're imported one after another.", roles:['admin','management']} ]},
   {id:'2026-11-04c', date:'2026-11-04', items:[ {text:"<b>New Business</b> (Admin and Management only): a new section, next to Protection / Send in Blue, that replaces the Advisor NBR, NBR Bible and Live Salesboard spreadsheets. Add a case to an advisor's NBR once and it goes into the Bible too; add the date paid in the Bible and the Salesboard updates. Upload the existing spreadsheets on <b>Advisors &amp; upload</b> to bring in past months.", roles:['admin','management']} ]},
@@ -14250,6 +14265,8 @@ function nbrBibFiltered(){
     return true;
   }).map(([id,l])=> ({id, ...l}));
 }
+// Dates as 14/03/25 so the Bible table fits on the screen.
+function nbrShortDate(iso){ return /^\d{4}-\d{2}-\d{2}/.test(iso||'') ? `${iso.slice(8,10)}/${iso.slice(5,7)}/${iso.slice(2,4)}` : ''; }
 function renderNbrBible(){
   const el = document.getElementById('nbrBibleBody');
   if(nbrNotReady(el)) return;
@@ -14261,9 +14278,9 @@ function renderNbrBible(){
   const products = [...new Set(Object.values(NBR_BIB).map(l=> l && l.product).filter(Boolean))].sort();
   const noMonth = Object.values(NBR_BIB).some(l=> l && !l.month), noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
   const shown = lines.slice(0, nbrUI.bibShown);
-  const tableHtml = lines.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-bib-table">
-    <thead><tr><th>Period</th><th>Adv</th><th>Client</th><th>App</th><th>Offer/terms</th><th>Comp</th><th>Provider</th><th>Product</th><th>Income source</th><th class="num">Amount</th><th>When</th><th>How</th><th>Date paid</th><th class="num">Paid</th><th>Status</th><th></th></tr></thead>
-    <tbody>${shown.map(l=>{ const s = nbrBibStatus(l); return `<tr class="nbr-click bl-${s}" data-nbr-line="${esc(l.id)}"><td>${esc(l.month ? nbrYmLabel(l.month) : '—')}</td><td>${esc(l.adv ? nbrAdvName(l.adv) : '—')}${l.office ? ` <span class="nbr-office">${esc(l.office)}</span>` : ''}</td><td><b>${esc(l.client||'')}</b>${l.life ? ` <span class="nbr-tag">Life ${esc(l.life)}</span>` : ''}</td><td>${l.appDate ? fmtDateSlash(l.appDate) : ''}</td><td>${l.offerDate ? fmtDateSlash(l.offerDate) : ''}</td><td>${l.compDate ? fmtDateSlash(l.compDate) : ''}</td><td>${esc(l.provider||'')}</td><td>${esc(l.product||'')}</td><td>${esc(l.source||'')}</td><td class="num b">${nbrMoneyCell(l.amount)}</td><td>${esc(l.when||'')}</td><td>${esc(l.how||'')}</td><td>${l.datePaid ? fmtDateSlash(l.datePaid) : ''}</td><td class="num">${nbrMoneyCell(l.paid)}</td><td><span class="bl-chip bl-chip-${s}">${BIB_STATUS[s][0]}</span></td><td>${s!=='paid' && s!=='npw' ? `<button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(l.id)}">Paid</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
+  const tableHtml = lines.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table">
+    <thead><tr><th>Period</th><th>Adv</th><th>Client</th><th>App</th><th>Offer / terms</th><th>Comp</th><th>Provider</th><th>Product</th><th>Income source</th><th class="num">Amount</th><th>When / how</th><th>Date paid</th><th class="num">Paid</th><th>Status</th></tr></thead>
+    <tbody>${shown.map(l=>{ const s = nbrBibStatus(l); return `<tr class="nbr-click bl-${s}" data-nbr-line="${esc(l.id)}"><td>${esc(l.month ? nbrYmLabel(l.month) : '—')}</td><td>${esc(l.adv ? nbrAdvName(l.adv) : '—')}${l.office ? ` <span class="nbr-office">${esc(l.office)}</span>` : ''}</td><td class="wrap nbr-bib-client"><b>${esc(l.client||'')}</b>${l.life ? ` <span class="nbr-tag">Life ${esc(l.life)}</span>` : ''}</td><td>${nbrShortDate(l.appDate)}</td><td>${nbrShortDate(l.offerDate)}</td><td>${nbrShortDate(l.compDate)}</td><td class="wrap">${esc(l.provider||'')}</td><td>${esc(l.product||'')}</td><td class="wrap">${esc(l.source||'')}</td><td class="num b">${nbrMoneyCell(l.amount)}</td><td class="wrap">${esc([l.when, l.how].filter(Boolean).join(' · '))}</td><td>${nbrShortDate(l.datePaid)}</td><td class="num">${nbrMoneyCell(l.paid)}</td><td class="nbr-bib-st"><span class="bl-chip bl-chip-${s}">${BIB_STATUS[s][0]}</span>${s!=='paid' && s!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(l.id)}" title="Mark as paid">Paid</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
     ${lines.length > shown.length ? `<div class="nbr-more"><button type="button" class="btn btn-secondary btn-sm" id="nbrBibMore">Show ${Math.min(NBR_PAGE, lines.length - shown.length)} more (${lines.length - shown.length} not shown)</button></div>` : ''}`
     : '<div class="nml-empty">No Bible lines match.</div>';
 

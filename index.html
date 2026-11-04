@@ -742,6 +742,11 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-ubox{border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--bg); font-size:13px;}
 .nbr-ubox p{margin-bottom:8px;}
 .nbr-ubox-dim{color:var(--text-muted);}
+.nbr-up-mode{border-top:1px solid var(--border); padding-top:10px; margin-top:4px;}
+.nbr-fill-sum{margin:4px 0 12px 18px; display:flex; flex-direction:column; gap:4px;}
+.nbr-up-det{margin:-4px 0 12px 24px; font-size:12px;}
+.nbr-up-det summary{cursor:pointer; color:var(--brand); font-weight:600; margin-bottom:6px;}
+.nbr-up-rows{max-height:280px; overflow:auto; border:1px solid var(--border); border-radius:8px; background:var(--surface);}
 .nbr-up-list{display:flex; flex-direction:column; gap:10px; margin-bottom:12px;}
 .nbr-up-remove{font-weight:600; margin-left:8px; font-size:12px;}
 .nbr-up-title{font-weight:800; margin-bottom:6px;}
@@ -6790,6 +6795,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05a', date:'2026-11-05', items:[ {text:"<b>New Business</b>: uploading the Bible now has a <b>Fill in the blanks</b> option. Each row is matched to the NBR cases and Bible lines already here, and only what's missing is added (date paid, amount paid, offer and completion dates…). Nothing already entered is changed, and nothing is doubled.", roles:['admin','management']} ]},
   {id:'2026-11-04d', date:'2026-11-04', items:[ {text:"<b>New Business</b>: you can now upload several Advisor NBRs in one go (hold Ctrl and click each file). Each file gets its own preview where you choose whose NBR it is, then they're imported one after another.", roles:['admin','management']} ]},
   {id:'2026-11-04c', date:'2026-11-04', items:[ {text:"<b>New Business</b> (Admin and Management only): a new section, next to Protection / Send in Blue, that replaces the Advisor NBR, NBR Bible and Live Salesboard spreadsheets. Add a case to an advisor's NBR once and it goes into the Bible too; add the date paid in the Bible and the Salesboard updates. Upload the existing spreadsheets on <b>Advisors &amp; upload</b> to bring in past months.", roles:['admin','management']} ]},
   {id:'2026-11-04b', date:'2026-11-04', items:[ {text:"<b>In Research</b>: on a case in Appointments / Research, press <b>In Research</b> (next to Quotes Sent). The card turns <b>pale yellow</b> on your dashboard, so you can tell research cases from appointments. Once you press Quotes Sent it turns pale green as before.", roles:['mapa']} ]},
@@ -14321,7 +14327,7 @@ function renderNbrSetup(){
       </section>
       <section class="nbr-card">
         <div class="nbr-card-head"><h2>Upload spreadsheets</h2></div>
-        <p class="nbr-p">Upload the spreadsheets as they are (.xlsx). You can pick several Advisor NBRs at once (hold Ctrl and click each one): each is imported on its own. Everything goes into the right month, so past months are filled in too. You can upload the same file again later: it replaces what came from it before.</p>
+        <p class="nbr-p">Upload the spreadsheets as they are (.xlsx). You can pick several Advisor NBRs at once (hold Ctrl and click each one): each is imported on its own. Everything goes into the right month, so past months are filled in too. Once the NBRs are in, upload the Bible with <b>Fill in the blanks</b> to add dates paid and other details to those cases without doubling them. You can upload the same file again later: it replaces what came from it before.</p>
         <div class="nbr-upload-btns">
           <label class="btn btn-secondary"><input type="file" id="nbrUpNbr" accept=".xlsx,.xls" class="hidden" multiple>Upload Advisor NBRs</label>
           <label class="btn btn-secondary"><input type="file" id="nbrUpBible" accept=".xlsx,.xls" class="hidden">Upload the Bible</label>
@@ -14552,13 +14558,34 @@ function nbrReadUpload(X, file, kind, it, up){
         map[code] = a ? a.id : 'new';
         c.office = office ? office[0] : '';
       });
-      Object.assign(it, {state:'ready', parsed:p, map});
+      const hasData = Object.keys(NBR_ENT).length || Object.keys(NBR_BIB).length;
+      Object.assign(it, {state:'ready', parsed:p, map, mode: hasData ? 'fill' : 'add', addExtra:true, addUnmatched:false});
     }
   }).catch(err=>{ it.state = 'error'; it.error = err.message; });
 }
 // Who an NBR file will go to: an advisor id, or "new:<name>" (two files for the same new name share one advisor).
 function nbrUpTarget(it){ return it.adv==='new' ? (it.newName ? 'new:'+it.newName.toLowerCase() : '') : it.adv; }
 function nbrUpMonthsKey(it){ return it.parsed ? Object.keys(it.parsed.months) : []; }
+function nbrFillPreview(it){
+  const key = JSON.stringify(it.map)+'|'+nbrVer;
+  if(!it._m || it._m.key!==key) it._m = {key, res: nbrBibleMatch(it)};
+  const M = it._m.res, n = x=> x===1 ? '' : 's';
+  const rowTable = list=> `<div class="nbr-scroll nbr-up-rows"><table class="nml-table nbr-table"><thead><tr><th>Adv</th><th>Client</th><th>Product</th><th class="num">Amount</th><th>Month</th><th>Date paid</th></tr></thead><tbody>
+    ${list.slice(0,200).map(l=> `<tr><td>${esc(l.code||'')}</td><td>${esc(l.client||'')}</td><td>${esc(l.product||'')}</td><td class="num">${nbrMoney(l.amount)}</td><td>${esc(nbrYmLabel(l.month))}</td><td>${esc(l.datePaid ? fmtDateSlash(l.datePaid) : '')}</td></tr>`).join('')}
+    </tbody></table>${list.length>200 ? `<p class="nbr-p">…and ${list.length-200} more.</p>` : ''}</div>`;
+  const matched = M.fill.length + M.same;
+  return `<ul class="nbr-fill-sum">
+      ${matched ? `<li><b>${matched}</b> row${n(matched)} match a Bible line already here: <b>${M.fill.length}</b> will have blanks filled in${M.same ? `, ${M.same} already up to date` : ''}.</li>` : ''}
+      ${M.link.length ? `<li><b>${M.link.length}</b> row${n(M.link.length)} match an NBR case that has no Bible line yet: they'll be added and linked to the case.</li>` : ''}
+      ${M.paidAdded ? `<li><b>${M.paidAdded}</b> date${n(M.paidAdded)} paid will be added to these, so they show as Banked on the Salesboard.</li>` : ''}
+      ${!matched && !M.link.length ? `<li>No rows match the cases or Bible lines already here. Check each code above is matched to the right advisor.</li>` : ''}
+      ${M.skipped ? `<li>${M.skipped} row${n(M.skipped)} left out (codes set to "Leave these lines out").</li>` : ''}
+    </ul>
+    ${M.extra.length ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="addExtra" ${it.addExtra ? 'checked' : ''}> <span>Add the <b>${M.extra.length}</b> row${n(M.extra.length)} that aren't on any NBR uploaded here: earlier years, clawbacks and admin fees, or advisors with no NBR. <span class="field-hint">(Leave ticked to keep past banked figures.)</span></span></label>
+      <details class="nbr-up-det"><summary>See these rows</summary>${rowTable(M.extra)}</details>` : ''}
+    ${M.unmatched.length ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="addUnmatched" ${it.addUnmatched ? 'checked' : ''}> <span>Also add the <b>${M.unmatched.length}</b> row${n(M.unmatched.length)} from years the advisor's NBR covers where no matching case was found. <span class="field-hint">(Check these first: the client name may be spelt differently, or the case may be missing from the NBR.)</span></span></label>
+      <details class="nbr-up-det" open><summary>See these rows</summary>${rowTable(M.unmatched)}</details>` : ''}`;
+}
 function renderNbrUpload(){
   const box = document.getElementById('nbrUpArea'); if(!box) return;
   const up = nbrUI.upload; if(!up){ box.innerHTML = ''; return; }
@@ -14624,8 +14651,12 @@ function renderNbrUpload(){
     <p class="nbr-p">Match each code in the Adv column to an advisor. Codes set to "New advisor" are added as advisors (you can rename them on the Advisors list afterwards).</p>
     <div class="nbr-code-map">${codes.map(([code,c])=> `<label><span><b>${esc(code)}</b> · ${c.n} line${c.n===1?'':'s'}${c.office ? ' · '+esc(c.office) : ''}</span>
       <select data-nbr-code="${esc(code)}"><option value="new" ${it.map[code]==='new' ? 'selected' : ''}>New advisor "${esc(code)}"</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===it.map[code] ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="skip" ${it.map[code]==='skip' ? 'selected' : ''}>Leave these lines out</option></select></label>`).join('')}</div>
-    ${existing ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="replace" ${it.replace ? 'checked' : ''}> Replace the ${existing} Bible line${existing===1?'':'s'} already here for ${esc(fys.join(', '))}</label>` : ''}
-    ${foot(cancelBtn + `<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go">Import ${p.lines.length} lines</button>`)}
+    <div class="nbr-up-mode">
+      <label class="nbr-check"><input type="radio" name="nbrBibMode" data-nbr-uf="mode" value="fill" ${it.mode==='fill' ? 'checked' : ''}> <span><b>Fill in the blanks</b>: match each row to the NBR cases and Bible lines already here, and only add what's missing (date paid, amount paid, offer and completion dates…). Nothing already entered is changed.</span></label>
+      <label class="nbr-check"><input type="radio" name="nbrBibMode" data-nbr-uf="mode" value="add" ${it.mode==='add' ? 'checked' : ''}> <span><b>Add every row</b> as a new Bible line</span></label>
+    </div>
+    ${it.mode==='fill' ? nbrFillPreview(it) : existing ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="replace" ${it.replace ? 'checked' : ''}> Replace the ${existing} Bible line${existing===1?'':'s'} already here for ${esc(fys.join(', '))}</label>` : ''}
+    ${foot(cancelBtn + `<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go">${it.mode==='fill' ? 'Fill in the blanks' : `Import ${p.lines.length} lines`}</button>`)}
   </div>`;
 }
 document.addEventListener('change', e=>{
@@ -14637,7 +14668,10 @@ document.addEventListener('change', e=>{
   else if(f==='newName') it.newName = t.value.trim();
   else if(f==='newOffice') it.newOffice = t.value;
   else if(f==='replace') it.replace = t.checked;
-  else if(t.dataset.nbrCode) it.map[t.dataset.nbrCode] = t.value;
+  else if(f==='mode'){ it.mode = t.value; renderNbrUpload(); }
+  else if(f==='addExtra') it.addExtra = t.checked;
+  else if(f==='addUnmatched') it.addUnmatched = t.checked;
+  else if(t.dataset.nbrCode){ it.map[t.dataset.nbrCode] = t.value; if(it.mode==='fill') renderNbrUpload(); }
 });
 document.addEventListener('input', e=>{
   const up = nbrUI.upload, t = e.target; if(!up || t.dataset.nbrUf!=='newName') return;
@@ -14690,6 +14724,109 @@ function nbrBibleUploadPatches(it){
   });
   return {updates, msg: `imported ${n} Bible line${n===1?'':'s'}${skipped ? ` (left out ${skipped})` : ''}.`};
 }
+/* ---- Bible upload, "fill in the blanks" ----
+   Each Bible row is matched to what's already here: a Bible line, or a fee on an advisor's NBR case that
+   doesn't have a Bible line yet. A matched line only gets the fields it's missing (date paid, amount paid,
+   offer / completion dates…); nothing already entered is changed. Rows that match nothing are listed so
+   they can be added or left out. Uploading the same Bible again changes nothing. */
+const NBR_FILL_FIELDS = ['office','dept','appDate','offerDate','compDate','switchDate','provider','source','when','mumsType','how','datePaid','paid','life','address','npwNote','amount'];
+function nbrProdKind(p){
+  p = String(p||'');
+  if(p==='Mums Fee') return 'mums';
+  if(p==='Sols Fee') return 'sols';
+  if(p==='Val Fee') return 'val';
+  if(p==='Life Ins' || p==='Gen Ins') return 'prot';
+  if(!p || p==='Clawback' || p==='Admin Fee') return '';
+  return 'proc';
+}
+const NBR_NAME_SKIP = new Set(['mr','mrs','ms','miss','mx','dr','and','the']);
+function nbrNameToks(s){ return new Set(String(s||'').toLowerCase().replace(/[^a-z\s&,]/g,' ').split(/[\s&,]+/).filter(w=> w.length>1 && !NBR_NAME_SKIP.has(w))); }
+// 3 = same names, 2 = two names in common, 1 = one name (e.g. the surname) in common, 0 = no match.
+function nbrNameScore(a, b){
+  if(!a.size || !b.size) return 0;
+  let hit = 0; a.forEach(w=>{ if(b.has(w)) hit++; });
+  if(hit===a.size && hit===b.size) return 3;
+  return hit>=2 ? 2 : hit===1 ? 1 : 0;
+}
+const nbrMonthNo = ym=> ym ? (+ym.slice(0,4))*12 + (+ym.slice(5,7)) : null;
+const nbrBlank = v=> v==null || v==='' || (typeof v==='number' && !v);
+function nbrBibleMatch(it){
+  const p = it.parsed, advOf = code=> !code ? '' : it.map[code]==='skip' ? null : it.map[code]==='new' ? 'new:'+code : it.map[code];
+  // What the rows can be matched to, by advisor + kind of fee.
+  const targets = {}, add = (key, t)=> (targets[key] || (targets[key] = [])).push(t);
+  const linked = new Set();
+  Object.entries(NBR_BIB).forEach(([id,l])=>{
+    if(!l) return; if(l.entry && l.kind) linked.add(l.entry+'|'+l.kind);
+    const k = l.kind || nbrProdKind(l.product) || 'x:'+String(l.product||'').toLowerCase(); if(!l.adv) return;
+    add(l.adv+'|'+k, {type:'line', id, l, toks:nbrNameToks(l.client), m:nbrMonthNo(l.month), amt:nbrRound(l.amount)});
+  });
+  const nbrYears = {};
+  Object.entries(NBR_ENT).forEach(([id,e])=>{
+    if(!e || !e.adv) return;
+    (nbrYears[e.adv] || (nbrYears[e.adv] = new Set())).add(String(e.month||'').slice(0,4));
+    NBR_CATS.forEach(([k])=>{ const amt = nbrRound(e[k]); if(amt && !linked.has(id+'|'+k)) add(e.adv+'|'+k, {type:'entry', id, k, e, toks:nbrNameToks(e.client), m:nbrMonthNo(e.month), amt}); });
+  });
+  // Every likely pair, best first; each row and each target is used once.
+  // Clawbacks, admin fees etc. aren't on the NBR, but are still matched to Bible lines so a second upload doesn't double them.
+  const pairs = [], rows = p.lines.map((l, i)=> ({i, l, adv:advOf(l.code), fee:nbrProdKind(l.product), kind:nbrProdKind(l.product) || 'x:'+String(l.product||'').toLowerCase(), toks:nbrNameToks(l.client), m:nbrMonthNo(l.month), amt:nbrRound(l.amount)}));
+  // Index each advisor + fee list by month, so a row is only compared with targets up to 3 months either side.
+  const byMonth = {};
+  Object.entries(targets).forEach(([key, list])=> list.forEach((t, ti)=>{ t.ti = ti; const mk = key+'|'+(t.m==null ? '' : t.m); (byMonth[mk] || (byMonth[mk] = [])).push(t); }));
+  const near = (key, m)=> m==null ? (targets[key] || []) : [-3,-2,-1,0,1,2,3].flatMap(d=> byMonth[key+'|'+(m+d)] || []).concat(byMonth[key+'|'] || []);
+  rows.forEach(r=>{
+    if(!r.adv) return;
+    near(r.adv+'|'+r.kind, r.m).forEach(t=>{
+      const ti = t.ti;
+      if(r.m!=null && t.m!=null && Math.abs(r.m - t.m) > 3) return;
+      const name = nbrNameScore(r.toks, t.toks), same = Math.abs(r.amt - t.amt) < 0.01;
+      if(!name || (name===1 && !same)) return;
+      pairs.push({r:r.i, t:r.adv+'|'+r.kind+'|'+ti, target:t, score: name*10 + (same ? 15 : 0) - (r.m!=null && t.m!=null ? Math.abs(r.m - t.m) : 2) + (t.type==='line' ? 1 : 0)});
+    });
+  });
+  pairs.sort((a,b)=> b.score - a.score);
+  const rowDone = new Map(), tDone = new Set();
+  pairs.forEach(x=>{ if(rowDone.has(x.r) || tDone.has(x.t)) return; rowDone.set(x.r, x.target); tDone.add(x.t); });
+  const out = {fill:[], same:0, link:[], extra:[], unmatched:[], skipped:0, paidAdded:0};
+  rows.forEach(r=>{
+    const l = r.l;
+    if(r.adv===null){ out.skipped++; return; }
+    const t = rowDone.get(r.i);
+    if(t && t.type==='line'){
+      const set = {};
+      NBR_FILL_FIELDS.forEach(f=>{ if(!nbrBlank(l[f]) && nbrBlank(t.l[f])) set[f] = l[f]; });
+      if(l.npw && !t.l.npw) set.npw = true;
+      if(Object.keys(set).length){ out.fill.push({id:t.id, set, row:l}); if(set.datePaid) out.paidAdded++; } else out.same++;
+    } else if(t && t.type==='entry'){ out.link.push({row:l, entry:t.id, kind:t.k}); if(l.datePaid) out.paidAdded++; }
+    // Not matched: from a year the advisor's NBR doesn't cover (or not a fee the NBR has, e.g. a clawback) → extra; otherwise it may be a case missing from the NBR → unmatched.
+    else if(!r.adv || !r.fee || r.adv.startsWith('new:') || !(nbrYears[r.adv] && nbrYears[r.adv].has(String(l.month||'').slice(0,4)))) out.extra.push(l);
+    else out.unmatched.push(l);
+  });
+  return out;
+}
+function nbrBibleFillPatches(it){
+  const p = it.parsed, updates = {}, now = Date.now(), by = currentUser.name, ids = {};
+  Object.entries(it.map).forEach(([code, v])=>{
+    if(v==='skip') return;
+    if(v==='new'){ const id = nbrKey(); ids[code] = id; updates['advisors/'+id] = {name: code, codes: code, office: p.codes[code].office || '', active: true}; }
+    else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
+  });
+  const M = nbrBibleMatch(it);
+  const newLine = (l, extra)=>{ const data = {...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now, ...extra}; delete data.code; if(!data.adv) delete data.adv; updates['bible/'+nbrKey()] = data; };
+  M.fill.forEach(f=>{ Object.entries(f.set).forEach(([k,v])=>{ updates['bible/'+f.id+'/'+k] = v; }); updates['bible/'+f.id+'/updatedAt'] = now; updates['bible/'+f.id+'/updatedBy'] = by; });
+  M.link.forEach(x=>{ const e = NBR_ENT[x.entry] || {}, a = NBR_ADV[e.adv] || {}; newLine(x.row, {entry:x.entry, kind:x.kind, ...(x.row.office ? {} : a.office ? {office:a.office} : {})}); });
+  let added = 0;
+  if(it.addExtra) M.extra.forEach(l=>{ newLine(l); added++; });
+  if(it.addUnmatched) M.unmatched.forEach(l=>{ newLine(l); added++; });
+  const left = (it.addExtra ? 0 : M.extra.length) + (it.addUnmatched ? 0 : M.unmatched.length) + M.skipped;
+  const bits = [];
+  if(M.fill.length) bits.push(`filled in the blanks on ${M.fill.length} Bible line${M.fill.length===1?'':'s'}`);
+  if(M.link.length) bits.push(`added ${M.link.length} line${M.link.length===1?'':'s'} to NBR cases that didn't have one yet`);
+  if(M.paidAdded) bits.push(`${M.paidAdded} date${M.paidAdded===1?'':'s'} paid added`);
+  if(added) bits.push(`added ${added} other line${added===1?'':'s'}`);
+  if(M.same) bits.push(`${M.same} already up to date`);
+  if(left) bits.push(`left out ${left}`);
+  return {updates, msg: (bits.join('; ') || 'nothing to change') + '.'};
+}
 // Writes in chunks so a big file doesn't hit the size limit, showing progress on the file's card.
 function nbrWriteChunks(updates, it){
   const keys = Object.keys(updates); let done = 0, chain = Promise.resolve();
@@ -14713,7 +14850,7 @@ function nbrRunUpload(){
     chain = chain.then(()=>{
       it.state = 'saving'; it.progress = ''; renderNbrUpload();
       // Worked out just before each file is written, so a later file sees what the earlier ones saved.
-      const r = up.kind==='nbr' ? nbrNbrUploadPatches(it, up.toBible, made) : nbrBibleUploadPatches(it);
+      const r = up.kind==='nbr' ? nbrNbrUploadPatches(it, up.toBible, made) : it.mode==='fill' ? nbrBibleFillPatches(it) : nbrBibleUploadPatches(it);
       return nbrWriteChunks(r.updates, it)
         .then(()=>{ it.state = 'done'; it.msg = r.msg.charAt(0).toUpperCase() + r.msg.slice(1); ok++; if(r.adv) last = r; })
         .catch(err=>{ it.state = 'error'; it.error = 'Stopped part-way: '+err.message+'. Upload this file again to finish (tick "Replace").'; });

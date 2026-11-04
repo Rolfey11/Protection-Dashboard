@@ -681,6 +681,81 @@ body.mode-sib .prot-only{display:none !important;}
 body:not(.mode-sib) .sib-only{display:none !important;}
 /* Commercial: a third section, only for colleagues ticked "Commercial" in Settings */
 body.mode-com .mode-switch button.on{background:#0E6E5C;}
+/* New Business (Admin + Management): advisors' NBRs, the Bible and the Salesboard */
+body.mode-nbr .mode-switch button.on{background:#8A5A00;}
+body.mode-nbr .prot-only{display:none !important;}
+body:not(.mode-nbr) .nbr-only{display:none !important;}
+.nbr-toolbar{display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+.nbr-toolbar label{display:flex; flex-direction:column; gap:4px; font-size:11.5px; font-weight:700; color:var(--text-muted);}
+.nbr-toolbar select,.nbr-toolbar input[type=search],.nbr-row-btns input[type=text]{padding:8px 10px; border:1.5px solid var(--border-2); border-radius:9px; background:var(--surface); color:var(--text); font:inherit; font-size:13px;}
+.nbr-toolbar input[type=search]{min-width:220px; flex:1;}
+.nbr-spacer{flex:1;}
+.nbr-h2{font-size:16px; font-weight:700; margin:26px 0 10px; color:var(--text);}
+.nbr-table{font-size:12.5px; min-width:0;}
+.nbr-table th,.nbr-table td{padding:7px 9px; white-space:nowrap;}
+.nbr-table td.num,.nbr-table th.num{text-align:right; font-variant-numeric:tabular-nums;}
+.nbr-table td.b{font-weight:700;}
+.nbr-table tr.nbr-group td{background:var(--bg); font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-muted);}
+.nbr-table tr.nbr-tot td{background:color-mix(in srgb, var(--brand) 5%, var(--surface)); font-weight:600;}
+.nbr-table tr.nbr-grand td{background:color-mix(in srgb, var(--brand) 10%, var(--surface)); font-weight:800; border-top:2px solid var(--border-2);}
+.nbr-table tr.nbr-sel td{background:color-mix(in srgb, #8A5A00 9%, var(--surface));}
+.nbr-table tr.nbr-click{cursor:pointer;}
+.nbr-table tr.nbr-click:hover td{background:var(--brand-tint);}
+.nbr-table td.nbr-notes{max-width:260px; overflow:hidden; text-overflow:ellipsis; color:var(--text-muted);}
+.nbr-table tr.nbr-inactive td{color:var(--text-faint);}
+.nbr-zero{color:var(--text-faint);}
+.nbr-note{color:var(--text-muted); font-size:11.5px;}
+.nbr-up{color:var(--green); font-weight:700;} .nbr-down{color:var(--red); font-weight:700;}
+.nbr-tag{display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:999px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); vertical-align:1px;}
+.nbr-office{font-size:10px; font-weight:800; color:var(--text-faint);}
+.nbr-callout{padding:14px 16px; border-radius:12px; background:color-mix(in srgb, #8A5A00 8%, var(--surface)); border:1px solid color-mix(in srgb, #8A5A00 25%, var(--border)); margin-bottom:16px; font-size:13.5px;}
+.nbr-months{display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:6px; margin-bottom:6px;}
+@media (max-width:900px){ .nbr-months{grid-template-columns:repeat(6, minmax(0,1fr));} }
+.nbr-month{display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 4px; border:1.5px solid var(--border); border-radius:10px; background:var(--surface); font:inherit; cursor:pointer; color:var(--text);}
+.nbr-month span{font-size:11px; color:var(--text-muted); white-space:nowrap;}
+.nbr-month.on{border-color:#8A5A00; background:color-mix(in srgb, #8A5A00 10%, var(--surface));}
+.nbr-adv-cards{display:flex; flex-direction:column; gap:8px;}
+.nbr-adv-card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:0 12px;}
+.nbr-adv-card summary{display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; padding:11px 2px; cursor:pointer; font-size:13.5px;}
+.nbr-adv-card summary span{color:var(--text-muted); font-size:12px;}
+.nbr-adv-card .nbr-adv-sum{margin-left:auto;}
+.nbr-adv-card[open]{padding-bottom:12px;}
+.nbr-status-cards .stat-card{text-align:left; font:inherit; cursor:pointer;}
+.nbr-status-cards .stat-card.on{outline:2px solid #8A5A00;}
+.bl-chip{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--bg); color:var(--text-muted);}
+.bl-chip-offer{background:var(--blue-bg); color:var(--blue);} .bl-chip-comp{background:var(--amber-bg); color:var(--amber);} .bl-chip-paid{background:var(--green-bg); color:var(--green);} .bl-chip-npw{background:var(--bg); color:var(--text-faint); text-decoration:line-through;}
+.nbr-bib-table tr.bl-comp td{background:color-mix(in srgb, var(--amber) 8%, var(--surface));}
+.nbr-bib-table tr.bl-paid td{background:color-mix(in srgb, var(--green) 7%, var(--surface));}
+.nbr-bib-table tr.bl-offer td{background:color-mix(in srgb, var(--blue) 5%, var(--surface));}
+.nbr-bib-table tr.bl-npw td{color:var(--text-faint);}
+.bl-card-paid .sv{color:var(--green);} .bl-card-comp .sv{color:var(--amber);} .bl-card-offer .sv{color:var(--blue);} .bl-card-npw .sv{color:var(--text-faint);}
+.nbr-more{text-align:center; margin:10px 0;}
+.nbr-setup-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(520px, 1fr)); gap:16px; align-items:start;}
+@media (max-width:1100px){ .nbr-setup-grid{grid-template-columns:1fr;} }
+.nbr-card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow-sm); overflow-x:auto;}
+.nbr-card-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
+.nbr-card-head h2{font-size:15px; font-weight:700;}
+.nbr-danger{border-color:color-mix(in srgb, var(--red) 35%, var(--border));}
+.nbr-p{font-size:13px; color:var(--text-muted); margin-bottom:12px;}
+.nbr-upload-btns{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+.nbr-upload-btns label{cursor:pointer;}
+.nbr-up{border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--bg); font-size:13px;}
+.nbr-up p{margin-bottom:8px;}
+.nbr-up-title{font-weight:800; margin-bottom:6px;}
+.nbr-up-bad{border-color:var(--red); color:var(--red);}
+.nbr-up-good{border-color:var(--green);}
+.nbr-up-months{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12px; color:var(--text-muted); margin-bottom:12px;}
+.nbr-warn{color:var(--amber); font-weight:600;}
+.nbr-code-map{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:8px; margin-bottom:12px;}
+.nbr-code-map label{display:flex; flex-direction:column; gap:4px; font-size:12px;}
+.nbr-code-map select{padding:6px 8px; border:1.5px solid var(--border-2); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; font-size:12.5px;}
+.nbr-row-btns{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; margin-top:10px;}
+.nbr-check{display:flex; gap:8px; align-items:flex-start; font-size:13px; margin:6px 0 10px; cursor:pointer;}
+.nbr-check input{margin-top:3px; accent-color:var(--brand);}
+.modal.nbr-wide{max-width:860px;}
+.nbr-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:0 14px;}
+.nbr-grid.nbr-grid-2{grid-template-columns:repeat(2, minmax(0,1fr));}
+@media (max-width:700px){ .nbr-grid,.nbr-grid.nbr-grid-2{grid-template-columns:1fr;} }
 body.mode-com .prot-only{display:none !important;}
 body:not(.mode-com) .com-only{display:none !important;}
 .com-pots{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:14px; align-items:start;}
@@ -2042,6 +2117,7 @@ body:not(.ai-on) #askBtn{display:none;}
         <button type="button" data-mode="protection" class="on">Protection</button>
         <button type="button" data-mode="sib">Send in Blue</button>
         <button type="button" data-mode="com" id="comModeBtn" class="hidden">Commercial</button>
+        <button type="button" data-mode="nbr" id="nbrModeBtn" class="hidden">New Business</button>
       </div>
 
       <div class="nav-tabs" id="navTabs">
@@ -2053,6 +2129,10 @@ body:not(.ai-on) #askBtn{display:none;}
         <button class="nav-tab sib-only hidden" data-page="sibInsights" id="sibInsightsTab">Insights</button>
         <button class="nav-tab com-only" data-page="com" id="comTab">Cases</button>
         <button class="nav-tab com-only" data-page="calendar" id="comCalTab">Calendar</button>
+        <button class="nav-tab nbr-only" data-page="nbrBoard">Salesboard</button>
+        <button class="nav-tab nbr-only" data-page="nbrReg">Advisor NBR</button>
+        <button class="nav-tab nbr-only" data-page="nbrBible">Bible</button>
+        <button class="nav-tab nbr-only" data-page="nbrSetup">Advisors &amp; upload</button>
         <button class="nav-tab hidden" data-page="logins" id="loginsTab">Log in Data</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
         <button class="nav-tab hidden" data-page="settings" id="settingsTab">Settings</button>
@@ -2500,6 +2580,24 @@ body:not(.ai-on) #askBtn{display:none;}
         <button type="button" class="btn btn-secondary btn-sm" id="comLostToggle">Not proceeding (0)</button>
       </div>
       <div class="com-pots" id="comPots"></div>
+    </div>
+
+    <!-- ============= NEW BUSINESS (Admin + Management) ============= -->
+    <div id="page-nbrBoard" class="hidden">
+      <div class="page-head"><div><h1>Live Salesboard</h1><p class="sub">Written business from the advisors' NBRs, banked from the Bible.</p></div></div>
+      <div id="nbrBoardBody"></div>
+    </div>
+    <div id="page-nbrReg" class="hidden">
+      <div class="page-head"><div><h1>Advisor NBR</h1><p class="sub">Each advisor's new business register. Cases you add here go into the Bible too.</p></div></div>
+      <div id="nbrRegBody"></div>
+    </div>
+    <div id="page-nbrBible" class="hidden">
+      <div class="page-head"><div><h1>NBR Bible</h1><p class="sub">One line per fee, by financial year (March to February). Add the date paid when the money comes in.</p></div></div>
+      <div id="nbrBibleBody"></div>
+    </div>
+    <div id="page-nbrSetup" class="hidden">
+      <div class="page-head"><div><h1>Advisors &amp; upload</h1><p class="sub">The advisors on the NBR, uploading the spreadsheets, targets and drop-down lists.</p></div></div>
+      <div id="nbrSetupBody"></div>
     </div>
 
     <div id="page-sib" class="hidden">
@@ -3075,6 +3173,19 @@ body:not(.ai-on) #askBtn{display:none;}
       <button class="btn btn-secondary" data-close="newTaskOverlay">Cancel</button>
       <button class="btn btn-secondary" id="ntSubmitAnother" title="Save this lead and start another, keeping the source, advisor and date">Save &amp; add another</button>
       <button class="btn btn-primary" id="ntSubmit">Assign lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Business: one form window for cases, NPWs, Bible lines and advisors -->
+<div class="modal-overlay" id="nbrFormOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="nbrFormTitle">New Business</h2><button class="modal-close" data-close="nbrFormOverlay">✕</button></div>
+    <div class="modal-body" id="nbrFormBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="nbrFormDelete" style="margin-right:auto;">Delete</button>
+      <button class="btn btn-secondary" data-close="nbrFormOverlay">Cancel</button>
+      <button class="btn btn-primary" id="nbrFormSave">Save</button>
     </div>
   </div>
 </div>
@@ -4264,6 +4375,7 @@ function logout(){
   db.ref('logins').off(); loginsListening = false; LOGINS = {};
   db.ref('sib/cases').off(); sibListening = false; sibLoaded = false; SIB = {}; sibOpenKey = null;
   db.ref('commercial/cases').off(); comListening = false; comLoaded = false; COM = {}; comOpenId = null; comAct = null;
+  stopNbrListener();
   selectedAdvisorFilter = null; searchTerm = ''; dateRangeFrom = null; dateRangeTo = null;
   document.getElementById('globalSearch').value = '';
   document.getElementById('dateFrom').value = ''; document.getElementById('dateTo').value = '';
@@ -4488,7 +4600,7 @@ function enterApp(){
     currentUser.role==='admin' ? "Here's everything logged across the team." :
     "Here's everything happening across the whole team's workflow.";
 
-  syncComAccess();
+  syncComAccess(); syncNbrAccess();
   setAppMode(APP_MODE, false);
   goPage(appHomePage());
   prefetchSections();
@@ -4511,10 +4623,12 @@ function goPage(page){
   document.getElementById('page-sibInsights').classList.toggle('hidden', page!=='sibInsights');
   document.getElementById('page-com').classList.toggle('hidden', page!=='com');
   if(page==='com'){ startComListener(); renderCom(); }
+  ['nbrBoard','nbrReg','nbrBible','nbrSetup'].forEach(p=> document.getElementById('page-'+p).classList.toggle('hidden', page!==p));
+  if(/^nbr/.test(page)){ startNbrListener(); renderNbrVisible(); }
   document.getElementById('page-useful').classList.toggle('hidden', page!=='useful');
   if(page==='useful') showUsefulHome();
   document.getElementById('page-calendar').classList.toggle('hidden', page!=='calendar');
-  document.getElementById('daterangeWrap').style.visibility = (page==='calendar' || page==='useful' || page==='logins') ? 'hidden' : '';
+  document.getElementById('daterangeWrap').style.visibility = (page==='calendar' || page==='useful' || page==='logins' || /^nbr/.test(page)) ? 'hidden' : '';
   document.getElementById('page-settings').classList.toggle('hidden', page!=='settings');
   if(page==='settings'){
     const isMapa = currentUser.role==='mapa';
@@ -5144,11 +5258,12 @@ function sibReasonsFor(outcome){
 }
 const SIB_REASONS = ['Resi Product Transfer','Resi Remortgage','Mortgage NTU','BTL Remortgage','BTL Product Transfer','Discussing Options','Client/s went direct','Client/s went online','Client/s have moved','Client/s have cleared mortgage','Not Due yet','Clients separated','Unsubscribed from SIB'];
 let APP_MODE = 'protection';
-try{ const m = localStorage.getItem('plt_mode'); if(m==='sib' || m==='com') APP_MODE = m; }catch(e){}
+try{ const m = localStorage.getItem('plt_mode'); if(m==='sib' || m==='com' || m==='nbr') APP_MODE = m; }catch(e){}
 let SIB = {}, sibListening = false, sibLoaded = false, sibOpenKey = null, sibAction = null, sibMoreOpen = false;
 
 document.body.classList.toggle('mode-sib', APP_MODE==='sib');
 document.body.classList.toggle('mode-com', APP_MODE==='com');
+document.body.classList.toggle('mode-nbr', APP_MODE==='nbr');
 const sibState = {month:null, search:'', adviser:'', outcome:'all', emailClient:'', showAll:false, view:null};
 /* Pots for working Send in Blue clients (all follow the month picked at the top):
    Client Reviews: not spoken to yet (No answer → move on 1 or 2 weeks, drops to the bottom);
@@ -5208,16 +5323,17 @@ function sibAccess(){ return !currentUser || !isProtAdviser(currentUser.id); }
 function syncSibAccess(){
   document.querySelector('#modeSwitch [data-mode="sib"]').classList.toggle('hidden', !sibAccess());
   // Only Protection left (no Commercial tick): no need for the switch at all.
-  document.getElementById('modeSwitch').classList.toggle('hidden', !sibAccess() && !comAccess());
+  document.getElementById('modeSwitch').classList.toggle('hidden', !sibAccess() && !comAccess() && !nbrAccess());
   if(!sibAccess() && APP_MODE==='sib') setAppMode('protection');
 }
 function setAppMode(mode, go=true){
-  APP_MODE = mode==='sib' && sibAccess() ? 'sib' : mode==='com' && (!currentUser || comAccess()) ? 'com' : 'protection';
+  APP_MODE = mode==='sib' && sibAccess() ? 'sib' : mode==='com' && (!currentUser || comAccess()) ? 'com' : mode==='nbr' && (!currentUser || nbrAccess()) ? 'nbr' : 'protection';
   try{ localStorage.setItem('plt_mode', APP_MODE); }catch(e){}
   document.body.classList.toggle('mode-sib', APP_MODE==='sib');
   document.body.classList.toggle('mode-com', APP_MODE==='com');
+  document.body.classList.toggle('mode-nbr', APP_MODE==='nbr');
   document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.classList.toggle('on', b.dataset.mode===APP_MODE));
-  document.querySelector('.brand-text .t1').textContent = APP_MODE==='sib' ? 'Send in Blue' : APP_MODE==='com' ? 'Commercial' : 'Protection Lead Tracker';
+  document.querySelector('.brand-text .t1').textContent = APP_MODE==='sib' ? 'Send in Blue' : APP_MODE==='com' ? 'Commercial' : APP_MODE==='nbr' ? 'New Business' : 'Protection Lead Tracker';
   if(go && currentUser) goPage(appHomePage());
   if(currentUser) setTimeout(checkOverdueGate, 0);
 }
@@ -6671,6 +6787,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-04c', date:'2026-11-04', items:[ {text:"<b>New Business</b> (Admin and Management only): a new section, next to Protection / Send in Blue, that replaces the Advisor NBR, NBR Bible and Live Salesboard spreadsheets. Add a case to an advisor's NBR once and it goes into the Bible too; add the date paid in the Bible and the Salesboard updates. Upload the existing spreadsheets on <b>Advisors &amp; upload</b> to bring in past months.", roles:['admin','management']} ]},
   {id:'2026-11-04b', date:'2026-11-04', items:[ {text:"<b>In Research</b>: on a case in Appointments / Research, press <b>In Research</b> (next to Quotes Sent). The card turns <b>pale yellow</b> on your dashboard, so you can tell research cases from appointments. Once you press Quotes Sent it turns pale green as before.", roles:['mapa']} ]},
   {id:'2026-11-04a', date:'2026-11-04', items:[ {text:"<b>The overdue pop-up can't be skipped</b>: it now comes straight back after a page refresh, and other pop-ups no longer hold it back. Deal with each overdue appointment or reminder to clear it.", roles:['mapa']} ]},
   {id:'2026-11-02b', date:'2026-11-02', items:[
@@ -7475,7 +7592,7 @@ db.ref('users').on('value', snap=>{
   if(currentUser){
     const me = USERS[currentUser.id];
     if(!me){ logout(); toast('Your account has been removed. Please speak to Management.', 'error'); return; }
-    syncComAccess(); syncSibAccess();
+    syncComAccess(); syncSibAccess(); syncNbrAccess();
     document.getElementById('userRoleLbl').textContent = roleLabelFor(currentUser.id);
     // Pick up name/role changes made in Settings without needing to log out
     if(me.role !== currentUser.role){
@@ -13030,7 +13147,7 @@ let COM = {}, comListening = false, comLoaded = false, comOpenId = null, comEdit
 const comState = {search:'', cat:'', adv:'', calAdv:'', lost:false};
 function comAccess(){ return !!currentUser && !!USERS[currentUser.id] && USERS[currentUser.id].commercial===true; }
 function comSeesAll(){ return !!currentUser && currentUser.role!=='mapa'; }
-function appHomePage(){ return APP_MODE==='sib' ? 'sib' : APP_MODE==='com' ? 'com' : 'dashboard'; }
+function appHomePage(){ return APP_MODE==='sib' ? 'sib' : APP_MODE==='com' ? 'com' : APP_MODE==='nbr' ? 'nbrBoard' : 'dashboard'; }
 // Show the Commercial switch only to ticked colleagues; move anyone un-ticked back to Protection.
 function syncComAccess(){
   const ok = comAccess();
@@ -13539,6 +13656,1019 @@ setInterval(()=>{
   refreshInsightsIfVisible();
   if(activeLeadId) refreshLeadModal(true);
 }, 30000);
+
+/* ============================================================================
+   NEW BUSINESS (Admin + Management only)
+   Replaces three spreadsheets that fed each other:
+   - Advisor NBR: each advisor's new business register. Accounts add each
+     case to the month it's written in, in the week it falls in. Written
+     figures (proc fee, mums fee, protection, sols and val referrals) are
+     added up by month; NPWs are taken off in the month they're recorded.
+   - Bible: one line per piece of income (proc fee, mums fee, protection,
+     sols fee, val fee...), on the March-February financial year. A case
+     added to an advisor's NBR creates its Bible lines automatically;
+     accounts add the date paid and amount when the money comes in.
+     Banked = everything paid, counted in the month it was paid.
+   - Salesboard: written (from the NBR) and banked (from the Bible) by
+     advisor, office and month, with year-on-year and targets.
+   Data: nbr/advisors, nbr/entries (NBR cases), nbr/npw, nbr/bible, nbr/config.
+   ============================================================================ */
+const NBR_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const NBR_MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const NBR_CATS = [['proc','Proc fee'],['mums','Mums fee'],['prot','Protection'],['sols','Sols refs'],['val','Val refs']];
+const NBR_OFFICES = [['F','Frimley'],['G','Gurkha'],['W','Wills']];
+const NBR_SALE_TYPES = ['Pur','Remo','E.R','F/ADV','Prod.Trans','Protection','BTL Pur','BTL Remo','BTL F/ADV','BTL Port','LTB','Sec Loan','Bridging'];
+// Type of sale on the NBR → the Bible's product for the proc fee line, and its mums fee type.
+const NBR_SALE_PRODUCT = {'Pur':'Proc Fee','Remo':'Remo','E.R':'ER','F/ADV':'F/Adv','Prod.Trans':'Prod Tfr','Protection':'Life Ins','BTL Pur':'Proc Fee','BTL Remo':'Remo','BTL F/ADV':'F/Adv','BTL Port':'Proc Fee','LTB':'Proc Fee','Sec Loan':'Sec Loan','Bridging':'Bridging'};
+const NBR_SALE_MUMS = {'Pur':'mort','BTL Pur':'mort','BTL Port':'mort','LTB':'mort','Remo':'Remo','BTL Remo':'Remo','Prod.Trans':'PT','E.R':'ER','F/ADV':'F/Adv','BTL F/ADV':'F/Adv'};
+const NBR_PRODUCTS = ['Proc Fee','Mums Fee','Sols Fee','Val Fee','Prod Tfr','Remo','Life Ins','Gen Ins','ER','F/Adv','Sec Loan','Bridging','Clawback','Admin Fee','C Mort','C Remo','C Bridging','C Bus Loan'];
+const NBR_WHEN = ['upfront','on offer','on comp','no fee','prev app','top up','S&P'];
+const NBR_MUMS_TYPES = ['mort','Remo','PT','ER','F/Adv','admin'];
+const NBR_HOW = ['LINK','EPDQ','BACS','VIRTUAL','CASH'];
+const BIB_STATUS = {pipe:['Written','Written, not yet offered'], offer:['Offered','Offered / terms issued, not completed'], comp:['Completed','Completed or on risk, not yet paid'], paid:['Paid','Paid'], npw:['NPW','Not proceeding (NPW)']};
+const NBR_PAGE = 150;
+
+let NBR_ADV = {}, NBR_ENT = {}, NBR_NPW = {}, NBR_BIB = {}, NBR_CFG = {};
+let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
+const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false};
+const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
+  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, upload:null};
+
+function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
+function nbrReady(){ return Object.values(nbrLoaded).every(Boolean); }
+function syncNbrAccess(){
+  const ok = nbrAccess();
+  document.getElementById('nbrModeBtn').classList.toggle('hidden', !ok);
+  if(!ok && nbrListening) stopNbrListener();
+  if(!ok && APP_MODE==='nbr'){ closeModal('nbrFormOverlay', true); setAppMode('protection'); }
+}
+function startNbrListener(){
+  if(nbrListening || !nbrAccess()) return;
+  nbrListening = true; nbrError = '';
+  Object.keys(nbrLoaded).forEach(k=>{
+    db.ref('nbr/'+k).on('value', snap=>{
+      const v = snap.val() || {};
+      if(k==='advisors') NBR_ADV = v; else if(k==='entries') NBR_ENT = v; else if(k==='npw') NBR_NPW = v; else if(k==='bible') NBR_BIB = v; else NBR_CFG = v;
+      nbrLoaded[k] = true; nbrVer++; nbrRenderSoon();
+    }, ()=>{
+      nbrError = 'Could not load New Business. Publish the updated Firebase rules, then refresh.';
+      stopNbrListener(); nbrRenderSoon();
+    });
+  });
+}
+function stopNbrListener(){
+  Object.keys(nbrLoaded).forEach(k=>{ db.ref('nbr/'+k).off(); nbrLoaded[k] = false; });
+  nbrListening = false; NBR_ADV = {}; NBR_ENT = {}; NBR_NPW = {}; NBR_BIB = {}; NBR_CFG = {}; nbrVer++; nbrUI.upload = null;
+}
+function nbrRenderSoon(){ clearTimeout(nbrRenderTimer); nbrRenderTimer = setTimeout(renderNbrVisible, 80); }
+function nbrPageShown(p){ const el = document.getElementById('page-'+p); return el && !el.classList.contains('hidden'); }
+function renderNbrVisible(){
+  if(nbrPageShown('nbrBoard')) renderNbrBoard();
+  if(nbrPageShown('nbrReg')) renderNbrReg();
+  if(nbrPageShown('nbrBible')) renderNbrBible();
+  if(nbrPageShown('nbrSetup')) renderNbrSetup();
+}
+
+/* ---- small helpers ---- */
+const nbrPad = n=> String(n).padStart(2,'0');
+function n0(v){ if(typeof v==='number') return isFinite(v) ? v : 0; const x = parseFloat(String(v==null ? '' : v).replace(/[£,\s]/g,'')); return isFinite(x) ? x : 0; }
+function nbrRound(v){ return Math.round(n0(v)*100)/100; }
+function nbrMoney(v){ const x = nbrRound(v); return (x<0 ? '-£' : '£') + Math.abs(x).toLocaleString('en-GB',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function nbrMoneyCell(v){ return nbrRound(v) ? nbrMoney(v) : '<span class="nbr-zero">–</span>'; }
+function nbrPct(a, b){ return b ? (Math.round(a/b*1000)/10).toFixed(1)+'%' : '–'; }
+function nbrYm(y, m){ return `${y}-${nbrPad(m)}`; }
+function nbrYmLabel(ym, long){ if(!ym) return '—'; const m = +ym.slice(5,7); return (long ? NBR_MONTHS_LONG : NBR_MONTHS)[m-1]+' '+ym.slice(0,4); }
+function nbrYearMonths(y){ return Array.from({length:12}, (_,i)=> nbrYm(y, i+1)); }
+function nbrFyOf(ym){ if(!ym) return ''; const y = +ym.slice(0,4), m = +ym.slice(5,7); return 'FY'+nbrPad((m>=3 ? y : y-1) % 100); }
+function nbrFyStart(fy){ return 2000 + parseInt(String(fy).slice(2),10); }
+function nbrFyMonths(fy){ const y = nbrFyStart(fy); return Array.from({length:12}, (_,i)=> i<10 ? nbrYm(y, i+3) : nbrYm(y+1, i-9)); }
+function nbrFyLabel(fy){ const y = nbrFyStart(fy); return `${fy} (Mar ${y} – Feb ${y+1})`; }
+function nbrToday(){ return todayISO(); }
+function nbrThisYm(){ return nbrToday().slice(0,7); }
+function nbrAdvName(id){ return NBR_ADV[id] && NBR_ADV[id].name ? NBR_ADV[id].name : (id ? '(unknown advisor)' : '(no advisor)'); }
+function nbrAdvCodes(a){ return String(a && a.codes || '').split(',').map(s=> s.trim()).filter(Boolean); }
+function nbrAdvs(all){
+  const order = {F:0, G:1, W:2};
+  return Object.entries(NBR_ADV).map(([id,a])=> ({id, ...a})).filter(a=> a.name && (all || a.active!==false))
+    .sort((a,b)=> ((order[a.office] ?? 3) - (order[b.office] ?? 3)) || a.name.localeCompare(b.name));
+}
+function nbrEntTotal(e){ return NBR_CATS.reduce((s,[k])=> s + n0(e[k]), 0); }
+function nbrNpwTotal(x){ return n0(x.proc) + n0(x.mums) + n0(x.prot) + n0(x.sols); } // as the NPW sheet: no val
+function nbrBibStatus(l){ return l.npw ? 'npw' : l.datePaid ? 'paid' : l.compDate ? 'comp' : l.offerDate ? 'offer' : 'pipe'; }
+function nbrSurname(client){ const first = String(client||'').split(/\s*&\s*|\s+and\s+/i)[0].trim(); const parts = first.split(/\s+/); return parts.length ? parts[parts.length-1] : ''; }
+function nbrLists(){
+  const L = NBR_CFG.lists || {}, arr = v=> (Array.isArray(v) ? v : Object.values(v||{})).filter(x=> typeof x==='string' && x.trim());
+  const fromData = key=> Object.values(NBR_ENT).map(e=> e && e[key]).filter(x=> typeof x==='string' && x.trim());
+  const uniq = a=> [...new Set(a.map(s=> s.trim()))].sort((x,y)=> x.localeCompare(y));
+  return {sols: uniq([...arr(L.sols), ...fromData('solsName')]), vals: uniq([...arr(L.vals), ...fromData('valName')]),
+    leadProviders: uniq([...arr(L.leadProviders), ...fromData('leadProvider')]),
+    saleTypes: arr(L.saleTypes).length ? uniq(arr(L.saleTypes)) : NBR_SALE_TYPES.slice()};
+}
+function nbrTargets(){ return {written: n0(NBR_CFG.targetWritten) || 3000000, banked: n0(NBR_CFG.targetBanked) || 2300000}; }
+function nbrDefaultSource(){ return NBR_CFG.defaultSource || 'HLP'; }
+
+/* Written by advisor and month (from the NBR), NPW by advisor and month,
+   banked by advisor and month (from the Bible: amount paid, by the month paid). */
+function nbrAgg(){
+  if(nbrAggCache && nbrAggCache.v===nbrVer) return nbrAggCache;
+  const w = {}, npw = {}, bank = {}, years = new Set();
+  Object.values(NBR_ENT).forEach(e=>{
+    if(!e || !e.month) return;
+    const a = w[e.adv||''] || (w[e.adv||''] = {});
+    const r = a[e.month] || (a[e.month] = {proc:0, mums:0, prot:0, sols:0, val:0, n:0});
+    NBR_CATS.forEach(([k])=> r[k] += n0(e[k])); r.n++;
+    years.add(+e.month.slice(0,4));
+  });
+  Object.values(NBR_NPW).forEach(x=>{
+    if(!x || !x.month) return;
+    const a = npw[x.adv||''] || (npw[x.adv||''] = {});
+    a[x.month] = (a[x.month]||0) + nbrNpwTotal(x);
+  });
+  Object.values(NBR_BIB).forEach(l=>{
+    if(!l || !l.datePaid) return;
+    const ym = l.datePaid.slice(0,7), a = bank[l.adv||''] || (bank[l.adv||''] = {});
+    a[ym] = (a[ym]||0) + n0(l.paid);
+    years.add(+ym.slice(0,4));
+  });
+  years.add(new Date().getFullYear());
+  return (nbrAggCache = {v:nbrVer, w, npw, bank, years:[...years].filter(y=> y>2000 && y<2100).sort((a,b)=> b-a)});
+}
+function nbrRow(adv, ym){
+  const A = nbrAgg();
+  const w = (A.w[adv] && A.w[adv][ym]) || {proc:0, mums:0, prot:0, sols:0, val:0, n:0};
+  const total = nbrEntTotal(w), npw = (A.npw[adv] && A.npw[adv][ym]) || 0, banked = (A.bank[adv] && A.bank[adv][ym]) || 0;
+  return {...w, total, npw, excl: total - npw, banked};
+}
+function nbrSum(rows){
+  const out = {proc:0, mums:0, prot:0, sols:0, val:0, n:0, total:0, npw:0, excl:0, banked:0};
+  rows.forEach(r=> Object.keys(out).forEach(k=> out[k] += n0(r[k])));
+  return out;
+}
+// Every advisor id with figures (including ones no longer on the list).
+function nbrAllAdvIds(){
+  const A = nbrAgg(), ids = new Set(Object.keys(NBR_ADV));
+  [A.w, A.npw, A.bank].forEach(o=> Object.keys(o).forEach(k=> ids.add(k)));
+  return [...ids];
+}
+function nbrYearHasData(adv, y){ return nbrYearMonths(y).some(ym=>{ const r = nbrRow(adv, ym); return r.total || r.npw || r.banked; }); }
+
+/* ---- shared form modal ---- */
+let nbrFormSave = null, nbrFormDelete = null;
+function openNbrForm({title, body, saveLabel='Save', onSave, onDelete, deleteLabel='Delete', wide=true}){
+  document.getElementById('nbrFormTitle').textContent = title;
+  document.getElementById('nbrFormBody').innerHTML = body;
+  document.getElementById('nbrFormSave').textContent = saveLabel;
+  document.getElementById('nbrFormSave').disabled = false;
+  const del = document.getElementById('nbrFormDelete');
+  del.classList.toggle('hidden', !onDelete); del.textContent = deleteLabel; del.disabled = false;
+  document.querySelector('#nbrFormOverlay .modal').classList.toggle('nbr-wide', !!wide);
+  nbrFormSave = onSave; nbrFormDelete = onDelete;
+  openModal('nbrFormOverlay');
+  const first = document.querySelector('#nbrFormBody input:not([type=hidden]), #nbrFormBody select');
+  if(first) setTimeout(()=> first.focus(), 60);
+}
+document.getElementById('nbrFormSave').addEventListener('click', function(){
+  if(!nbrFormSave) return;
+  const r = nbrFormSave();
+  if(r && typeof r.then==='function'){
+    this.disabled = true;
+    r.then(ok=>{ if(ok!==false) closeModal('nbrFormOverlay', true); else this.disabled = false; })
+     .catch(err=>{ toast('Could not save: '+err.message, 'error'); this.disabled = false; });
+  } else if(r!==false) closeModal('nbrFormOverlay', true);
+});
+document.getElementById('nbrFormDelete').addEventListener('click', function(){
+  if(!nbrFormDelete) return;
+  if(this.dataset.armed!=='1'){ this.dataset.armed = '1'; this.textContent = 'Click again to confirm'; setTimeout(()=>{ this.dataset.armed = ''; this.textContent = 'Delete'; }, 4000); return; }
+  this.dataset.armed = ''; this.disabled = true;
+  Promise.resolve(nbrFormDelete()).then(()=> closeModal('nbrFormOverlay', true)).catch(err=>{ toast('Could not delete: '+err.message, 'error'); this.disabled = false; });
+});
+document.getElementById('nbrFormBody').addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.tagName==='INPUT' && e.target.type!=='checkbox'){ e.preventDefault(); document.getElementById('nbrFormSave').click(); } });
+function nfText(id, label, val, extra=''){ return `<div class="field"><label for="${id}">${label}</label><input type="text" id="${id}" value="${esc(val==null ? '' : val)}" ${extra}></div>`; }
+function nfDate(id, label, val){ return `<div class="field"><label for="${id}">${label}</label><input type="date" id="${id}" value="${esc(val||'')}"></div>`; }
+function nfMonth(id, label, val){ return `<div class="field"><label for="${id}">${label}</label><input type="month" id="${id}" value="${esc(val||'')}"></div>`; }
+function nfMoney(id, label, val){ return `<div class="field"><label for="${id}">${label}</label><div class="money-wrap"><span>£</span><input type="number" step="0.01" id="${id}" value="${val==null || val==='' || n0(val)===0 && val!==0 ? '' : esc(String(nbrRound(val)))}" inputmode="decimal"></div></div>`; }
+function nfSelect(id, label, val, opts){ return `<div class="field"><label for="${id}">${label}</label><select id="${id}">${opts.map(([v,t])=> `<option value="${esc(v)}" ${String(v)===String(val==null?'':val) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>`; }
+function nfList(id, label, val, list){ return `<div class="field"><label for="${id}">${label}</label><input type="text" id="${id}" list="${id}L" value="${esc(val==null ? '' : val)}" autocomplete="off"><datalist id="${id}L">${list.map(x=> `<option value="${esc(x)}">`).join('')}</datalist></div>`; }
+const nfv = id=> { const el = document.getElementById(id); return el ? (el.type==='checkbox' ? el.checked : String(el.value).trim()) : ''; };
+const nfn = id=> { const v = nfv(id); return v==='' ? 0 : nbrRound(v); };
+function nbrAdvOptions(sel, blank='Choose an advisor…'){ return [['', blank], ...nbrAdvs(true).map(a=> [a.id, a.name + (a.active===false ? ' (inactive)' : '')])].concat(sel && !NBR_ADV[sel] ? [[sel, nbrAdvName(sel)]] : []); }
+function nbrClean(o){ const out = {}; Object.entries(o).forEach(([k,v])=>{ if(v!=='' && v!=null && !(typeof v==='number' && !isFinite(v))) out[k] = v; }); return out; }
+function nbrWeekFor(dateStr, ym){
+  // The Friday that ends the week (as the NBR's weekly blocks), kept inside the register month.
+  const d = toDate(dateStr || nbrToday()); if(isNaN(d)) return '';
+  const add = (5 - d.getDay() + 7) % 7; d.setDate(d.getDate() + add);
+  let iso = `${d.getFullYear()}-${nbrPad(d.getMonth()+1)}-${nbrPad(d.getDate())}`;
+  if(ym && iso.slice(0,7)!==ym){ const y = +ym.slice(0,4), m = +ym.slice(5,7); const last = new Date(y, m, 0); iso = iso < ym ? `${ym}-01` : `${ym}-${nbrPad(last.getDate())}`; }
+  return iso;
+}
+function nbrWrite(updates){
+  // Multi-path writes under nbr/, in batches so a big upload doesn't time out.
+  const keys = Object.keys(updates); let p = Promise.resolve();
+  for(let i=0; i<keys.length; i+=400){ const part = {}; keys.slice(i, i+400).forEach(k=> part[k] = updates[k]); p = p.then(()=> db.ref('nbr').update(part)); }
+  return p;
+}
+const nbrKey = ()=> db.ref('nbr').push().key;
+
+/* ---- NBR case → Bible lines ---- */
+function nbrLinePatches(entryId, e, opts={}){
+  const out = {}, adv = NBR_ADV[e.adv] || {};
+  const linked = {}; Object.entries(NBR_BIB).forEach(([lid,l])=>{ if(l && l.entry===entryId && l.kind) linked[l.kind] = [lid,l]; });
+  const src = nbrDefaultSource();
+  const spec = {
+    proc: {product: NBR_SALE_PRODUCT[e.saleType] || 'Proc Fee', provider: e.lender || '', source: src},
+    mums: {product:'Mums Fee', provider:'', source: nbrSurname(e.client), mumsType: NBR_SALE_MUMS[e.saleType] || ''},
+    prot: {product:'Life Ins', provider: e.lender || '', source: src},
+    sols: {product:'Sols Fee', provider: e.solsName || '', source: e.solsName || ''},
+    val:  {product:'Val Fee', provider: e.valName || '', source: e.valName || ''},
+  };
+  NBR_CATS.forEach(([k])=>{
+    const amt = nbrRound(e[k]), ex = linked[k];
+    const shared = nbrClean({adv:e.adv, office:adv.office || '', client:e.client || '', appDate:e.appSub || '', month:e.month, address:e.notes || ''});
+    if(amt){
+      if(ex){ const [lid, l] = ex; out['bible/'+lid] = {...l, ...shared, amount:amt, updatedAt:Date.now()}; }
+      else if(opts.create!==false) out['bible/'+nbrKey()] = nbrClean({...shared, ...spec[k], amount:amt, entry:entryId, kind:k, src:'nbr', createdAt:Date.now()});
+    } else if(ex){
+      const [lid, l] = ex;
+      if(!l.datePaid && !n0(l.paid)) out['bible/'+lid] = null;
+      else { const keep = {...l}; delete keep.entry; delete keep.kind; out['bible/'+lid] = keep; }
+    }
+  });
+  return out;
+}
+function nbrEntryDeletePatches(entryId){
+  const out = {['entries/'+entryId]: null};
+  Object.entries(NBR_BIB).forEach(([lid,l])=>{
+    if(!l || l.entry!==entryId) return;
+    if(!l.datePaid && !n0(l.paid)) out['bible/'+lid] = null;
+    else { const keep = {...l}; delete keep.entry; delete keep.kind; out['bible/'+lid] = keep; }
+  });
+  return out;
+}
+
+/* ---- Add / edit a case on an advisor's NBR ---- */
+function openNbrEntry(id, preset={}){
+  const e = id ? (NBR_ENT[id] || {}) : {adv: nbrUI.regAdv || '', month: nbrUI.regMonth || nbrThisYm(), ...preset};
+  if(id && !NBR_ENT[id]) return;
+  const L = nbrLists();
+  const linked = id ? Object.values(NBR_BIB).filter(l=> l && l.entry===id).length : 0;
+  const week = e.week || nbrWeekFor(nbrToday().slice(0,7)===e.month ? nbrToday() : e.month+'-01', e.month);
+  const body = `
+    <div class="nbr-grid">
+      ${nfSelect('nfAdv','Advisor', e.adv, nbrAdvOptions(e.adv))}
+      ${nfMonth('nfMonth','Register month', e.month)}
+      ${nfDate('nfWeek','Week ending (Friday)', week)}
+      ${nfText('nfClient','Client - new business', e.client)}
+      ${nfText('nfLender','Lender / insurer', e.lender)}
+      ${nfSelect('nfSale','Type of sale', e.saleType||'', [['','—'], ...L.saleTypes.map(s=> [s,s])].concat(e.saleType && !L.saleTypes.includes(e.saleType) ? [[e.saleType,e.saleType]] : []))}
+      ${nfMoney('nfProc','Proc fee', e.proc)}
+      ${nfMoney('nfMums','Mums fee', e.mums)}
+      ${nfMoney('nfProt','Protection', e.prot)}
+      ${nfMoney('nfSols','Sols amount', e.sols)}
+      ${nfList('nfSolsName','Sols name', e.solsName, L.sols)}
+      ${nfMoney('nfVal','Val amount', e.val)}
+      ${nfList('nfValName','Val name', e.valName, L.vals)}
+      ${nfDate('nfAppSub','Date app submitted', e.appSub)}
+      ${nfList('nfLead','Lead provider', e.leadProvider, L.leadProviders)}
+    </div>
+    <div class="field"><label for="nfNotes">Postcode, 1st line of address, switch date for PTs &amp; notes</label><input type="text" id="nfNotes" value="${esc(e.notes||'')}"></div>
+    <div class="nbr-grid">
+      ${nfMoney('nfLink','£ link: to send', e.linkToSend)}
+      ${nfDate('nfLinkSent','Accounts: date sent', e.linkSent)}
+      ${nfDate('nfLinkPaid','Accounts: date paid', e.linkPaid)}
+    </div>
+    ${id ? `<p class="field-hint">${linked ? `This case has ${linked} line${linked===1?'':'s'} in the Bible; changing the amounts here updates them (paid details stay as they are).` : 'This case isn\'t in the Bible.'}</p>
+      ${linked ? '' : `<label class="nbr-check"><input type="checkbox" id="nfToBible"> Add it to the Bible now</label>`}`
+    : `<label class="nbr-check"><input type="checkbox" id="nfToBible" checked> Add it to the Bible too (one line for each fee)</label>`}`;
+  openNbrForm({title: id ? 'Edit case' : 'Add a case to the NBR', body, saveLabel: id ? 'Save' : 'Add case',
+    onSave: ()=>{
+      const data = nbrClean({adv:nfv('nfAdv'), month:nfv('nfMonth'), week:nfv('nfWeek'), client:nfv('nfClient'), lender:nfv('nfLender'), saleType:nfv('nfSale'),
+        proc:nfn('nfProc'), mums:nfn('nfMums'), prot:nfn('nfProt'), sols:nfn('nfSols'), solsName:nfv('nfSolsName'), val:nfn('nfVal'), valName:nfv('nfValName'),
+        appSub:nfv('nfAppSub'), leadProvider:nfv('nfLead'), notes:nfv('nfNotes'), linkToSend:nfn('nfLink'), linkSent:nfv('nfLinkSent'), linkPaid:nfv('nfLinkPaid')});
+      if(!data.adv){ toast('Choose the advisor.', 'error'); return false; }
+      if(!data.month){ toast('Choose the register month.', 'error'); return false; }
+      if(!data.client){ toast('Enter the client.', 'error'); return false; }
+      if(!data.week || data.week.slice(0,7)!==data.month) data.week = nbrWeekFor(data.week || data.month+'-01', data.month);
+      const key = id || nbrKey(), old = id ? NBR_ENT[id] : null;
+      data.createdAt = old && old.createdAt || Date.now(); data.createdBy = old && old.createdBy || currentUser.name;
+      if(old && old.src) data.src = old.src;
+      data.updatedAt = Date.now(); data.updatedBy = currentUser.name;
+      const toBible = !!nfv('nfToBible') || (id && linked > 0);
+      const updates = {['entries/'+key]: data, ...(toBible ? nbrLinePatches(key, data) : {})};
+      nbrUI.regAdv = data.adv; nbrUI.regMonth = data.month; nbrUI.regYear = +data.month.slice(0,4);
+      return nbrWrite(updates).then(()=> toast(id ? 'Case saved.' : 'Case added'+(toBible ? ' (and to the Bible).' : '.'), 'success'));
+    },
+    onDelete: id ? ()=> nbrWrite(nbrEntryDeletePatches(id)).then(()=> toast('Case deleted. Any Bible lines already paid were kept.', 'success')) : null});
+}
+
+/* ---- Add / edit an NPW (negative amendment) ---- */
+function openNbrNpw(id){
+  const x = id ? (NBR_NPW[id] || {}) : {adv: nbrUI.regAdv || '', month: nbrThisYm(), date: nbrToday()};
+  const body = `<div class="nbr-grid">
+      ${nfSelect('npAdv','Advisor', x.adv, nbrAdvOptions(x.adv))}
+      ${nfMonth('npMonth','Month it comes off', x.month)}
+      ${nfDate('npDate','Date', x.date)}
+      ${nfText('npClient','Client', x.client)}
+      ${nfText('npLender','Lender / insurer', x.lender)}
+      ${nfText('npActs','ACTS', x.acts)}
+      ${nfMoney('npProc','Proc fee', x.proc)}
+      ${nfMoney('npMums','Mums fee', x.mums)}
+      ${nfMoney('npProt','Protection', x.prot)}
+      ${nfMoney('npSols','Sols', x.sols)}
+    </div>
+    <div class="field"><label for="npNotes">Notes / information</label><input type="text" id="npNotes" value="${esc(x.notes||'')}"></div>
+    <p class="field-hint">The total (proc + mums + protection + sols) comes off the advisor's written figures for that month. To show it in the Bible too, open the case's Bible line and tick NPW.</p>`;
+  openNbrForm({title: id ? 'Edit NPW' : 'Add an NPW / negative amendment', body, saveLabel: id ? 'Save' : 'Add NPW',
+    onSave: ()=>{
+      const data = nbrClean({adv:nfv('npAdv'), month:nfv('npMonth'), date:nfv('npDate'), client:nfv('npClient'), lender:nfv('npLender'), acts:nfv('npActs'),
+        proc:nfn('npProc'), mums:nfn('npMums'), prot:nfn('npProt'), sols:nfn('npSols'), notes:nfv('npNotes')});
+      if(!data.adv || !data.month){ toast('Choose the advisor and month.', 'error'); return false; }
+      data.updatedAt = Date.now(); data.updatedBy = currentUser.name;
+      return nbrWrite({['npw/'+(id || nbrKey())]: data}).then(()=> toast(id ? 'NPW saved.' : 'NPW added.', 'success'));
+    },
+    onDelete: id ? ()=> nbrWrite({['npw/'+id]: null}).then(()=> toast('NPW deleted.', 'success')) : null});
+}
+
+/* ---- Add / edit a Bible line ---- */
+function openNbrLine(id, opts={}){
+  const l = id ? (NBR_BIB[id] || {}) : {month: nbrThisYm(), adv: nbrUI.bibAdv || ''};
+  if(id && !NBR_BIB[id]) return;
+  const body = `<div class="nbr-grid">
+      ${nfSelect('blAdv','Advisor', l.adv, nbrAdvOptions(l.adv))}
+      ${nfSelect('blOffice','Office', l.office||'', [['','—'],['F','Frimley (F)'],['G','Gurkha (G)']])}
+      ${nfMonth('blMonth','Period (month written)', l.month)}
+      ${nfText('blClient','Client', l.client)}
+      ${nfText('blDept','Dept / ref', l.dept)}
+      ${nfList('blProvider','Provider', l.provider, [])}
+      ${nfList('blProduct','Product', l.product, NBR_PRODUCTS)}
+      ${nfText('blSource','Income source', l.source)}
+      ${nfMoney('blAmount','Amount', l.amount)}
+      ${nfDate('blApp','App date', l.appDate)}
+      ${nfDate('blOffer','Offer / terms', l.offerDate)}
+      ${nfDate('blComp','Completion date', l.compDate)}
+      ${nfDate('blSwitch','Switch date', l.switchDate)}
+      ${nfList('blWhen','When (mums fee)', l.when, NBR_WHEN)}
+      ${nfList('blMumsType','Mums fee type', l.mumsType, NBR_MUMS_TYPES)}
+      ${nfList('blHow','How paid', l.how, NBR_HOW)}
+      ${nfDate('blPaidDate','Date paid', l.datePaid)}
+      ${nfMoney('blPaid','Paid', l.paid)}
+      ${nfSelect('blLife','Life', l.life||'', [['','—'],['Y','Y'],['SA','SA']])}
+    </div>
+    <div class="field"><label for="blAddress">Address / notes</label><input type="text" id="blAddress" value="${esc(l.address||'')}"></div>
+    <div class="nbr-row-btns">
+      <label class="nbr-check"><input type="checkbox" id="blNpw" ${l.npw ? 'checked' : ''}> NPW (not proceeding)</label>
+      <button type="button" class="btn btn-secondary btn-sm" id="blPaidToday">Paid in full today</button>
+    </div>
+    ${l.npwNote ? `<p class="field-hint">NPW column in the uploaded Bible said: ${esc(l.npwNote)}</p>` : ''}
+    ${l.entry && NBR_ENT[l.entry] ? `<p class="field-hint">Created from ${esc(nbrAdvName(NBR_ENT[l.entry].adv))}'s NBR (${esc(nbrYmLabel(NBR_ENT[l.entry].month))}). Amounts changed on the NBR update this line.</p>` : ''}`;
+  openNbrForm({title: id ? 'Bible line' : 'Add a Bible line', body, saveLabel: id ? 'Save' : 'Add line',
+    onSave: ()=>{
+      const data = nbrClean({adv:nfv('blAdv'), office:nfv('blOffice'), month:nfv('blMonth'), client:nfv('blClient'), dept:nfv('blDept'), provider:nfv('blProvider'),
+        product:nfv('blProduct'), source:nfv('blSource'), amount:nfn('blAmount'), appDate:nfv('blApp'), offerDate:nfv('blOffer'), compDate:nfv('blComp'),
+        switchDate:nfv('blSwitch'), when:nfv('blWhen'), mumsType:nfv('blMumsType'), how:nfv('blHow'), datePaid:nfv('blPaidDate'), paid:nfn('blPaid'),
+        life:nfv('blLife'), address:nfv('blAddress')});
+      if(nfv('blNpw')) data.npw = true;
+      if(!data.adv){ toast('Choose the advisor.', 'error'); return false; }
+      if(!data.month){ toast('Choose the period (month written).', 'error'); return false; }
+      if(data.paid && !data.datePaid){ toast('Add the date paid, so it counts as banked in the right month.', 'error'); return false; }
+      if(!data.office && NBR_ADV[data.adv]) data.office = NBR_ADV[data.adv].office || '';
+      const old = id ? NBR_BIB[id] : null;
+      ['entry','kind','src','createdAt','npwNote'].forEach(k=>{ if(old && old[k]!=null) data[k] = old[k]; });
+      if(!old) data.createdAt = Date.now();
+      data.updatedAt = Date.now(); data.updatedBy = currentUser.name;
+      return nbrWrite({['bible/'+(id || nbrKey())]: data}).then(()=> toast(id ? 'Bible line saved.' : 'Bible line added.', 'success'));
+    },
+    onDelete: id ? ()=> nbrWrite({['bible/'+id]: null}).then(()=> toast('Bible line deleted.', 'success')) : null});
+  document.getElementById('blPaidToday').addEventListener('click', ()=>{
+    document.getElementById('blPaidDate').value = nbrToday();
+    const amt = document.getElementById('blAmount').value; if(amt && !document.getElementById('blPaid').value) document.getElementById('blPaid').value = amt;
+  });
+  if(opts.paid) setTimeout(()=> document.getElementById('blPaidDate').focus(), 80);
+}
+
+/* ---- Advisors ---- */
+function openNbrAdvisor(id){
+  const a = id ? (NBR_ADV[id] || {}) : {active:true};
+  const body = `${nfText('naName','Name', a.name)}
+    ${nfText('naCodes','Bible code(s)', a.codes, 'placeholder="e.g. SD, or SUJIT, Sujit"')}
+    <p class="field-hint" style="margin:-10px 0 16px;">The initials used in the Bible's "Adv" column. Separate more than one with commas.</p>
+    ${nfSelect('naOffice','Office', a.office||'', [['','—'], ...NBR_OFFICES])}
+    <label class="nbr-check"><input type="checkbox" id="naActive" ${a.active!==false ? 'checked' : ''}> Active (shows on the NBR and Salesboard)</label>`;
+  openNbrForm({title: id ? 'Edit advisor' : 'Add an advisor', body, wide:false, saveLabel: id ? 'Save' : 'Add advisor',
+    onSave: ()=>{
+      const name = nfv('naName'); if(!name){ toast('Enter the name.', 'error'); return false; }
+      const codes = nfv('naCodes').split(',').map(s=> s.trim()).filter(Boolean);
+      const clash = codes.find(c=> nbrAdvs(true).some(o=> o.id!==id && nbrAdvCodes(o).some(x=> x.toLowerCase()===c.toLowerCase())));
+      if(clash){ toast(`The code "${clash}" is already used by another advisor.`, 'error'); return false; }
+      const data = nbrClean({name, codes: codes.join(', '), office: nfv('naOffice')}); data.active = !!nfv('naActive');
+      return nbrWrite({['advisors/'+(id || nbrKey())]: data}).then(()=> toast(id ? 'Advisor saved.' : 'Advisor added.', 'success'));
+    },
+    onDelete: id ? (()=>{
+      const used = Object.values(NBR_ENT).some(e=> e && e.adv===id) || Object.values(NBR_BIB).some(l=> l && l.adv===id) || Object.values(NBR_NPW).some(x=> x && x.adv===id);
+      return used ? null : ()=> nbrWrite({['advisors/'+id]: null}).then(()=> toast('Advisor removed.', 'success'));
+    })() : null});
+}
+
+/* ============================== SALESBOARD ============================== */
+function nbrYearOptions(sel){ return nbrAgg().years.map(y=> `<option value="${y}" ${y===sel ? 'selected' : ''}>${y}</option>`).join(''); }
+function nbrNotReady(el){
+  if(nbrError){ el.innerHTML = `<div class="nml-empty">${esc(nbrError)}</div>`; return true; }
+  if(!nbrReady()){ el.innerHTML = '<div class="nml-empty">Loading…</div>'; return true; }
+  return false;
+}
+function renderNbrBoard(){
+  const el = document.getElementById('nbrBoardBody');
+  if(nbrNotReady(el)) return;
+  const now = new Date();
+  if(!nbrUI.boardYear) nbrUI.boardYear = now.getFullYear();
+  if(!nbrUI.boardMonth) nbrUI.boardMonth = now.getFullYear()===nbrUI.boardYear ? now.getMonth()+1 : 12;
+  const Y = nbrUI.boardYear, yms = nbrYearMonths(Y), prev = nbrYearMonths(Y-1), selYm = nbrYm(Y, nbrUI.boardMonth);
+  const ids = nbrAllAdvIds();
+  const advs = ids.filter(id=> (NBR_ADV[id] && NBR_ADV[id].active!==false) || nbrYearHasData(id, Y))
+    .map(id=> ({id, name:nbrAdvName(id), office:(NBR_ADV[id]||{}).office || ''}))
+    .sort((a,b)=> ({F:0,G:1,W:2}[a.office] ?? 3) - ({F:0,G:1,W:2}[b.office] ?? 3) || a.name.localeCompare(b.name));
+  const monthTot = ym=> nbrSum(ids.map(id=> nbrRow(id, ym)));
+  const year = yms.map(monthTot), lastYear = prev.map(monthTot), yt = nbrSum(year);
+  const T = nbrTargets();
+  const upTo = Y===now.getFullYear() ? now.getMonth()+1 : 12;
+  const ytd = nbrSum(year.slice(0, upTo)), lytd = nbrSum(lastYear.slice(0, upTo));
+  const sel = monthTot(selYm);
+
+  // 1) Month by advisor (the spreadsheet's LIVE sales figures), grouped by office.
+  const grand = nbrSum(advs.map(a=> nbrRow(a.id, selYm)));
+  const officeBlock = (code, label)=>{
+    const list = advs.filter(a=> (a.office||'')===code); if(!list.length) return '';
+    const rows = list.map(a=> ({a, r: nbrRow(a.id, selYm)})); const tot = nbrSum(rows.map(x=> x.r));
+    return `<tr class="nbr-group"><td colspan="10">${esc(label)}</td></tr>
+      ${rows.map(({a,r})=> `<tr><td><button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">${esc(a.name)}</button></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, tot.total)}</td><td class="num">${nbrPct(r.total, grand.total)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
+      <tr class="nbr-tot"><td>${esc(label)} total</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(tot[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(tot.total)}</td><td class="num">${tot.total ? '100%' : '–'}</td><td class="num">${nbrPct(tot.total, grand.total)}</td><td class="num">${nbrMoneyCell(tot.banked)}</td></tr>`;
+  };
+  const boardTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+    <thead><tr><th>Advisor</th>${NBR_CATS.map(([,l])=> `<th class="num">${l}</th>`).join('')}<th class="num">Total written</th><th class="num">% of office</th><th class="num">% of all</th><th class="num">Banked</th></tr></thead>
+    <tbody>${NBR_OFFICES.map(([c,l])=> officeBlock(c, l)).join('')}${officeBlock('', 'No office set')}
+      <tr class="nbr-grand"><td>All offices</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(grand[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(grand.total)}</td><td></td><td class="num">${grand.total ? '100%' : '–'}</td><td class="num">${nbrMoneyCell(sel.banked)}</td></tr>
+    </tbody></table></div>`;
+
+  // 2) The year by month: written v last year, banked, NPW.
+  const yoy = (a,b)=> b ? `<span class="${a>=b ? 'nbr-up' : 'nbr-down'}">${a>=b ? '+' : ''}${(Math.round((a/b-1)*1000)/10).toFixed(1)}%</span>` : '–';
+  const yearTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+    <thead><tr><th>Month</th><th class="num">Written ${Y-1}</th><th class="num">Written ${Y}</th><th class="num">Year on year</th><th class="num">NPW</th><th class="num">Written exc NPW</th><th class="num">Banked ${Y}</th><th class="num">Banked v written</th></tr></thead>
+    <tbody>${yms.map((ym,i)=>{ const r = year[i], l = lastYear[i]; return `<tr class="${ym===selYm ? 'nbr-sel' : ''}"><td>${NBR_MONTHS[i]}</td><td class="num">${nbrMoneyCell(l.total)}</td><td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${yoy(r.total, l.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num b">${nbrMoneyCell(r.banked)}</td><td class="num">${r.total && r.banked ? yoy(r.banked, r.total) : '–'}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Total</td><td class="num">${nbrMoneyCell(nbrSum(lastYear).total)}</td><td class="num b">${nbrMoneyCell(yt.total)}</td><td class="num">${yoy(yt.total, nbrSum(lastYear).total)}</td><td class="num">${nbrMoneyCell(yt.npw)}</td><td class="num">${nbrMoneyCell(yt.excl)}</td><td class="num b">${nbrMoneyCell(yt.banked)}</td><td class="num">${yt.total && yt.banked ? yoy(yt.banked, yt.total) : '–'}</td></tr>
+      <tr class="nbr-tot"><td>Against target</td><td></td><td class="num">${nbrMoney(yt.total - T.written)}</td><td colspan="3" class="nbr-note">Written target ${nbrMoney(T.written)}</td><td class="num">${nbrMoney(yt.banked - T.banked)}</td><td class="nbr-note">Banked target ${nbrMoney(T.banked)}</td></tr>
+    </tbody></table></div>`;
+
+  // 3) Written by product by month.
+  const prodTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+    <thead><tr><th>Month</th>${NBR_CATS.map(([,l])=> `<th class="num">${l}</th>`).join('')}<th class="num">Total</th><th class="num">% of year</th></tr></thead>
+    <tbody>${yms.map((ym,i)=>{ const r = year[i]; return `<tr class="${ym===selYm ? 'nbr-sel' : ''}"><td>${NBR_MONTHS[i]}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, yt.total)}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Total</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(yt[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(yt.total)}</td><td class="num">${yt.total ? '100%' : '–'}</td></tr>
+    </tbody></table></div>`;
+
+  // 4) Each advisor by month (the spreadsheet's "Advisor by Mth").
+  const advCards = advs.map(a=>{
+    const rows = yms.map(ym=> nbrRow(a.id, ym)), t = nbrSum(rows);
+    return `<details class="nbr-adv-card"><summary><b>${esc(a.name)}</b><span>${esc((NBR_OFFICES.find(o=> o[0]===a.office)||['','No office'])[1])}</span><span class="nbr-adv-sum">Written ${nbrMoney(t.total)} · NPW ${nbrMoney(t.npw)} · Banked ${nbrMoney(t.banked)}</span></summary>
+      <div class="nml-table-wrap"><table class="nml-table nbr-table">
+      <thead><tr><th>${Y}</th>${NBR_CATS.map(([,l])=> `<th class="num">${l}</th>`).join('')}<th class="num">Total written</th><th class="num">NPW</th><th class="num">Total exc NPW</th><th class="num">Banked</th></tr></thead>
+      <tbody>${rows.map((r,i)=> `<tr><td>${NBR_MONTHS[i]}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
+      <tr class="nbr-grand"><td>Totals</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td class="num">${nbrMoneyCell(t.npw)}</td><td class="num">${nbrMoneyCell(t.excl)}</td><td class="num">${nbrMoneyCell(t.banked)}</td></tr></tbody></table></div></details>`;
+  }).join('');
+  const unassigned = nbrSum(yms.map(ym=> nbrRow('', ym)));
+
+  const empty = !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
+  el.innerHTML = `
+    ${empty ? `<div class="nbr-callout">Nothing here yet. Go to <button type="button" class="linkish" data-nbr-go="nbrSetup">Advisors &amp; upload</button> to upload the advisors' NBRs and the Bible, or add advisors and start adding cases on the <button type="button" class="linkish" data-nbr-go="nbrReg">Advisor NBR</button>.</div>` : ''}
+    <div class="nbr-toolbar">
+      <label>Year <select id="nbrBoardYear">${nbrYearOptions(Y)}</select></label>
+      <label>Month <select id="nbrBoardMonth">${NBR_MONTHS_LONG.map((m,i)=> `<option value="${i+1}" ${i+1===nbrUI.boardMonth ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card accent"><div class="sv">${nbrMoney(sel.total)}</div><div class="sl">Written in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
+      <div class="stat-card good"><div class="sv">${nbrMoney(sel.banked)}</div><div class="sl">Banked in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
+      <div class="stat-card"><div class="sv">${nbrMoney(ytd.total)}</div><div class="sl">Written ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y} · ${nbrPct(yt.total, T.written)} of target${lytd.total ? ` · ${yoy(ytd.total, lytd.total)} on ${Y-1}` : ''}</div></div>
+      <div class="stat-card"><div class="sv">${nbrMoney(ytd.banked)}</div><div class="sl">Banked ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y} · ${nbrPct(yt.banked, T.banked)} of target</div></div>
+      <div class="stat-card warn"><div class="sv">${nbrMoney(yt.npw)}</div><div class="sl">NPW in ${Y}</div></div>
+    </div>
+    <h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} by advisor</h2>
+    ${boardTable}
+    ${unassigned.banked ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
+    <h2 class="nbr-h2">${Y} by month</h2>
+    ${yearTable}
+    <h2 class="nbr-h2">${Y} written by product</h2>
+    ${prodTable}
+    <h2 class="nbr-h2">Each advisor by month</h2>
+    <div class="nbr-adv-cards">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>`;
+  document.getElementById('nbrBoardYear').addEventListener('change', e=>{ nbrUI.boardYear = +e.target.value; nbrUI.boardMonth = +e.target.value===now.getFullYear() ? now.getMonth()+1 : 12; renderNbrBoard(); });
+  document.getElementById('nbrBoardMonth').addEventListener('change', e=>{ nbrUI.boardMonth = +e.target.value; renderNbrBoard(); });
+}
+
+/* ============================== ADVISOR NBR ============================== */
+function renderNbrReg(){
+  const el = document.getElementById('nbrRegBody');
+  if(nbrNotReady(el)) return;
+  const advs = nbrAdvs(false), all = nbrAdvs(true);
+  if(!all.length){ el.innerHTML = `<div class="nbr-callout">Add the advisors first (or upload an advisor's NBR) on <button type="button" class="linkish" data-nbr-go="nbrSetup">Advisors &amp; upload</button>.</div>`; return; }
+  if(!nbrUI.regAdv || !NBR_ADV[nbrUI.regAdv]) nbrUI.regAdv = (advs[0] || all[0]).id;
+  const now = new Date();
+  if(!nbrUI.regYear) nbrUI.regYear = now.getFullYear();
+  if(!nbrUI.regMonth || +nbrUI.regMonth.slice(0,4)!==nbrUI.regYear) nbrUI.regMonth = nbrYm(nbrUI.regYear, nbrUI.regYear===now.getFullYear() ? now.getMonth()+1 : 1);
+  const adv = nbrUI.regAdv, Y = nbrUI.regYear, ym = nbrUI.regMonth, a = NBR_ADV[adv];
+  const yms = nbrYearMonths(Y);
+  const ents = Object.entries(NBR_ENT).filter(([,e])=> e && e.adv===adv && e.month===ym).map(([id,e])=> ({id, ...e}))
+    .sort((x,y)=> (x.week||'').localeCompare(y.week||'') || (x.createdAt||0) - (y.createdAt||0));
+  const weeks = []; ents.forEach(e=>{ const w = e.week || ''; let g = weeks.find(x=> x.week===w); if(!g) weeks.push(g = {week:w, rows:[]}); g.rows.push(e); });
+  const inBible = new Set(Object.values(NBR_BIB).filter(l=> l && l.entry).map(l=> l.entry));
+  const head = `<tr><th>Client - new business</th><th>Lender / insurer</th>${NBR_CATS.map(([,l])=> `<th class="num">${l.replace(' refs','')}</th>`).join('')}<th class="num">Total</th><th>Sols name</th><th>Val name</th><th>App sub</th><th>Lead provider</th><th>Type of sale</th><th>Notes</th><th class="num">£ link</th><th>Sent</th><th>Paid</th></tr>`;
+  const rowHtml = e=> `<tr class="nbr-click" data-nbr-ent="${esc(e.id)}"><td><b>${esc(e.client||'')}</b>${inBible.has(e.id) ? ' <span class="nbr-tag" title="In the Bible">Bible</span>' : ''}</td><td>${esc(e.lender||'')}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(e[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(nbrEntTotal(e))}</td><td>${esc(e.solsName||'')}</td><td>${esc(e.valName||'')}</td><td>${e.appSub ? fmtDateSlash(e.appSub) : ''}</td><td>${esc(e.leadProvider||'')}</td><td>${esc(e.saleType||'')}</td><td class="nbr-notes">${esc(e.notes||'')}</td><td class="num">${nbrMoneyCell(e.linkToSend)}</td><td>${e.linkSent ? fmtDateSlash(e.linkSent) : ''}</td><td>${e.linkPaid ? fmtDateSlash(e.linkPaid) : ''}</td></tr>`;
+  const totRow = (label, rows, cls)=>{ const t = nbrSum(rows.map(e=> ({...e, total: nbrEntTotal(e)}))); return `<tr class="${cls}"><td>${label}</td><td></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td colspan="10"></td></tr>`; };
+  const monthHtml = ents.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-reg-table"><thead>${head}</thead><tbody>
+      ${weeks.map((g,i)=> `<tr class="nbr-group"><td colspan="18">Week ${i+1}${g.week ? ' · w/e '+esc(fmtDate(g.week)) : ''}</td></tr>${g.rows.map(rowHtml).join('')}${totRow(`Week ${i+1} totals`, g.rows, 'nbr-tot')}`).join('')}
+      ${totRow(`${NBR_MONTHS_LONG[+ym.slice(5,7)-1]} total`, ents, 'nbr-grand')}
+    </tbody></table></div>` : `<div class="nml-empty">No cases in ${esc(nbrYmLabel(ym, true))} yet.</div>`;
+
+  // Cumulative summary for the year (written, NPW, exc NPW, NPW last year).
+  const rows = yms.map(m=> nbrRow(adv, m)), t = nbrSum(rows);
+  const lastNpw = nbrYearMonths(Y-1).map(m=> nbrRow(adv, m).npw), lastNpwT = lastNpw.reduce((s,v)=> s+v, 0);
+  const cumHtml = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+    <thead><tr><th>Month</th>${NBR_CATS.map(([,l])=> `<th class="num">${l}</th>`).join('')}<th class="num">Total</th><th class="num">NPW</th><th class="num">Total exc NPW</th><th class="num">NPW ${Y-1}</th></tr></thead>
+    <tbody>${rows.map((r,i)=> `<tr class="nbr-click ${yms[i]===ym ? 'nbr-sel' : ''}" data-nbr-month="${yms[i]}"><td>${NBR_MONTHS[i]}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(lastNpw[i])}</td></tr>`).join('')}
+    <tr class="nbr-grand"><td>Totals</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td class="num">${nbrMoneyCell(t.npw)}</td><td class="num">${nbrMoneyCell(t.excl)}</td><td class="num">${nbrMoneyCell(lastNpwT)}</td></tr></tbody></table></div>`;
+
+  const npws = Object.entries(NBR_NPW).filter(([,x])=> x && x.adv===adv && x.month && +x.month.slice(0,4)===Y).map(([id,x])=> ({id, ...x})).sort((p,q)=> p.month.localeCompare(q.month) || (p.date||'').localeCompare(q.date||''));
+  const npwHtml = npws.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Month</th><th>Date</th><th>Client</th><th>Lender / insurer</th><th class="num">Proc</th><th class="num">Mums</th><th class="num">Protection</th><th class="num">Sols</th><th class="num">Total</th><th>ACTS</th><th>Notes</th></tr></thead><tbody>
+      ${npws.map(x=> `<tr class="nbr-click" data-nbr-npw="${esc(x.id)}"><td>${esc(nbrYmLabel(x.month))}</td><td>${x.date ? fmtDateSlash(x.date) : ''}</td><td><b>${esc(x.client||'')}</b></td><td>${esc(x.lender||'')}</td><td class="num">${nbrMoneyCell(x.proc)}</td><td class="num">${nbrMoneyCell(x.mums)}</td><td class="num">${nbrMoneyCell(x.prot)}</td><td class="num">${nbrMoneyCell(x.sols)}</td><td class="num b">${nbrMoneyCell(nbrNpwTotal(x))}</td><td>${esc(x.acts||'')}</td><td class="nbr-notes">${esc(x.notes||'')}</td></tr>`).join('')}
+      <tr class="nbr-grand"><td colspan="8">Grand total</td><td class="num b">${nbrMoney(npws.reduce((s,x)=> s + nbrNpwTotal(x), 0))}</td><td colspan="2"></td></tr></tbody></table></div>` : `<div class="nml-empty">No NPWs for ${Y}.</div>`;
+
+  el.innerHTML = `
+    <div class="nbr-toolbar">
+      <label>Advisor <select id="nbrRegAdv">${all.map(x=> `<option value="${esc(x.id)}" ${x.id===adv ? 'selected' : ''}>${esc(x.name)}${x.active===false ? ' (inactive)' : ''}</option>`).join('')}</select></label>
+      <label>Year <select id="nbrRegYear">${nbrYearOptions(Y)}</select></label>
+      <span class="nbr-spacer"></span>
+      <button type="button" class="btn btn-secondary btn-sm" id="nbrAddNpw">+ Add NPW</button>
+      <button type="button" class="btn btn-primary btn-sm" id="nbrAddEnt">+ Add case</button>
+    </div>
+    <div class="nbr-months">${yms.map((m,i)=>{ const r = rows[i]; return `<button type="button" class="nbr-month ${m===ym ? 'on' : ''}" data-nbr-month="${m}"><b>${NBR_MONTHS[i]}</b><span>${r.total ? nbrMoney(r.total).replace(/\.\d\d$/,'') : '–'}</span></button>`; }).join('')}</div>
+    <h2 class="nbr-h2">${esc(a ? a.name : '')} New Business Register – ${esc(nbrYmLabel(ym, true).toUpperCase())}</h2>
+    ${monthHtml}
+    <h2 class="nbr-h2">${esc(a ? a.name : '')} – total figures ${Y}</h2>
+    ${cumHtml}
+    <h2 class="nbr-h2">Negative amendments &amp; NPW – ${Y}</h2>
+    ${npwHtml}`;
+  document.getElementById('nbrRegAdv').addEventListener('change', e=>{ nbrUI.regAdv = e.target.value; renderNbrReg(); });
+  document.getElementById('nbrRegYear').addEventListener('change', e=>{ nbrUI.regYear = +e.target.value; nbrUI.regMonth = null; renderNbrReg(); });
+  document.getElementById('nbrAddEnt').addEventListener('click', ()=> openNbrEntry(null));
+  document.getElementById('nbrAddNpw').addEventListener('click', ()=> openNbrNpw(null));
+}
+
+/* ============================== BIBLE ============================== */
+function nbrBibFys(){
+  const s = new Set([nbrFyOf(nbrThisYm())]);
+  Object.values(NBR_BIB).forEach(l=>{ if(l && l.month) s.add(nbrFyOf(l.month)); });
+  return [...s].sort().reverse();
+}
+function nbrBibFiltered(){
+  const f = nbrUI, q = f.bibSearch.toLowerCase();
+  return Object.entries(NBR_BIB).filter(([,l])=>{
+    if(!l) return false;
+    // Searching looks across every year, so a client can be found without knowing when it was written.
+    if(!q && f.bibFY && (l.month ? nbrFyOf(l.month) : '')!==f.bibFY && !(f.bibFY==='none' && !l.month)) return false;
+    if(!q && f.bibMonth && l.month!==f.bibMonth) return false;
+    if(f.bibAdv && (l.adv||'')!==(f.bibAdv==='none' ? '' : f.bibAdv)) return false;
+    if(f.bibStatus && nbrBibStatus(l)!==f.bibStatus) return false;
+    if(f.bibProduct && (l.product||'')!==f.bibProduct) return false;
+    if(q && ![l.client, l.provider, l.source, l.address, l.dept, l.product].some(v=> String(v||'').toLowerCase().includes(q))) return false;
+    return true;
+  }).map(([id,l])=> ({id, ...l}));
+}
+function renderNbrBible(){
+  const el = document.getElementById('nbrBibleBody');
+  if(nbrNotReady(el)) return;
+  const fys = nbrBibFys();
+  if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = fys[0];
+  const fy = nbrUI.bibFY, fyMonths = fy==='none' ? [] : nbrFyMonths(fy);
+  const lines = nbrBibFiltered().sort((a,b)=> (a.month||'').localeCompare(b.month||'') || nbrAdvName(a.adv).localeCompare(nbrAdvName(b.adv)) || (a.client||'').localeCompare(b.client||''));
+  const by = {}; lines.forEach(l=>{ const s = nbrBibStatus(l); (by[s] || (by[s] = {n:0, amt:0, paid:0})); by[s].n++; by[s].amt += n0(l.amount); by[s].paid += n0(l.paid); });
+  const products = [...new Set(Object.values(NBR_BIB).map(l=> l && l.product).filter(Boolean))].sort();
+  const noMonth = Object.values(NBR_BIB).some(l=> l && !l.month), noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
+  const shown = lines.slice(0, nbrUI.bibShown);
+  const tableHtml = lines.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-bib-table">
+    <thead><tr><th>Period</th><th>Adv</th><th>Client</th><th>App</th><th>Offer/terms</th><th>Comp</th><th>Provider</th><th>Product</th><th>Income source</th><th class="num">Amount</th><th>When</th><th>How</th><th>Date paid</th><th class="num">Paid</th><th>Status</th><th></th></tr></thead>
+    <tbody>${shown.map(l=>{ const s = nbrBibStatus(l); return `<tr class="nbr-click bl-${s}" data-nbr-line="${esc(l.id)}"><td>${esc(l.month ? nbrYmLabel(l.month) : '—')}</td><td>${esc(l.adv ? nbrAdvName(l.adv) : '—')}${l.office ? ` <span class="nbr-office">${esc(l.office)}</span>` : ''}</td><td><b>${esc(l.client||'')}</b>${l.life ? ` <span class="nbr-tag">Life ${esc(l.life)}</span>` : ''}</td><td>${l.appDate ? fmtDateSlash(l.appDate) : ''}</td><td>${l.offerDate ? fmtDateSlash(l.offerDate) : ''}</td><td>${l.compDate ? fmtDateSlash(l.compDate) : ''}</td><td>${esc(l.provider||'')}</td><td>${esc(l.product||'')}</td><td>${esc(l.source||'')}</td><td class="num b">${nbrMoneyCell(l.amount)}</td><td>${esc(l.when||'')}</td><td>${esc(l.how||'')}</td><td>${l.datePaid ? fmtDateSlash(l.datePaid) : ''}</td><td class="num">${nbrMoneyCell(l.paid)}</td><td><span class="bl-chip bl-chip-${s}">${BIB_STATUS[s][0]}</span></td><td>${s!=='paid' && s!=='npw' ? `<button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(l.id)}">Paid</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
+    ${lines.length > shown.length ? `<div class="nbr-more"><button type="button" class="btn btn-secondary btn-sm" id="nbrBibMore">Show ${Math.min(NBR_PAGE, lines.length - shown.length)} more (${lines.length - shown.length} not shown)</button></div>` : ''}`
+    : '<div class="nml-empty">No Bible lines match.</div>';
+
+  // Banked: paid amounts by advisor and the month paid, for this financial year.
+  let bankedHtml = '';
+  if(fy!=='none'){
+    const bank = {}; Object.values(NBR_BIB).forEach(l=>{ if(!l || !l.datePaid) return; const ym = l.datePaid.slice(0,7); if(nbrFyOf(ym)!==fy) return; const a = bank[l.adv||''] || (bank[l.adv||''] = {}); a[ym] = (a[ym]||0) + n0(l.paid); });
+    const advIds = Object.keys(bank).sort((a,b)=> nbrAdvName(a).localeCompare(nbrAdvName(b)));
+    const colT = fyMonths.map(ym=> advIds.reduce((s,id)=> s + (bank[id][ym]||0), 0)), all = colT.reduce((s,v)=> s+v, 0);
+    bankedHtml = advIds.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Adv</th>${fyMonths.map(ym=> `<th class="num">${NBR_MONTHS[+ym.slice(5,7)-1]}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
+      ${advIds.map(id=>{ const r = fyMonths.map(ym=> bank[id][ym]||0); return `<tr><td>${esc(id ? nbrAdvName(id) : '(no advisor)')}</td>${r.map(v=> `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.reduce((s,v)=> s+v, 0))}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Total</td>${colT.map(v=> `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(all)}</td></tr></tbody></table></div>`
+      : `<div class="nml-empty">Nothing paid in ${esc(fy)} yet.</div>`;
+  }
+  // By advisor and product, for the lines matching the filters (the Bible's pipe / offered / completed pivots).
+  const pv = {}, pvProd = new Set(); lines.forEach(l=>{ const p = l.product || '(none)'; pvProd.add(p); const a = pv[l.adv||''] || (pv[l.adv||''] = {}); a[p] = (a[p]||0) + n0(l.amount); });
+  const pvCols = [...pvProd].sort(), pvRows = Object.keys(pv).sort((a,b)=> nbrAdvName(a).localeCompare(nbrAdvName(b)));
+  const pivotHtml = pvRows.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Adv</th>${pvCols.map(p=> `<th class="num">${esc(p)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
+      ${pvRows.map(id=>{ const r = pvCols.map(p=> pv[id][p]||0); return `<tr><td>${esc(id ? nbrAdvName(id) : '(no advisor)')}</td>${r.map(v=> `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.reduce((s,v)=> s+v, 0))}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Total</td>${pvCols.map(p=> `<td class="num">${nbrMoneyCell(pvRows.reduce((s,id)=> s + (pv[id][p]||0), 0))}</td>`).join('')}<td class="num b">${nbrMoneyCell(lines.reduce((s,l)=> s + n0(l.amount), 0))}</td></tr></tbody></table></div>` : '';
+
+  const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])].concat(noAdv ? [['none','(no advisor)']] : []);
+  el.innerHTML = `
+    <div class="nbr-toolbar nbr-filters">
+      <label>Financial year <select id="nbrBibFY">${fys.map(f=> `<option value="${f}" ${f===fy ? 'selected' : ''}>${esc(nbrFyLabel(f))}</option>`).join('')}${noMonth ? `<option value="none" ${fy==='none' ? 'selected' : ''}>No period set</option>` : ''}</select></label>
+      <label>Period <select id="nbrBibMonth"><option value="">Whole year</option>${fyMonths.map(ym=> `<option value="${ym}" ${ym===nbrUI.bibMonth ? 'selected' : ''}>${esc(nbrYmLabel(ym))}</option>`).join('')}</select></label>
+      <label>Advisor <select id="nbrBibAdv">${advOpts.map(([v,t])=> `<option value="${esc(v)}" ${v===nbrUI.bibAdv ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+      <label>Status <select id="nbrBibStatus"><option value="">All</option>${Object.entries(BIB_STATUS).map(([k,v])=> `<option value="${k}" ${k===nbrUI.bibStatus ? 'selected' : ''}>${esc(v[1])}</option>`).join('')}</select></label>
+      <label>Product <select id="nbrBibProduct"><option value="">All</option>${products.map(p=> `<option ${p===nbrUI.bibProduct ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
+      <input type="search" id="nbrBibSearch" placeholder="Search client, provider, address…" value="${esc(nbrUI.bibSearch)}">
+      <button type="button" class="btn btn-primary btn-sm" id="nbrAddLine">+ Add line</button>
+    </div>
+    <div class="stat-grid nbr-status-cards">${Object.entries(BIB_STATUS).map(([k,v])=>{ const s = by[k] || {n:0, amt:0, paid:0}; return `<button type="button" class="stat-card nbr-sc bl-card-${k} ${nbrUI.bibStatus===k ? 'on' : ''}" data-nbr-status="${k}"><div class="sv">${nbrMoney(k==='paid' ? s.paid : s.amt)}</div><div class="sl">${esc(v[1])} · ${s.n} line${s.n===1?'':'s'}</div></button>`; }).join('')}</div>
+    ${nbrUI.bibSearch ? `<p class="field-hint" style="margin:-8px 0 10px;">Searching every financial year for "${esc(nbrUI.bibSearch)}".</p>` : ''}
+    ${tableHtml}
+    ${fy!=='none' ? `<h2 class="nbr-h2">Banked in ${esc(nbrFyLabel(fy))} – by the month paid</h2>${bankedHtml}` : ''}
+    ${pivotHtml ? `<h2 class="nbr-h2">These lines by advisor and product</h2>${pivotHtml}` : ''}`;
+  const set = (id, key, num)=> document.getElementById(id).addEventListener('change', e=>{ nbrUI[key] = e.target.value; if(key==='bibFY') nbrUI.bibMonth = ''; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); });
+  set('nbrBibFY','bibFY'); set('nbrBibMonth','bibMonth'); set('nbrBibAdv','bibAdv'); set('nbrBibStatus','bibStatus'); set('nbrBibProduct','bibProduct');
+  let t = null;
+  document.getElementById('nbrBibSearch').addEventListener('input', e=>{ clearTimeout(t); t = setTimeout(()=>{ nbrUI.bibSearch = e.target.value.trim(); nbrUI.bibShown = NBR_PAGE; renderNbrBible(); const s = document.getElementById('nbrBibSearch'); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }, 250); });
+  document.getElementById('nbrAddLine').addEventListener('click', ()=> openNbrLine(null));
+  const more = document.getElementById('nbrBibMore'); if(more) more.addEventListener('click', ()=>{ nbrUI.bibShown += NBR_PAGE; renderNbrBible(); });
+}
+
+/* ============================== ADVISORS & UPLOAD ============================== */
+function renderNbrSetup(){
+  const el = document.getElementById('nbrSetupBody');
+  if(nbrNotReady(el)) return;
+  const advs = nbrAdvs(true), L = NBR_CFG.lists || {}, T = nbrTargets();
+  const listVal = k=> (Array.isArray(L[k]) ? L[k] : Object.values(L[k]||{})).join('\n');
+  const count = id=> Object.values(NBR_ENT).filter(e=> e && e.adv===id).length;
+  const bcount = id=> Object.values(NBR_BIB).filter(l=> l && l.adv===id).length;
+  el.innerHTML = `
+    <div class="nbr-setup-grid">
+      <section class="nbr-card">
+        <div class="nbr-card-head"><h2>Advisors</h2><button type="button" class="btn btn-primary btn-sm" id="nbrAddAdv">+ Add advisor</button></div>
+        ${advs.length ? `<table class="nml-table nbr-table"><thead><tr><th>Name</th><th>Bible code(s)</th><th>Office</th><th class="num">NBR cases</th><th class="num">Bible lines</th><th></th></tr></thead><tbody>
+          ${advs.map(a=> `<tr class="nbr-click ${a.active===false ? 'nbr-inactive' : ''}" data-nbr-adv="${esc(a.id)}"><td><b>${esc(a.name)}</b>${a.active===false ? ' <span class="nbr-tag">inactive</span>' : ''}</td><td>${esc(a.codes||'—')}</td><td>${esc((NBR_OFFICES.find(o=> o[0]===a.office)||['','—'])[1])}</td><td class="num">${count(a.id)}</td><td class="num">${bcount(a.id)}</td><td><button type="button" class="linkish">Edit</button></td></tr>`).join('')}
+        </tbody></table>` : '<div class="nml-empty">No advisors yet. Add them here, or upload an advisor\'s NBR or the Bible and they\'re added for you.</div>'}
+      </section>
+      <section class="nbr-card">
+        <div class="nbr-card-head"><h2>Upload spreadsheets</h2></div>
+        <p class="nbr-p">Upload the spreadsheets as they are (.xlsx). Everything goes into the right month, so past months are filled in too. You can upload the same file again later: it replaces what came from it before.</p>
+        <div class="nbr-upload-btns">
+          <label class="btn btn-secondary"><input type="file" id="nbrUpNbr" accept=".xlsx,.xls" class="hidden">Upload an Advisor NBR</label>
+          <label class="btn btn-secondary"><input type="file" id="nbrUpBible" accept=".xlsx,.xls" class="hidden">Upload the Bible</label>
+        </div>
+        <div id="nbrUpArea"></div>
+      </section>
+      <section class="nbr-card">
+        <div class="nbr-card-head"><h2>Targets</h2></div>
+        <div class="nbr-grid nbr-grid-2">
+          ${nfMoney('nbrTgtW','Written target for the year', T.written)}
+          ${nfMoney('nbrTgtB','Banked target for the year', T.banked)}
+        </div>
+        <div class="field"><label for="nbrDefSrc">Income source for new proc fee &amp; protection lines in the Bible</label><input type="text" id="nbrDefSrc" value="${esc(nbrDefaultSource())}"></div>
+        <button type="button" class="btn btn-primary btn-sm" id="nbrSaveTargets">Save</button>
+      </section>
+      <section class="nbr-card">
+        <div class="nbr-card-head"><h2>Drop-down lists</h2></div>
+        <p class="nbr-p">One per line. Uploading an advisor's NBR adds its lists here.</p>
+        <div class="nbr-grid nbr-grid-2">
+          <div class="field"><label for="nbrLsSols">Sols names</label><textarea id="nbrLsSols" rows="6">${esc(listVal('sols'))}</textarea></div>
+          <div class="field"><label for="nbrLsVals">Val names</label><textarea id="nbrLsVals" rows="6">${esc(listVal('vals'))}</textarea></div>
+          <div class="field"><label for="nbrLsSale">Types of sale</label><textarea id="nbrLsSale" rows="6">${esc(listVal('saleTypes') || NBR_SALE_TYPES.join('\n'))}</textarea></div>
+          <div class="field"><label for="nbrLsLead">Lead providers</label><textarea id="nbrLsLead" rows="6">${esc(listVal('leadProviders'))}</textarea></div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="nbrSaveLists">Save lists</button>
+      </section>
+      ${currentUser.role==='management' ? `<section class="nbr-card nbr-danger">
+        <div class="nbr-card-head"><h2>Start again</h2></div>
+        <p class="nbr-p">Deletes every advisor, NBR case, NPW and Bible line in New Business (${Object.keys(NBR_ENT).length} cases, ${Object.keys(NBR_NPW).length} NPWs, ${Object.keys(NBR_BIB).length} Bible lines). It can't be undone.</p>
+        <div class="nbr-row-btns"><input type="text" id="nbrWipeTxt" placeholder="Type DELETE to confirm"><button type="button" class="btn btn-danger btn-sm" id="nbrWipe">Delete everything</button></div>
+      </section>` : ''}
+    </div>`;
+  if(nbrUI.upload) renderNbrUpload();
+  document.getElementById('nbrAddAdv').addEventListener('click', ()=> openNbrAdvisor(null));
+  document.getElementById('nbrUpNbr').addEventListener('change', e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) nbrStartUpload(f, 'nbr'); });
+  document.getElementById('nbrUpBible').addEventListener('change', e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) nbrStartUpload(f, 'bible'); });
+  document.getElementById('nbrSaveTargets').addEventListener('click', ()=>{
+    const w = nfn('nbrTgtW'), b = nfn('nbrTgtB');
+    nbrWrite({'config/targetWritten': w || null, 'config/targetBanked': b || null, 'config/defaultSource': nfv('nbrDefSrc') || null}).then(()=> toast('Saved.', 'success')).catch(err=> toast('Could not save: '+err.message, 'error'));
+  });
+  document.getElementById('nbrSaveLists').addEventListener('click', ()=>{
+    const lines = id=> [...new Set(document.getElementById(id).value.split('\n').map(s=> s.trim()).filter(Boolean))];
+    nbrWrite({'config/lists': {sols: lines('nbrLsSols'), vals: lines('nbrLsVals'), saleTypes: lines('nbrLsSale'), leadProviders: lines('nbrLsLead')}})
+      .then(()=> toast('Lists saved.', 'success')).catch(err=> toast('Could not save: '+err.message, 'error'));
+  });
+  const wipe = document.getElementById('nbrWipe');
+  if(wipe) wipe.addEventListener('click', ()=>{
+    if(nfv('nbrWipeTxt')!=='DELETE'){ toast('Type DELETE in the box first.', 'error'); return; }
+    wipe.disabled = true;
+    db.ref('nbr').update({advisors:null, entries:null, npw:null, bible:null}).then(()=> toast('New Business emptied.', 'success')).catch(err=>{ toast('Could not delete: '+err.message, 'error'); wipe.disabled = false; });
+  });
+}
+
+/* ---- Reading the spreadsheets ---- */
+function nbrXlDate(v){
+  if(v==null || v==='') return '';
+  if(typeof v==='number'){ if(v < 20000 || v > 80000) return ''; const d = window.XLSX.SSF.parse_date_code(v); return d ? `${d.y}-${nbrPad(d.m)}-${nbrPad(d.d)}` : ''; }
+  if(v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${nbrPad(v.getMonth()+1)}-${nbrPad(v.getDate())}`;
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+  if(m){ const y = m[3].length===2 ? 2000 + +m[3] : +m[3]; return `${y}-${nbrPad(m[2])}-${nbrPad(m[1])}`; }
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return '';
+}
+function nbrXlMonth(v){
+  // "01/2026", a date, or "Jan 2026" / "January 2026" → "2026-01"
+  if(v==null || v==='') return '';
+  if(typeof v==='number'){ const d = nbrXlDate(v); return d ? d.slice(0,7) : ''; }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})[\/.\-](\d{4})$/); if(m && +m[1]>=1 && +m[1]<=12) return `${m[2]}-${nbrPad(m[1])}`;
+  m = s.match(/^([a-z]{3,9})\.?\s+(\d{4})$/i); if(m){ const i = NBR_MONTHS.findIndex(x=> m[1].toLowerCase().startsWith(x.toLowerCase())); if(i>=0) return `${m[2]}-${nbrPad(i+1)}`; }
+  const d = nbrXlDate(s); return d ? d.slice(0,7) : '';
+}
+const nbrCellStr = v=> v==null ? '' : (typeof v==='string' ? v.trim() : String(v).trim());
+function nbrSheetRows(ws){ return window.XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null, blankrows:true}); }
+function nbrSheetMonth(name){
+  const m = String(name).trim().match(/^([a-z]{3,9})\.?\s+(\d{4})$/i); if(!m) return '';
+  const i = NBR_MONTHS.findIndex(x=> m[1].toLowerCase().startsWith(x.toLowerCase()));
+  return i>=0 ? nbrYm(+m[2], i+1) : '';
+}
+
+// An advisor's NBR workbook: a sheet per month (weekly blocks), an NPW sheet and a DATA sheet of lists.
+function nbrParseAdvisorNbr(wb){
+  const out = {name:'', months:{}, entries:[], npw:[], lists:{sols:[], vals:[], saleTypes:[], leadProviders:[]}, warnings:[]};
+  const take = s=>{ if(out.name) return; const m = nbrCellStr(s).match(/^(.*?)\s+new business register/i); if(m && m[1] && !/^adv name$/i.test(m[1].trim())) out.name = m[1].trim(); };
+  wb.SheetNames.forEach(sn=>{
+    const ym = nbrSheetMonth(sn); if(!ym) return;
+    const rows = nbrSheetRows(wb.Sheets[sn]);
+    rows.slice(0,3).forEach(r=> (r||[]).forEach(take));
+    let h = rows.findIndex((r,i)=> i<8 && (r||[]).some(c=> /client/i.test(nbrCellStr(c))));
+    const col = {client:1, lender:2, proc:3, mums:4, prot:5, sols:6, solsName:7, val:8, valName:9, appSub:10, leadProvider:11, saleType:12, notes:13, linkToSend:14, linkSent:15, linkPaid:16};
+    let start = 3;
+    if(h>=0){
+      const hr = rows[h].map(nbrCellStr), sub = (rows[h+1]||[]).map(nbrCellStr), found = {};
+      hr.forEach((t,i)=>{ const s = t.toLowerCase().replace(/\s+/g,' ');
+        if(!s) return;
+        const set = k=>{ if(found[k]==null) found[k] = i; };
+        if(/client/.test(s)) set('client'); else if(/lender|insurer/.test(s)) set('lender'); else if(/proc/.test(s)) set('proc'); else if(/mum/.test(s)) set('mums');
+        else if(/protection/.test(s)) set('prot'); else if(/sols/.test(s) && /amount/.test(s)) set('sols'); else if(/sols/.test(s) && /name/.test(s)) set('solsName');
+        else if(/val/.test(s) && /amount/.test(s)) set('val'); else if(/val/.test(s) && /name/.test(s)) set('valName'); else if(/date app|app sub/.test(s)) set('appSub');
+        else if(/lead/.test(s)) set('leadProvider'); else if(/type of sale/.test(s)) set('saleType'); else if(/post ?code|notes/.test(s)) set('notes');
+        else if(/link/.test(s)) set('linkToSend'); else if(/accounts/.test(s)) set('linkSent'); });
+      sub.forEach((t,i)=>{ const s = t.toLowerCase(); if(/to send/.test(s)) found.linkToSend = i; else if(/date sent/.test(s)) found.linkSent = i; else if(/date paid/.test(s)) found.linkPaid = i; });
+      Object.assign(col, found);
+      start = h + 1 + (sub.some(t=> /to send|date sent|date paid/i.test(t)) ? 1 : 0);
+    }
+    let lastWeek = '', n = 0;
+    for(let i=start; i<rows.length; i++){
+      const r = rows[i] || [], a = r[0], b = nbrCellStr(r[1]);
+      if(typeof a==='string' && /week|total/i.test(a)) continue;
+      if(/^totals?$/i.test(b) || /grand total/i.test(b)) continue;
+      const wk = nbrXlDate(a); if(wk) lastWeek = wk;
+      const amt = k=> nbrRound(r[col[k]]);
+      const client = nbrCellStr(r[col.client]);
+      const vals = {proc:amt('proc'), mums:amt('mums'), prot:amt('prot'), sols:amt('sols'), val:amt('val')};
+      if(!client && !Object.values(vals).some(Boolean)) continue;
+      const e = nbrClean({month:ym, week: wk || lastWeek || '', client, lender:nbrCellStr(r[col.lender]), ...vals,
+        solsName:nbrCellStr(r[col.solsName]), valName:nbrCellStr(r[col.valName]), appSub:nbrXlDate(r[col.appSub]) || '', leadProvider:nbrCellStr(r[col.leadProvider]),
+        saleType:nbrCellStr(r[col.saleType]), notes: r[col.notes]!=null && typeof r[col.notes]==='number' && nbrXlDate(r[col.notes]) ? fmtDateSlash(nbrXlDate(r[col.notes])) : nbrCellStr(r[col.notes]),
+        linkToSend: nbrRound(r[col.linkToSend]) || '', linkSent: nbrXlDate(r[col.linkSent]), linkPaid: nbrXlDate(r[col.linkPaid])});
+      if(!e.week || e.week.slice(0,7)!==ym) e.week = nbrWeekFor(e.week || ym+'-01', ym);
+      out.entries.push(e); n++;
+    }
+    out.months[ym] = n;
+  });
+  // NPW sheet
+  const npwName = wb.SheetNames.find(s=> /npw/i.test(s));
+  if(npwName){
+    const rows = nbrSheetRows(wb.Sheets[npwName]);
+    rows.slice(0,3).forEach(r=> (r||[]).forEach(take));
+    const h = rows.findIndex(r=> (r||[]).some(c=> /client/i.test(nbrCellStr(c))) && (r||[]).some(c=> /total/i.test(nbrCellStr(c))));
+    if(h>=0){
+      const col = {}; rows[h].map(nbrCellStr).forEach((t,i)=>{ const s = t.toLowerCase(); const set = k=>{ if(col[k]==null) col[k] = i; };
+        if(/acts/.test(s)) set('acts'); else if(/^date$/.test(s)) set('date'); else if(/client/.test(s)) set('client'); else if(/lender|insurer/.test(s)) set('lender');
+        else if(/proc/.test(s)) set('proc'); else if(/mum/.test(s)) set('mums'); else if(/protection/.test(s)) set('prot'); else if(/sols/.test(s)) set('sols');
+        else if(/month/.test(s)) set('month'); else if(/notes|information/.test(s)) set('notes'); });
+      for(let i=h+1; i<rows.length; i++){
+        const r = rows[i] || [], get = k=> col[k]==null ? null : r[col[k]];
+        if(/grand total/i.test(nbrCellStr(get('client'))) || /grand total/i.test(nbrCellStr(r[2]))) continue;
+        const x = nbrClean({acts:nbrCellStr(get('acts')), date:nbrXlDate(get('date')), client:nbrCellStr(get('client')), lender:nbrCellStr(get('lender')),
+          proc:nbrRound(get('proc')), mums:nbrRound(get('mums')), prot:nbrRound(get('prot')), sols:nbrRound(get('sols')), notes:nbrCellStr(get('notes'))});
+        if(!x.client && !nbrNpwTotal(x)) continue;
+        x.month = nbrXlMonth(get('month')) || (x.date ? x.date.slice(0,7) : '');
+        if(!x.month){ out.warnings.push(`NPW for ${x.client || 'a client'} has no month, so it was left out.`); continue; }
+        out.npw.push(x);
+      }
+    }
+  }
+  // DATA sheet: the drop-down lists
+  const dataName = wb.SheetNames.find(s=> /^data$/i.test(s.trim()));
+  if(dataName){
+    const rows = nbrSheetRows(wb.Sheets[dataName]), hr = (rows[0]||[]).map(nbrCellStr);
+    const pick = (re, key)=>{ const i = hr.findIndex(t=> re.test(t)); if(i<0) return; for(let j=1; j<rows.length; j++){ const v = nbrCellStr((rows[j]||[])[i]); if(v) out.lists[key].push(v); } };
+    pick(/sols/i, 'sols'); pick(/val/i, 'vals'); pick(/type of/i, 'saleTypes'); pick(/lead/i, 'leadProviders');
+  }
+  return out;
+}
+
+const NBR_BIB_HEAD = {'client':'client','x':'office','adv':'adv','dept/ref':'dept','app date':'appDate','offer/terms':'offerDate','comp date':'compDate','switch date':'switchDate',
+  'provider':'provider','product':'product','income source':'source','amount':'amount','when':'when','mums fee type':'mumsType','how':'how','date paid':'datePaid',
+  'period':'period','fin_year':'fy','fin year':'fy','npw?':'npw','npw':'npw','paid':'paid','life':'life','address':'address'};
+// The Bible workbook: the DATA sheet, one line per piece of income.
+function nbrParseBible(wb){
+  const out = {lines:[], codes:{}, warnings:[], fys:{}};
+  const sn = wb.SheetNames.find(s=> /^data$/i.test(s.trim())) || wb.SheetNames.find(s=>{ const r = nbrSheetRows(wb.Sheets[s])[0] || []; return r.some(c=> /^adv$/i.test(nbrCellStr(c))) && r.some(c=> /product/i.test(nbrCellStr(c))); });
+  if(!sn){ out.warnings.push("Couldn't find the DATA sheet in this file."); return out; }
+  const rows = nbrSheetRows(wb.Sheets[sn]), col = {};
+  (rows[0]||[]).forEach((c,i)=>{ const k = NBR_BIB_HEAD[nbrCellStr(c).toLowerCase()]; if(k && col[k]==null) col[k] = i; });
+  if(col.adv==null || col.product==null){ out.warnings.push("This doesn't look like the Bible: there's no Adv or Product column."); return out; }
+  const canon = {}; NBR_PRODUCTS.forEach(p=> canon[p.toLowerCase()] = p);
+  for(let i=1; i<rows.length; i++){
+    const r = rows[i] || [], get = k=> col[k]==null ? null : r[col[k]];
+    const adv = nbrCellStr(get('adv')), client = nbrCellStr(get('client')), amount = nbrRound(get('amount'));
+    if(!adv && !client && !amount) continue;
+    const prodRaw = nbrCellStr(get('product')), product = canon[prodRaw.toLowerCase()] || prodRaw;
+    const fy = nbrCellStr(get('fy')).toUpperCase().replace(/\s+/g,''), period = Math.round(n0(get('period')));
+    let month = '';
+    if(/^FY\d{2}$/.test(fy) && period>=1 && period<=12){ const y = nbrFyStart(fy), m = period + 2; month = m>12 ? nbrYm(y+1, m-12) : nbrYm(y, m); }
+    const appDate = nbrXlDate(get('appDate')), datePaid = nbrXlDate(get('datePaid'));
+    if(!month) month = (appDate || datePaid || '').slice(0,7);
+    const npwRaw = nbrCellStr(get('npw')), office = nbrCellStr(get('office')).toUpperCase();
+    const howRaw = get('how'), how = typeof howRaw==='number' && nbrXlDate(howRaw) ? fmtDateSlash(nbrXlDate(howRaw)) : nbrCellStr(howRaw);
+    const l = nbrClean({code:adv, office: office==='F' || office==='G' ? office : '', client, dept:nbrCellStr(get('dept')), appDate, offerDate:nbrXlDate(get('offerDate')),
+      compDate:nbrXlDate(get('compDate')), switchDate:nbrXlDate(get('switchDate')), provider:nbrCellStr(get('provider')), product, source:nbrCellStr(get('source')),
+      amount, when:nbrCellStr(get('when')), mumsType:nbrCellStr(get('mumsType')), how, datePaid, paid:nbrRound(get('paid')), month,
+      life:nbrCellStr(get('life')).toUpperCase(), address:nbrCellStr(get('address'))});
+    if(/^npw/i.test(npwRaw)) l.npw = true; else if(npwRaw) l.npwNote = npwRaw;
+    out.lines.push(l);
+    if(adv){ const c = out.codes[adv] || (out.codes[adv] = {n:0, offices:{}}); c.n++; if(l.office) c.offices[l.office] = (c.offices[l.office]||0) + 1; }
+    const f = month ? nbrFyOf(month) : '(no period)'; out.fys[f] = (out.fys[f]||0) + 1;
+  }
+  return out;
+}
+
+/* ---- Upload: read, check, then import ---- */
+function nbrStartUpload(file, kind){
+  nbrUI.upload = {kind, file:file.name, state:'reading'}; renderNbrUpload();
+  loadXlsx().then(X=> file.arrayBuffer().then(buf=> X.read(buf, {type:'array', cellDates:false})))
+    .then(wb=>{
+      const up = nbrUI.upload; if(!up || up.file!==file.name) return;
+      if(kind==='nbr'){
+        const p = nbrParseAdvisorNbr(wb);
+        if(!Object.keys(p.months).length && !p.npw.length) throw new Error("This doesn't look like an Advisor NBR: there are no month sheets (e.g. \"Jan 2026\").");
+        const match = nbrAdvs(true).find(a=> p.name && a.name.toLowerCase()===p.name.toLowerCase());
+        Object.assign(up, {state:'ready', parsed:p, adv: match ? match.id : (p.name ? 'new' : ''), newName: p.name || '', newOffice:'F', replace:true, toBible:false});
+      } else {
+        const p = nbrParseBible(wb);
+        if(!p.lines.length) throw new Error(p.warnings[0] || 'No Bible lines found in this file.');
+        const map = {};
+        Object.entries(p.codes).forEach(([code, c])=>{
+          const a = nbrAdvs(true).find(x=> nbrAdvCodes(x).some(k=> k.toLowerCase()===code.toLowerCase()));
+          const office = Object.entries(c.offices).sort((x,y)=> y[1]-x[1])[0];
+          map[code] = a ? a.id : 'new';
+          c.office = office ? office[0] : '';
+        });
+        Object.assign(up, {state:'ready', parsed:p, map, replace:true});
+      }
+      renderNbrUpload();
+    })
+    .catch(err=>{ if(nbrUI.upload){ nbrUI.upload.state = 'error'; nbrUI.upload.error = err.message; renderNbrUpload(); } });
+}
+function renderNbrUpload(){
+  const box = document.getElementById('nbrUpArea'); if(!box) return;
+  const up = nbrUI.upload; if(!up){ box.innerHTML = ''; return; }
+  const cancel = `<button type="button" class="btn btn-secondary btn-sm" data-nbr-up="cancel">${up.state==='done' ? 'Close' : 'Cancel'}</button>`;
+  if(up.state==='reading'){ box.innerHTML = `<div class="nbr-up">Reading ${esc(up.file)}…</div>`; return; }
+  if(up.state==='error'){ box.innerHTML = `<div class="nbr-up nbr-up-bad"><b>${esc(up.file)}</b>: ${esc(up.error)}<div class="nbr-row-btns">${cancel}</div></div>`; return; }
+  if(up.state==='saving'){ box.innerHTML = `<div class="nbr-up">Importing ${esc(up.file)}… ${esc(up.progress||'')}</div>`; return; }
+  if(up.state==='done'){ box.innerHTML = `<div class="nbr-up nbr-up-good">${up.msg}<div class="nbr-row-btns">${cancel}</div></div>`; return; }
+  const p = up.parsed, advOpts = nbrAdvs(true);
+  if(up.kind==='nbr'){
+    const months = Object.keys(p.months).sort(), years = [...new Set(months.map(m=> m.slice(0,4)))];
+    const advId = up.adv && up.adv!=='new' ? up.adv : null;
+    const existing = advId ? Object.values(NBR_ENT).filter(e=> e && e.adv===advId && months.includes(e.month)).length : 0;
+    const npwMonths = [...new Set(p.npw.map(x=> x.month))];
+    const existingNpw = advId ? Object.values(NBR_NPW).filter(x=> x && x.adv===advId && (npwMonths.includes(x.month) || years.includes(String(x.month||'').slice(0,4)))).length : 0;
+    const tot = nbrSum(p.entries.map(e=> ({...e, total:nbrEntTotal(e)})));
+    box.innerHTML = `<div class="nbr-up">
+      <div class="nbr-up-title">${esc(up.file)}</div>
+      <p>${p.entries.length} case${p.entries.length===1?'':'s'} in ${months.length} month${months.length===1?'':'s'} (${esc(months.length ? nbrYmLabel(months[0])+' – '+nbrYmLabel(months[months.length-1]) : '—')}), written ${nbrMoney(tot.total)}; ${p.npw.length} NPW${p.npw.length===1?'':'s'}.</p>
+      <div class="nbr-up-months">${months.map(m=> `<span>${esc(nbrYmLabel(m))}: <b>${p.months[m]}</b></span>`).join('')}</div>
+      ${p.warnings.map(w=> `<p class="nbr-warn">${esc(w)}</p>`).join('')}
+      <div class="nbr-grid nbr-grid-2">
+        <div class="field"><label for="nbrUpAdv">Whose NBR is this?</label><select id="nbrUpAdv"><option value="">Choose…</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===up.adv ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="new" ${up.adv==='new' ? 'selected' : ''}>New advisor…</option></select></div>
+        ${up.adv==='new' ? `<div class="field"><label for="nbrUpNewName">New advisor's name</label><input type="text" id="nbrUpNewName" value="${esc(up.newName)}"></div>
+          <div class="field"><label for="nbrUpNewOffice">Office</label><select id="nbrUpNewOffice">${NBR_OFFICES.map(([c,l])=> `<option value="${c}" ${c===up.newOffice ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
+      </div>
+      ${existing || existingNpw ? `<label class="nbr-check"><input type="checkbox" id="nbrUpReplace" ${up.replace ? 'checked' : ''}> Replace what's already here for this advisor in these months (${existing} case${existing===1?'':'s'}${existingNpw ? `, ${existingNpw} NPW${existingNpw===1?'':'s'}` : ''})</label>` : ''}
+      <label class="nbr-check"><input type="checkbox" id="nbrUpToBible" ${up.toBible ? 'checked' : ''}> Also add these cases to the Bible <span class="field-hint">(leave this off if you're uploading the Bible as well, or they'll be in it twice)</span></label>
+      <div class="nbr-row-btns">${cancel}<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go" ${!up.adv ? 'disabled' : ''}>Import ${p.entries.length} case${p.entries.length===1?'':'s'}</button></div>
+    </div>`;
+  } else {
+    const fys = Object.keys(p.fys).sort();
+    const existing = Object.values(NBR_BIB).filter(l=> l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')).length;
+    const codes = Object.entries(p.codes).sort((a,b)=> b[1].n - a[1].n);
+    box.innerHTML = `<div class="nbr-up">
+      <div class="nbr-up-title">${esc(up.file)}</div>
+      <p>${p.lines.length} Bible lines: ${fys.map(f=> `${esc(f)} <b>${p.fys[f]}</b>`).join(' · ')}.</p>
+      ${p.warnings.map(w=> `<p class="nbr-warn">${esc(w)}</p>`).join('')}
+      <p class="nbr-p">Match each code in the Adv column to an advisor. Codes set to "New advisor" are added as advisors (you can rename them on the Advisors list afterwards).</p>
+      <div class="nbr-code-map">${codes.map(([code,c])=> `<label><span><b>${esc(code)}</b> · ${c.n} line${c.n===1?'':'s'}${c.office ? ' · '+esc(c.office) : ''}</span>
+        <select data-nbr-code="${esc(code)}"><option value="new" ${up.map[code]==='new' ? 'selected' : ''}>New advisor "${esc(code)}"</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===up.map[code] ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="skip" ${up.map[code]==='skip' ? 'selected' : ''}>Leave these lines out</option></select></label>`).join('')}</div>
+      ${existing ? `<label class="nbr-check"><input type="checkbox" id="nbrUpReplace" ${up.replace ? 'checked' : ''}> Replace the ${existing} Bible line${existing===1?'':'s'} already here for ${esc(fys.join(', '))}</label>` : ''}
+      <div class="nbr-row-btns">${cancel}<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go">Import ${p.lines.length} lines</button></div>
+    </div>`;
+  }
+}
+document.addEventListener('change', e=>{
+  const up = nbrUI.upload; if(!up || up.state!=='ready' || !e.target.closest('#nbrUpArea')) return;
+  const t = e.target;
+  if(t.id==='nbrUpAdv'){ up.adv = t.value; renderNbrUpload(); }
+  else if(t.id==='nbrUpNewName') up.newName = t.value.trim();
+  else if(t.id==='nbrUpNewOffice') up.newOffice = t.value;
+  else if(t.id==='nbrUpReplace') up.replace = t.checked;
+  else if(t.id==='nbrUpToBible') up.toBible = t.checked;
+  else if(t.dataset.nbrCode) up.map[t.dataset.nbrCode] = t.value;
+});
+document.addEventListener('input', e=>{ const up = nbrUI.upload; if(up && e.target.id==='nbrUpNewName') up.newName = e.target.value.trim(); });
+function nbrRunUpload(){
+  const up = nbrUI.upload; if(!up || up.state!=='ready') return;
+  const p = up.parsed, updates = {}, now = Date.now(), by = currentUser.name;
+  let msg = '';
+  if(up.kind==='nbr'){
+    let adv = up.adv;
+    if(!adv){ toast('Choose whose NBR this is.', 'error'); return; }
+    if(adv==='new'){
+      if(!up.newName){ toast("Enter the new advisor's name.", 'error'); return; }
+      adv = nbrKey(); updates['advisors/'+adv] = {name: up.newName, office: up.newOffice || 'F', active: true};
+    }
+    const months = Object.keys(p.months), years = [...new Set(months.map(m=> m.slice(0,4)))], npwMonths = [...new Set(p.npw.map(x=> x.month))];
+    if(up.replace){
+      Object.entries(NBR_ENT).forEach(([id,e])=>{ if(e && e.adv===adv && months.includes(e.month)) Object.assign(updates, nbrEntryDeletePatches(id)); });
+      Object.entries(NBR_NPW).forEach(([id,x])=>{ if(x && x.adv===adv && (npwMonths.includes(x.month) || years.includes(String(x.month||'').slice(0,4)))) updates['npw/'+id] = null; });
+    }
+    const advRec = updates['advisors/'+adv] || NBR_ADV[adv] || {};
+    p.entries.forEach(e=>{
+      const id = nbrKey(), data = {...e, adv, src:'upload', createdAt:now, createdBy:by};
+      updates['entries/'+id] = data;
+      if(up.toBible){ const saved = NBR_ADV[adv]; if(!saved) NBR_ADV[adv] = advRec; Object.assign(updates, nbrLinePatches(id, data)); if(!saved) delete NBR_ADV[adv]; }
+    });
+    p.npw.forEach(x=>{ updates['npw/'+nbrKey()] = {...x, adv, src:'upload', updatedAt:now, updatedBy:by}; });
+    // Add the workbook's drop-down lists to ours.
+    const L = NBR_CFG.lists || {}, cur = k=> Array.isArray(L[k]) ? L[k] : Object.values(L[k]||{});
+    ['sols','vals','saleTypes','leadProviders'].forEach(k=>{ if(p.lists[k].length) updates['config/lists/'+k] = [...new Set([...cur(k), ...p.lists[k]].map(s=> String(s).trim()).filter(Boolean))]; });
+    msg = `Imported ${p.entries.length} case${p.entries.length===1?'':'s'} and ${p.npw.length} NPW${p.npw.length===1?'':'s'} for <b>${esc(advRec.name || nbrAdvName(adv))}</b>.`;
+    nbrUI.regAdv = adv; if(months.length){ const last = months.sort()[months.length-1]; nbrUI.regYear = +last.slice(0,4); nbrUI.regMonth = last; }
+  } else {
+    const ids = {}; // code → advisor id
+    Object.entries(up.map).forEach(([code, v])=>{
+      if(v==='skip') return;
+      if(v==='new'){ const id = nbrKey(); ids[code] = id; updates['advisors/'+id] = {name: code, codes: code, office: p.codes[code].office || '', active: true}; }
+      else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
+    });
+    const fys = Object.keys(p.fys);
+    if(up.replace) Object.entries(NBR_BIB).forEach(([id,l])=>{ if(l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')) updates['bible/'+id] = null; });
+    let n = 0, skipped = 0;
+    p.lines.forEach(l=>{
+      if(l.code && !ids[l.code]){ skipped++; return; }
+      const data = {...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now};
+      delete data.code; if(!data.adv) delete data.adv;
+      updates['bible/'+nbrKey()] = data; n++;
+    });
+    msg = `Imported ${n} Bible line${n===1?'':'s'}${skipped ? ` (left out ${skipped})` : ''}.`;
+  }
+  up.state = 'saving'; up.progress = ''; renderNbrUpload();
+  const keys = Object.keys(updates); let done = 0, chain = Promise.resolve();
+  for(let i=0; i<keys.length; i+=400){
+    const part = {}; keys.slice(i, i+400).forEach(k=> part[k] = updates[k]);
+    chain = chain.then(()=> db.ref('nbr').update(part)).then(()=>{ done += Object.keys(part).length; up.progress = `${Math.round(done/keys.length*100)}%`; const b = document.getElementById('nbrUpArea'); if(b && up.state==='saving') b.firstElementChild.textContent = `Importing ${up.file}… ${up.progress}`; });
+  }
+  chain.then(()=>{ up.state = 'done'; up.msg = msg; renderNbrUpload(); toast('Upload finished.', 'success'); })
+    .catch(err=>{ up.state = 'error'; up.error = 'Stopped part-way: '+err.message+'. Upload the file again to finish (tick "Replace").'; renderNbrUpload(); });
+}
+
+/* ---- clicks across the New Business pages ---- */
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-nbr-go],[data-nbr-reg],[data-nbr-ent],[data-nbr-npw],[data-nbr-line],[data-nbr-pay],[data-nbr-adv],[data-nbr-month],[data-nbr-status],[data-nbr-up]');
+  if(!t || !document.body.classList.contains('mode-nbr')) return;
+  const d = t.dataset;
+  if(d.nbrGo) goPage(d.nbrGo);
+  else if(d.nbrReg){ nbrUI.regAdv = d.nbrReg; nbrUI.regYear = nbrUI.boardYear; nbrUI.regMonth = nbrYm(nbrUI.boardYear, nbrUI.boardMonth); goPage('nbrReg'); }
+  else if(d.nbrEnt) openNbrEntry(d.nbrEnt);
+  else if(d.nbrNpw) openNbrNpw(d.nbrNpw);
+  else if(d.nbrPay){ e.stopPropagation(); openNbrLine(d.nbrPay, {paid:true}); }
+  else if(d.nbrLine) openNbrLine(d.nbrLine);
+  else if(d.nbrAdv) openNbrAdvisor(d.nbrAdv);
+  else if(d.nbrMonth){ nbrUI.regMonth = d.nbrMonth; renderNbrReg(); }
+  else if(d.nbrStatus){ nbrUI.bibStatus = nbrUI.bibStatus===d.nbrStatus ? '' : d.nbrStatus; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); }
+  else if(d.nbrUp==='cancel'){ nbrUI.upload = null; renderNbrUpload(); }
+  else if(d.nbrUp==='go') nbrRunUpload();
+});
 
 renderPinDots();
 setLoginTitle();

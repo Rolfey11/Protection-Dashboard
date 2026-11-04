@@ -3881,6 +3881,7 @@ function closeModal(id, force){
   if(!force && id==='comOverlay' && comOpenId){ const why = comCloseBlock(COM[comOpenId]); if(why){ toast(why,'error'); return; } }
   if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
+  if(id!=='overdueOverlay' && id!=='leadOverlay' && id!=='comOverlay' && currentUser) setTimeout(checkOverdueGate, 0);
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldEditClient = false; ldEditNames = null; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
   if(id==='comOverlay'){ comOpenId = null; comAct = null; comEditOpen = false; if(currentUser) setTimeout(checkOverdueGate, 0); }
@@ -6662,6 +6663,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-04a', date:'2026-11-04', items:[ {text:"<b>The overdue pop-up can't be skipped</b>: it now comes straight back after a page refresh, and other pop-ups no longer hold it back. Deal with each overdue appointment or reminder to clear it.", roles:['mapa']} ]},
   {id:'2026-11-02b', date:'2026-11-02', items:[
     {text:"<b>No more \"Terms issued — chase the client\" in My Day</b>: cases with terms issued are often just waiting for exchange, so they no longer get a chase prompt.", roles:['mapa']},
   ]},
@@ -11098,24 +11100,40 @@ function myOverdueBookings(){
 // Protection and Commercial each have their own lock; Send in Blue has none.
 let overdueGateMode = null;
 function overdueGateList(){ return APP_MODE==='protection' ? myOverdueBookings() : APP_MODE==='com' ? myComOverdue() : []; }
+// Pop-ups that are only for reading: they never hold the overdue pop-up back (it closes them).
+const OVERDUE_GATE_SKIPS = ['whatsNewOverlay','thanksPopOverlay','thanksWallOverlay','referredOverlay','fullyDeclinedOverlay','helpOverlay','viewEmailOverlay'];
+let overdueGateConfirmed = false; // shown with live data (not just the copy kept for a refresh)
 function checkOverdueGate(){
   if(overdueGateActive && overdueGateMode!==APP_MODE){ overdueGateActive = false; closeModal('overdueOverlay', true); }
+  // After a refresh the dashboard is drawn from this tab's saved copy straight away,
+  // so check that copy too: there's no gap before the live data arrives.
   const live = APP_MODE==='protection' ? leadsLive : APP_MODE==='com' && comLoaded;
-  if(!currentUser || !live) return;
+  const ready = live || (APP_MODE==='protection' && leadsLoaded);
+  if(!currentUser || !ready) return;
   const list = overdueGateList();
   if(!list.length){
-    if(overdueGateActive){ overdueGateActive = false; closeModal('overdueOverlay'); toast('All caught up. Thank you!','success'); }
+    if(overdueGateActive && live){ overdueGateActive = false; closeModal('overdueOverlay', true); if(overdueGateConfirmed) toast('All caught up. Thank you!','success'); overdueGateConfirmed = false; }
     return;
   }
-  // Never interrupt someone partway through another window; it opens as soon as they close it.
-  if(!overdueGateActive && document.querySelector('.modal-overlay.open')) return;
+  if(live) overdueGateConfirmed = true;
+  if(!overdueGateActive){
+    // Never interrupt someone partway through another window (a case, a new task, an email...);
+    // it opens the moment they close it. Pop-ups that are just for reading don't count.
+    const busy = [...document.querySelectorAll('.modal-overlay.open')].some(m=> m.id!=='overdueOverlay' && !OVERDUE_GATE_SKIPS.includes(m.id));
+    if(busy) return;
+    OVERDUE_GATE_SKIPS.forEach(id=>{ const m = document.getElementById(id); if(m && m.classList.contains('open')) closeModal(id, true); });
+  }
   document.getElementById('overdueSub').textContent = `${list.length} overdue ${list.length===1 ? 'item needs' : 'items need'} dealing with before you can use the dashboard.`;
   document.getElementById('overdueBody').innerHTML = list.map(l=> `<div class="chase-row"><div class="who"><div><b>${esc(l._com || APP_MODE==='com' ? comName(l) : l.clientName||'(no name)')}</b><small>${esc(fuKindLabel(l))} · ${esc(overdueText(l.followUpDate, l.followUpTime))}${l.followUpNote ? ' · '+esc(l.followUpNote) : ''}</small></div>
       <div class="chase-btns"><button type="button" class="btn btn-primary btn-sm" data-overdue-open="${esc(l.id)}">${fuKind(l)==='reminder' ? 'Deal with reminder' : 'Record outcome'}</button></div></div></div>`).join('');
   document.querySelectorAll('[data-overdue-open]').forEach(b=> b.addEventListener('click', ()=> APP_MODE==='com' ? openComCase(b.dataset.overdueOpen) : openLead(b.dataset.overdueOpen)));
   if(!overdueGateActive){ overdueGateActive = true; overdueGateMode = APP_MODE; openModal('overdueOverlay'); }
 }
-setInterval(()=>{ if(currentUser) checkOverdueGate(); }, 60000);
+// Checked often, and again whenever any window closes or the tab comes back into view,
+// so nothing (a refresh, another pop-up, switching tabs) gets round it.
+setInterval(()=>{ if(currentUser) checkOverdueGate(); }, 15000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && currentUser) checkOverdueGate(); });
+window.addEventListener('focus', ()=>{ if(currentUser) checkOverdueGate(); });
 
 /* mode: 'onrisk' → On Risk; 'underwriting' → Submitted / In Underwriting;
    'nowonrisk' → a case with terms issued that the client has taken up. */

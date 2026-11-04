@@ -1214,6 +1214,13 @@ body:not(.mode-com) .com-only{display:none !important;}
 .lead-card.quoted:hover{border-color:color-mix(in srgb, var(--green) 60%, var(--border));}
 .lc-quoted{flex:none; display:grid; place-items:center; width:18px; height:18px; color:var(--green); background:var(--green-bg); border-radius:50%;}
 .lc-quoted .ico{width:12px; height:12px;}
+/* In research (advisor's own marker, Appointments / Research only): pale yellow, with a magnifier so it isn't colour alone. */
+.lead-card.research{background:color-mix(in srgb, #F2C230 16%, var(--surface)); border-color:color-mix(in srgb, #D9A800 45%, var(--border));}
+.lead-card.research:hover{border-color:color-mix(in srgb, #D9A800 70%, var(--border));}
+.lc-research{flex:none; display:grid; place-items:center; width:18px; height:18px; color:#8A6A00; background:color-mix(in srgb, #F2C230 35%, var(--surface)); border-radius:50%;}
+.lc-research .ico{width:11px; height:11px;}
+.research-on{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; font-weight:700; color:#8A6A00;}
+.research-on .linkish{font-size:12.5px; font-weight:600;}
 /* Cards scrolled out of view inside a column aren't laid out until they're
    scrolled to, which keeps switching back to a busy board quick. */
 .pot-body > .lead-card{content-visibility:auto; contain-intrinsic-size:auto 76px;}
@@ -3844,6 +3851,7 @@ const ICON_PATHS = {
   trendUp:'<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
   trendDown:'<path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>',
   users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
   pound:'<path d="M18 7c0-5.3-8-5.3-8 0v10"/><path d="M6 13h8"/><path d="M6 21h12"/><path d="M6 21c2.5 0 4-1.5 4-4"/>',
 };
 function ico(name, cls=''){
@@ -6663,6 +6671,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-04b', date:'2026-11-04', items:[ {text:"<b>In Research</b>: on a case in Appointments / Research, press <b>In Research</b> (next to Quotes Sent). The card turns <b>pale yellow</b> on your dashboard, so you can tell research cases from appointments. Once you press Quotes Sent it turns pale green as before.", roles:['mapa']} ]},
   {id:'2026-11-04a', date:'2026-11-04', items:[ {text:"<b>The overdue pop-up can't be skipped</b>: it now comes straight back after a page refresh, and other pop-ups no longer hold it back. Deal with each overdue appointment or reminder to clear it.", roles:['mapa']} ]},
   {id:'2026-11-02b', date:'2026-11-02', items:[
     {text:"<b>No more \"Terms issued — chase the client\" in My Day</b>: cases with terms issued are often just waiting for exchange, so they no longer get a chase prompt.", roles:['mapa']},
@@ -9011,11 +9020,14 @@ function leadCardHtml(lead, potKey){
 
   // Contacted Clients who've had their quotes show pale green, with a label so it isn't colour alone.
   const quoted = potKey==='existing' && !!lead.quotesSentAt;
+  // Marked "In research" by the advisor (and no quotes yet): pale yellow. Overdue red still wins.
+  const research = potKey==='existing' && !quoted && !!lead.researchAt && !isOverdue;
   return `
-    <div class="lead-card ${isOverdue?'overdue':''} ${quoted?'quoted':''}" data-id="${esc(lead.id)}">
+    <div class="lead-card ${isOverdue?'overdue':''} ${quoted?'quoted':''} ${research?'research':''}" data-id="${esc(lead.id)}">
       <div class="lc-top">
         <div class="lc-name">${esc(lead.clientName)}</div>${refTag}
         ${quoted ? `<span class="lc-quoted" title="Quotes sent ${esc(fmtDate(lead.quotesSentAt))}" aria-label="Quotes sent">${ico('check')}</span>` : ''}
+        ${research ? `<span class="lc-research" title="In research since ${esc(fmtDate(lead.researchAt))}" aria-label="In research">${ico('search')}</span>` : ''}
         ${(potKey==='new' || potKey==='existing') ? (()=>{ const n = contactAttempts(lead); return n ? `<span class="lc-att" title="${n} contact attempt${n===1?'':'s'}">${ico('phone')}${n}</span>` : ''; })() : ''}
         ${advisor}
       </div>
@@ -9187,6 +9199,7 @@ const HELP = [
     {t:'Reminders and appointments', roles:['mapa','management'], h:`Every case in <b>Appointments / Research</b> must have its next step booked; you can't close it until it does. <b>New Cases</b> can be closed without one (it shows <i>Nothing booked yet</i> until you book).<ul><li><b>Set reminder</b>: a date and time to chase the client. The case stays in New Cases until you speak to them. <b>Save &amp; add to Google Calendar</b> adds "REMINDER CHASE - client name" to your calendar.</li><li><b>Book appointment</b>: a phone call, video call or face to face meeting. The case moves to Appointments / Research. The calendar event is "Protection Call with Michael Usher Mortgage Services - client name", with or without a client invite.</li><li><b>Decline</b> (Appointments / Research only): opens the decline form with the reason, detail and decline steps.</li></ul>`},
     {t:'Email a client', roles:['mapa','management'], h:`<ol><li>Click <b>Email</b> on the case.</li><li>Pick a template (optional) and fill in anything in <b>[square brackets]</b>.</li><li>Click <b>Open in Gmail</b>, then <b>Send</b> in Gmail.</li></ol>A copy is saved in the case history.`},
     {t:'Sign up → Submitted → Terms issued → On Risk', roles:['mapa','management'], h:`On a case in <b>Appointments / Research</b> you can press <b>Sign Up</b> (next to Decline) at any time, or choose Sign Up from the Outcome of meeting.<ol><li>After the call, click <b>Sign Up</b> and choose <b>Submitted to underwriting</b> (or <b>On Risk</b> if no underwriting is needed). Enter the total commission, choose each policy sold (DTA, LTA, FIB, CIC, IP, WOL) and tick which client it covers. Tick more than one client for a joint policy; use <b>+ Add another policy</b> for more.</li><li>When the insurer offers terms, open the case and click <b>Terms issued</b> (add the terms if you like).</li><li>When the client goes ahead, click <b>On Risk</b>. The commission and policies are filled in for you: check them and change anything that's different.</li></ol>`},
+    {t:'Mark a case as in research', roles:['mapa'], h:`Open one of your cases in <b>Appointments / Research</b> and press <b>In Research</b> (next to Quotes Sent). The card turns pale yellow with a magnifying glass, so you can tell research cases from appointments at a glance. When you press <b>Quotes Sent</b> it turns pale green instead. Pressed it by mistake? Press <b>Undo</b> on the case.`},
     {t:'Mark quotes as sent', roles:['mapa','management'], h:`Open a case in <b>Appointments / Research</b> and press <b>Quotes Sent</b> once the client has their quotes. The card turns pale green with a ✓, and it's recorded in the case history. Pressed it by mistake? Press <b>Undo</b> on the case.`},
     {t:'Decline a case', roles:['mapa','management'], h:`<ol><li>Click <b>Call</b> (or another action), then <b>Decline</b>.</li><li>Choose the reason and add detail.</li><li>Tick any steps already done: reasoning sent, HLP email, NPW.</li></ol>The case waits in <b>Declined · email pending</b> until all three steps are done, then moves to <b>Fully Declined Leads</b> (the button next to the advisor filter). For <b>Unable to Contact</b>, the rule is 10 contact attempts; the tracker shows how many are logged.`},
     {t:'Client has a medical condition', roles:['mapa','management'], h:`Open <b>Useful Info → Medical Conditions Guide</b>. Search for the condition (e.g. "diabetes" or "back") to see how insurers usually treat it for Life, CI and IP, and the questions to ask before you go to market. It's general guidance: always get an indicative decision from the insurer.`},
@@ -9524,7 +9537,10 @@ function renderLeadModal(){
     if(lead.status==='new') nextHtml = `<span>Next: <b>book an appointment</b> with the client, or <b>set a reminder</b> to chase them. The case stays in New Cases until an appointment is booked.</span>`;
     if(lead.status==='existing') nextHtml = lead.quotesSentAt
       ? `<span class="quotes-done">${ico('checkCircle')} <b>Quotes sent ${esc(fmtDate(lead.quotesSentAt))}</b>${lead.quotesSentByName ? ' by '+esc(lead.quotesSentByName) : ''} · the case shows pale green on the dashboard</span><button type="button" class="linkish" id="quotesUndoBtn">Undo</button>`
-      : `<span>Next stage: <b>Quotes sent</b>. Mark it once the client has their quotes (the case shows pale green on the dashboard).</span><button type="button" class="stage-btn" id="quotesSentBtn" style="background:var(--green);">✓ Quotes Sent</button>`;
+      : `${currentUser.role==='mapa' && lead.researchAt
+          ? `<span class="research-on">${ico('search')} In research since ${esc(fmtDate(lead.researchAt))} · the case shows pale yellow on the dashboard <button type="button" class="linkish" id="researchUndoBtn">Undo</button></span>`
+          : `<span>Next stage: <b>Quotes sent</b>. Mark it once the client has their quotes (the case shows pale green on the dashboard).</span>`}
+        <span style="display:flex; gap:8px; flex-wrap:wrap;">${currentUser.role==='mapa' && !lead.researchAt ? `<button type="button" class="stage-btn" id="researchBtn" style="background:#B98F00;" title="Shows the case pale yellow on your dashboard, so you can tell research cases from appointments">${ico('search')} In Research</button>` : ''}<button type="button" class="stage-btn" id="quotesSentBtn" style="background:var(--green);">✓ Quotes Sent</button></span>`;
     if(lead.status==='underwriting') nextHtml = `<span>Submitted / in underwriting. When the insurer issues terms, mark it here.</span><button type="button" class="stage-btn" id="termsIssuedBtn" style="background:var(--indigo);">Terms issued</button>
       <div id="termsForm" class="hidden" style="width:100%;">
         <div class="field" style="margin-bottom:8px;"><label for="termsNote">Terms (optional)</label><input type="text" id="termsNote" maxlength="200" placeholder="e.g. Standard terms, or +50% loading on CI"></div>
@@ -9683,6 +9699,24 @@ function renderLeadModal(){
         .then(()=>{ toast('Quotes sent. The case now shows green in Appointments / Research.','success'); refreshLeadModal(true); })
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
     });
+    // In Research (advisors only): pale yellow on the dashboard until quotes are sent.
+    const rsb = document.getElementById('researchBtn');
+    if(rsb) rsb.addEventListener('click', function(){
+      this.disabled = true;
+      const now = Date.now();
+      logAudit(lead.id, {type:'research', text:`In research - ${fmtDateSlash(now)}`, byId:currentUser.id, byName:currentUser.name, at:now},
+        {researchAt:now, researchBy:currentUser.id})
+        .then(()=>{ toast('Marked as in research. The case now shows pale yellow on your dashboard.','success'); refreshLeadModal(true); })
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    });
+    const rub = document.getElementById('researchUndoBtn');
+    if(rub) rub.addEventListener('click', function(){
+      this.disabled = true;
+      logAudit(lead.id, {type:'research', text:'In research mark removed', byId:currentUser.id, byName:currentUser.name, at:Date.now()},
+        {researchAt:null, researchBy:null})
+        .then(()=>{ toast('In research mark removed.','success'); refreshLeadModal(true); })
+        .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
+    });
     const qub = document.getElementById('quotesUndoBtn');
     if(qub) qub.addEventListener('click', function(){
       this.disabled = true;
@@ -9735,7 +9769,7 @@ function renderLeadModal(){
 function auditIcon(type){
   const map = {
     assigned:'pin', call:'phone', text:'message', email:'mail', emailIn:'mail', appointment:'calendar', other:'note',
-    feedback:'message', thanks:'send', signup:'checkCircle', underwriting:'clock', terms:'note', quotes:'send', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
+    feedback:'message', thanks:'send', signup:'checkCircle', underwriting:'clock', terms:'note', quotes:'send', research:'search', followup:'calendarCheck', decline:'xCircle', sent:'send', hlp:'folder', npw:'checkCircle', status:'shuffle', note:'note', detail:'mail'
   };
   return map[type] ? ico(map[type]) : '•';
 }

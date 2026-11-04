@@ -684,6 +684,7 @@ body.mode-com .mode-switch button.on{background:#0E6E5C;}
 /* New Business (Admin + Management): advisors' NBRs, the Bible and the Salesboard */
 body.mode-nbr .mode-switch button.on{background:#8A5A00;}
 body.mode-nbr .prot-only{display:none !important;}
+body.nbr-view .nbr-only:not([data-page="nbrBoard"]){display:none !important;}
 body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-toolbar{display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
 .nbr-toolbar label{display:flex; flex-direction:column; gap:4px; font-size:11.5px; font-weight:700; color:var(--text-muted);}
@@ -4637,6 +4638,7 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
   tab.addEventListener('click', ()=>{ if(tab.dataset.page==='settings') settingsSel = null; goPage(tab.dataset.page); });
 });
 function goPage(page){
+  if(/^nbr/.test(page) && page!=='nbrBoard' && currentUser && !nbrAccess()) page = 'nbrBoard';
   document.querySelectorAll('.nav-tab').forEach(t=> t.classList.toggle('active', t.dataset.page===page));
   document.getElementById('page-dashboard').classList.toggle('hidden', page!=='dashboard');
   document.getElementById('page-insights').classList.toggle('hidden', page!=='insights');
@@ -5346,17 +5348,17 @@ function sibAccess(){ return !currentUser || !isProtAdviser(currentUser.id); }
 function syncSibAccess(){
   document.querySelector('#modeSwitch [data-mode="sib"]').classList.toggle('hidden', !sibAccess());
   // Only Protection left (no Commercial tick): no need for the switch at all.
-  document.getElementById('modeSwitch').classList.toggle('hidden', !sibAccess() && !comAccess() && !nbrAccess());
+  document.getElementById('modeSwitch').classList.toggle('hidden', !sibAccess() && !comAccess() && !nbrSeeAccess());
   if(!sibAccess() && APP_MODE==='sib') setAppMode('protection');
 }
 function setAppMode(mode, go=true){
-  APP_MODE = mode==='sib' && sibAccess() ? 'sib' : mode==='com' && (!currentUser || comAccess()) ? 'com' : mode==='nbr' && (!currentUser || nbrAccess()) ? 'nbr' : 'protection';
+  APP_MODE = mode==='sib' && sibAccess() ? 'sib' : mode==='com' && (!currentUser || comAccess()) ? 'com' : mode==='nbr' && (!currentUser || nbrSeeAccess()) ? 'nbr' : 'protection';
   try{ localStorage.setItem('plt_mode', APP_MODE); }catch(e){}
   document.body.classList.toggle('mode-sib', APP_MODE==='sib');
   document.body.classList.toggle('mode-com', APP_MODE==='com');
   document.body.classList.toggle('mode-nbr', APP_MODE==='nbr');
   document.querySelectorAll('#modeSwitch [data-mode]').forEach(b=> b.classList.toggle('on', b.dataset.mode===APP_MODE));
-  document.querySelector('.brand-text .t1').textContent = APP_MODE==='sib' ? 'Send in Blue' : APP_MODE==='com' ? 'Commercial' : APP_MODE==='nbr' ? 'New Business' : 'Protection Lead Tracker';
+  document.querySelector('.brand-text .t1').textContent = APP_MODE==='sib' ? 'Send in Blue' : APP_MODE==='com' ? 'Commercial' : APP_MODE==='nbr' ? (nbrViewer() ? 'Salesboard' : 'New Business') : 'Protection Lead Tracker';
   if(go && currentUser) goPage(appHomePage());
   if(currentUser) setTimeout(checkOverdueGate, 0);
 }
@@ -6810,6 +6812,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05d', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: click <b>Salesboard</b> at the top to see the live sales figures: written and banked by advisor and month, the year by month against last year and the targets, and each advisor's year.", roles:['mapa']} ]},
   {id:'2026-11-05c', date:'2026-11-05', items:[ {text:"<b>New Business</b>: for a year with no NBR uploaded (e.g. 2025), the Advisor NBR and Salesboard now show what each advisor wrote that month, broken down by proc fee, mums fee, protection, sols and val, worked out from the Bible.", roles:['admin','management']} ]},
   {id:'2026-11-05b', date:'2026-11-05', items:[ {text:"<b>New Business</b>: the Bible table now fits on the screen, and its column headings stay at the top as you scroll down.", roles:['admin','management']} ]},
   {id:'2026-11-05a', date:'2026-11-05', items:[ {text:"<b>New Business</b>: uploading the Bible now has a <b>Fill in the blanks</b> option. Each row is matched to the NBR cases and Bible lines already here, and only what's missing is added (date paid, amount paid, offer and completion dates…). Nothing already entered is changed, and nothing is doubled.", roles:['admin','management']} ]},
@@ -13722,21 +13725,53 @@ const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMont
   bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, upload:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
-function nbrReady(){ return Object.values(nbrLoaded).every(Boolean); }
+// MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
+function nbrViewer(){ return !!currentUser && currentUser.role==='mapa'; }
+function nbrSeeAccess(){ return nbrAccess() || nbrViewer(); }
+let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null;
+function nbrReady(){ return nbrViewer() ? nbrSumLoaded : Object.values(nbrLoaded).every(Boolean); }
 function syncNbrAccess(){
-  const ok = nbrAccess();
-  document.getElementById('nbrModeBtn').classList.toggle('hidden', !ok);
-  if(!ok && nbrListening) stopNbrListener();
+  const ok = nbrSeeAccess(), view = nbrViewer();
+  const btn = document.getElementById('nbrModeBtn');
+  btn.classList.toggle('hidden', !ok); btn.textContent = view ? 'Salesboard' : 'New Business';
+  document.body.classList.toggle('nbr-view', view);
+  if(!nbrAccess() && nbrListening) stopNbrListener();
+  if(!view && nbrSumListening) stopNbrSummary();
   if(!ok && APP_MODE==='nbr'){ closeModal('nbrFormOverlay', true); setAppMode('protection'); }
+  else if(APP_MODE==='nbr'){ document.querySelector('.brand-text .t1').textContent = view ? 'Salesboard' : 'New Business'; if(view && !nbrPageShown('nbrBoard')) goPage('nbrBoard'); }
+}
+function startNbrSummary(){
+  if(nbrSumListening || !nbrViewer()) return;
+  nbrSumListening = true; nbrError = '';
+  db.ref('nbrBoard').on('value', snap=>{ NBR_SUMMARY = snap.val() || {}; nbrSumLoaded = true; nbrVer++; nbrRenderSoon(); },
+    ()=>{ nbrError = 'Could not load the Salesboard. Ask Management to publish the updated Firebase rules, then refresh.'; stopNbrSummary(); nbrRenderSoon(); });
+}
+function stopNbrSummary(){ db.ref('nbrBoard').off(); nbrSumListening = false; nbrSumLoaded = false; NBR_SUMMARY = null; nbrVer++; }
+// Admin / Management: keep the Salesboard summary up to date whenever New Business changes.
+function nbrPublishSoon(){ clearTimeout(nbrPublishTimer); nbrPublishTimer = setTimeout(nbrPublishSummary, 1500); }
+function nbrPublishSummary(){
+  if(!nbrAccess() || !nbrListening || !Object.values(nbrLoaded).every(Boolean)) return;
+  const A = nbrAgg(), r2 = v=> Math.round(n0(v)*100)/100, key = k=> k || '_';
+  const pack = (o, f)=>{ const out = {}; Object.entries(o).forEach(([adv, months])=>{ const m = {}; Object.entries(months).forEach(([ym, v])=>{ const x = f(v); if(x!=null) m[ym] = x; }); if(Object.keys(m).length) out[key(adv)] = m; }); return out; };
+  const advisors = {}; Object.entries(NBR_ADV).forEach(([id,a])=>{ if(a) advisors[id] = {name: a.name || '', office: a.office || '', active: a.active!==false}; });
+  const sum = {advisors,
+    w: pack(A.w, v=>{ const x = {}; NBR_CATS.forEach(([k])=>{ if(r2(v[k])) x[k] = r2(v[k]); }); return Object.keys(x).length ? x : null; }),
+    npw: pack(A.npw, v=> r2(v) || null), bank: pack(A.bank, v=> r2(v) || null),
+    fromBible: [...A.fromBible].map(k=> k.startsWith('|') ? '_'+k : k), years: A.years,
+    targets: {written: nbrTargets().written, banked: nbrTargets().banked}};
+  const json = JSON.stringify(sum);
+  if(json===nbrPublished) return;
+  db.ref('nbrBoard').set({...sum, updatedAt: Date.now()}).then(()=>{ nbrPublished = json; }).catch(()=>{});
 }
 function startNbrListener(){
+  if(nbrViewer()){ startNbrSummary(); return; }
   if(nbrListening || !nbrAccess()) return;
   nbrListening = true; nbrError = '';
   Object.keys(nbrLoaded).forEach(k=>{
     db.ref('nbr/'+k).on('value', snap=>{
       const v = snap.val() || {};
       if(k==='advisors') NBR_ADV = v; else if(k==='entries') NBR_ENT = v; else if(k==='npw') NBR_NPW = v; else if(k==='bible') NBR_BIB = v; else NBR_CFG = v;
-      nbrLoaded[k] = true; nbrVer++; nbrRenderSoon();
+      nbrLoaded[k] = true; nbrVer++; nbrRenderSoon(); nbrPublishSoon();
     }, ()=>{
       nbrError = 'Could not load New Business. Publish the updated Firebase rules, then refresh.';
       stopNbrListener(); nbrRenderSoon();
@@ -13744,6 +13779,8 @@ function startNbrListener(){
   });
 }
 function stopNbrListener(){
+  clearTimeout(nbrPublishTimer); nbrPublished = '';
+  if(nbrSumListening) stopNbrSummary();
   Object.keys(nbrLoaded).forEach(k=>{ db.ref('nbr/'+k).off(); nbrLoaded[k] = false; });
   nbrListening = false; NBR_ADV = {}; NBR_ENT = {}; NBR_NPW = {}; NBR_BIB = {}; NBR_CFG = {}; nbrVer++; nbrUI.upload = null;
 }
@@ -13772,7 +13809,9 @@ function nbrFyMonths(fy){ const y = nbrFyStart(fy); return Array.from({length:12
 function nbrFyLabel(fy){ const y = nbrFyStart(fy); return `${fy} (Mar ${y} – Feb ${y+1})`; }
 function nbrToday(){ return todayISO(); }
 function nbrThisYm(){ return nbrToday().slice(0,7); }
-function nbrAdvName(id){ return NBR_ADV[id] && NBR_ADV[id].name ? NBR_ADV[id].name : (id ? '(unknown advisor)' : '(no advisor)'); }
+// The advisor list: the full one, or the Salesboard summary's for MAPAs.
+function nbrAdvMap(){ return nbrViewer() ? ((NBR_SUMMARY && NBR_SUMMARY.advisors) || {}) : NBR_ADV; }
+function nbrAdvName(id){ const M = nbrAdvMap(); return M[id] && M[id].name ? M[id].name : (id ? '(unknown advisor)' : '(no advisor)'); }
 function nbrAdvCodes(a){ return String(a && a.codes || '').split(',').map(s=> s.trim()).filter(Boolean); }
 function nbrAdvs(all){
   const order = {F:0, G:1, W:2};
@@ -13791,7 +13830,10 @@ function nbrLists(){
     leadProviders: uniq([...arr(L.leadProviders), ...fromData('leadProvider')]),
     saleTypes: arr(L.saleTypes).length ? uniq(arr(L.saleTypes)) : NBR_SALE_TYPES.slice()};
 }
-function nbrTargets(){ return {written: n0(NBR_CFG.targetWritten) || 3000000, banked: n0(NBR_CFG.targetBanked) || 2300000}; }
+function nbrTargets(){
+  if(nbrViewer()){ const t = (NBR_SUMMARY && NBR_SUMMARY.targets) || {}; return {written: n0(t.written) || 3000000, banked: n0(t.banked) || 2300000}; }
+  return {written: n0(NBR_CFG.targetWritten) || 3000000, banked: n0(NBR_CFG.targetBanked) || 2300000};
+}
 function nbrDefaultSource(){ return NBR_CFG.defaultSource || 'HLP'; }
 
 /* Written by advisor and month (from the NBR), NPW by advisor and month,
@@ -13800,6 +13842,14 @@ function nbrDefaultSource(){ return NBR_CFG.defaultSource || 'HLP'; }
    from that advisor's Bible lines instead: each line's amount, by product, in the month it was written. */
 function nbrAgg(){
   if(nbrAggCache && nbrAggCache.v===nbrVer) return nbrAggCache;
+  if(nbrViewer()){
+    const S = NBR_SUMMARY || {}, unkey = o=>{ const out = {}; Object.entries(o||{}).forEach(([k,v])=> out[k==='_' ? '' : k] = v); return out; };
+    const w = {}; Object.entries(unkey(S.w)).forEach(([adv, months])=>{ w[adv] = {}; Object.entries(months||{}).forEach(([ym, v])=>{ w[adv][ym] = {proc:0, mums:0, prot:0, sols:0, val:0, n:0, ...v}; }); });
+    const years = (Array.isArray(S.years) ? S.years : Object.values(S.years||{})).map(Number);
+    if(!years.includes(new Date().getFullYear())) years.push(new Date().getFullYear());
+    const fb = (Array.isArray(S.fromBible) ? S.fromBible : Object.values(S.fromBible||{})).map(k=> k.startsWith('_|') ? k.slice(1) : k);
+    return (nbrAggCache = {v:nbrVer, w, npw:unkey(S.npw), bank:unkey(S.bank), fromBible:new Set(fb), years:years.sort((a,b)=> b-a)});
+  }
   const w = {}, npw = {}, bank = {}, years = new Set(), entYears = new Set(), fromBible = new Set();
   Object.values(NBR_ENT).forEach(e=>{ if(e && e.month) entYears.add((e.adv||'')+'|'+e.month.slice(0,4)); });
   Object.values(NBR_ENT).forEach(e=>{
@@ -13846,7 +13896,7 @@ function nbrSum(rows){
 }
 // Every advisor id with figures (including ones no longer on the list).
 function nbrAllAdvIds(){
-  const A = nbrAgg(), ids = new Set(Object.keys(NBR_ADV));
+  const A = nbrAgg(), ids = new Set(Object.keys(nbrAdvMap()));
   [A.w, A.npw, A.bank].forEach(o=> Object.keys(o).forEach(k=> ids.add(k)));
   return [...ids];
 }
@@ -14123,8 +14173,9 @@ function renderNbrBoard(){
   if(!nbrUI.boardMonth) nbrUI.boardMonth = now.getFullYear()===nbrUI.boardYear ? now.getMonth()+1 : 12;
   const Y = nbrUI.boardYear, yms = nbrYearMonths(Y), prev = nbrYearMonths(Y-1), selYm = nbrYm(Y, nbrUI.boardMonth);
   const ids = nbrAllAdvIds();
-  const advs = ids.filter(id=> (NBR_ADV[id] && NBR_ADV[id].active!==false) || nbrYearHasData(id, Y))
-    .map(id=> ({id, name:nbrAdvName(id), office:(NBR_ADV[id]||{}).office || ''}))
+  const AM = nbrAdvMap(), view = nbrViewer();
+  const advs = ids.filter(id=> (AM[id] && AM[id].active!==false) || nbrYearHasData(id, Y))
+    .map(id=> ({id, name:nbrAdvName(id), office:(AM[id]||{}).office || ''}))
     .sort((a,b)=> ({F:0,G:1,W:2}[a.office] ?? 3) - ({F:0,G:1,W:2}[b.office] ?? 3) || a.name.localeCompare(b.name));
   const monthTot = ym=> nbrSum(ids.map(id=> nbrRow(id, ym)));
   const year = yms.map(monthTot), lastYear = prev.map(monthTot), yt = nbrSum(year);
@@ -14139,7 +14190,7 @@ function renderNbrBoard(){
     const list = advs.filter(a=> (a.office||'')===code); if(!list.length) return '';
     const rows = list.map(a=> ({a, r: nbrRow(a.id, selYm)})); const tot = nbrSum(rows.map(x=> x.r));
     return `<tr class="nbr-group"><td colspan="10">${esc(label)}</td></tr>
-      ${rows.map(({a,r})=> `<tr><td><button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">${esc(a.name)}</button></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, tot.total)}</td><td class="num">${nbrPct(r.total, grand.total)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
+      ${rows.map(({a,r})=> `<tr><td>${view ? esc(a.name) : `<button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">${esc(a.name)}</button>`}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, tot.total)}</td><td class="num">${nbrPct(r.total, grand.total)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
       <tr class="nbr-tot"><td>${esc(label)} total</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(tot[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(tot.total)}</td><td class="num">${tot.total ? '100%' : '–'}</td><td class="num">${nbrPct(tot.total, grand.total)}</td><td class="num">${nbrMoneyCell(tot.banked)}</td></tr>`;
   };
   const boardTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
@@ -14176,9 +14227,10 @@ function renderNbrBoard(){
   const unassigned = nbrSum(yms.map(ym=> nbrRow('', ym)));
   const fromBibleNames = advs.filter(a=> nbrAgg().fromBible.has(a.id+'|'+Y)).map(a=> a.name);
 
-  const empty = !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
+  const empty = view ? !Object.keys((NBR_SUMMARY && NBR_SUMMARY.w) || {}).length && !Object.keys((NBR_SUMMARY && NBR_SUMMARY.bank) || {}).length : !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
   el.innerHTML = `
-    ${empty ? `<div class="nbr-callout">Nothing here yet. Go to <button type="button" class="linkish" data-nbr-go="nbrSetup">Advisors &amp; upload</button> to upload the advisors' NBRs and the Bible, or add advisors and start adding cases on the <button type="button" class="linkish" data-nbr-go="nbrReg">Advisor NBR</button>.</div>` : ''}
+    ${empty && view ? `<div class="nbr-callout">Nothing on the Salesboard yet.</div>` : ''}
+    ${empty && !view ? `<div class="nbr-callout">Nothing here yet. Go to <button type="button" class="linkish" data-nbr-go="nbrSetup">Advisors &amp; upload</button> to upload the advisors' NBRs and the Bible, or add advisors and start adding cases on the <button type="button" class="linkish" data-nbr-go="nbrReg">Advisor NBR</button>.</div>` : ''}
     <div class="nbr-toolbar">
       <label>Year <select id="nbrBoardYear">${nbrYearOptions(Y)}</select></label>
       <label>Month <select id="nbrBoardMonth">${NBR_MONTHS_LONG.map((m,i)=> `<option value="${i+1}" ${i+1===nbrUI.boardMonth ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
@@ -14193,7 +14245,7 @@ function renderNbrBoard(){
     <h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} by advisor</h2>
     ${fromBibleNames.length ? `<p class="field-hint nbr-bib-note">Written figures for ${esc(fromBibleNames.length > 4 ? fromBibleNames.length+' advisors' : fromBibleNames.join(', '))} in ${Y} come from the Bible, as there's no NBR for them that year.</p>` : ''}
     ${boardTable}
-    ${unassigned.banked ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
+    ${unassigned.banked && !view ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
     <h2 class="nbr-h2">${Y} by month</h2>
     ${yearTable}
     <h2 class="nbr-h2">${Y} written by product</h2>

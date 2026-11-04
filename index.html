@@ -739,11 +739,14 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-p{font-size:13px; color:var(--text-muted); margin-bottom:12px;}
 .nbr-upload-btns{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
 .nbr-upload-btns label{cursor:pointer;}
-.nbr-up{border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--bg); font-size:13px;}
-.nbr-up p{margin-bottom:8px;}
+.nbr-ubox{border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--bg); font-size:13px;}
+.nbr-ubox p{margin-bottom:8px;}
+.nbr-ubox-dim{color:var(--text-muted);}
+.nbr-up-list{display:flex; flex-direction:column; gap:10px; margin-bottom:12px;}
+.nbr-up-remove{font-weight:600; margin-left:8px; font-size:12px;}
 .nbr-up-title{font-weight:800; margin-bottom:6px;}
-.nbr-up-bad{border-color:var(--red); color:var(--red);}
-.nbr-up-good{border-color:var(--green);}
+.nbr-ubox-bad{border-color:var(--red); color:var(--red);}
+.nbr-ubox-good{border-color:var(--green);}
 .nbr-up-months{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12px; color:var(--text-muted); margin-bottom:12px;}
 .nbr-warn{color:var(--amber); font-weight:600;}
 .nbr-code-map{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:8px; margin-bottom:12px;}
@@ -6787,6 +6790,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-04d', date:'2026-11-04', items:[ {text:"<b>New Business</b>: you can now upload several Advisor NBRs in one go (hold Ctrl and click each file). Each file gets its own preview where you choose whose NBR it is, then they're imported one after another.", roles:['admin','management']} ]},
   {id:'2026-11-04c', date:'2026-11-04', items:[ {text:"<b>New Business</b> (Admin and Management only): a new section, next to Protection / Send in Blue, that replaces the Advisor NBR, NBR Bible and Live Salesboard spreadsheets. Add a case to an advisor's NBR once and it goes into the Bible too; add the date paid in the Bible and the Salesboard updates. Upload the existing spreadsheets on <b>Advisors &amp; upload</b> to bring in past months.", roles:['admin','management']} ]},
   {id:'2026-11-04b', date:'2026-11-04', items:[ {text:"<b>In Research</b>: on a case in Appointments / Research, press <b>In Research</b> (next to Quotes Sent). The card turns <b>pale yellow</b> on your dashboard, so you can tell research cases from appointments. Once you press Quotes Sent it turns pale green as before.", roles:['mapa']} ]},
   {id:'2026-11-04a', date:'2026-11-04', items:[ {text:"<b>The overdue pop-up can't be skipped</b>: it now comes straight back after a page refresh, and other pop-ups no longer hold it back. Deal with each overdue appointment or reminder to clear it.", roles:['mapa']} ]},
@@ -14317,9 +14321,9 @@ function renderNbrSetup(){
       </section>
       <section class="nbr-card">
         <div class="nbr-card-head"><h2>Upload spreadsheets</h2></div>
-        <p class="nbr-p">Upload the spreadsheets as they are (.xlsx). Everything goes into the right month, so past months are filled in too. You can upload the same file again later: it replaces what came from it before.</p>
+        <p class="nbr-p">Upload the spreadsheets as they are (.xlsx). You can pick several Advisor NBRs at once (hold Ctrl and click each one): each is imported on its own. Everything goes into the right month, so past months are filled in too. You can upload the same file again later: it replaces what came from it before.</p>
         <div class="nbr-upload-btns">
-          <label class="btn btn-secondary"><input type="file" id="nbrUpNbr" accept=".xlsx,.xls" class="hidden">Upload an Advisor NBR</label>
+          <label class="btn btn-secondary"><input type="file" id="nbrUpNbr" accept=".xlsx,.xls" class="hidden" multiple>Upload Advisor NBRs</label>
           <label class="btn btn-secondary"><input type="file" id="nbrUpBible" accept=".xlsx,.xls" class="hidden">Upload the Bible</label>
         </div>
         <div id="nbrUpArea"></div>
@@ -14352,8 +14356,8 @@ function renderNbrSetup(){
     </div>`;
   if(nbrUI.upload) renderNbrUpload();
   document.getElementById('nbrAddAdv').addEventListener('click', ()=> openNbrAdvisor(null));
-  document.getElementById('nbrUpNbr').addEventListener('change', e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) nbrStartUpload(f, 'nbr'); });
-  document.getElementById('nbrUpBible').addEventListener('change', e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) nbrStartUpload(f, 'bible'); });
+  document.getElementById('nbrUpNbr').addEventListener('change', e=>{ const fs = [...e.target.files]; e.target.value = ''; if(fs.length) nbrStartUpload(fs, 'nbr'); });
+  document.getElementById('nbrUpBible').addEventListener('change', e=>{ const fs = [...e.target.files]; e.target.value = ''; if(fs.length) nbrStartUpload(fs, 'bible'); });
   document.getElementById('nbrSaveTargets').addEventListener('click', ()=>{
     const w = nfn('nbrTgtW'), b = nfn('nbrTgtB');
     nbrWrite({'config/targetWritten': w || null, 'config/targetBanked': b || null, 'config/defaultSource': nfv('nbrDefSrc') || null}).then(()=> toast('Saved.', 'success')).catch(err=> toast('Could not save: '+err.message, 'error'));
@@ -14512,144 +14516,217 @@ function nbrParseBible(wb){
   return out;
 }
 
-/* ---- Upload: read, check, then import ---- */
-function nbrStartUpload(file, kind){
-  nbrUI.upload = {kind, file:file.name, state:'reading'}; renderNbrUpload();
-  loadXlsx().then(X=> file.arrayBuffer().then(buf=> X.read(buf, {type:'array', cellDates:false})))
-    .then(wb=>{
-      const up = nbrUI.upload; if(!up || up.file!==file.name) return;
-      if(kind==='nbr'){
-        const p = nbrParseAdvisorNbr(wb);
-        if(!Object.keys(p.months).length && !p.npw.length) throw new Error("This doesn't look like an Advisor NBR: there are no month sheets (e.g. \"Jan 2026\").");
-        const match = nbrAdvs(true).find(a=> p.name && a.name.toLowerCase()===p.name.toLowerCase());
-        Object.assign(up, {state:'ready', parsed:p, adv: match ? match.id : (p.name ? 'new' : ''), newName: p.name || '', newOffice:'F', replace:true, toBible:false});
-      } else {
-        const p = nbrParseBible(wb);
-        if(!p.lines.length) throw new Error(p.warnings[0] || 'No Bible lines found in this file.');
-        const map = {};
-        Object.entries(p.codes).forEach(([code, c])=>{
-          const a = nbrAdvs(true).find(x=> nbrAdvCodes(x).some(k=> k.toLowerCase()===code.toLowerCase()));
-          const office = Object.entries(c.offices).sort((x,y)=> y[1]-x[1])[0];
-          map[code] = a ? a.id : 'new';
-          c.office = office ? office[0] : '';
-        });
-        Object.assign(up, {state:'ready', parsed:p, map, replace:true});
-      }
-      renderNbrUpload();
-    })
-    .catch(err=>{ if(nbrUI.upload){ nbrUI.upload.state = 'error'; nbrUI.upload.error = err.message; renderNbrUpload(); } });
+/* ---- Upload: read, check, then import ----
+   Advisor NBRs can be picked several at a time: each file gets its own preview
+   and advisor choice, then they're imported one after another. The Bible is one file. */
+function nbrUpItem(file){ return {file:file.name, state:'reading', replace:true}; }
+function nbrStartUpload(files, kind){
+  files = [...files]; if(!files.length) return;
+  let up = nbrUI.upload;
+  if(up && up.running){ toast('Wait for the files being imported to finish first.', 'error'); return; }
+  // More NBRs picked while a batch is still waiting to be imported: add them to it.
+  if(kind==='nbr' && up && up.kind==='nbr' && !up.running && !up.finished) up.items.push(...files.map(nbrUpItem));
+  else { if(kind!=='nbr') files = files.slice(0,1); up = nbrUI.upload = {kind, items: files.map(nbrUpItem), toBible:false}; }
+  renderNbrUpload();
+  const items = up.items.slice(-files.length);
+  loadXlsx().then(X=> Promise.all(files.map((file, i)=> nbrReadUpload(X, file, kind, items[i], up))))
+    .catch(err=> items.forEach(it=>{ if(it.state==='reading'){ it.state = 'error'; it.error = err.message; } }))
+    .then(()=>{ if(nbrUI.upload===up) renderNbrUpload(); });
 }
+function nbrReadUpload(X, file, kind, it, up){
+  return file.arrayBuffer().then(buf=>{
+    if(nbrUI.upload!==up) return;
+    const wb = X.read(buf, {type:'array', cellDates:false});
+    if(kind==='nbr'){
+      const p = nbrParseAdvisorNbr(wb);
+      if(!Object.keys(p.months).length && !p.npw.length) throw new Error("This doesn't look like an Advisor NBR: there are no month sheets (e.g. \"Jan 2026\").");
+      const match = nbrAdvs(true).find(a=> p.name && a.name.toLowerCase()===p.name.toLowerCase());
+      Object.assign(it, {state:'ready', parsed:p, adv: match ? match.id : (p.name ? 'new' : ''), newName: p.name || '', newOffice:'F'});
+    } else {
+      const p = nbrParseBible(wb);
+      if(!p.lines.length) throw new Error(p.warnings[0] || 'No Bible lines found in this file.');
+      const map = {};
+      Object.entries(p.codes).forEach(([code, c])=>{
+        const a = nbrAdvs(true).find(x=> nbrAdvCodes(x).some(k=> k.toLowerCase()===code.toLowerCase()));
+        const office = Object.entries(c.offices).sort((x,y)=> y[1]-x[1])[0];
+        map[code] = a ? a.id : 'new';
+        c.office = office ? office[0] : '';
+      });
+      Object.assign(it, {state:'ready', parsed:p, map});
+    }
+  }).catch(err=>{ it.state = 'error'; it.error = err.message; });
+}
+// Who an NBR file will go to: an advisor id, or "new:<name>" (two files for the same new name share one advisor).
+function nbrUpTarget(it){ return it.adv==='new' ? (it.newName ? 'new:'+it.newName.toLowerCase() : '') : it.adv; }
+function nbrUpMonthsKey(it){ return it.parsed ? Object.keys(it.parsed.months) : []; }
 function renderNbrUpload(){
   const box = document.getElementById('nbrUpArea'); if(!box) return;
   const up = nbrUI.upload; if(!up){ box.innerHTML = ''; return; }
-  const cancel = `<button type="button" class="btn btn-secondary btn-sm" data-nbr-up="cancel">${up.state==='done' ? 'Close' : 'Cancel'}</button>`;
-  if(up.state==='reading'){ box.innerHTML = `<div class="nbr-up">Reading ${esc(up.file)}…</div>`; return; }
-  if(up.state==='error'){ box.innerHTML = `<div class="nbr-up nbr-up-bad"><b>${esc(up.file)}</b>: ${esc(up.error)}<div class="nbr-row-btns">${cancel}</div></div>`; return; }
-  if(up.state==='saving'){ box.innerHTML = `<div class="nbr-up">Importing ${esc(up.file)}… ${esc(up.progress||'')}</div>`; return; }
-  if(up.state==='done'){ box.innerHTML = `<div class="nbr-up nbr-up-good">${up.msg}<div class="nbr-row-btns">${cancel}</div></div>`; return; }
-  const p = up.parsed, advOpts = nbrAdvs(true);
+  const items = up.items, ready = items.filter(it=> it.state==='ready'), busy = up.running;
+  const reading = items.some(it=> it.state==='reading');
+  const advOpts = nbrAdvs(true), dis = busy || up.finished ? 'disabled' : '';
+  const status = it=>{
+    if(it.state==='reading') return `<div class="nbr-ubox">Reading <b>${esc(it.file)}</b>…</div>`;
+    if(it.state==='error') return `<div class="nbr-ubox nbr-ubox-bad"><b>${esc(it.file)}</b>: ${esc(it.error)}</div>`;
+    if(it.state==='waiting') return `<div class="nbr-ubox nbr-ubox-dim"><b>${esc(it.file)}</b>: waiting…</div>`;
+    if(it.state==='saving') return `<div class="nbr-ubox">Importing <b>${esc(it.file)}</b>… ${esc(it.progress||'')}</div>`;
+    if(it.state==='done') return `<div class="nbr-ubox nbr-ubox-good"><b>${esc(it.file)}</b>: ${it.msg}</div>`;
+    return '';
+  };
+  const foot = btns=> `<div class="nbr-row-btns">${btns}</div>`;
+  const cancelBtn = up.finished ? `<button type="button" class="btn btn-secondary btn-sm" data-nbr-up="cancel">Close</button>`
+    : busy ? '' : `<button type="button" class="btn btn-secondary btn-sm" data-nbr-up="cancel">Cancel</button>`;
   if(up.kind==='nbr'){
-    const months = Object.keys(p.months).sort(), years = [...new Set(months.map(m=> m.slice(0,4)))];
-    const advId = up.adv && up.adv!=='new' ? up.adv : null;
-    const existing = advId ? Object.values(NBR_ENT).filter(e=> e && e.adv===advId && months.includes(e.month)).length : 0;
-    const npwMonths = [...new Set(p.npw.map(x=> x.month))];
-    const existingNpw = advId ? Object.values(NBR_NPW).filter(x=> x && x.adv===advId && (npwMonths.includes(x.month) || years.includes(String(x.month||'').slice(0,4)))).length : 0;
-    const tot = nbrSum(p.entries.map(e=> ({...e, total:nbrEntTotal(e)})));
-    box.innerHTML = `<div class="nbr-up">
-      <div class="nbr-up-title">${esc(up.file)}</div>
-      <p>${p.entries.length} case${p.entries.length===1?'':'s'} in ${months.length} month${months.length===1?'':'s'} (${esc(months.length ? nbrYmLabel(months[0])+' – '+nbrYmLabel(months[months.length-1]) : '—')}), written ${nbrMoney(tot.total)}; ${p.npw.length} NPW${p.npw.length===1?'':'s'}.</p>
-      <div class="nbr-up-months">${months.map(m=> `<span>${esc(nbrYmLabel(m))}: <b>${p.months[m]}</b></span>`).join('')}</div>
-      ${p.warnings.map(w=> `<p class="nbr-warn">${esc(w)}</p>`).join('')}
-      <div class="nbr-grid nbr-grid-2">
-        <div class="field"><label for="nbrUpAdv">Whose NBR is this?</label><select id="nbrUpAdv"><option value="">Choose…</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===up.adv ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="new" ${up.adv==='new' ? 'selected' : ''}>New advisor…</option></select></div>
-        ${up.adv==='new' ? `<div class="field"><label for="nbrUpNewName">New advisor's name</label><input type="text" id="nbrUpNewName" value="${esc(up.newName)}"></div>
-          <div class="field"><label for="nbrUpNewOffice">Office</label><select id="nbrUpNewOffice">${NBR_OFFICES.map(([c,l])=> `<option value="${c}" ${c===up.newOffice ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
-      </div>
-      ${existing || existingNpw ? `<label class="nbr-check"><input type="checkbox" id="nbrUpReplace" ${up.replace ? 'checked' : ''}> Replace what's already here for this advisor in these months (${existing} case${existing===1?'':'s'}${existingNpw ? `, ${existingNpw} NPW${existingNpw===1?'':'s'}` : ''})</label>` : ''}
-      <label class="nbr-check"><input type="checkbox" id="nbrUpToBible" ${up.toBible ? 'checked' : ''}> Also add these cases to the Bible <span class="field-hint">(leave this off if you're uploading the Bible as well, or they'll be in it twice)</span></label>
-      <div class="nbr-row-btns">${cancel}<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go" ${!up.adv ? 'disabled' : ''}>Import ${p.entries.length} case${p.entries.length===1?'':'s'}</button></div>
-    </div>`;
-  } else {
-    const fys = Object.keys(p.fys).sort();
-    const existing = Object.values(NBR_BIB).filter(l=> l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')).length;
-    const codes = Object.entries(p.codes).sort((a,b)=> b[1].n - a[1].n);
-    box.innerHTML = `<div class="nbr-up">
-      <div class="nbr-up-title">${esc(up.file)}</div>
-      <p>${p.lines.length} Bible lines: ${fys.map(f=> `${esc(f)} <b>${p.fys[f]}</b>`).join(' · ')}.</p>
-      ${p.warnings.map(w=> `<p class="nbr-warn">${esc(w)}</p>`).join('')}
-      <p class="nbr-p">Match each code in the Adv column to an advisor. Codes set to "New advisor" are added as advisors (you can rename them on the Advisors list afterwards).</p>
-      <div class="nbr-code-map">${codes.map(([code,c])=> `<label><span><b>${esc(code)}</b> · ${c.n} line${c.n===1?'':'s'}${c.office ? ' · '+esc(c.office) : ''}</span>
-        <select data-nbr-code="${esc(code)}"><option value="new" ${up.map[code]==='new' ? 'selected' : ''}>New advisor "${esc(code)}"</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===up.map[code] ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="skip" ${up.map[code]==='skip' ? 'selected' : ''}>Leave these lines out</option></select></label>`).join('')}</div>
-      ${existing ? `<label class="nbr-check"><input type="checkbox" id="nbrUpReplace" ${up.replace ? 'checked' : ''}> Replace the ${existing} Bible line${existing===1?'':'s'} already here for ${esc(fys.join(', '))}</label>` : ''}
-      <div class="nbr-row-btns">${cancel}<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go">Import ${p.lines.length} lines</button></div>
-    </div>`;
+    const many = items.length > 1;
+    const cards = items.map((it, i)=>{
+      if(it.state!=='ready') return status(it);
+      const p = it.parsed, months = Object.keys(p.months).sort(), years = [...new Set(months.map(m=> m.slice(0,4)))];
+      const advId = it.adv && it.adv!=='new' ? it.adv : null;
+      const existing = advId ? Object.values(NBR_ENT).filter(e=> e && e.adv===advId && months.includes(e.month)).length : 0;
+      const npwMonths = [...new Set(p.npw.map(x=> x.month))];
+      const existingNpw = advId ? Object.values(NBR_NPW).filter(x=> x && x.adv===advId && (npwMonths.includes(x.month) || years.includes(String(x.month||'').slice(0,4)))).length : 0;
+      const tot = nbrSum(p.entries.map(e=> ({...e, total:nbrEntTotal(e)})));
+      const tgt = nbrUpTarget(it);
+      const clash = tgt ? items.slice(0, i).find(o=> o.state==='ready' && nbrUpTarget(o)===tgt && nbrUpMonthsKey(o).some(m=> months.includes(m))) : null;
+      return `<div class="nbr-ubox" data-nbr-item="${i}">
+        <div class="nbr-up-title">${esc(it.file)}${many && !dis ? ` <button type="button" class="linkish nbr-up-remove" data-nbr-up="remove" data-nbr-i="${i}">Leave this file out</button>` : ''}</div>
+        <p>${p.entries.length} case${p.entries.length===1?'':'s'} in ${months.length} month${months.length===1?'':'s'} (${esc(months.length ? nbrYmLabel(months[0])+' – '+nbrYmLabel(months[months.length-1]) : '—')}), written ${nbrMoney(tot.total)}; ${p.npw.length} NPW${p.npw.length===1?'':'s'}.</p>
+        <div class="nbr-up-months">${months.map(m=> `<span>${esc(nbrYmLabel(m))}: <b>${p.months[m]}</b></span>`).join('')}</div>
+        ${p.warnings.map(w=> `<p class="nbr-warn">${esc(w)}</p>`).join('')}
+        ${clash ? `<p class="nbr-warn">This is for the same advisor and months as ${esc(clash.file)}. Only one of them should be uploaded: if both are, this one replaces the other.</p>` : ''}
+        <div class="nbr-grid nbr-grid-2">
+          <div class="field"><label>Whose NBR is this?</label><select data-nbr-uf="adv" ${dis}><option value="">Choose…</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===it.adv ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="new" ${it.adv==='new' ? 'selected' : ''}>New advisor…</option></select></div>
+          ${it.adv==='new' ? `<div class="field"><label>New advisor's name</label><input type="text" data-nbr-uf="newName" value="${esc(it.newName)}" ${dis}></div>
+            <div class="field"><label>Office</label><select data-nbr-uf="newOffice" ${dis}>${NBR_OFFICES.map(([c,l])=> `<option value="${c}" ${c===it.newOffice ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
+        </div>
+        ${existing || existingNpw ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="replace" ${it.replace ? 'checked' : ''} ${dis}> Replace what's already here for this advisor in these months (${existing} case${existing===1?'':'s'}${existingNpw ? `, ${existingNpw} NPW${existingNpw===1?'':'s'}` : ''})</label>` : ''}
+      </div>`;
+    }).join('');
+    const nCases = ready.reduce((s, it)=> s + it.parsed.entries.length, 0);
+    const missing = ready.filter(it=> !it.adv || (it.adv==='new' && !it.newName)).length;
+    const goLabel = ready.length > 1 ? `Import all ${ready.length} files (${nCases} cases)` : `Import ${nCases} case${nCases===1?'':'s'}`;
+    box.innerHTML = `${many ? `<p class="nbr-p"><b>${items.length} files.</b> Check whose NBR each one is, then import them all: each file is imported on its own.</p>` : ''}
+      <div class="nbr-up-list">${cards}</div>
+      ${ready.length && !up.finished ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="toBible" ${up.toBible ? 'checked' : ''} ${dis}> Also add these cases to the Bible <span class="field-hint">(leave this off if you're uploading the Bible as well, or they'll be in it twice)</span></label>` : ''}
+      ${missing && !busy ? `<p class="nbr-warn">Choose whose NBR ${missing===1 && ready.length===1 ? 'this is' : `each file is (${missing} still to choose)`}.</p>` : ''}
+      ${foot(cancelBtn + (ready.length && !busy && !up.finished ? `<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go" ${reading ? 'disabled' : ''}>${goLabel}</button>` : ''))}`;
+    return;
   }
+  const it = items[0];
+  if(it.state!=='ready'){ box.innerHTML = status(it) + (busy ? '' : foot(cancelBtn)); return; }
+  const p = it.parsed, fys = Object.keys(p.fys).sort();
+  const existing = Object.values(NBR_BIB).filter(l=> l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')).length;
+  const codes = Object.entries(p.codes).sort((a,b)=> b[1].n - a[1].n);
+  box.innerHTML = `<div class="nbr-ubox" data-nbr-item="0">
+    <div class="nbr-up-title">${esc(it.file)}</div>
+    <p>${p.lines.length} Bible lines: ${fys.map(f=> `${esc(f)} <b>${p.fys[f]}</b>`).join(' · ')}.</p>
+    ${p.warnings.map(w=> `<p class="nbr-warn">${esc(w)}</p>`).join('')}
+    <p class="nbr-p">Match each code in the Adv column to an advisor. Codes set to "New advisor" are added as advisors (you can rename them on the Advisors list afterwards).</p>
+    <div class="nbr-code-map">${codes.map(([code,c])=> `<label><span><b>${esc(code)}</b> · ${c.n} line${c.n===1?'':'s'}${c.office ? ' · '+esc(c.office) : ''}</span>
+      <select data-nbr-code="${esc(code)}"><option value="new" ${it.map[code]==='new' ? 'selected' : ''}>New advisor "${esc(code)}"</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===it.map[code] ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="skip" ${it.map[code]==='skip' ? 'selected' : ''}>Leave these lines out</option></select></label>`).join('')}</div>
+    ${existing ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="replace" ${it.replace ? 'checked' : ''}> Replace the ${existing} Bible line${existing===1?'':'s'} already here for ${esc(fys.join(', '))}</label>` : ''}
+    ${foot(cancelBtn + `<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go">Import ${p.lines.length} lines</button>`)}
+  </div>`;
 }
 document.addEventListener('change', e=>{
-  const up = nbrUI.upload; if(!up || up.state!=='ready' || !e.target.closest('#nbrUpArea')) return;
-  const t = e.target;
-  if(t.id==='nbrUpAdv'){ up.adv = t.value; renderNbrUpload(); }
-  else if(t.id==='nbrUpNewName') up.newName = t.value.trim();
-  else if(t.id==='nbrUpNewOffice') up.newOffice = t.value;
-  else if(t.id==='nbrUpReplace') up.replace = t.checked;
-  else if(t.id==='nbrUpToBible') up.toBible = t.checked;
-  else if(t.dataset.nbrCode) up.map[t.dataset.nbrCode] = t.value;
+  const up = nbrUI.upload, t = e.target; if(!up || up.running || up.finished || !t.closest('#nbrUpArea')) return;
+  const card = t.closest('[data-nbr-item]'), it = card ? up.items[+card.dataset.nbrItem] : null, f = t.dataset.nbrUf;
+  if(f==='toBible'){ up.toBible = t.checked; return; }
+  if(!it || it.state!=='ready') return;
+  if(f==='adv'){ it.adv = t.value; renderNbrUpload(); }
+  else if(f==='newName') it.newName = t.value.trim();
+  else if(f==='newOffice') it.newOffice = t.value;
+  else if(f==='replace') it.replace = t.checked;
+  else if(t.dataset.nbrCode) it.map[t.dataset.nbrCode] = t.value;
 });
-document.addEventListener('input', e=>{ const up = nbrUI.upload; if(up && e.target.id==='nbrUpNewName') up.newName = e.target.value.trim(); });
-function nbrRunUpload(){
-  const up = nbrUI.upload; if(!up || up.state!=='ready') return;
-  const p = up.parsed, updates = {}, now = Date.now(), by = currentUser.name;
-  let msg = '';
-  if(up.kind==='nbr'){
-    let adv = up.adv;
-    if(!adv){ toast('Choose whose NBR this is.', 'error'); return; }
-    if(adv==='new'){
-      if(!up.newName){ toast("Enter the new advisor's name.", 'error'); return; }
-      adv = nbrKey(); updates['advisors/'+adv] = {name: up.newName, office: up.newOffice || 'F', active: true};
-    }
-    const months = Object.keys(p.months), years = [...new Set(months.map(m=> m.slice(0,4)))], npwMonths = [...new Set(p.npw.map(x=> x.month))];
-    if(up.replace){
-      Object.entries(NBR_ENT).forEach(([id,e])=>{ if(e && e.adv===adv && months.includes(e.month)) Object.assign(updates, nbrEntryDeletePatches(id)); });
-      Object.entries(NBR_NPW).forEach(([id,x])=>{ if(x && x.adv===adv && (npwMonths.includes(x.month) || years.includes(String(x.month||'').slice(0,4)))) updates['npw/'+id] = null; });
-    }
-    const advRec = updates['advisors/'+adv] || NBR_ADV[adv] || {};
-    p.entries.forEach(e=>{
-      const id = nbrKey(), data = {...e, adv, src:'upload', createdAt:now, createdBy:by};
-      updates['entries/'+id] = data;
-      if(up.toBible){ const saved = NBR_ADV[adv]; if(!saved) NBR_ADV[adv] = advRec; Object.assign(updates, nbrLinePatches(id, data)); if(!saved) delete NBR_ADV[adv]; }
-    });
-    p.npw.forEach(x=>{ updates['npw/'+nbrKey()] = {...x, adv, src:'upload', updatedAt:now, updatedBy:by}; });
-    // Add the workbook's drop-down lists to ours.
-    const L = NBR_CFG.lists || {}, cur = k=> Array.isArray(L[k]) ? L[k] : Object.values(L[k]||{});
-    ['sols','vals','saleTypes','leadProviders'].forEach(k=>{ if(p.lists[k].length) updates['config/lists/'+k] = [...new Set([...cur(k), ...p.lists[k]].map(s=> String(s).trim()).filter(Boolean))]; });
-    msg = `Imported ${p.entries.length} case${p.entries.length===1?'':'s'} and ${p.npw.length} NPW${p.npw.length===1?'':'s'} for <b>${esc(advRec.name || nbrAdvName(adv))}</b>.`;
-    nbrUI.regAdv = adv; if(months.length){ const last = months.sort()[months.length-1]; nbrUI.regYear = +last.slice(0,4); nbrUI.regMonth = last; }
-  } else {
-    const ids = {}; // code → advisor id
-    Object.entries(up.map).forEach(([code, v])=>{
-      if(v==='skip') return;
-      if(v==='new'){ const id = nbrKey(); ids[code] = id; updates['advisors/'+id] = {name: code, codes: code, office: p.codes[code].office || '', active: true}; }
-      else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
-    });
-    const fys = Object.keys(p.fys);
-    if(up.replace) Object.entries(NBR_BIB).forEach(([id,l])=>{ if(l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')) updates['bible/'+id] = null; });
-    let n = 0, skipped = 0;
-    p.lines.forEach(l=>{
-      if(l.code && !ids[l.code]){ skipped++; return; }
-      const data = {...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now};
-      delete data.code; if(!data.adv) delete data.adv;
-      updates['bible/'+nbrKey()] = data; n++;
-    });
-    msg = `Imported ${n} Bible line${n===1?'':'s'}${skipped ? ` (left out ${skipped})` : ''}.`;
+document.addEventListener('input', e=>{
+  const up = nbrUI.upload, t = e.target; if(!up || t.dataset.nbrUf!=='newName') return;
+  const card = t.closest('[data-nbr-item]'), it = card ? up.items[+card.dataset.nbrItem] : null;
+  if(it) it.newName = t.value.trim();
+});
+// The database changes for one Advisor NBR file. `made` remembers advisors created earlier in the same batch.
+function nbrNbrUploadPatches(it, toBible, made){
+  const p = it.parsed, updates = {}, now = Date.now(), by = currentUser.name;
+  let adv = it.adv;
+  if(adv==='new'){
+    const nm = it.newName.toLowerCase();
+    const found = made[nm] || (nbrAdvs(true).find(a=> a.name.toLowerCase()===nm) || {}).id;
+    if(found) adv = found;
+    else { adv = made[nm] = nbrKey(); updates['advisors/'+adv] = {name: it.newName, office: it.newOffice || 'F', active: true}; }
   }
-  up.state = 'saving'; up.progress = ''; renderNbrUpload();
+  const months = Object.keys(p.months), years = [...new Set(months.map(m=> m.slice(0,4)))], npwMonths = [...new Set(p.npw.map(x=> x.month))];
+  if(it.replace){
+    Object.entries(NBR_ENT).forEach(([id,e])=>{ if(e && e.adv===adv && months.includes(e.month)) Object.assign(updates, nbrEntryDeletePatches(id)); });
+    Object.entries(NBR_NPW).forEach(([id,x])=>{ if(x && x.adv===adv && (npwMonths.includes(x.month) || years.includes(String(x.month||'').slice(0,4)))) updates['npw/'+id] = null; });
+  }
+  const advRec = updates['advisors/'+adv] || NBR_ADV[adv] || {};
+  p.entries.forEach(e=>{
+    const id = nbrKey(), data = {...e, adv, src:'upload', createdAt:now, createdBy:by};
+    updates['entries/'+id] = data;
+    if(toBible){ const saved = NBR_ADV[adv]; if(!saved) NBR_ADV[adv] = advRec; Object.assign(updates, nbrLinePatches(id, data)); if(!saved) delete NBR_ADV[adv]; }
+  });
+  p.npw.forEach(x=>{ updates['npw/'+nbrKey()] = {...x, adv, src:'upload', updatedAt:now, updatedBy:by}; });
+  // Add the workbook's drop-down lists to ours.
+  const L = NBR_CFG.lists || {}, cur = k=> Array.isArray(L[k]) ? L[k] : Object.values(L[k]||{});
+  ['sols','vals','saleTypes','leadProviders'].forEach(k=>{ if(p.lists[k].length) updates['config/lists/'+k] = [...new Set([...cur(k), ...p.lists[k]].map(s=> String(s).trim()).filter(Boolean))]; });
+  const msg = `imported ${p.entries.length} case${p.entries.length===1?'':'s'} and ${p.npw.length} NPW${p.npw.length===1?'':'s'} for <b>${esc(advRec.name || nbrAdvName(adv))}</b>.`;
+  return {updates, msg, adv, months};
+}
+function nbrBibleUploadPatches(it){
+  const p = it.parsed, updates = {}, now = Date.now(), ids = {}; // code → advisor id
+  Object.entries(it.map).forEach(([code, v])=>{
+    if(v==='skip') return;
+    if(v==='new'){ const id = nbrKey(); ids[code] = id; updates['advisors/'+id] = {name: code, codes: code, office: p.codes[code].office || '', active: true}; }
+    else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
+  });
+  const fys = Object.keys(p.fys);
+  if(it.replace) Object.entries(NBR_BIB).forEach(([id,l])=>{ if(l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')) updates['bible/'+id] = null; });
+  let n = 0, skipped = 0;
+  p.lines.forEach(l=>{
+    if(l.code && !ids[l.code]){ skipped++; return; }
+    const data = {...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now};
+    delete data.code; if(!data.adv) delete data.adv;
+    updates['bible/'+nbrKey()] = data; n++;
+  });
+  return {updates, msg: `imported ${n} Bible line${n===1?'':'s'}${skipped ? ` (left out ${skipped})` : ''}.`};
+}
+// Writes in chunks so a big file doesn't hit the size limit, showing progress on the file's card.
+function nbrWriteChunks(updates, it){
   const keys = Object.keys(updates); let done = 0, chain = Promise.resolve();
   for(let i=0; i<keys.length; i+=400){
     const part = {}; keys.slice(i, i+400).forEach(k=> part[k] = updates[k]);
-    chain = chain.then(()=> db.ref('nbr').update(part)).then(()=>{ done += Object.keys(part).length; up.progress = `${Math.round(done/keys.length*100)}%`; const b = document.getElementById('nbrUpArea'); if(b && up.state==='saving') b.firstElementChild.textContent = `Importing ${up.file}… ${up.progress}`; });
+    chain = chain.then(()=> db.ref('nbr').update(part)).then(()=>{ done += Object.keys(part).length; it.progress = `${Math.round(done/keys.length*100)}%`; renderNbrUpload(); });
   }
-  chain.then(()=>{ up.state = 'done'; up.msg = msg; renderNbrUpload(); toast('Upload finished.', 'success'); })
-    .catch(err=>{ up.state = 'error'; up.error = 'Stopped part-way: '+err.message+'. Upload the file again to finish (tick "Replace").'; renderNbrUpload(); });
+  return chain;
+}
+function nbrRunUpload(){
+  const up = nbrUI.upload; if(!up || up.running || up.finished) return;
+  const todo = up.items.filter(it=> it.state==='ready');
+  if(!todo.length) return;
+  if(up.kind==='nbr'){
+    const bad = todo.find(it=> !it.adv || (it.adv==='new' && !it.newName));
+    if(bad){ toast(bad.adv ? "Enter the new advisor's name for "+bad.file+'.' : 'Choose whose NBR '+bad.file+' is.', 'error'); return; }
+  }
+  up.running = true; todo.forEach(it=>{ it.state = 'waiting'; }); renderNbrUpload();
+  const made = {}; let ok = 0, last = null, chain = Promise.resolve();
+  todo.forEach(it=>{
+    chain = chain.then(()=>{
+      it.state = 'saving'; it.progress = ''; renderNbrUpload();
+      // Worked out just before each file is written, so a later file sees what the earlier ones saved.
+      const r = up.kind==='nbr' ? nbrNbrUploadPatches(it, up.toBible, made) : nbrBibleUploadPatches(it);
+      return nbrWriteChunks(r.updates, it)
+        .then(()=>{ it.state = 'done'; it.msg = r.msg.charAt(0).toUpperCase() + r.msg.slice(1); ok++; if(r.adv) last = r; })
+        .catch(err=>{ it.state = 'error'; it.error = 'Stopped part-way: '+err.message+'. Upload this file again to finish (tick "Replace").'; });
+    });
+  });
+  chain.then(()=>{
+    up.running = false; up.finished = true;
+    if(last){ nbrUI.regAdv = last.adv; const ms = last.months.sort(); if(ms.length){ const m = ms[ms.length-1]; nbrUI.regYear = +m.slice(0,4); nbrUI.regMonth = m; } }
+    renderNbrUpload();
+    const failed = todo.length - ok;
+    if(failed) toast(`${ok} of ${todo.length} file${todo.length===1?'':'s'} imported. ${failed} stopped part-way: see below.`, 'error');
+    else toast(todo.length > 1 ? `All ${todo.length} files imported.` : 'Upload finished.', 'success');
+  });
 }
 
 /* ---- clicks across the New Business pages ---- */
@@ -14666,7 +14743,8 @@ document.addEventListener('click', e=>{
   else if(d.nbrAdv) openNbrAdvisor(d.nbrAdv);
   else if(d.nbrMonth){ nbrUI.regMonth = d.nbrMonth; renderNbrReg(); }
   else if(d.nbrStatus){ nbrUI.bibStatus = nbrUI.bibStatus===d.nbrStatus ? '' : d.nbrStatus; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); }
-  else if(d.nbrUp==='cancel'){ nbrUI.upload = null; renderNbrUpload(); }
+  else if(d.nbrUp==='cancel'){ if(!(nbrUI.upload && nbrUI.upload.running)){ nbrUI.upload = null; renderNbrUpload(); } }
+  else if(d.nbrUp==='remove'){ const up = nbrUI.upload; if(up && !up.running && !up.finished){ up.items.splice(+d.nbrI, 1); if(!up.items.length) nbrUI.upload = null; renderNbrUpload(); } }
   else if(d.nbrUp==='go') nbrRunUpload();
 });
 

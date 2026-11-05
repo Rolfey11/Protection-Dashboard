@@ -6839,6 +6839,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05l', date:'2026-11-05', items:[ {text:"<b>Wills</b>: new Wills cases now have <b>David Prior</b> as the broker, and aren't linked to the MAPA whose NBR you added them from. Find them all on the <b>Wills</b> tab.", roles:['admin','management']} ]},
   {id:'2026-11-05k', date:'2026-11-05', items:[ {text:"<b>Salesboard is quicker after a refresh</b>: it shows in about a second instead of waiting for the whole Bible to download.", roles:['admin','management']} ]},
   {id:'2026-11-05j', date:'2026-11-05', items:[
     {text:"<b>New Business: B&amp;C and Wills.</b> Two new tabs, laid out like the spreadsheets. <b>B&amp;C</b> (Frimley and Gurkha): each policy goes into the Bible as a Gen Ins line and onto the office's B&amp;C row on the Salesboard. <b>Wills</b>: not in the Bible; on the Salesboard in the Wills section (banked at the net value, ÷1.2). On the Advisor NBR there's now an <b>Add Wills Case</b> button next to Add case. Both spreadsheets can be uploaded, and downloaded in their own layout.", roles:['admin','management']},
@@ -14479,8 +14480,6 @@ function renderNbrReg(){
     <div class="nbr-months">${yms.map((m,i)=>{ const r = rows[i]; return `<button type="button" class="nbr-month ${m===ym ? 'on' : ''}" data-nbr-month="${m}"><b>${NBR_MONTHS[i]}</b><span>${r.total ? nbrMoney(r.total).replace(/\.\d\d$/,'') : '–'}</span></button>`; }).join('')}</div>
     <h2 class="nbr-h2">${esc(a ? a.name : '')} New Business Register – ${esc(nbrYmLabel(ym, true).toUpperCase())}</h2>
     ${bibYear ? `<div class="nbr-callout nbr-callout-soft">There's no NBR for ${esc(a ? a.name : '')} in ${Y}, so these figures come from the <b>Bible</b>: each line's amount, by product, in the month it was written. Upload ${esc(a ? a.name : 'their')}'s ${Y} NBR on <button type="button" class="linkish" data-nbr-go="nbrSetup">Advisors &amp; upload</button> to see the weekly register instead.</div>${bibMonthHtml}` : monthHtml}
-    <h2 class="nbr-h2">Wills cases from ${esc(a ? a.name : '')} – ${esc(nbrYmLabel(ym, true))}</h2>
-    ${nbrWillsTable(nbrWillsForAdv(adv).filter(w=> w.month===ym), {empty: `No Wills cases with ${esc(a ? a.name : 'this advisor')} as the broker in ${esc(nbrYmLabel(ym, true))}. Use <b>Add Wills Case</b> to add one.`})}
     <h2 class="nbr-h2">${esc(a ? a.name : '')} – total figures ${Y}</h2>
     ${cumHtml}
     <h2 class="nbr-h2">Negative amendments &amp; NPW – ${Y}</h2>
@@ -14488,7 +14487,7 @@ function renderNbrReg(){
   document.getElementById('nbrRegAdv').addEventListener('change', e=>{ nbrUI.regAdv = e.target.value; renderNbrReg(); });
   document.getElementById('nbrRegYear').addEventListener('change', e=>{ nbrUI.regYear = +e.target.value; nbrUI.regMonth = null; renderNbrReg(); });
   document.getElementById('nbrAddEnt').addEventListener('click', ()=> openNbrEntry(null));
-  document.getElementById('nbrAddWill').addEventListener('click', ()=> openNbrWill(null, {broker: a ? a.name : '', brokerAdv: adv, date: ym===nbrThisYm() ? nbrToday() : ym+'-01'}));
+  document.getElementById('nbrAddWill').addEventListener('click', ()=> openNbrWill(null, {date: ym===nbrThisYm() ? nbrToday() : ym+'-01', fromReg:true}));
   document.getElementById('nbrAddNpw').addEventListener('click', ()=> openNbrNpw(null));
 }
 
@@ -15260,6 +15259,7 @@ function nbrRunUpload(){
    Wills: the Wills case value sheet. Not in the Bible; on the Salesboard in the Wills block, banked at the net
    value (the total ÷ 1.2, taking off VAT), as on the original Salesboard. */
 const NBR_BC_TYPES = ['B&C','Contents only L/HOLD','Buildings'];
+const NBR_WILLS_BROKER = 'David Prior'; // the only one who does Wills
 const NBR_BC_LEADS = ['New Mortgage','Vivid Homes','Stand Alone','Client Review'];
 const NBR_BC_OFFICES = [['F','Frimley'],['G','Gurkha']];
 // The month sheets in the Wills case value sheet are named like this ("March 2026", "Sept 2026").
@@ -15283,7 +15283,7 @@ function nbrBcLists(){
 }
 function nbrWillLists(){
   const uniq = a=> [...new Set(a.filter(x=> typeof x==='string' && x.trim()).map(s=> s.trim()))].sort((x,y)=> x.localeCompare(y));
-  return {sources: uniq(Object.values(NBR_WILLS).map(w=> w && w.source)), brokers: uniq([...nbrAdvs(false).map(a=> a.name), ...Object.values(NBR_WILLS).map(w=> w && w.broker)])};
+  return {sources: uniq(Object.values(NBR_WILLS).map(w=> w && w.source)), brokers: uniq([NBR_WILLS_BROKER, ...Object.values(NBR_WILLS).map(w=> w && w.broker)])};
 }
 
 /* ---- B&C policy → its Bible line ---- */
@@ -15369,7 +15369,7 @@ function openNbrBc(id, preset={}){
     onDelete: id ? ()=> nbrWrite(nbrBcDeletePatches(id)).then(()=> toast('Policy deleted.', 'success')) : null});
 }
 function openNbrWill(id, preset={}){
-  const w = id ? (NBR_WILLS[id] || {}) : {date: nbrToday(), ...preset};
+  const w = id ? (NBR_WILLS[id] || {}) : {date: nbrToday(), broker: NBR_WILLS_BROKER, ...preset};
   if(id && !NBR_WILLS[id]) return;
   const L = nbrWillLists();
   const body = `<div class="nbr-grid">
@@ -15392,12 +15392,10 @@ function openNbrWill(id, preset={}){
         source:nfv('wlSource'), broker:nfv('wlBroker'), notes:nfv('wlNotes')});
       if(!date){ toast('Enter the date.', 'error'); return false; }
       if(!data.firstName && !data.surname){ toast("Enter the client's name.", 'error'); return false; }
-      const adv = nbrQuoterAdv(data.broker) || (preset.brokerAdv && data.broker===preset.broker ? preset.brokerAdv : '');
-      if(adv) data.brokerAdv = adv;
       const key = id || nbrKey(), now = Date.now(), prev = id ? NBR_WILLS[id] : null;
       Object.assign(data, prev ? nbrClean({createdAt:prev.createdAt, createdBy:prev.createdBy, src:prev.src}) : {createdAt:now, createdBy:currentUser.name, src:'manual'}, {updatedAt:now, updatedBy:currentUser.name});
       nbrUI.willsMonth = data.month; nbrUI.willsYear = +data.month.slice(0,4);
-      return nbrWrite({['wills/'+key]: data}).then(()=> toast(id ? 'Wills case saved.' : 'Wills case added.', 'success'));
+      return nbrWrite({['wills/'+key]: nbrClean(data)}).then(()=> toast(id ? 'Wills case saved.' : preset.fromReg ? 'Wills case added: it\'s on the Wills tab.' : 'Wills case added.', 'success'));
     },
     onDelete: id ? ()=> nbrWrite({['wills/'+id]: null}).then(()=> toast('Wills case deleted.', 'success')) : null});
 }
@@ -15445,10 +15443,6 @@ function renderNbrBC(){
   document.getElementById('nbrBcYear').addEventListener('change', e=>{ nbrUI.bcYear = +e.target.value; nbrUI.bcMonth = null; renderNbrBC(); });
   document.getElementById('nbrBcAdd').addEventListener('click', ()=> openNbrBc(null, {office: off, month: ym}));
   document.getElementById('nbrBcDl').addEventListener('click', ()=> nbrExportBc(off, Y));
-}
-function nbrWillsForAdv(adv){
-  const a = NBR_ADV[adv], nm = String(a && a.name || '').trim().toLowerCase();
-  return Object.entries(NBR_WILLS).filter(([,w])=> w && (w.brokerAdv ? w.brokerAdv===adv : nm && String(w.broker||'').trim().toLowerCase()===nm)).map(([id,w])=> ({id, ...w}));
 }
 function nbrWillsTable(rows, opts={}){
   if(!rows.length) return `<div class="nml-empty">${opts.empty || 'No Wills cases.'}</div>`;
@@ -15645,7 +15639,7 @@ function nbrWillsUploadPatches(it){
   let toAdd = rows, same = 0;
   if(it.mode==='replace') existing.forEach(([id])=>{ updates['wills/'+id] = null; });
   else { const D = nbrSimpleDiff(rows, existing.map(([,w])=> w), nbrWillKey); toAdd = D.fresh.map(i=> rows[i]); same = D.same.length; }
-  toAdd.forEach(r=>{ const adv = nbrQuoterAdv(r.broker); updates['wills/'+nbrKey()] = nbrClean({...r, ...(adv ? {brokerAdv:adv} : {}), src:'upload', createdAt:now, createdBy:by}); });
+  toAdd.forEach(r=>{ updates['wills/'+nbrKey()] = nbrClean({...r, broker: r.broker || NBR_WILLS_BROKER, src:'upload', createdAt:now, createdBy:by}); });
   return {updates, msg: `added ${toAdd.length} Wills case${toAdd.length===1 ? '' : 's'}${same ? `; ${same} already here, left as they are` : ''}.`};
 }
 function nbrBcWillsCard(it, i, up, dis, many){

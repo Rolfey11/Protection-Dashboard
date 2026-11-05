@@ -697,6 +697,8 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-table td.num,.nbr-table th.num{text-align:right; font-variant-numeric:tabular-nums;}
 .nbr-table td.b{font-weight:700;}
 .nbr-table tr.nbr-group td{background:var(--bg); font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-muted);}
+/* Salesboard office banners (Frimley, Gurkha…) in Michael Usher pink */
+.nbr-board-table tr.nbr-group td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.6px; padding-top:9px; padding-bottom:9px; border-color:#A6297A;}
 .nbr-table tr.nbr-tot td{background:color-mix(in srgb, var(--brand) 5%, var(--surface)); font-weight:600;}
 .nbr-table tr.nbr-grand td{background:color-mix(in srgb, var(--brand) 10%, var(--surface)); font-weight:800; border-top:2px solid var(--border-2);}
 .nbr-table tr.nbr-sel td{background:color-mix(in srgb, #8A5A00 9%, var(--surface));}
@@ -6817,6 +6819,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05f', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: the office headings (Frimley, Gurkha) are now Michael Usher pink, so each office stands out.", roles:['admin','management','mapa']} ]},
   {id:'2026-11-05e', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: tidied up. The month for everyone is at the top (your row is highlighted), then <b>My figures</b>: what you've written and banked by month, by quarter and by year, compared with last year.", roles:['mapa']},
     {text:"<b>New Business</b>: each advisor can now be linked to their <b>Dashboard login</b> (Advisors &amp; upload → Edit), so MAPAs see their own figures on the Salesboard. A login with exactly the same name is linked automatically.", roles:['admin','management']} ]},
   {id:'2026-11-05d', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: click <b>Salesboard</b> at the top to see the live sales figures: written and banked by advisor and month, the year by month against last year and the targets, and each advisor's year.", roles:['mapa']} ]},
@@ -14221,7 +14224,7 @@ function renderNbrBoard(){
       ${rows.map(({a,r})=> `<tr class="${view && a.id===nbrAdvForUser(currentUser.id) ? 'nbr-me' : ''}"><td>${view ? (a.id===nbrAdvForUser(currentUser.id) ? `<b>${esc(a.name)}</b> <span class="nbr-tag">You</span>` : esc(a.name)) : `<button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">${esc(a.name)}</button>`}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, tot.total)}</td><td class="num">${nbrPct(r.total, grand.total)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
       <tr class="nbr-tot"><td>${esc(label)} total</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(tot[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(tot.total)}</td><td class="num">${tot.total ? '100%' : '–'}</td><td class="num">${nbrPct(tot.total, grand.total)}</td><td class="num">${nbrMoneyCell(tot.banked)}</td></tr>`;
   };
-  const boardTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+  const boardTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-board-table">
     <thead><tr><th>Advisor</th>${NBR_CATS.map(([,l])=> `<th class="num">${l}</th>`).join('')}<th class="num">Total written</th><th class="num">% of office</th><th class="num">% of all</th><th class="num">Banked</th></tr></thead>
     <tbody>${NBR_OFFICES.map(([c,l])=> officeBlock(c, l)).join('')}${officeBlock('', 'No office set')}
       <tr class="nbr-grand"><td>All offices</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(grand[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(grand.total)}</td><td></td><td class="num">${grand.total ? '100%' : '–'}</td><td class="num">${nbrMoneyCell(sel.banked)}</td></tr>

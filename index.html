@@ -6839,6 +6839,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05k', date:'2026-11-05', items:[ {text:"<b>Salesboard is quicker after a refresh</b>: it shows in about a second instead of waiting for the whole Bible to download.", roles:['admin','management']} ]},
   {id:'2026-11-05j', date:'2026-11-05', items:[
     {text:"<b>New Business: B&amp;C and Wills.</b> Two new tabs, laid out like the spreadsheets. <b>B&amp;C</b> (Frimley and Gurkha): each policy goes into the Bible as a Gen Ins line and onto the office's B&amp;C row on the Salesboard. <b>Wills</b>: not in the Bible; on the Salesboard in the Wills section (banked at the net value, ÷1.2). On the Advisor NBR there's now an <b>Add Wills Case</b> button next to Add case. Both spreadsheets can be uploaded, and downloaded in their own layout.", roles:['admin','management']},
     {text:"<b>Salesboard</b>: now shows the Frimley and Gurkha B&amp;C and the Wills cases, with a gap between each office.", roles:['mapa']} ]},
@@ -13820,6 +13821,10 @@ function startNbrListener(){
   if(nbrViewer()){ startNbrSummary(); return; }
   if(nbrListening || !nbrAccess()) return;
   startNbrSummary();
+  // Straight after a refresh the page is drawn from this tab's saved copy while the sign-in is confirmed.
+  // Only the small Salesboard summary loads until then: the full NBRs and Bible (several MB) would hold up
+  // the sign-in check behind them. They start as soon as the sign-in is confirmed.
+  if(bootedFromCacheUid) return;
   nbrListening = true; nbrError = '';
   Object.keys(nbrLoaded).forEach(k=>{
     db.ref('nbr/'+k).on('value', snap=>{

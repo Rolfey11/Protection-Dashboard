@@ -697,6 +697,10 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-table td.num,.nbr-table th.num{text-align:right; font-variant-numeric:tabular-nums;}
 .nbr-table td.b{font-weight:700;}
 .nbr-table tr.nbr-group td{background:var(--bg); font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--text-muted);}
+/* Salesboard office totals: a stronger pink band so they stand out from the advisors, and a gap before All offices */
+.nbr-table.nbr-board-table tr.nbr-office-tot td{background:color-mix(in srgb, #A6297A 20%, var(--surface)); color:var(--text); font-weight:800; border-top:2px solid color-mix(in srgb, #A6297A 55%, var(--surface)); border-bottom:2px solid color-mix(in srgb, #A6297A 55%, var(--surface));}
+.nbr-table.nbr-board-table tr.nbr-gap td{height:16px; padding:0; background:var(--surface); border-top:0; border-bottom:0;}
+.nbr-table.nbr-board-table tr.nbr-grand td{border-top:2px solid #A6297A;}
 /* Salesboard office banners (Frimley, Gurkha…) in Michael Usher pink */
 .nbr-board-table tr.nbr-group td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.6px; padding-top:9px; padding-bottom:9px; border-color:#A6297A;}
 .nbr-table tr.nbr-tot td{background:color-mix(in srgb, var(--brand) 5%, var(--surface)); font-weight:600;}
@@ -6824,6 +6828,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05i', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: the Frimley and Gurkha total lines now stand out in a stronger pink, with a gap before All offices.", roles:['admin','management','mapa']} ]},
   {id:'2026-11-05h', date:'2026-11-05', items:[ {text:"<b>New Business</b>: uploading an advisor's NBR again now <b>adds just the new cases</b> (and puts them in the Bible, so the Salesboard updates too). Cases already here are left as they are, and you can choose to update any whose figures have changed. \"Replace\" is still there if you need it.", roles:['admin','management']} ]},
   {id:'2026-11-05g', date:'2026-11-05', items:[ {text:"<b>New Business is quicker</b>: the Salesboard shows straight away, and the NBRs and Bible load in the background a few seconds after you log in, so they're ready when you open them.", roles:['admin','management']} ]},
   {id:'2026-11-05f', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: the office headings (Frimley, Gurkha) are now Michael Usher pink, so each office stands out.", roles:['admin','management','mapa']} ]},
@@ -14246,11 +14251,12 @@ function renderNbrBoard(){
     const rows = list.map(a=> ({a, r: nbrRow(a.id, selYm)})); const tot = nbrSum(rows.map(x=> x.r));
     return `<tr class="nbr-group"><td colspan="10">${esc(label)}</td></tr>
       ${rows.map(({a,r})=> `<tr class="${view && a.id===nbrAdvForUser(currentUser.id) ? 'nbr-me' : ''}"><td>${view ? (a.id===nbrAdvForUser(currentUser.id) ? `<b>${esc(a.name)}</b> <span class="nbr-tag">You</span>` : esc(a.name)) : `<button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">${esc(a.name)}</button>`}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, tot.total)}</td><td class="num">${nbrPct(r.total, grand.total)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
-      <tr class="nbr-tot"><td>${esc(label)} total</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(tot[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(tot.total)}</td><td class="num">${tot.total ? '100%' : '–'}</td><td class="num">${nbrPct(tot.total, grand.total)}</td><td class="num">${nbrMoneyCell(tot.banked)}</td></tr>`;
+      <tr class="nbr-tot nbr-office-tot"><td>${esc(label)} total</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(tot[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(tot.total)}</td><td class="num">${tot.total ? '100%' : '–'}</td><td class="num">${nbrPct(tot.total, grand.total)}</td><td class="num">${nbrMoneyCell(tot.banked)}</td></tr>`;
   };
   const boardTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-board-table">
     <thead><tr><th>Advisor</th>${NBR_CATS.map(([,l])=> `<th class="num">${l}</th>`).join('')}<th class="num">Total written</th><th class="num">% of office</th><th class="num">% of all</th><th class="num">Banked</th></tr></thead>
     <tbody>${NBR_OFFICES.map(([c,l])=> officeBlock(c, l)).join('')}${officeBlock('', 'No office set')}
+      <tr class="nbr-gap" aria-hidden="true"><td colspan="10"></td></tr>
       <tr class="nbr-grand"><td>All offices</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(grand[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(grand.total)}</td><td></td><td class="num">${grand.total ? '100%' : '–'}</td><td class="num">${nbrMoneyCell(sel.banked)}</td></tr>
     </tbody></table></div>`;
 

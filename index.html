@@ -4655,7 +4655,11 @@ function goPage(page){
   document.getElementById('page-sibInsights').classList.toggle('hidden', page!=='sibInsights');
   document.getElementById('page-com').classList.toggle('hidden', page!=='com');
   if(page==='com'){ startComListener(); renderCom(); }
-  ['nbrBoard','nbrReg','nbrBible','nbrSetup'].forEach(p=> document.getElementById('page-'+p).classList.toggle('hidden', page!==p));
+  ['nbrBoard','nbrReg','nbrBible','nbrSetup'].forEach(p=>{
+    const pg = document.getElementById('page-'+p), leaving = page!==p && !pg.classList.contains('hidden');
+    pg.classList.toggle('hidden', page!==p);
+    if(leaving){ const body = document.getElementById(p+'Body'); if(body) body.innerHTML = ''; }
+  });
   if(/^nbr/.test(page)){ startNbrListener(); renderNbrVisible(); }
   document.getElementById('page-useful').classList.toggle('hidden', page!=='useful');
   if(page==='useful') showUsefulHome();
@@ -5379,7 +5383,7 @@ function ensureSibLoaded(){
    the first switch to Send in Blue or Commercial doesn't wait for a download. */
 function prefetchSections(){
   clearTimeout(prefetchSections.t);
-  prefetchSections.t = setTimeout(()=> (window.requestIdleCallback || (f=> f()))(()=>{ if(currentUser){ startSibListener(); startComListener(); nbrCheckSummary(); } }), 3000);
+  prefetchSections.t = setTimeout(()=> (window.requestIdleCallback || (f=> f()))(()=>{ if(currentUser){ startSibListener(); startComListener(); if(nbrAccess()) startNbrListener(); } }), 3000);
 }
 function startSibListener(){
   if(sibListening || !currentUser) return;
@@ -6819,6 +6823,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05g', date:'2026-11-05', items:[ {text:"<b>New Business is quicker</b>: the Salesboard shows straight away, and the NBRs and Bible load in the background a few seconds after you log in, so they're ready when you open them.", roles:['admin','management']} ]},
   {id:'2026-11-05f', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: the office headings (Frimley, Gurkha) are now Michael Usher pink, so each office stands out.", roles:['admin','management','mapa']} ]},
   {id:'2026-11-05e', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: tidied up. The month for everyone is at the top (your row is highlighted), then <b>My figures</b>: what you've written and banked by month, by quarter and by year, compared with last year.", roles:['mapa']},
     {text:"<b>New Business</b>: each advisor can now be linked to their <b>Dashboard login</b> (Advisors &amp; upload → Edit), so MAPAs see their own figures on the Salesboard. A login with exactly the same name is linked automatically.", roles:['admin','management']} ]},
@@ -13740,22 +13745,31 @@ function nbrViewer(){ return !!currentUser && currentUser.role==='mapa'; }
 function nbrSeeAccess(){ return nbrAccess() || nbrViewer(); }
 let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null, nbrShare = null;
 const NBR_SUM_VERSION = 2;
-function nbrReady(){ return nbrViewer() ? nbrSumLoaded : Object.values(nbrLoaded).every(Boolean); }
+function nbrFullReady(){ return Object.values(nbrLoaded).every(Boolean); }
+function nbrReady(){ return nbrViewer() ? nbrSumLoaded : nbrFullReady(); }
+// Figures come from the summary: always for MAPAs; for Admin / Management only until the full data has arrived.
+function nbrOnSummary(){ return nbrViewer() || (nbrAccess() && !nbrFullReady() && nbrSumLoaded && !!(NBR_SUMMARY && NBR_SUMMARY.updatedAt)); }
 function syncNbrAccess(){
   const ok = nbrSeeAccess(), view = nbrViewer();
   const btn = document.getElementById('nbrModeBtn');
   btn.classList.toggle('hidden', !ok); btn.textContent = view ? 'Salesboard' : 'New Business';
   document.body.classList.toggle('nbr-view', view);
   if(!nbrAccess() && nbrListening) stopNbrListener();
-  if(!view && nbrSumListening) stopNbrSummary();
+  if(!ok && nbrSumListening) stopNbrSummary();
   if(!ok && APP_MODE==='nbr'){ closeModal('nbrFormOverlay', true); setAppMode('protection'); }
   else if(APP_MODE==='nbr'){ document.querySelector('.brand-text .t1').textContent = view ? 'Salesboard' : 'New Business'; if(view && !nbrPageShown('nbrBoard')) goPage('nbrBoard'); }
 }
 function startNbrSummary(){
-  if(nbrSumListening || !nbrViewer()) return;
-  nbrSumListening = true; nbrError = '';
-  db.ref('nbrBoard').on('value', snap=>{ NBR_SUMMARY = snap.val() || {}; nbrSumLoaded = true; nbrVer++; nbrRenderSoon(); },
-    ()=>{ nbrError = 'Could not load the Salesboard. Ask Management to publish the updated Firebase rules, then refresh.'; stopNbrSummary(); nbrRenderSoon(); });
+  if(nbrSumListening || !nbrSeeAccess() || (nbrAccess() && nbrFullReady())) return;
+  nbrSumListening = true; if(nbrViewer()) nbrError = '';
+  db.ref('nbrBoard').on('value', snap=>{
+    // Admin / Management only need it until their full data is in.
+    if(nbrAccess() && nbrFullReady()){ stopNbrSummary(); return; }
+    NBR_SUMMARY = snap.val() || {}; nbrSumLoaded = true; nbrVer++; nbrRenderSoon();
+  }, ()=>{
+    if(nbrViewer()){ nbrError = 'Could not load the Salesboard. Ask Management to publish the updated Firebase rules, then refresh.'; nbrRenderSoon(); }
+    stopNbrSummary();
+  });
 }
 function stopNbrSummary(){ db.ref('nbrBoard').off(); nbrSumListening = false; nbrSumLoaded = false; NBR_SUMMARY = null; nbrVer++; }
 // Admin / Management: keep the Salesboard summary up to date whenever New Business changes.
@@ -13777,20 +13791,19 @@ function nbrPublishSummary(){
   const done = err=>{ nbrShare = err ? {err: err.message || String(err)} : {at: Date.now()}; if(!err) nbrPublished = json; else console.warn('Salesboard summary not shared:', err); if(nbrPageShown('nbrBoard')) renderNbrBoard(); };
   try{ db.ref('nbrBoard').set({...sum, updatedAt: Date.now()}).then(()=> done(null), done); }catch(err){ done(err); }
 }
-// On logging in, Admin / Management build the summary if it's missing or out of date (no need to open New Business).
-function nbrCheckSummary(){
-  if(!nbrAccess()) return;
-  db.ref('nbrBoard/v').once('value').then(s=>{ if(s.val()!==NBR_SUM_VERSION) startNbrListener(); }, ()=> startNbrListener());
-}
+// Admin / Management load New Business quietly a few seconds after logging in (see prefetchSections), so it's
+// ready when they open it, and the MAPAs' Salesboard summary is rebuilt if it's out of date.
 function startNbrListener(){
   if(nbrViewer()){ startNbrSummary(); return; }
   if(nbrListening || !nbrAccess()) return;
+  startNbrSummary();
   nbrListening = true; nbrError = '';
   Object.keys(nbrLoaded).forEach(k=>{
     db.ref('nbr/'+k).on('value', snap=>{
       const v = snap.val() || {};
       if(k==='advisors') NBR_ADV = v; else if(k==='entries') NBR_ENT = v; else if(k==='npw') NBR_NPW = v; else if(k==='bible') NBR_BIB = v; else NBR_CFG = v;
       nbrLoaded[k] = true; nbrVer++; nbrRenderSoon(); nbrPublishSoon();
+      if(nbrFullReady() && nbrSumListening) stopNbrSummary();
     }, ()=>{
       nbrError = 'Could not load New Business. Publish the updated Firebase rules, then refresh.';
       stopNbrListener(); nbrRenderSoon();
@@ -13816,7 +13829,8 @@ function renderNbrVisible(){
 const nbrPad = n=> String(n).padStart(2,'0');
 function n0(v){ if(typeof v==='number') return isFinite(v) ? v : 0; const x = parseFloat(String(v==null ? '' : v).replace(/[£,\s]/g,'')); return isFinite(x) ? x : 0; }
 function nbrRound(v){ return Math.round(n0(v)*100)/100; }
-function nbrMoney(v){ const x = nbrRound(v); return (x<0 ? '-£' : '£') + Math.abs(x).toLocaleString('en-GB',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+const NBR_NUM = new Intl.NumberFormat('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+function nbrMoney(v){ const x = nbrRound(v); return (x<0 ? '-£' : '£') + NBR_NUM.format(Math.abs(x)); }
 function nbrMoneyCell(v){ return nbrRound(v) ? nbrMoney(v) : '<span class="nbr-zero">–</span>'; }
 function nbrPct(a, b){ return b ? (Math.round(a/b*1000)/10).toFixed(1)+'%' : '–'; }
 function nbrYm(y, m){ return `${y}-${nbrPad(m)}`; }
@@ -13829,7 +13843,7 @@ function nbrFyLabel(fy){ const y = nbrFyStart(fy); return `${fy} (Mar ${y} – F
 function nbrToday(){ return todayISO(); }
 function nbrThisYm(){ return nbrToday().slice(0,7); }
 // The advisor list: the full one, or the Salesboard summary's for MAPAs.
-function nbrAdvMap(){ return nbrViewer() ? ((NBR_SUMMARY && NBR_SUMMARY.advisors) || {}) : NBR_ADV; }
+function nbrAdvMap(){ return nbrOnSummary() ? ((NBR_SUMMARY && NBR_SUMMARY.advisors) || {}) : NBR_ADV; }
 // The advisor record for a dashboard login: the one linked to it, or failing that the one with the same name.
 function nbrAdvForUser(uid){
   const M = nbrAdvMap(), u = USERS[uid]; if(!uid) return '';
@@ -13858,7 +13872,7 @@ function nbrLists(){
     saleTypes: arr(L.saleTypes).length ? uniq(arr(L.saleTypes)) : NBR_SALE_TYPES.slice()};
 }
 function nbrTargets(){
-  if(nbrViewer()){ const t = (NBR_SUMMARY && NBR_SUMMARY.targets) || {}; return {written: n0(t.written) || 3000000, banked: n0(t.banked) || 2300000}; }
+  if(nbrOnSummary()){ const t = (NBR_SUMMARY && NBR_SUMMARY.targets) || {}; return {written: n0(t.written) || 3000000, banked: n0(t.banked) || 2300000}; }
   return {written: n0(NBR_CFG.targetWritten) || 3000000, banked: n0(NBR_CFG.targetBanked) || 2300000};
 }
 function nbrDefaultSource(){ return NBR_CFG.defaultSource || 'HLP'; }
@@ -13869,7 +13883,7 @@ function nbrDefaultSource(){ return NBR_CFG.defaultSource || 'HLP'; }
    from that advisor's Bible lines instead: each line's amount, by product, in the month it was written. */
 function nbrAgg(){
   if(nbrAggCache && nbrAggCache.v===nbrVer) return nbrAggCache;
-  if(nbrViewer()){
+  if(nbrOnSummary()){
     const S = NBR_SUMMARY || {}, unkey = o=>{ const out = {}; Object.entries(o||{}).forEach(([k,v])=> out[k==='_' ? '' : k] = v); return out; };
     const w = {}; Object.entries(unkey(S.w)).forEach(([adv, months])=>{ w[adv] = {}; Object.entries(months||{}).forEach(([ym, v])=>{ w[adv][ym] = {proc:0, mums:0, prot:0, sols:0, val:0, n:0, ...v}; }); });
     const years = (Array.isArray(S.years) ? S.years : Object.values(S.years||{})).map(Number);
@@ -14191,14 +14205,18 @@ function openNbrAdvisor(id){
 
 /* ============================== SALESBOARD ============================== */
 function nbrYearOptions(sel){ return nbrAgg().years.map(y=> `<option value="${y}" ${y===sel ? 'selected' : ''}>${y}</option>`).join(''); }
-function nbrNotReady(el){
+function nbrNotReady(el, summaryOk){
   if(nbrError){ el.innerHTML = `<div class="nml-empty">${esc(nbrError)}</div>`; return true; }
-  if(!nbrReady()){ el.innerHTML = '<div class="nml-empty">Loading…</div>'; return true; }
+  if(!nbrReady() && !(summaryOk && nbrOnSummary())){
+    const n = Object.values(nbrLoaded).filter(Boolean).length, tot = Object.keys(nbrLoaded).length;
+    el.innerHTML = `<div class="nml-empty">Loading${nbrAccess() && n ? ` (${n} of ${tot})` : ''}…</div>`; return true;
+  }
   return false;
 }
 function renderNbrBoard(){
   const el = document.getElementById('nbrBoardBody');
-  if(nbrNotReady(el)) return;
+  if(nbrNotReady(el, true)) return;
+  const quick = !nbrViewer() && nbrOnSummary();
   const now = new Date();
   if(!nbrUI.boardYear) nbrUI.boardYear = now.getFullYear();
   if(!nbrUI.boardMonth) nbrUI.boardMonth = now.getFullYear()===nbrUI.boardYear ? now.getMonth()+1 : 12;
@@ -14296,7 +14314,7 @@ function renderNbrBoard(){
       <tbody>${yearsMine.map(y=>{ const r = yr(y), l = yr(y-1); return `<tr class="${y===Y ? 'nbr-sel' : ''}"><td>${y}</td>${catCells(r)}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td><td class="num">${yoy(r.total, l.total)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="nml-empty">Nothing yet.</div>'}`;
     }
   }
-  const empty = view ? !Object.keys((NBR_SUMMARY && NBR_SUMMARY.w) || {}).length && !Object.keys((NBR_SUMMARY && NBR_SUMMARY.bank) || {}).length : !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
+  const empty = view || quick ? !Object.keys((NBR_SUMMARY && NBR_SUMMARY.w) || {}).length && !Object.keys((NBR_SUMMARY && NBR_SUMMARY.bank) || {}).length : !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
   el.innerHTML = `
     ${view && !(NBR_SUMMARY && NBR_SUMMARY.updatedAt) ? `<div class="nbr-callout">The Salesboard hasn't been filled in yet. It fills in automatically the next time someone in Admin or Management logs in, so check back shortly.</div>` : empty && view ? `<div class="nbr-callout">Nothing on the Salesboard yet.</div>` : ''}
     ${!view && nbrShare && nbrShare.err ? `<div class="nbr-callout nbr-callout-bad"><b>MAPAs and protection advisers can't see these figures yet</b>: the Salesboard couldn't be shared with them (${esc(nbrShare.err)}). Publish the latest database rules in Firebase, then refresh this page.</div>` : ''}
@@ -14306,7 +14324,8 @@ function renderNbrBoard(){
       <label>Month <select id="nbrBoardMonth">${NBR_MONTHS_LONG.map((m,i)=> `<option value="${i+1}" ${i+1===nbrUI.boardMonth ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
       <span class="nbr-spacer"></span>
       ${view && NBR_SUMMARY && NBR_SUMMARY.updatedAt ? `<span class="field-hint">Updated ${esc(new Date(NBR_SUMMARY.updatedAt).toLocaleDateString('en-GB'))} at ${esc(new Date(NBR_SUMMARY.updatedAt).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
-      ${!view && nbrShare && nbrShare.at ? `<span class="field-hint">Shared with MAPAs and protection advisers · ${esc(new Date(nbrShare.at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
+      ${quick ? `<span class="field-hint">Loading the latest details…</span>` : ''}
+      ${!view && !quick && nbrShare && nbrShare.at ? `<span class="field-hint">Shared with MAPAs and protection advisers · ${esc(new Date(nbrShare.at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
     </div>
     ${view ? `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} · everyone</h2>` : ''}
     <div class="stat-grid ${view ? 'nbr-stat-2' : ''}">
@@ -14500,8 +14519,10 @@ function renderNbrSetup(){
   if(nbrNotReady(el)) return;
   const advs = nbrAdvs(true), L = NBR_CFG.lists || {}, T = nbrTargets();
   const listVal = k=> (Array.isArray(L[k]) ? L[k] : Object.values(L[k]||{})).join('\n');
-  const count = id=> Object.values(NBR_ENT).filter(e=> e && e.adv===id).length;
-  const bcount = id=> Object.values(NBR_BIB).filter(l=> l && l.adv===id).length;
+  const cN = {}, bN = {};
+  Object.values(NBR_ENT).forEach(e=>{ if(e) cN[e.adv] = (cN[e.adv]||0) + 1; });
+  Object.values(NBR_BIB).forEach(l=>{ if(l) bN[l.adv] = (bN[l.adv]||0) + 1; });
+  const count = id=> cN[id] || 0, bcount = id=> bN[id] || 0;
   el.innerHTML = `
     <div class="nbr-setup-grid">
       <section class="nbr-card">

@@ -6843,6 +6843,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05p', date:'2026-11-05', items:[ {text:"<b>New Business</b>: fixed reading NBRs laid out differently (e.g. Arbin's): an unlabelled month-total row was being counted as a case, and missing Sols/Val columns were being guessed. Upload Arbin's NBR again to correct his figures.", roles:['admin','management']} ]},
   {id:'2026-11-05o', date:'2026-11-05', items:[ {text:"<b>New Business</b>: if the same person is on the advisors list twice (e.g. \"Arbin\" from the Bible and \"Arbin Gurung\" from his NBR), it's flagged on <b>Advisors &amp; upload</b>. Open one and use <b>Merge</b> so their figures aren't counted twice.", roles:['admin','management']} ]},
   {id:'2026-11-05n', date:'2026-11-05', items:[ {text:"<b>New Business</b>: uploading an advisor's NBR now <b>brings the dashboard in line with it</b> for the months in the file: new cases added, changed ones updated, and ones no longer on the NBR removed. Dates paid in the Bible are kept. (\"Add new cases only\" and \"Replace\" are still there.)", roles:['admin','management']} ]},
   {id:'2026-11-05m', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: shows straight away after a refresh (it keeps its last figures for this tab, then updates live).", roles:['admin','management','mapa']} ]},
@@ -14733,7 +14734,10 @@ function nbrParseAdvisorNbr(wb){
   const take = s=>{ if(out.name) return; const m = nbrCellStr(s).match(/^(.*?)\s+new business register/i); if(m && m[1] && !/^adv name$/i.test(m[1].trim())) out.name = m[1].trim(); };
   wb.SheetNames.forEach(sn=>{
     const ym = nbrSheetMonth(sn); if(!ym) return;
-    const rows = nbrSheetRows(wb.Sheets[sn]);
+    const ws = wb.Sheets[sn], rows = nbrSheetRows(ws);
+    // Where row/column 0 of `rows` sits on the sheet, to look at a cell's formula.
+    const rg = ws['!ref'] ? window.XLSX.utils.decode_range(ws['!ref']) : {s:{r:0, c:0}};
+    const isFormula = (i, c)=>{ const cell = ws[window.XLSX.utils.encode_cell({r: rg.s.r + i, c: rg.s.c + c})]; return !!(cell && cell.f); };
     rows.slice(0,3).forEach(r=> (r||[]).forEach(take));
     let h = rows.findIndex((r,i)=> i<8 && (r||[]).some(c=> /client/i.test(nbrCellStr(c))));
     const col = {client:1, lender:2, proc:3, mums:4, prot:5, sols:6, solsName:7, val:8, valName:9, appSub:10, leadProvider:11, saleType:12, notes:13, linkToSend:14, linkSent:15, linkPaid:16};
@@ -14749,6 +14753,9 @@ function nbrParseAdvisorNbr(wb){
         else if(/lead/.test(s)) set('leadProvider'); else if(/type of sale/.test(s)) set('saleType'); else if(/post ?code|notes/.test(s)) set('notes');
         else if(/link/.test(s)) set('linkToSend'); else if(/accounts/.test(s)) set('linkSent'); });
       sub.forEach((t,i)=>{ const s = t.toLowerCase(); if(/to send/.test(s)) found.linkToSend = i; else if(/date sent/.test(s)) found.linkSent = i; else if(/date paid/.test(s)) found.linkPaid = i; });
+      // Only the columns this sheet has: some NBRs (e.g. a protection adviser's) have no Sols or Val columns,
+      // and guessing their place would read other columns (monthly premiums, dates) as fees.
+      if(found.client!=null) Object.keys(col).forEach(k=>{ if(found[k]==null) col[k] = null; });
       Object.assign(col, found);
       start = h + 1 + (sub.some(t=> /to send|date sent|date paid/i.test(t)) ? 1 : 0);
     }
@@ -14758,14 +14765,17 @@ function nbrParseAdvisorNbr(wb){
       if(typeof a==='string' && /week|total/i.test(a)) continue;
       if(/^totals?$/i.test(b) || /grand total/i.test(b)) continue;
       const wk = nbrXlDate(a); if(wk) lastWeek = wk;
-      const amt = k=> nbrRound(r[col[k]]);
-      const client = nbrCellStr(r[col.client]);
+      const amt = k=> col[k]==null ? 0 : nbrRound(r[col[k]]);
+      const client = col.client==null ? '' : nbrCellStr(r[col.client]);
       const vals = {proc:amt('proc'), mums:amt('mums'), prot:amt('prot'), sols:amt('sols'), val:amt('val')};
       if(!client && !Object.values(vals).some(Boolean)) continue;
-      const e = nbrClean({month:ym, week: wk || lastWeek || '', client, lender:nbrCellStr(r[col.lender]), ...vals,
-        solsName:nbrCellStr(r[col.solsName]), valName:nbrCellStr(r[col.valName]), appSub:nbrXlDate(r[col.appSub]) || '', leadProvider:nbrCellStr(r[col.leadProvider]),
-        saleType:nbrCellStr(r[col.saleType]), notes: r[col.notes]!=null && typeof r[col.notes]==='number' && nbrXlDate(r[col.notes]) ? fmtDateSlash(nbrXlDate(r[col.notes])) : nbrCellStr(r[col.notes]),
-        linkToSend: nbrRound(r[col.linkToSend]) || '', linkSent: nbrXlDate(r[col.linkSent]), linkPaid: nbrXlDate(r[col.linkPaid])});
+      // A row with no client whose amounts are formulas is a total (e.g. an unlabelled month total), not a case.
+      if(!client && ['proc','mums','prot','sols','val'].some(k=> col[k]!=null && vals[k] && isFormula(i, col[k]))) continue;
+      const cv = k=> col[k]==null ? null : r[col[k]];
+      const e = nbrClean({month:ym, week: wk || lastWeek || '', client, lender:nbrCellStr(cv('lender')), ...vals,
+        solsName:nbrCellStr(cv('solsName')), valName:nbrCellStr(cv('valName')), appSub:nbrXlDate(cv('appSub')) || '', leadProvider:nbrCellStr(cv('leadProvider')),
+        saleType:nbrCellStr(cv('saleType')), notes: cv('notes')!=null && typeof cv('notes')==='number' && nbrXlDate(cv('notes')) ? fmtDateSlash(nbrXlDate(cv('notes'))) : nbrCellStr(cv('notes')),
+        linkToSend: nbrRound(cv('linkToSend')) || '', linkSent: nbrXlDate(cv('linkSent')), linkPaid: nbrXlDate(cv('linkPaid'))});
       if(!e.week || e.week.slice(0,7)!==ym) e.week = nbrWeekFor(e.week || ym+'-01', ym);
       out.entries.push(e); n++;
     }

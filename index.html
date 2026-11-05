@@ -3878,7 +3878,7 @@ function saveBootCache(){
     catch(e){ bootCacheTooBig = true; try{ sessionStorage.removeItem(BOOT_CACHE_KEY); }catch(e2){} } // too big for this browser: just load normally
   }, 1500);
 }
-function clearBootCache(){ bootCache = null; clearTimeout(bootCacheTimer); try{ sessionStorage.removeItem(BOOT_CACHE_KEY); }catch(e){} }
+function clearBootCache(){ bootCache = null; clearTimeout(bootCacheTimer); try{ sessionStorage.removeItem(BOOT_CACHE_KEY); sessionStorage.removeItem('plt_nbr_sum'); }catch(e){} }
 /* Runs once the page has loaded: draw the dashboard from the refresh copy
    without waiting for the sign-in check. When the check comes back, the
    usual sign-in steps run; if this tab is no longer signed in as the same
@@ -6839,6 +6839,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05m', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: shows straight away after a refresh (it keeps its last figures for this tab, then updates live).", roles:['admin','management','mapa']} ]},
   {id:'2026-11-05l', date:'2026-11-05', items:[ {text:"<b>Wills</b>: new Wills cases now have <b>David Prior</b> as the broker, and aren't linked to the MAPA whose NBR you added them from. Find them all on the <b>Wills</b> tab.", roles:['admin','management']} ]},
   {id:'2026-11-05k', date:'2026-11-05', items:[ {text:"<b>Salesboard is quicker after a refresh</b>: it shows in about a second instead of waiting for the whole Bible to download.", roles:['admin','management']} ]},
   {id:'2026-11-05j', date:'2026-11-05', items:[
@@ -13784,13 +13785,20 @@ function syncNbrAccess(){
   if(!ok && APP_MODE==='nbr'){ closeModal('nbrFormOverlay', true); setAppMode('protection'); }
   else if(APP_MODE==='nbr'){ document.querySelector('.brand-text .t1').textContent = view ? 'Salesboard' : 'New Business'; if(view && !nbrPageShown('nbrBoard')) goPage('nbrBoard'); }
 }
+// The Salesboard's last figures (names and totals only) are kept for this tab, so after a refresh it shows
+// straight away and then updates live. Cleared on logging out.
+const NBR_SUM_CACHE = 'plt_nbr_sum';
+function nbrCacheSummary(sum){ try{ sessionStorage.setItem(NBR_SUM_CACHE, JSON.stringify({uid: currentUser && currentUser.id, sum})); }catch(e){} }
+function nbrCachedSummary(){ try{ const c = JSON.parse(sessionStorage.getItem(NBR_SUM_CACHE) || 'null'); return c && currentUser && c.uid===currentUser.id && c.sum && c.sum.updatedAt ? c.sum : null; }catch(e){ return null; } }
 function startNbrSummary(){
   if(nbrSumListening || !nbrSeeAccess() || (nbrAccess() && nbrFullReady())) return;
   nbrSumListening = true; if(nbrViewer()) nbrError = '';
+  if(!nbrSumLoaded){ const c = nbrCachedSummary(); if(c){ NBR_SUMMARY = c; nbrSumLoaded = true; nbrVer++; nbrRenderSoon(); } }
   db.ref('nbrBoard').on('value', snap=>{
     // Admin / Management only need it until their full data is in.
     if(nbrAccess() && nbrFullReady()){ stopNbrSummary(); return; }
     NBR_SUMMARY = snap.val() || {}; nbrSumLoaded = true; nbrVer++; nbrRenderSoon();
+    if(NBR_SUMMARY.updatedAt) nbrCacheSummary(NBR_SUMMARY);
   }, ()=>{
     if(nbrViewer()){ nbrError = 'Could not load the Salesboard. Ask Management to publish the updated Firebase rules, then refresh.'; nbrRenderSoon(); }
     stopNbrSummary();
@@ -13813,8 +13821,9 @@ function nbrPublishSummary(){
     targets: {written: nbrTargets().written, banked: nbrTargets().banked}, v: NBR_SUM_VERSION};
   const json = JSON.stringify(sum);
   if(json===nbrPublished) return;
-  const done = err=>{ nbrShare = err ? {err: err.message || String(err)} : {at: Date.now()}; if(!err) nbrPublished = json; else console.warn('Salesboard summary not shared:', err); if(nbrPageShown('nbrBoard')) renderNbrBoard(); };
-  try{ db.ref('nbrBoard').set({...sum, updatedAt: Date.now()}).then(()=> done(null), done); }catch(err){ done(err); }
+  const stamp = Date.now();
+  const done = err=>{ nbrShare = err ? {err: err.message || String(err)} : {at: Date.now()}; if(!err){ nbrPublished = json; nbrCacheSummary({...sum, updatedAt: stamp}); } else console.warn('Salesboard summary not shared:', err); if(nbrPageShown('nbrBoard')) renderNbrBoard(); };
+  try{ db.ref('nbrBoard').set({...sum, updatedAt: stamp}).then(()=> done(null), done); }catch(err){ done(err); }
 }
 // Admin / Management load New Business quietly a few seconds after logging in (see prefetchSections), so it's
 // ready when they open it, and the MAPAs' Salesboard summary is rebuilt if it's out of date.
@@ -13845,7 +13854,7 @@ function stopNbrListener(){
   Object.keys(nbrLoaded).forEach(k=>{ db.ref('nbr/'+k).off(); nbrLoaded[k] = false; });
   nbrListening = false; NBR_ADV = {}; NBR_ENT = {}; NBR_NPW = {}; NBR_BIB = {}; NBR_CFG = {}; NBR_BC = {}; NBR_WILLS = {}; nbrVer++; nbrUI.upload = null;
 }
-function nbrRenderSoon(){ clearTimeout(nbrRenderTimer); nbrRenderTimer = setTimeout(renderNbrVisible, 80); }
+function nbrRenderSoon(){ clearTimeout(nbrRenderTimer); nbrRenderTimer = setTimeout(renderNbrVisible, nbrFullReady() || nbrViewer() ? 80 : 30); }
 function nbrPageShown(p){ const el = document.getElementById('page-'+p); return el && !el.classList.contains('hidden'); }
 function renderNbrVisible(){
   if(nbrPageShown('nbrBoard')) renderNbrBoard();

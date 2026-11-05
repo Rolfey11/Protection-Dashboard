@@ -770,6 +770,10 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-ubox{border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--bg); font-size:13px;}
 .nbr-ubox p{margin-bottom:8px;}
 .nbr-ubox-dim{color:var(--text-muted);}
+.nbr-merge{margin-top:16px; padding-top:12px; border-top:1px solid var(--border);}
+.nbr-merge-h{font-weight:700; font-size:13px; margin-bottom:4px;}
+.nbr-merge select{min-width:220px;}
+.nbr-tag.nbr-tag-warn{background:color-mix(in srgb, var(--amber) 18%, var(--surface)); color:var(--text);}
 .nbr-check.nbr-sub{margin-left:24px; font-size:12.5px;}
 .nbr-up-mode{border-top:1px solid var(--border); padding-top:10px; margin-top:4px;}
 .nbr-fill-sum{margin:4px 0 12px 18px; display:flex; flex-direction:column; gap:4px;}
@@ -6839,6 +6843,8 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05o', date:'2026-11-05', items:[ {text:"<b>New Business</b>: if the same person is on the advisors list twice (e.g. \"Arbin\" from the Bible and \"Arbin Gurung\" from his NBR), it's flagged on <b>Advisors &amp; upload</b>. Open one and use <b>Merge</b> so their figures aren't counted twice.", roles:['admin','management']} ]},
+  {id:'2026-11-05n', date:'2026-11-05', items:[ {text:"<b>New Business</b>: uploading an advisor's NBR now <b>brings the dashboard in line with it</b> for the months in the file: new cases added, changed ones updated, and ones no longer on the NBR removed. Dates paid in the Bible are kept. (\"Add new cases only\" and \"Replace\" are still there.)", roles:['admin','management']} ]},
   {id:'2026-11-05m', date:'2026-11-05', items:[ {text:"<b>Salesboard</b>: shows straight away after a refresh (it keeps its last figures for this tab, then updates live).", roles:['admin','management','mapa']} ]},
   {id:'2026-11-05l', date:'2026-11-05', items:[ {text:"<b>Wills</b>: new Wills cases now have <b>David Prior</b> as the broker, and aren't linked to the MAPA whose NBR you added them from. Find them all on the <b>Wills</b> tab.", roles:['admin','management']} ]},
   {id:'2026-11-05k', date:'2026-11-05', items:[ {text:"<b>Salesboard is quicker after a refresh</b>: it shows in about a second instead of waiting for the whole Bible to download.", roles:['admin','management']} ]},
@@ -14237,6 +14243,33 @@ function openNbrLine(id, opts={}){
 }
 
 /* ---- Advisors ---- */
+// Another advisor that looks like the same person: one name is the other's first name, or matches one of its Bible codes.
+function nbrLikelySame(id){
+  const a = NBR_ADV[id]; if(!a) return '';
+  const n = String(a.name||'').trim().toLowerCase(), first = n.split(/\s+/)[0], codes = nbrAdvCodes(a).map(c=> c.toLowerCase());
+  const o = nbrAdvs(true).find(x=>{
+    if(x.id===id) return false;
+    const xn = String(x.name||'').trim().toLowerCase(), xf = xn.split(/\s+/)[0], xc = nbrAdvCodes(x).map(c=> c.toLowerCase());
+    return (n && (xf===n || xc.includes(n))) || (xn && (first===xn || codes.includes(xn))) || (n!==xn && first && first===xf && (n.split(/\s+/).length===1 || xn.split(/\s+/).length===1));
+  });
+  return o ? o.id : '';
+}
+function nbrMergeAdvisor(fromId, toId){
+  const a = NBR_ADV[fromId], b = NBR_ADV[toId];
+  if(!a || !b){ toast('Choose the advisor to merge into.', 'error'); return; }
+  const ents = Object.entries(NBR_ENT).filter(([,e])=> e && e.adv===fromId), npws = Object.entries(NBR_NPW).filter(([,x])=> x && x.adv===fromId), lines = Object.entries(NBR_BIB).filter(([,l])=> l && l.adv===fromId);
+  if(!confirm(`Move ${ents.length} case${ents.length===1?'':'s'}, ${npws.length} NPW${npws.length===1?'':'s'} and ${lines.length} Bible line${lines.length===1?'':'s'} from "${a.name}" to "${b.name}", and remove "${a.name}"?`)) return;
+  const up = {};
+  ents.forEach(([k])=>{ up['entries/'+k+'/adv'] = toId; });
+  npws.forEach(([k])=>{ up['npw/'+k+'/adv'] = toId; });
+  lines.forEach(([k])=>{ up['bible/'+k+'/adv'] = toId; });
+  const codes = [...new Set([...nbrAdvCodes(b), ...nbrAdvCodes(a), ...(nbrAdvCodes(a).length ? [] : [a.name])].map(c=> c.trim()).filter(Boolean))];
+  up['advisors/'+toId+'/codes'] = codes.join(', ');
+  if(!b.office && a.office) up['advisors/'+toId+'/office'] = a.office;
+  if(!b.userId && a.userId) up['advisors/'+toId+'/userId'] = a.userId;
+  up['advisors/'+fromId] = null;
+  nbrWrite(up).then(()=>{ closeModal('nbrFormOverlay', true); toast(`Merged into ${b.name}.`, 'success'); }).catch(err=> toast('Could not merge: '+err.message, 'error'));
+}
 function openNbrAdvisor(id){
   const a = id ? (NBR_ADV[id] || {}) : {active:true};
   const body = `${nfText('naName','Name', a.name)}
@@ -14245,7 +14278,13 @@ function openNbrAdvisor(id){
     ${nfSelect('naOffice','Office', a.office||'', [['','—'], ...NBR_OFFICES])}
     ${nfSelect('naUser','Dashboard login', a.userId||'', nbrLoginOptions())}
     <p class="field-hint" style="margin:-10px 0 16px;">So they see their own figures on the Salesboard. If it's left blank, a login with exactly the same name is used.</p>
-    <label class="nbr-check"><input type="checkbox" id="naActive" ${a.active!==false ? 'checked' : ''}> Active (shows on the NBR and Salesboard)</label>`;
+    <label class="nbr-check"><input type="checkbox" id="naActive" ${a.active!==false ? 'checked' : ''}> Active (shows on the NBR and Salesboard)</label>
+    ${id ? `<div class="nbr-merge">
+      <div class="nbr-merge-h">Same person as another advisor here?</div>
+      <p class="field-hint">e.g. "Arbin" from the Bible and "Arbin Gurung" from his NBR. Merging moves all of this advisor's cases, NPWs and Bible lines to the other one, adds the Bible codes, and removes this one, so nothing is counted twice.</p>
+      <div class="nbr-row-btns"><select id="naMerge"><option value="">Merge into…</option>${nbrAdvs(true).filter(o=> o.id!==id).map(o=> `<option value="${esc(o.id)}" ${o.id===nbrLikelySame(id) ? 'selected' : ''}>${esc(o.name)}${o.id===nbrLikelySame(id) ? ' (looks like the same person)' : ''}</option>`).join('')}</select>
+      <button type="button" class="btn btn-secondary btn-sm" id="naMergeBtn">Merge</button></div>
+    </div>` : ''}`;
   openNbrForm({title: id ? 'Edit advisor' : 'Add an advisor', body, wide:false, saveLabel: id ? 'Save' : 'Add advisor',
     onSave: ()=>{
       const name = nfv('naName'); if(!name){ toast('Enter the name.', 'error'); return false; }
@@ -14258,6 +14297,7 @@ function openNbrAdvisor(id){
       return nbrWrite({['advisors/'+(id || nbrKey())]: data}).then(()=> toast(id ? 'Advisor saved.' : 'Advisor added.', 'success'));
     },
     onDelete: id ? (()=>{
+      setTimeout(()=>{ const btn = document.getElementById('naMergeBtn'); if(btn) btn.addEventListener('click', ()=> nbrMergeAdvisor(id, nfv('naMerge'))); }, 0);
       const used = Object.values(NBR_ENT).some(e=> e && e.adv===id) || Object.values(NBR_BIB).some(l=> l && l.adv===id) || Object.values(NBR_NPW).some(x=> x && x.adv===id);
       return used ? null : ()=> nbrWrite({['advisors/'+id]: null}).then(()=> toast('Advisor removed.', 'success'));
     })() : null});
@@ -14596,12 +14636,12 @@ function renderNbrSetup(){
       <section class="nbr-card">
         <div class="nbr-card-head"><h2>Advisors</h2><button type="button" class="btn btn-primary btn-sm" id="nbrAddAdv">+ Add advisor</button></div>
         ${advs.length ? `<table class="nml-table nbr-table"><thead><tr><th>Name</th><th>Bible code(s)</th><th>Office</th><th>Dashboard login</th><th class="num">NBR cases</th><th class="num">Bible lines</th><th></th></tr></thead><tbody>
-          ${advs.map(a=> `<tr class="nbr-click ${a.active===false ? 'nbr-inactive' : ''}" data-nbr-adv="${esc(a.id)}"><td><b>${esc(a.name)}</b>${a.active===false ? ' <span class="nbr-tag">inactive</span>' : ''}</td><td>${esc(a.codes||'—')}</td><td>${esc((NBR_OFFICES.find(o=> o[0]===a.office)||['','—'])[1])}</td><td>${(()=>{ const uid = a.userId || Object.keys(USERS).find(u=> nbrAdvForUser(u)===a.id); return uid && USERS[uid] ? esc(USERS[uid].name) + (a.userId ? '' : ' <span class="nbr-tag">same name</span>') : '<span class="nbr-zero">–</span>'; })()}</td><td class="num">${count(a.id)}</td><td class="num">${bcount(a.id)}</td><td><button type="button" class="linkish">Edit</button></td></tr>`).join('')}
+          ${advs.map(a=> `<tr class="nbr-click ${a.active===false ? 'nbr-inactive' : ''}" data-nbr-adv="${esc(a.id)}"><td><b>${esc(a.name)}</b>${a.active===false ? ' <span class="nbr-tag">inactive</span>' : ''}${nbrLikelySame(a.id) ? ` <span class="nbr-tag nbr-tag-warn" title="Open it and use Merge if it's the same person">same person as ${esc(nbrAdvName(nbrLikelySame(a.id)))}?</span>` : ''}</td><td>${esc(a.codes||'—')}</td><td>${esc((NBR_OFFICES.find(o=> o[0]===a.office)||['','—'])[1])}</td><td>${(()=>{ const uid = a.userId || Object.keys(USERS).find(u=> nbrAdvForUser(u)===a.id); return uid && USERS[uid] ? esc(USERS[uid].name) + (a.userId ? '' : ' <span class="nbr-tag">same name</span>') : '<span class="nbr-zero">–</span>'; })()}</td><td class="num">${count(a.id)}</td><td class="num">${bcount(a.id)}</td><td><button type="button" class="linkish">Edit</button></td></tr>`).join('')}
         </tbody></table>` : '<div class="nml-empty">No advisors yet. Add them here, or upload an advisor\'s NBR or the Bible and they\'re added for you.</div>'}
       </section>
       <section class="nbr-card">
         <div class="nbr-card-head"><h2>Upload spreadsheets</h2></div>
-        <p class="nbr-p">Upload the spreadsheets as they are (.xlsx). You can pick several Advisor NBRs at once (hold Ctrl and click each one): each is imported on its own. Everything goes into the right month, so past months are filled in too. Once the NBRs are in, upload the Bible with <b>Fill in the blanks</b> to add dates paid and other details to those cases without doubling them. The Frimley and Gurkha B&amp;C spreadsheets (you can pick both at once) and the Wills case value sheet upload the same way. Upload an advisor's NBR again whenever it's been updated: just the new cases are added (and put in the Bible), and the cases already here are left as they are.</p>
+        <p class="nbr-p">Upload the spreadsheets as they are (.xlsx). You can pick several Advisor NBRs at once (hold Ctrl and click each one): each is imported on its own. Everything goes into the right month, so past months are filled in too. Once the NBRs are in, upload the Bible with <b>Fill in the blanks</b> to add dates paid and other details to those cases without doubling them. The Frimley and Gurkha B&amp;C spreadsheets (you can pick both at once) and the Wills case value sheet upload the same way. Upload an advisor's NBR again whenever it's been updated: the dashboard is brought in line with it (new cases added, changed ones updated, ones no longer on it removed), and dates paid in the Bible are kept.</p>
         <div class="nbr-upload-btns">
           <label class="btn btn-secondary"><input type="file" id="nbrUpNbr" accept=".xlsx,.xls" class="hidden" multiple>Upload Advisor NBRs</label>
           <label class="btn btn-secondary"><input type="file" id="nbrUpBible" accept=".xlsx,.xls" class="hidden">Upload the Bible</label>
@@ -14803,7 +14843,7 @@ function nbrParseBible(wb){
 /* ---- Upload: read, check, then import ----
    Advisor NBRs can be picked several at a time: each file gets its own preview
    and advisor choice, then they're imported one after another. The Bible is one file. */
-function nbrUpItem(file){ return {file:file.name, state:'reading', replace:true, nbrMode:'add', updChanged:false}; }
+function nbrUpItem(file){ return {file:file.name, state:'reading', replace:true, nbrMode:'sync', updChanged:false}; }
 function nbrStartUpload(files, kind){
   files = [...files]; if(!files.length) return;
   let up = nbrUI.upload;
@@ -14914,15 +14954,19 @@ function renderNbrUpload(){
             <div class="field"><label>Office</label><select data-nbr-uf="newOffice" ${dis}>${NBR_OFFICES.map(([c,l])=> `<option value="${c}" ${c===it.newOffice ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
         </div>
         ${existing || existingNpw ? (()=>{ const D = nbrNbrDiff(it), pl = (n, w)=> `${n} ${w}${n===1 ? '' : 's'}`; return `<div class="nbr-up-mode">
-          <label class="nbr-check"><input type="radio" name="nbrMode${i}" data-nbr-uf="nbrMode" value="add" ${it.nbrMode!=='replace' ? 'checked' : ''} ${dis}> <span><b>Add new cases only</b>: <b>${pl(D.fresh.length, 'new case')}</b>${D.freshNpw.length ? ` and ${pl(D.freshNpw.length, 'new NPW')}` : ''} will be added. ${D.same.length} already here ${D.same.length===1 ? 'is' : 'are'} left as ${D.same.length===1 ? 'it is' : 'they are'}.</span></label>
-          ${it.nbrMode!=='replace' && D.changed.length ? `<label class="nbr-check nbr-sub"><input type="checkbox" data-nbr-uf="updChanged" ${it.updChanged ? 'checked' : ''} ${dis}> <span>Also update the <b>${D.changed.length}</b> case${D.changed.length===1?'':'s'} where the figures have changed on the spreadsheet: ${esc(D.changed.slice(0,6).map(c=> p.entries[c.i].client || '(no name)').join(', '))}${D.changed.length>6 ? '…' : ''}</span></label>` : ''}
+          <label class="nbr-check"><input type="radio" name="nbrMode${i}" data-nbr-uf="nbrMode" value="sync" ${it.nbrMode==='sync' ? 'checked' : ''} ${dis}> <span><b>Bring in line with this NBR</b> (recommended): <b>${pl(D.fresh.length, 'new case')}</b> added, <b>${D.changed.length}</b> updated where the figures have changed, <b>${D.gone.length}</b> no longer on the NBR removed${D.freshNpw.length || D.goneNpw.length ? `; NPWs: ${D.freshNpw.length} added, ${D.goneNpw.length} removed` : ''}. ${D.same.length} unchanged. Dates paid in the Bible are kept.
+            ${D.gone.length ? `<span class="field-hint">Removed: ${esc(D.gone.slice(0,6).map(id=> (NBR_ENT[id]||{}).client || '(no name)').join(', '))}${D.gone.length>6 ? '…' : ''}</span>` : ''}</span></label>
+          <label class="nbr-check"><input type="radio" name="nbrMode${i}" data-nbr-uf="nbrMode" value="add" ${it.nbrMode==='add' ? 'checked' : ''} ${dis}> <span><b>Add new cases only</b>: <b>${pl(D.fresh.length, 'new case')}</b>${D.freshNpw.length ? ` and ${pl(D.freshNpw.length, 'new NPW')}` : ''} will be added. ${D.same.length} already here ${D.same.length===1 ? 'is' : 'are'} left as ${D.same.length===1 ? 'it is' : 'they are'}.</span></label>
+          ${it.nbrMode==='add' && D.changed.length ? `<label class="nbr-check nbr-sub"><input type="checkbox" data-nbr-uf="updChanged" ${it.updChanged ? 'checked' : ''} ${dis}> <span>Also update the <b>${D.changed.length}</b> case${D.changed.length===1?'':'s'} where the figures have changed on the spreadsheet: ${esc(D.changed.slice(0,6).map(c=> p.entries[c.i].client || '(no name)').join(', '))}${D.changed.length>6 ? '…' : ''}</span></label>` : ''}
           <label class="nbr-check"><input type="radio" name="nbrMode${i}" data-nbr-uf="nbrMode" value="replace" ${it.nbrMode==='replace' ? 'checked' : ''} ${dis}> <span><b>Replace</b> what's already here for this advisor in these months (${pl(existing, 'case')}${existingNpw ? `, ${pl(existingNpw, 'NPW')}` : ''})</span></label>
         </div>`; })() : ''}
       </div>`;
     }).join('');
-    const nCases = ready.reduce((s, it)=> s + (it.nbrMode!=='replace' && it.adv && it.adv!=='new' ? nbrNbrDiff(it).fresh.length : it.parsed.entries.length), 0);
+    const nCases = ready.reduce((s, it)=>{ if(it.nbrMode==='replace' || !it.adv || it.adv==='new') return s + it.parsed.entries.length; const D = nbrNbrDiff(it); return s + D.fresh.length + (it.nbrMode==='sync' ? D.changed.length + D.gone.length : 0); }, 0);
+    const anySync = ready.some(it=> it.nbrMode==='sync' && it.adv && it.adv!=='new');
     const missing = ready.filter(it=> !it.adv || (it.adv==='new' && !it.newName)).length;
-    const goLabel = ready.length > 1 ? `Import all ${ready.length} files (${nCases} new case${nCases===1?'':'s'})` : `Import ${nCases} case${nCases===1?'':'s'}`;
+    const goLabel = anySync ? (ready.length > 1 ? `Import all ${ready.length} files (${nCases} change${nCases===1?'':'s'})` : `Import (${nCases} change${nCases===1?'':'s'})`)
+      : ready.length > 1 ? `Import all ${ready.length} files (${nCases} new case${nCases===1?'':'s'})` : `Import ${nCases} case${nCases===1?'':'s'}`;
     box.innerHTML = `${many ? `<p class="nbr-p"><b>${items.length} files.</b> Check whose NBR each one is, then import them all: each file is imported on its own.</p>` : ''}
       <div class="nbr-up-list">${cards}</div>
       ${ready.length && !up.finished ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="toBible" ${up.toBible ? 'checked' : ''} ${dis}> Also add these cases to the Bible <span class="field-hint">(a case that's already in the Bible, e.g. from a Bible upload, is linked to its line rather than added twice)</span></label>` : ''}
@@ -14998,10 +15042,16 @@ function nbrNbrDiff(it, advOverride){
   const fresh = [], same = [], changed = [], done = new Set();
   p.entries.forEach((e,i)=>{ const L = pool[e.month+'|'+nbrClientKey(e.client)] || [], x = L.find(y=> !y.used && nbrFeeKey(y.e)===nbrFeeKey(e)); if(x){ x.used = true; same.push(i); done.add(i); } });
   p.entries.forEach((e,i)=>{ if(done.has(i)) return; const L = pool[e.month+'|'+nbrClientKey(e.client)] || [], x = L.find(y=> !y.used); if(x){ x.used = true; changed.push({i, id:x.id}); } else fresh.push(i); });
+  // Cases here for the months in the file that aren't on the NBR any more (deleted, or the client renamed).
+  const months = new Set(Object.keys(p.months)), gone = [];
+  Object.values(pool).forEach(L=> L.forEach(y=>{ if(!y.used && months.has(y.e.month)) gone.push(y.id); }));
   const npwKey = x=> x.month+'|'+nbrClientKey(x.client)+'|'+nbrRound(nbrNpwTotal(x));
-  const have = {}; if(advId) Object.values(NBR_NPW).forEach(x=>{ if(x && x.adv===advId){ const k = npwKey(x); have[k] = (have[k]||0) + 1; } });
-  const freshNpw = p.npw.filter(x=>{ const k = npwKey(x); if(have[k]){ have[k]--; return false; } return true; });
-  return (it._diff = {key, fresh, same, changed, freshNpw});
+  const years = new Set([...months].map(m=> m.slice(0,4))), npwMonths = new Set(p.npw.map(x=> x.month));
+  const haveNpw = {}; if(advId) Object.entries(NBR_NPW).forEach(([id,x])=>{ if(x && x.adv===advId){ const k = npwKey(x); (haveNpw[k] || (haveNpw[k] = [])).push(id); } });
+  const usedNpw = new Set();
+  const freshNpw = p.npw.filter(x=>{ const L = haveNpw[npwKey(x)] || [], id = L.find(j=> !usedNpw.has(j)); if(id){ usedNpw.add(id); return false; } return true; });
+  const goneNpw = advId ? Object.entries(NBR_NPW).filter(([id,x])=> x && x.adv===advId && !usedNpw.has(id) && (npwMonths.has(x.month) || years.has(String(x.month||'').slice(0,4)))).map(([id])=> id) : [];
+  return (it._diff = {key, fresh, same, changed, freshNpw, gone, goneNpw});
 }
 // Bible lines with no NBR case linked yet (e.g. from a Bible upload), so a new case can be linked to its line instead of a second copy.
 function nbrBibleReuser(adv, alsoFree){
@@ -15045,9 +15095,16 @@ function nbrNbrUploadPatches(it, toBible, made){
   }
   const months = Object.keys(p.months), years = [...new Set(months.map(m=> m.slice(0,4)))], npwMonths = [...new Set(p.npw.map(x=> x.month))];
   // A "new advisor" picked here may already exist by now (e.g. an earlier file in the same batch), so compare with whoever it really is.
-  const addOnly = it.nbrMode!=='replace';
+  // "sync" (the default): bring this advisor's months in line with the file. "add": new cases only. "replace": start those months again.
+  const mode = it.nbrMode || 'sync', addOnly = mode!=='replace', sync = mode==='sync';
   const D = addOnly ? nbrNbrDiff(it, adv) : null;
   const freed = new Set();
+  if(sync){
+    D.gone.forEach(id=> Object.assign(updates, nbrEntryDeletePatches(id)));
+    D.goneNpw.forEach(id=>{ updates['npw/'+id] = null; });
+    // Paid lines kept from removed cases can be linked to the cases that replace them (e.g. a client renamed).
+    Object.keys(updates).forEach(k=>{ const m = k.match(/^bible\/([^/]+)$/); if(m && updates[k]) freed.add(m[1]); });
+  }
   if(!addOnly && it.nbrMode==='replace'){
     Object.entries(NBR_ENT).forEach(([id,e])=>{ if(e && e.adv===adv && months.includes(e.month)) Object.assign(updates, nbrEntryDeletePatches(id)); });
     Object.entries(NBR_NPW).forEach(([id,x])=>{ if(x && x.adv===adv && (npwMonths.includes(x.month) || years.includes(String(x.month||'').slice(0,4)))) updates['npw/'+id] = null; });
@@ -15064,7 +15121,7 @@ function nbrNbrUploadPatches(it, toBible, made){
     if(toBible) nbrMergePatch(updates, withAdv(()=> nbrLinePatches(id, data, {reuse: reuser(data)})));
   });
   let updated = 0;
-  if(addOnly && it.updChanged) D.changed.forEach(({i, id})=>{
+  if(addOnly && (sync || it.updChanged)) D.changed.forEach(({i, id})=>{
     const cur = NBR_ENT[id] || {}, data = {...cur, ...p.entries[i], adv, updatedAt:now, updatedBy:by};
     updates['entries/'+id] = data; updated++;
     if(toBible) nbrMergePatch(updates, withAdv(()=> nbrLinePatches(id, data, {reuse: reuser(data)})));
@@ -15075,7 +15132,9 @@ function nbrNbrUploadPatches(it, toBible, made){
   const L = NBR_CFG.lists || {}, cur = k=> Array.isArray(L[k]) ? L[k] : Object.values(L[k]||{});
   ['sols','vals','saleTypes','leadProviders'].forEach(k=>{ if(p.lists[k].length) updates['config/lists/'+k] = [...new Set([...cur(k), ...p.lists[k]].map(s=> String(s).trim()).filter(Boolean))]; });
   const who = `<b>${esc(advRec.name || nbrAdvName(adv))}</b>`, pl = (n, w)=> `${n} ${w}${n===1 ? '' : 's'}`;
-  const msg = addOnly
+  const msg = sync
+    ? `brought ${who}'s NBR in line: ${pl(toAdd.length, 'new case')} added${toBible && toAdd.length ? ' (and to the Bible)' : ''}, ${pl(updated, 'case')} updated, ${pl(D.gone.length, 'case')} no longer on the NBR removed${npwAdd.length || D.goneNpw.length ? `; NPWs: ${npwAdd.length} added, ${D.goneNpw.length} removed` : ''}; ${D.same.length} unchanged.`
+    : addOnly
     ? `added ${pl(toAdd.length, 'new case')}${npwAdd.length ? ` and ${pl(npwAdd.length, 'NPW')}` : ''} for ${who}${toBible && toAdd.length ? ' (and to the Bible)' : ''}${updated ? `; updated ${pl(updated, 'case')}` : ''}${D.same.length ? `; ${D.same.length} already here, left as they are` : ''}${D.changed.length && !updated ? `; ${D.changed.length} with different figures left as they are` : ''}.`
     : `imported ${pl(p.entries.length, 'case')} and ${pl(p.npw.length, 'NPW')} for ${who}.`;
   return {updates, msg, adv, months};

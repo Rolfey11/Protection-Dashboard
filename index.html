@@ -6843,6 +6843,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-05q', date:'2026-11-05', items:[ {text:"<b>Bible upload</b>: each Bible code (e.g. SD, BG, Arbin) is now matched to your advisors by name or initials, and codes used only for B&amp;C are kept with no advisor, so nobody ends up on the list twice. Check the matches before importing.", roles:['admin','management']} ]},
   {id:'2026-11-05p', date:'2026-11-05', items:[ {text:"<b>New Business</b>: fixed reading NBRs laid out differently (e.g. Arbin's): an unlabelled month-total row was being counted as a case, and missing Sols/Val columns were being guessed. Upload Arbin's NBR again to correct his figures.", roles:['admin','management']} ]},
   {id:'2026-11-05o', date:'2026-11-05', items:[ {text:"<b>New Business</b>: if the same person is on the advisors list twice (e.g. \"Arbin\" from the Bible and \"Arbin Gurung\" from his NBR), it's flagged on <b>Advisors &amp; upload</b>. Open one and use <b>Merge</b> so their figures aren't counted twice.", roles:['admin','management']} ]},
   {id:'2026-11-05n', date:'2026-11-05', items:[ {text:"<b>New Business</b>: uploading an advisor's NBR now <b>brings the dashboard in line with it</b> for the months in the file: new cases added, changed ones updated, and ones no longer on the NBR removed. Dates paid in the Bible are kept. (\"Add new cases only\" and \"Replace\" are still there.)", roles:['admin','management']} ]},
@@ -14844,7 +14845,7 @@ function nbrParseBible(wb){
       life:nbrCellStr(get('life')).toUpperCase(), address:nbrCellStr(get('address'))});
     if(/^npw/i.test(npwRaw)) l.npw = true; else if(npwRaw) l.npwNote = npwRaw;
     out.lines.push(l);
-    if(adv){ const c = out.codes[adv] || (out.codes[adv] = {n:0, offices:{}}); c.n++; if(l.office) c.offices[l.office] = (c.offices[l.office]||0) + 1; }
+    if(adv){ const c = out.codes[adv] || (out.codes[adv] = {n:0, offices:{}}); c.n++; if(l.product==='Gen Ins') c.bc = (c.bc||0) + 1; if(l.office) c.offices[l.office] = (c.offices[l.office]||0) + 1; }
     const f = month ? nbrFyOf(month) : '(no period)'; out.fys[f] = (out.fys[f]||0) + 1;
   }
   return out;
@@ -14891,8 +14892,11 @@ function nbrReadUpload(X, file, kind, it, up){
       const map = {};
       Object.entries(p.codes).forEach(([code, c])=>{
         const a = nbrAdvs(true).find(x=> nbrAdvCodes(x).some(k=> k.toLowerCase()===code.toLowerCase()));
+        const guess = a ? '' : nbrGuessAdvForCode(code);
         const office = Object.entries(c.offices).sort((x,y)=> y[1]-x[1])[0];
-        map[code] = a ? a.id : 'new';
+        // A code used only for B&C (Gen Ins) with no advisor of that name is someone who quotes B&C: keep the lines, with no advisor.
+        map[code] = a ? a.id : guess ? guess : (c.bc && c.bc===c.n ? 'none' : 'new');
+        if(guess) c.guessed = true;
         c.office = office ? office[0] : '';
       });
       const hasData = Object.keys(NBR_ENT).length || Object.keys(NBR_BIB).length;
@@ -15005,9 +15009,10 @@ function renderNbrUpload(){
     <div class="nbr-up-title">${esc(it.file)}</div>
     <p>${p.lines.length} Bible lines: ${fys.map(f=> `${esc(f)} <b>${p.fys[f]}</b>`).join(' · ')}.</p>
     ${p.warnings.map(w=> `<p class="nbr-warn">${esc(w)}</p>`).join('')}
-    <p class="nbr-p">Match each code in the Adv column to an advisor. Codes set to "New advisor" are added as advisors (you can rename them on the Advisors list afterwards).</p>
+    <p class="nbr-p">Match each code in the Adv column to an advisor. Codes are matched to your advisors by name where they can be (check them); codes used only for B&amp;C are kept with no advisor. Any left on "New advisor" are added as advisors, so pick the right person if they're already on the list.</p>
     <div class="nbr-code-map">${codes.map(([code,c])=> `<label><span><b>${esc(code)}</b> · ${c.n} line${c.n===1?'':'s'}${c.office ? ' · '+esc(c.office) : ''}</span>
-      <select data-nbr-code="${esc(code)}"><option value="new" ${it.map[code]==='new' ? 'selected' : ''}>New advisor "${esc(code)}"</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===it.map[code] ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="skip" ${it.map[code]==='skip' ? 'selected' : ''}>Leave these lines out</option></select></label>`).join('')}</div>
+      <select data-nbr-code="${esc(code)}"><option value="new" ${it.map[code]==='new' ? 'selected' : ''}>New advisor "${esc(code)}"</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===it.map[code] ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="none" ${it.map[code]==='none' ? 'selected' : ''}>No advisor (e.g. B&amp;C quoted by staff)</option><option value="skip" ${it.map[code]==='skip' ? 'selected' : ''}>Leave these lines out</option></select>
+      ${c.guessed && it.map[code]!=='new' && it.map[code]!=='none' && it.map[code]!=='skip' ? '<span class="field-hint">matched by name: check it</span>' : it.map[code]==='new' ? '<span class="nbr-warn">will be added as a new advisor</span>' : ''}</label>`).join('')}</div>
     <div class="nbr-up-mode">
       <label class="nbr-check"><input type="radio" name="nbrBibMode" data-nbr-uf="mode" value="fill" ${it.mode==='fill' ? 'checked' : ''}> <span><b>Fill in the blanks</b>: match each row to the NBR cases and Bible lines already here, and only add what's missing (date paid, amount paid, offer and completion dates…). Nothing already entered is changed.</span></label>
       <label class="nbr-check"><input type="radio" name="nbrBibMode" data-nbr-uf="mode" value="add" ${it.mode==='add' ? 'checked' : ''}> <span><b>Add every row</b> as a new Bible line</span></label>
@@ -15033,7 +15038,7 @@ document.addEventListener('change', e=>{
   else if(f==='mode'){ it.mode = t.value; renderNbrUpload(); }
   else if(f==='addExtra') it.addExtra = t.checked;
   else if(f==='addUnmatched') it.addUnmatched = t.checked;
-  else if(t.dataset.nbrCode){ it.map[t.dataset.nbrCode] = t.value; if(it.mode==='fill') renderNbrUpload(); }
+  else if(t.dataset.nbrCode){ it.map[t.dataset.nbrCode] = t.value; renderNbrUpload(); }
 });
 document.addEventListener('input', e=>{
   const up = nbrUI.upload, t = e.target; if(!up || t.dataset.nbrUf!=='newName') return;
@@ -15149,10 +15154,28 @@ function nbrNbrUploadPatches(it, toBible, made){
     : `imported ${pl(p.entries.length, 'case')} and ${pl(p.npw.length, 'NPW')} for ${who}.`;
   return {updates, msg, adv, months};
 }
+// Which advisor a Bible "Adv" code most likely is, from the names: the first name ("Arbin", "SUJIT"), the initials
+// ("SD" = Sam Duquemin), the start of the first name and the surname's initial ("ShG"), or an initial and the surname ("JCurrie").
+function nbrGuessAdvForCode(code){
+  const c = String(code||'').trim().toLowerCase().replace(/[^a-z]/g,''); if(c.length<2) return '';
+  // Strongest kind of match first; a weaker one is only used if no advisor matches a stronger one.
+  const rules = [
+    (p, f, l, ini)=> c===f || c===p.join(''),                                          // first name, or the whole name
+    (p, f, l, ini)=> p.length>1 && (c===ini || c===f[0]+l[0]),                          // initials, e.g. "SD"
+    (p, f, l)=> p.length>1 && c.length>=3 && c.slice(-1)===l[0] && f.startsWith(c.slice(0,-1)), // e.g. "ShG"
+    (p, f, l)=> p.length>1 && c.length>=4 && c===f[0]+l,                                // e.g. "JCurrie"
+    (p, f, l)=> p.length>1 && c.length===3 && c[0]===f[0] && c[2]===l[0],               // with a middle initial, e.g. "JEC"
+    (p, f, l)=> p.length>1 && c.length>=3 && c===f[0]+l.slice(0, c.length-1),          // initial + start of surname, e.g. "MAT"
+  ];
+  const people = nbrAdvs(true).map(a=>{ const p = String(a.name||'').toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/).filter(Boolean); return {a, p, f:p[0]||'', l:p[p.length-1]||'', ini:p.map(x=> x[0]).join('')}; }).filter(x=> x.p.length);
+  for(const rule of rules){ const hits = people.filter(x=> rule(x.p, x.f, x.l, x.ini)); if(hits.length===1) return hits[0].a.id; if(hits.length>1) return ''; }
+  return '';
+}
 function nbrBibleUploadPatches(it){
   const p = it.parsed, updates = {}, now = Date.now(), ids = {}; // code → advisor id
   Object.entries(it.map).forEach(([code, v])=>{
     if(v==='skip') return;
+    if(v==='none'){ ids[code] = ''; return; }
     if(v==='new'){ const id = nbrKey(); ids[code] = id; updates['advisors/'+id] = {name: code, codes: code, office: p.codes[code].office || '', active: true}; }
     else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
   });
@@ -15160,7 +15183,7 @@ function nbrBibleUploadPatches(it){
   if(it.replace) Object.entries(NBR_BIB).forEach(([id,l])=>{ if(l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')) updates['bible/'+id] = null; });
   let n = 0, skipped = 0;
   p.lines.forEach(l=>{
-    if(l.code && !ids[l.code]){ skipped++; return; }
+    if(l.code && !(l.code in ids)){ skipped++; return; }
     const data = {...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now};
     delete data.code; if(!data.adv) delete data.adv;
     updates['bible/'+nbrKey()] = data; n++;
@@ -15195,7 +15218,7 @@ function nbrNameScore(a, b){
 const nbrMonthNo = ym=> ym ? (+ym.slice(0,4))*12 + (+ym.slice(5,7)) : null;
 const nbrBlank = v=> v==null || v==='' || (typeof v==='number' && !v);
 function nbrBibleMatch(it){
-  const p = it.parsed, advOf = code=> !code ? '' : it.map[code]==='skip' ? null : it.map[code]==='new' ? 'new:'+code : it.map[code];
+  const p = it.parsed, advOf = code=> !code ? '' : it.map[code]==='skip' ? null : it.map[code]==='none' ? '' : it.map[code]==='new' ? 'new:'+code : it.map[code];
   // What the rows can be matched to, by advisor + kind of fee.
   const targets = {}, add = (key, t)=> (targets[key] || (targets[key] = [])).push(t);
   const linked = new Set();
@@ -15266,6 +15289,7 @@ function nbrBibleFillPatches(it){
   const p = it.parsed, updates = {}, now = Date.now(), by = currentUser.name, ids = {};
   Object.entries(it.map).forEach(([code, v])=>{
     if(v==='skip') return;
+    if(v==='none'){ ids[code] = ''; return; }
     if(v==='new'){ const id = nbrKey(); ids[code] = id; updates['advisors/'+id] = {name: code, codes: code, office: p.codes[code].office || '', active: true}; }
     else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
   });

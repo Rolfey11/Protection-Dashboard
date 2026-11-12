@@ -713,8 +713,22 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .tg-pill.tg-good{background:var(--green-bg); color:var(--green);} .tg-pill.tg-mid{background:var(--amber-bg); color:var(--amber);} .tg-pill.tg-bad{background:var(--red-bg); color:var(--red);}
 .tg-mpct{display:block; font-weight:600; color:var(--text-faint); letter-spacing:0; text-transform:none;}
 .tgt-table tr.tg-mort td{border-top:2px solid var(--border-2);}
-.tgt-table th:not(:first-child){white-space:normal; min-width:74px; max-width:110px; line-height:1.3; vertical-align:bottom;}
-.tgt-table td{padding-left:8px; padding-right:8px;}
+.nml-table.tgt-table{table-layout:fixed; width:100%; min-width:0; font-size:12px;}
+.nml-table.tgt-table th,.nml-table.tgt-table td{padding:7px 4px; overflow:hidden;}
+.nml-table.tgt-table th:first-child,.nml-table.tgt-table td:first-child{padding-left:12px;}
+.nml-table.tgt-table td:first-child{white-space:normal; overflow-wrap:anywhere;}
+.nml-table.tgt-table th:not(:first-child){white-space:normal; line-height:1.3; vertical-align:bottom;}
+.nml-table.tgt-table th:last-child,.nml-table.tgt-table td:last-child{padding-right:10px;}
+.nml-table.tgt-table col.tg-c-name{width:150px;} .nml-table.tgt-table col.tg-c-info{width:84px;} .nml-table.tgt-table col.tg-c-pct{width:58px;}
+.nml-table.tgt-table .tg-pill{padding:2px 6px;}
+.nml-table.tgt-table .tg-k{display:none;}
+@media (max-width:1250px){
+  .nml-table.tgt-table .tg-f{display:none;} .nml-table.tgt-table .tg-k{display:inline;}
+  .nml-table.tgt-table col.tg-c-name{width:118px;} .nml-table.tgt-table col.tg-c-info{width:62px;} .nml-table.tgt-table col.tg-c-pct{width:48px;}
+  .nml-table.tgt-table th{font-size:9.5px; letter-spacing:0;}
+}
+/* Tablets and phones: too narrow for the whole year, so the table scrolls sideways inside its box. */
+@media (max-width:1000px){ .nml-table.tgt-table{min-width:940px;} }
 #nbrTgtUp .nbr-ubox{margin-bottom:16px;}
 .tg-key{margin:2px 0 4px;}
 .tg-years{display:flex; flex-wrap:wrap; gap:8px 18px; margin:6px 0 12px;}
@@ -7085,6 +7099,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-12f', date:'2026-11-12', items:[ {text:"<b>Targets</b>: the whole year now fits across the screen, with no scrolling sideways. Figures are in whole pounds (shortened to e.g. £22.5k on smaller screens). The banked target and minimum before DAP are in the Banked table.", roles:['admin','management']} ]},
   {id:'2026-11-12e', date:'2026-11-12', items:[ {text:"🎯 <b>Targets</b>: a new page in New Business with each advisor's written and banked targets, like the Adviser Targets spreadsheet. Upload the spreadsheet to bring in every year at once; what each advisor has written and banked fills in from the NBRs and the Bible, green when on target, amber when close, red when behind. The Salesboard's targets are now the advisors' targets added up.", roles:['admin','management']} ]},
   {id:'2026-11-12d', date:'2026-11-12', items:[ {text:"<b>Salesboard</b>: the column headings on the first table (Proc fee, Mums fee, Protection…) now stay at the top of the screen as you scroll down it."} ]},
   {id:'2026-11-12c', date:'2026-11-12', items:[ {text:"🎈 <b>Seasonal decorations</b>: on the <b>Themes</b> page, pick Spring, Summer, Autumn, Winter, Valentine's, Easter, Halloween, Bonfire Night, Christmas or New Year, or choose <b>Automatic</b> to follow the calendar. Off unless you turn it on; only affects your own device."} ]},
@@ -14781,6 +14796,12 @@ function nbrTargets(y){
 }
 // Green when at or above the mark, amber when at or above the lower mark, red below.
 function nbrTgtClass(v, good, okay){ if(!(good > 0)) return ''; return v >= good ? 'tg-good' : (okay > 0 && v >= okay) ? 'tg-mid' : 'tg-bad'; }
+// Whole pounds; on narrower screens a short form (e.g. £22.5k) so the whole year still fits.
+function nbrTgtMoney(v){
+  const x = Math.round(n0(v)), a = Math.abs(x), sign = x<0 ? '-' : '';
+  const k = a >= 1000 ? (a >= 100000 ? Math.round(a/1000) : (Math.round(a/100)/10).toFixed(1)) + 'k' : String(a);
+  return `<span class="tg-f">${sign}£${a.toLocaleString('en-GB')}</span><span class="tg-k">${sign}£${k}</span>`;
+}
 function nbrTgtPctCell(act, target, pace){
   if(act==null || !(n0(target) > 0)) return '<td class="num"><span class="nbr-zero">–</span></td>';
   const r = act / target, onPace = pace > 0 ? r / pace : r;
@@ -14807,35 +14828,37 @@ function renderNbrTargets(){
   const all = sumOf(A), mort = sumOf(A.filter(x=> x.t.office!=='W'));
   const showMonths = live && A.some(x=> x.a.live);
   const nameCell = t=> `<td><button type="button" class="linkish" data-nbr-tgt="${esc(t.id)}">${esc(t.name || nbrAdvName(t.adv))}</button>${t.se ? ' <span class="nbr-tag" title="Self-employed">s/e</span>' : ''}${t.note ? ` <span class="nbr-tag">${esc(t.note)}</span>` : ''}${live && !t.adv ? ' <span class="nbr-tag nbr-tag-warn" title="Click to link this target to an advisor so their figures fill in">not linked</span>' : ''}${!live && (t.wAct!=null || t.bAct!=null) ? ' <span class="nbr-tag" title="The dashboard has no figures for this year, so the actual figures come from the targets spreadsheet">from spreadsheet</span>' : ''}</td>`;
-  const money = v=> v==null ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(v);
+  const money = v=> v==null || !Math.round(n0(v)) ? '<span class="nbr-zero">–</span>' : nbrTgtMoney(v);
   const futureCell = i=> i >= upTo;
   const monthCells = (s, kind)=> !showMonths ? '' : Array.from({length:12}, (_,i)=>{
     if(futureCell(i) && !(s.months && s.months[i][kind])) return '<td class="num"></td>';
     if(!s.months) return '<td class="num"><span class="nbr-zero">–</span></td>';
     const v = s.months[i][kind], cls = !v ? '' : kind==='w' ? nbrTgtClass(v, s.written/12) : nbrTgtClass(v, s.banked/12, s.dap/12);
-    return `<td class="num ${cls}">${nbrMoneyCell(v)}</td>`;
+    return `<td class="num ${cls}">${money(v)}</td>`;
   }).join('');
   const monthHead = !showMonths ? '' : NBR_MONTHS.map((m,i)=> `<th class="num">${m}<span class="tg-mpct">${monthPct(i)}%</span></th>`).join('');
-  const shouldCell = target=> upTo && upTo < 12 ? `<td class="num">${n0(target) ? nbrMoney(target * pace) : '<span class="nbr-zero">–</span>'}</td>` : '';
+  const shouldCell = target=> upTo && upTo < 12 ? `<td class="num">${money(n0(target) * pace)}</td>` : '';
   const shouldHead = upTo && upTo < 12 ? `<th class="num">Should be at by end of ${NBR_MONTHS[upTo-1]}</th>` : '';
-  const wRow = (s, label, cls)=> `<tr class="${cls}">${label}<td class="num">${money(s.written || null)}</td><td class="num">${money(s.banked || null)}</td><td class="num">${s.written && s.banked ? Math.round(s.banked/s.written*100)+'%' : '–'}</td><td class="num">${money(s.dap || null)}</td><td class="num b">${money(s.w)}</td>${nbrTgtPctCell(s.w, s.written, pace)}${shouldCell(s.written)}${monthCells(s, 'w')}</tr>`;
-  const bRow = (s, label, cls)=> `<tr class="${cls}">${label}<td class="num">${money(s.banked || null)}</td><td class="num">${money(s.dap || null)}</td><td class="num b">${money(s.b)}</td>${nbrTgtPctCell(s.b, s.banked, pace)}${shouldCell(s.banked)}${monthCells(s, 'b')}</tr>`;
+  // Fixed column widths so the whole year fits across the screen (see .tgt-table).
+  const cols = n=> `<colgroup><col class="tg-c-name">${'<col class="tg-c-info">'.repeat(n)}<col class="tg-c-pct">${shouldHead ? '<col class="tg-c-info">' : ''}${showMonths ? '<col>'.repeat(12) : ''}</colgroup>`;
+  const wRow = (s, label, cls)=> `<tr class="${cls}">${label}<td class="num">${money(s.written || null)}</td><td class="num b">${money(s.w)}</td>${nbrTgtPctCell(s.w, s.written, pace)}${shouldCell(s.written)}${monthCells(s, 'w')}</tr>`;
+  const bRow = (s, label, cls)=> `<tr class="${cls}">${label}<td class="num" ${s.written && s.banked ? `title="${Math.round(s.banked/s.written*100)}% of the written target"` : ''}>${money(s.banked || null)}</td><td class="num">${money(s.dap || null)}</td><td class="num b">${money(s.b)}</td>${nbrTgtPctCell(s.b, s.banked, pace)}${shouldCell(s.banked)}${monthCells(s, 'b')}</tr>`;
   const rowSum = x=> ({written: n0(x.t.written), banked: n0(x.t.banked), dap: n0(x.t.dap), w: x.a.w, b: x.a.b, months: x.a.months});
-  const body = rowFn=>{
+  const body = (rowFn, ncols)=>{
     const blocks = offices.map(([c, label])=>{
       const list = A.filter(x=> (x.t.office||'')===c);
-      return `<tr class="nbr-group"><td colspan="40">${esc(label)}</td></tr>${list.map(x=> rowFn(rowSum(x), nameCell(x.t), '')).join('')}${list.length > 1 ? rowFn(sumOf(list), `<td>${esc(label)} total</td>`, 'nbr-tot') : ''}`;
+      return `<tr class="nbr-group"><td colspan="${ncols}">${esc(label)}</td></tr>${list.map(x=> rowFn(rowSum(x), nameCell(x.t), '')).join('')}${list.length > 1 ? rowFn(sumOf(list), `<td>${esc(label)} total</td>`, 'nbr-tot') : ''}`;
     });
     const mortIdx = offices.findIndex(([c])=> c==='W');
     if(offices.some(([c])=> c==='W') && offices.some(([c])=> c!=='W')) blocks.splice(mortIdx, 0, rowFn(mort, '<td>All mortgage departments</td>', 'nbr-tot tg-mort'));
     return blocks.join('') + rowFn(all, '<td>Total</td>', 'nbr-grand');
   };
-  const wTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table tgt-table">
-    <thead><tr><th>Advisor</th><th class="num">Written target</th><th class="num">Banked target</th><th class="num">Banked to written</th><th class="num">Minimum before DAP</th><th class="num">Written ${Y}</th><th class="num">% of target</th>${shouldHead}${monthHead}</tr></thead>
-    <tbody>${body(wRow)}</tbody></table></div>`;
-  const bTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table tgt-table">
+  const wTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table tgt-table">${cols(2)}
+    <thead><tr><th>Advisor</th><th class="num">Written target</th><th class="num">Written ${Y}</th><th class="num">% of target</th>${shouldHead}${monthHead}</tr></thead>
+    <tbody>${body(wRow, 4 + (shouldHead ? 1 : 0) + (showMonths ? 12 : 0))}</tbody></table></div>`;
+  const bTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table tgt-table">${cols(3)}
     <thead><tr><th>Advisor</th><th class="num">Banked target</th><th class="num">Minimum before DAP</th><th class="num">Banked ${Y}</th><th class="num">% of target</th>${shouldHead}${monthHead}</tr></thead>
-    <tbody>${body(bRow)}</tbody></table></div>`;
+    <tbody>${body(bRow, 5 + (shouldHead ? 1 : 0) + (showMonths ? 12 : 0))}</tbody></table></div>`;
   const pctTxt = (a, t)=> t ? Math.round(n0(a)/t*100)+'%' : '–';
   el.innerHTML = `
     <div class="nbr-toolbar">

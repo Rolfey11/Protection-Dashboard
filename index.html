@@ -7099,6 +7099,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-12g', date:'2026-11-12', items:[ {text:"<b>NPWs</b>: now read the same way as the NBR's own summary. The NPW sheet's <b>Total</b> column is what comes off, so NBRs with only a Total column (e.g. Arbin's) and NPWs with a Vals fee now count. A month typed as text like \"06/26\" is now read as June 2026, and the upload lists any NPW whose month the NBR's own totals miss, so you can fix it on the NBR. <b>Upload each advisor's NBR again</b> to bring their NPWs in line.", roles:['admin','management']} ]},
   {id:'2026-11-12f', date:'2026-11-12', items:[ {text:"<b>Targets</b>: the whole year now fits across the screen, with no scrolling sideways. Figures are in whole pounds (shortened to e.g. £22.5k on smaller screens). The banked target and minimum before DAP are in the Banked table.", roles:['admin','management']} ]},
   {id:'2026-11-12e', date:'2026-11-12', items:[ {text:"🎯 <b>Targets</b>: a new page in New Business with each advisor's written and banked targets, like the Adviser Targets spreadsheet. Upload the spreadsheet to bring in every year at once; what each advisor has written and banked fills in from the NBRs and the Bible, green when on target, amber when close, red when behind. The Salesboard's targets are now the advisors' targets added up.", roles:['admin','management']} ]},
   {id:'2026-11-12d', date:'2026-11-12', items:[ {text:"<b>Salesboard</b>: the column headings on the first table (Proc fee, Mums fee, Protection…) now stay at the top of the screen as you scroll down it."} ]},
@@ -14174,7 +14175,8 @@ function nbrAdvs(all){
     .sort((a,b)=> ((order[a.office] ?? 3) - (order[b.office] ?? 3)) || a.name.localeCompare(b.name));
 }
 function nbrEntTotal(e){ return BOARD_CATS.reduce((s,[k])=> s + n0(e[k]), 0); }
-function nbrNpwTotal(x){ return n0(x.proc) + n0(x.mums) + n0(x.prot) + n0(x.sols); } // as the NPW sheet: no val
+// An NPW's total: the NPW sheet's own Total column when it has one (some NBRs only have a Total), otherwise the fees added up.
+function nbrNpwTotal(x){ return x.total!=null && x.total!=='' ? n0(x.total) : n0(x.proc) + n0(x.mums) + n0(x.prot) + n0(x.sols) + n0(x.val); }
 function nbrBibStatus(l){ return l.npw ? 'npw' : l.datePaid ? 'paid' : l.compDate ? 'comp' : l.offerDate ? 'offer' : 'pipe'; }
 function nbrSurname(client){ const first = String(client||'').split(/\s*&\s*|\s+and\s+/i)[0].trim(); const parts = first.split(/\s+/); return parts.length ? parts[parts.length-1] : ''; }
 function nbrLists(){
@@ -14432,13 +14434,16 @@ function openNbrNpw(id){
       ${nfMoney('npMums','Mums fee', x.mums)}
       ${nfMoney('npProt','Protection', x.prot)}
       ${nfMoney('npSols','Sols', x.sols)}
+      ${nfMoney('npVal','Vals', x.val)}
+      ${nfMoney('npTotal','Total, only if it isn\'t the fees added up', x.total)}
     </div>
     <div class="field"><label for="npNotes">Notes / information</label><input type="text" id="npNotes" value="${esc(x.notes||'')}"></div>
-    <p class="field-hint">The total (proc + mums + protection + sols) comes off the advisor's written figures for that month. To show it in the Bible too, open the case's Bible line and tick NPW.</p>`;
+    <p class="field-hint">The total (proc + mums + protection + sols + vals, or the Total if you fill it in) comes off the advisor's written figures for that month. To show it in the Bible too, open the case's Bible line and tick NPW.</p>`;
   openNbrForm({title: id ? 'Edit NPW' : 'Add an NPW / negative amendment', body, saveLabel: id ? 'Save' : 'Add NPW',
     onSave: ()=>{
       const data = nbrClean({adv:nfv('npAdv'), month:nfv('npMonth'), date:nfv('npDate'), client:nfv('npClient'), lender:nfv('npLender'), acts:nfv('npActs'),
-        proc:nfn('npProc'), mums:nfn('npMums'), prot:nfn('npProt'), sols:nfn('npSols'), notes:nfv('npNotes')});
+        proc:nfn('npProc'), mums:nfn('npMums'), prot:nfn('npProt'), sols:nfn('npSols'), val:nfn('npVal'), notes:nfv('npNotes')});
+      if(nfv('npTotal')!=='' && Math.abs(nfn('npTotal') - nbrNpwTotal(data)) > 0.005) data.total = nfn('npTotal');
       if(!data.adv || !data.month){ toast('Choose the advisor and month.', 'error'); return false; }
       data.updatedAt = Date.now(); data.updatedBy = currentUser.name;
       return nbrWrite({['npw/'+(id || nbrKey())]: data}).then(()=> toast(id ? 'NPW saved.' : 'NPW added.', 'success'));
@@ -15098,9 +15103,9 @@ function renderNbrReg(){
     <tr class="nbr-grand"><td>Totals</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td class="num">${nbrMoneyCell(t.npw)}</td><td class="num">${nbrMoneyCell(t.excl)}</td><td class="num">${nbrMoneyCell(lastNpwT)}</td></tr></tbody></table></div>`;
 
   const npws = Object.entries(NBR_NPW).filter(([,x])=> x && x.adv===adv && x.month && +x.month.slice(0,4)===Y).map(([id,x])=> ({id, ...x})).sort((p,q)=> p.month.localeCompare(q.month) || (p.date||'').localeCompare(q.date||''));
-  const npwHtml = npws.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Month</th><th>Date</th><th>Client</th><th>Lender / insurer</th><th class="num">Proc</th><th class="num">Mums</th><th class="num">Protection</th><th class="num">Sols</th><th class="num">Total</th><th>ACTS</th><th>Notes</th></tr></thead><tbody>
-      ${npws.map(x=> `<tr class="nbr-click" data-nbr-npw="${esc(x.id)}"><td>${esc(nbrYmLabel(x.month))}</td><td>${x.date ? fmtDateSlash(x.date) : ''}</td><td><b>${esc(x.client||'')}</b></td><td>${esc(x.lender||'')}</td><td class="num">${nbrMoneyCell(x.proc)}</td><td class="num">${nbrMoneyCell(x.mums)}</td><td class="num">${nbrMoneyCell(x.prot)}</td><td class="num">${nbrMoneyCell(x.sols)}</td><td class="num b">${nbrMoneyCell(nbrNpwTotal(x))}</td><td>${esc(x.acts||'')}</td><td class="nbr-notes">${esc(x.notes||'')}</td></tr>`).join('')}
-      <tr class="nbr-grand"><td colspan="8">Grand total</td><td class="num b">${nbrMoney(npws.reduce((s,x)=> s + nbrNpwTotal(x), 0))}</td><td colspan="2"></td></tr></tbody></table></div>` : `<div class="nml-empty">No NPWs for ${Y}.</div>`;
+  const npwHtml = npws.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Month</th><th>Date</th><th>Client</th><th>Lender / insurer</th><th class="num">Proc</th><th class="num">Mums</th><th class="num">Protection</th><th class="num">Sols</th><th class="num">Vals</th><th class="num">Total</th><th>ACTS</th><th>Notes</th></tr></thead><tbody>
+      ${npws.map(x=> `<tr class="nbr-click" data-nbr-npw="${esc(x.id)}"><td>${esc(nbrYmLabel(x.month))}</td><td>${x.date ? fmtDateSlash(x.date) : ''}</td><td><b>${esc(x.client||'')}</b></td><td>${esc(x.lender||'')}</td><td class="num">${nbrMoneyCell(x.proc)}</td><td class="num">${nbrMoneyCell(x.mums)}</td><td class="num">${nbrMoneyCell(x.prot)}</td><td class="num">${nbrMoneyCell(x.sols)}</td><td class="num">${nbrMoneyCell(x.val)}</td><td class="num b">${nbrMoneyCell(nbrNpwTotal(x))}</td><td>${esc(x.acts||'')}</td><td class="nbr-notes">${esc(x.notes||'')}</td></tr>`).join('')}
+      <tr class="nbr-grand"><td colspan="9">Grand total</td><td class="num b">${nbrMoney(npws.reduce((s,x)=> s + nbrNpwTotal(x), 0))}</td><td colspan="2"></td></tr></tbody></table></div>` : `<div class="nml-empty">No NPWs for ${Y}.</div>`;
 
   el.innerHTML = `
     <div class="nbr-toolbar">
@@ -15301,7 +15306,8 @@ function nbrXlMonth(v){
   if(v==null || v==='') return '';
   if(typeof v==='number'){ const d = nbrXlDate(v); return d ? d.slice(0,7) : ''; }
   const s = String(v).trim();
-  let m = s.match(/^(\d{1,2})[\/.\-](\d{4})$/); if(m && +m[1]>=1 && +m[1]<=12) return `${m[2]}-${nbrPad(m[1])}`;
+  // "06/2026", or typed as text with a two-digit year, "06/26"
+  let m = s.match(/^(\d{1,2})[\/.\-](\d{4}|\d{2})$/); if(m && +m[1]>=1 && +m[1]<=12) return `${m[2].length===2 ? '20'+m[2] : m[2]}-${nbrPad(m[1])}`;
   m = s.match(/^([a-z]{3,9})\.?\s+(\d{4})$/i); if(m){ const i = NBR_MONTHS.findIndex(x=> m[1].toLowerCase().startsWith(x.toLowerCase())); if(i>=0) return `${m[2]}-${nbrPad(i+1)}`; }
   const d = nbrXlDate(s); return d ? d.slice(0,7) : '';
 }
@@ -15376,15 +15382,22 @@ function nbrParseAdvisorNbr(wb){
       const col = {}; rows[h].map(nbrCellStr).forEach((t,i)=>{ const s = t.toLowerCase(); const set = k=>{ if(col[k]==null) col[k] = i; };
         if(/acts/.test(s)) set('acts'); else if(/^date$/.test(s)) set('date'); else if(/client/.test(s)) set('client'); else if(/lender|insurer/.test(s)) set('lender');
         else if(/proc/.test(s)) set('proc'); else if(/mum/.test(s)) set('mums'); else if(/protection/.test(s)) set('prot'); else if(/sols/.test(s)) set('sols');
+        else if(/^vals?$/.test(s)) set('val'); else if(/^total$/.test(s)) set('total');
         else if(/month/.test(s)) set('month'); else if(/notes|information/.test(s)) set('notes'); });
       for(let i=h+1; i<rows.length; i++){
         const r = rows[i] || [], get = k=> col[k]==null ? null : r[col[k]];
         if(/grand total/i.test(nbrCellStr(get('client'))) || /grand total/i.test(nbrCellStr(r[2]))) continue;
         const x = nbrClean({acts:nbrCellStr(get('acts')), date:nbrXlDate(get('date')), client:nbrCellStr(get('client')), lender:nbrCellStr(get('lender')),
-          proc:nbrRound(get('proc')), mums:nbrRound(get('mums')), prot:nbrRound(get('prot')), sols:nbrRound(get('sols')), notes:nbrCellStr(get('notes'))});
+          proc:nbrRound(get('proc')), mums:nbrRound(get('mums')), prot:nbrRound(get('prot')), sols:nbrRound(get('sols')), val:nbrRound(get('val')), notes:nbrCellStr(get('notes'))});
+        // The sheet's Total is what comes off (it's what the NBR's summary adds up); kept when it isn't just the fees added up.
+        if(col.total!=null && get('total')!=null && get('total')!==''){ const t = nbrRound(get('total')); if(Math.abs(t - nbrNpwTotal(x)) > 0.005) x.total = t; }
         if(!x.client && !nbrNpwTotal(x)) continue;
         x.month = nbrXlMonth(get('month')) || (x.date ? x.date.slice(0,7) : '');
         if(!x.month){ out.warnings.push(`NPW for ${x.client || 'a client'} has no month, so it was left out.`); continue; }
+        // The NBR's own summary (and so the Salesboard spreadsheet) only counts a month entered as a date on the 1st (e.g. 06/2026).
+        // Typed as text ("06/26") or as another day, it's left out there; it's counted here, in that month.
+        const mv = get('month'), mDay = typeof mv==='number' ? +String(nbrXlDate(mv)).slice(8,10) : 0;
+        if((typeof mv==='string' && mv.trim()) || (mDay && mDay!==1)) out.warnings.push(`NPW for ${x.client || 'a client'} (${nbrMoney(nbrNpwTotal(x))}): the month ${typeof mv==='string' ? `is typed as text ("${mv.trim()}")` : `is ${fmtDateSlash(nbrXlDate(mv))}, not the 1st`}, so the NBR's own totals and the Salesboard spreadsheet leave it out. It's counted here in ${nbrYmLabel(x.month, true)}. Re-enter the month as ${x.month.slice(5,7)}/${x.month.slice(0,4)} on the NBR so they match.`);
         out.npw.push(x);
       }
     }

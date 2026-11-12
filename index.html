@@ -702,6 +702,10 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-table.nbr-board-table tr.nbr-special td:first-child{font-style:italic;}
 .nbr-table.nbr-board-table tr.nbr-gap td{height:16px; padding:0; background:var(--surface); border-top:0; border-bottom:0;}
 .nbr-table.nbr-board-table tr.nbr-grand td{border-top:2px solid #A6297A;}
+.sticky-head{position:fixed; z-index:39; overflow:hidden; pointer-events:none; display:none; background:var(--surface); border-bottom:1px solid var(--border); box-shadow:0 6px 10px -8px rgba(0,0,0,.35);}
+.sticky-head.on{display:block;}
+.sticky-head table{min-width:0; table-layout:fixed;}
+.sticky-head th{border-bottom:0;}
 /* Salesboard office banners (Frimley, Gurkha…) in Michael Usher pink */
 .nbr-board-table tr.nbr-group td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.6px; padding-top:9px; padding-bottom:9px; border-color:#A6297A;}
 .nbr-table tr.nbr-tot td{background:color-mix(in srgb, var(--brand) 5%, var(--surface)); font-weight:600;}
@@ -7059,6 +7063,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-12d', date:'2026-11-12', items:[ {text:"<b>Salesboard</b>: the column headings on the first table (Proc fee, Mums fee, Protection…) now stay at the top of the screen as you scroll down it."} ]},
   {id:'2026-11-12c', date:'2026-11-12', items:[ {text:"🎈 <b>Seasonal decorations</b>: on the <b>Themes</b> page, pick Spring, Summer, Autumn, Winter, Valentine's, Easter, Halloween, Bonfire Night, Christmas or New Year, or choose <b>Automatic</b> to follow the calendar. Off unless you turn it on; only affects your own device."} ]},
   {id:'2026-11-12b', date:'2026-11-12', items:[ {text:"🎄 <b>Christmas mode</b>: switch it on from the <b>Themes</b> page for falling snow, fairy lights, holly and a Santa hat. It's off unless you turn it on, and only affects your own device."} ]},
   {id:'2026-11-12a', date:'2026-11-12', items:[ {text:"<b>Advisor NBR</b>: each month now lists its weeks newest first, so the current week (marked <b>This week</b>) is at the top.", roles:['admin','management']} ]},
@@ -14674,7 +14679,40 @@ function renderNbrBoard(){
     <div class="nbr-adv-cards">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>`}`;
   document.getElementById('nbrBoardYear').addEventListener('change', e=>{ nbrUI.boardYear = +e.target.value; nbrUI.boardMonth = +e.target.value===now.getFullYear() ? now.getMonth()+1 : 12; renderNbrBoard(); });
   document.getElementById('nbrBoardMonth').addEventListener('change', e=>{ nbrUI.boardMonth = +e.target.value; renderNbrBoard(); });
+  const bt = el.querySelector('.nbr-board-table'); if(bt) stickyHead(bt.parentElement);
 }
+
+/* Keeps a table's column headings in view while scrolling down past it, then lets them go when the table ends.
+   (The table box scrolls sideways on small screens, so plain CSS sticky can't do this.) */
+const STICKY_HEADS = [];
+function stickyHead(wrap){
+  const table = wrap && wrap.querySelector('table'); if(!table || !table.tHead) return;
+  const box = document.createElement('div'); box.className = 'sticky-head'; box.setAttribute('aria-hidden', 'true');
+  const t = document.createElement('table'); t.className = table.className; t.appendChild(table.tHead.cloneNode(true)); box.appendChild(t);
+  document.body.appendChild(box);
+  const s = {wrap, table, box, t, sized:false};
+  wrap.addEventListener('scroll', ()=> stickyHeadPlace(s), {passive:true});
+  STICKY_HEADS.push(s); stickyHeadPlace(s);
+}
+function stickyHeadPlace(s){
+  if(!document.body.contains(s.wrap)){ s.box.remove(); STICKY_HEADS.splice(STICKY_HEADS.indexOf(s), 1); return; }
+  const bar = document.querySelector('.topbar'), top = bar && bar.offsetParent ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;
+  const r = s.table.getBoundingClientRect(), h = s.table.tHead.getBoundingClientRect().height;
+  const show = !!s.wrap.offsetParent && r.top < top && r.bottom > top + 2;
+  s.box.classList.toggle('on', show); if(!show){ s.sized = false; return; }
+  if(!s.sized){
+    const src = s.table.tHead.querySelectorAll('th'), dst = s.t.querySelectorAll('th');
+    src.forEach((th,i)=>{ const w = th.getBoundingClientRect().width + 'px'; if(dst[i]) Object.assign(dst[i].style, {width:w, minWidth:w, maxWidth:w}); });
+    s.t.style.width = r.width + 'px'; s.sized = true;
+  }
+  const w = s.wrap.getBoundingClientRect();
+  Object.assign(s.box.style, {top: Math.min(top, r.bottom - h) + 'px', left: (w.left + s.wrap.clientLeft) + 'px', width: s.wrap.clientWidth + 'px'});
+  s.t.style.transform = `translateX(${-s.wrap.scrollLeft}px)`;
+}
+function stickyHeadsAll(resized){ STICKY_HEADS.slice().forEach(s=>{ if(resized) s.sized = false; stickyHeadPlace(s); }); }
+let stickyRaf = 0;
+window.addEventListener('scroll', ()=>{ if(!stickyRaf) stickyRaf = requestAnimationFrame(()=>{ stickyRaf = 0; stickyHeadsAll(false); }); }, {passive:true});
+window.addEventListener('resize', ()=> stickyHeadsAll(true));
 
 /* ============================== ADVISOR NBR ============================== */
 function renderNbrReg(){

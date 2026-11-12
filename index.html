@@ -508,6 +508,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .nav-tabs{order:10; flex:1 0 100%; min-width:0; overflow-x:auto; scrollbar-width:none; padding-bottom:8px;}
   .nav-tabs::-webkit-scrollbar{display:none;}
 }
+/* Wider screens where a section's tabs still don't fit on one line (set from the script): the same, tabs on their own row. */
+.topbar.tabs-row .topbar-inner{flex-wrap:wrap; height:auto; padding:8px 24px 0; row-gap:4px;}
+.topbar.tabs-row .nav-tabs{order:10; flex:1 0 100%; min-width:0; overflow-x:auto; scrollbar-width:none; padding-bottom:8px;}
+.topbar.tabs-row .nav-tabs::-webkit-scrollbar{display:none;}
 @media (max-width:1180px){
   .brand-text .t2{display:none;}
 }
@@ -702,6 +706,19 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-table.nbr-board-table tr.nbr-special td:first-child{font-style:italic;}
 .nbr-table.nbr-board-table tr.nbr-gap td{height:16px; padding:0; background:var(--surface); border-top:0; border-bottom:0;}
 .nbr-table.nbr-board-table tr.nbr-grand td{border-top:2px solid #A6297A;}
+.tgt-table td.tg-good{background:var(--green-bg); color:var(--green); font-weight:600;}
+.tgt-table td.tg-mid{background:var(--amber-bg); color:var(--amber); font-weight:600;}
+.tgt-table td.tg-bad{background:var(--red-bg); color:var(--red);}
+.tg-pill{display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11.5px; background:var(--bg); color:var(--text-muted);}
+.tg-pill.tg-good{background:var(--green-bg); color:var(--green);} .tg-pill.tg-mid{background:var(--amber-bg); color:var(--amber);} .tg-pill.tg-bad{background:var(--red-bg); color:var(--red);}
+.tg-mpct{display:block; font-weight:600; color:var(--text-faint); letter-spacing:0; text-transform:none;}
+.tgt-table tr.tg-mort td{border-top:2px solid var(--border-2);}
+.tgt-table th:not(:first-child){white-space:normal; min-width:74px; max-width:110px; line-height:1.3; vertical-align:bottom;}
+.tgt-table td{padding-left:8px; padding-right:8px;}
+#nbrTgtUp .nbr-ubox{margin-bottom:16px;}
+.tg-key{margin:2px 0 4px;}
+.tg-years{display:flex; flex-wrap:wrap; gap:8px 18px; margin:6px 0 12px;}
+.tg-yr{display:inline-flex; align-items:center; gap:6px; font-size:13px;}
 .sticky-head{position:fixed; z-index:39; overflow:hidden; pointer-events:none; display:none; background:var(--surface); border-bottom:1px solid var(--border); box-shadow:0 6px 10px -8px rgba(0,0,0,.35);}
 .sticky-head.on{display:block;}
 .sticky-head table{min-width:0; table-layout:fixed;}
@@ -2205,6 +2222,7 @@ body:not(.ai-on) #askBtn{display:none;}
         <button class="nav-tab nbr-only" data-page="nbrBible">Bible</button>
         <button class="nav-tab nbr-only" data-page="nbrBC">B&amp;C</button>
         <button class="nav-tab nbr-only" data-page="nbrWills">Wills</button>
+        <button class="nav-tab nbr-only" data-page="nbrTargets">Targets</button>
         <button class="nav-tab nbr-only" data-page="nbrSetup">Advisors &amp; upload</button>
         <button class="nav-tab hidden" data-page="logins" id="loginsTab">Log in Data</button>
         <button class="nav-tab" data-page="themes" id="themesTab">Themes</button>
@@ -2675,6 +2693,10 @@ body:not(.ai-on) #askBtn{display:none;}
     <div id="page-nbrWills" class="hidden">
       <div class="page-head"><div><h1>Wills</h1><p class="sub">The Wills case value sheet. Wills don't go into the Bible; they show in the Wills section of the Salesboard.</p></div></div>
       <div id="nbrWillsBody"></div>
+    </div>
+    <div id="page-nbrTargets" class="hidden">
+      <div class="page-head"><div><h1>Adviser targets</h1><p class="sub">Each advisor's written and banked targets for the year, with their figures so far from the NBRs and the Bible.</p></div></div>
+      <div id="nbrTargetsBody"></div>
     </div>
     <div id="page-nbrSetup" class="hidden">
       <div class="page-head"><div><h1>Advisors &amp; upload</h1><p class="sub">The advisors on the NBR, uploading the spreadsheets, targets and drop-down lists.</p></div></div>
@@ -4716,7 +4738,7 @@ function goPage(page){
   document.getElementById('page-sibInsights').classList.toggle('hidden', page!=='sibInsights');
   document.getElementById('page-com').classList.toggle('hidden', page!=='com');
   if(page==='com'){ startComListener(); renderCom(); }
-  ['nbrBoard','nbrReg','nbrBible','nbrBC','nbrWills','nbrSetup'].forEach(p=>{
+  ['nbrBoard','nbrReg','nbrBible','nbrBC','nbrWills','nbrTargets','nbrSetup'].forEach(p=>{
     const pg = document.getElementById('page-'+p), leaving = page!==p && !pg.classList.contains('hidden');
     pg.classList.toggle('hidden', page!==p);
     if(leaving){ const body = document.getElementById(p+'Body'); if(body) body.innerHTML = ''; }
@@ -7063,6 +7085,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-12e', date:'2026-11-12', items:[ {text:"🎯 <b>Targets</b>: a new page in New Business with each advisor's written and banked targets, like the Adviser Targets spreadsheet. Upload the spreadsheet to bring in every year at once; what each advisor has written and banked fills in from the NBRs and the Bible, green when on target, amber when close, red when behind. The Salesboard's targets are now the advisors' targets added up.", roles:['admin','management']} ]},
   {id:'2026-11-12d', date:'2026-11-12', items:[ {text:"<b>Salesboard</b>: the column headings on the first table (Proc fee, Mums fee, Protection…) now stay at the top of the screen as you scroll down it."} ]},
   {id:'2026-11-12c', date:'2026-11-12', items:[ {text:"🎈 <b>Seasonal decorations</b>: on the <b>Themes</b> page, pick Spring, Summer, Autumn, Winter, Valentine's, Easter, Halloween, Bonfire Night, Christmas or New Year, or choose <b>Automatic</b> to follow the calendar. Off unless you turn it on; only affects your own device."} ]},
   {id:'2026-11-12b', date:'2026-11-12', items:[ {text:"🎄 <b>Christmas mode</b>: switch it on from the <b>Themes</b> page for falling snow, fairy lights, holly and a Santa hat. It's off unless you turn it on, and only affects your own device."} ]},
@@ -13991,11 +14014,11 @@ const NBR_HOW = ['LINK','EPDQ','BACS','VIRTUAL','CASH'];
 const BIB_STATUS = {pipe:['Written','Written, not yet offered'], offer:['Offered','Offered / terms issued, not completed'], comp:['Completed','Completed or on risk, not yet paid'], paid:['Paid','Paid'], npw:['NPW','Not proceeding (NPW)']};
 const NBR_PAGE = 150;
 
-let NBR_ADV = {}, NBR_ENT = {}, NBR_NPW = {}, NBR_BIB = {}, NBR_CFG = {}, NBR_BC = {}, NBR_WILLS = {};
+let NBR_ADV = {}, NBR_ENT = {}, NBR_NPW = {}, NBR_BIB = {}, NBR_CFG = {}, NBR_BC = {}, NBR_WILLS = {}, NBR_TGT = {};
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
-const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false};
+const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
-  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, upload:null};
+  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, upload:null, tgtYear:null, tgtUp:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
@@ -14071,7 +14094,7 @@ function startNbrListener(){
   Object.keys(nbrLoaded).forEach(k=>{
     db.ref('nbr/'+k).on('value', snap=>{
       const v = snap.val() || {};
-      if(k==='advisors') NBR_ADV = v; else if(k==='entries') NBR_ENT = v; else if(k==='npw') NBR_NPW = v; else if(k==='bible') NBR_BIB = v; else if(k==='bc') NBR_BC = v; else if(k==='wills') NBR_WILLS = v; else NBR_CFG = v;
+      if(k==='advisors') NBR_ADV = v; else if(k==='entries') NBR_ENT = v; else if(k==='npw') NBR_NPW = v; else if(k==='bible') NBR_BIB = v; else if(k==='bc') NBR_BC = v; else if(k==='wills') NBR_WILLS = v; else if(k==='targets') NBR_TGT = v; else NBR_CFG = v;
       nbrLoaded[k] = true; nbrVer++; nbrRenderSoon(); nbrPublishSoon();
       if(nbrFullReady() && nbrSumListening) stopNbrSummary();
     }, ()=>{
@@ -14084,7 +14107,7 @@ function stopNbrListener(){
   clearTimeout(nbrPublishTimer); nbrPublished = '';
   if(nbrSumListening) stopNbrSummary();
   Object.keys(nbrLoaded).forEach(k=>{ db.ref('nbr/'+k).off(); nbrLoaded[k] = false; });
-  nbrListening = false; NBR_ADV = {}; NBR_ENT = {}; NBR_NPW = {}; NBR_BIB = {}; NBR_CFG = {}; NBR_BC = {}; NBR_WILLS = {}; nbrVer++; nbrUI.upload = null;
+  nbrListening = false; NBR_ADV = {}; NBR_ENT = {}; NBR_NPW = {}; NBR_BIB = {}; NBR_CFG = {}; NBR_BC = {}; NBR_WILLS = {}; NBR_TGT = {}; nbrVer++; nbrUI.upload = null; nbrUI.tgtUp = null;
 }
 function nbrRenderSoon(){ clearTimeout(nbrRenderTimer); nbrRenderTimer = setTimeout(renderNbrVisible, nbrFullReady() || nbrViewer() ? 80 : 30); }
 function nbrPageShown(p){ const el = document.getElementById('page-'+p); return el && !el.classList.contains('hidden'); }
@@ -14094,6 +14117,7 @@ function renderNbrVisible(){
   if(nbrPageShown('nbrBible')) renderNbrBible();
   if(nbrPageShown('nbrBC')) renderNbrBC();
   if(nbrPageShown('nbrWills')) renderNbrWills();
+  if(nbrPageShown('nbrTargets')) renderNbrTargets();
   if(nbrPageShown('nbrSetup')) renderNbrSetup();
 }
 
@@ -14145,10 +14169,6 @@ function nbrLists(){
   return {sols: uniq([...arr(L.sols), ...fromData('solsName')]), vals: uniq([...arr(L.vals), ...fromData('valName')]),
     leadProviders: uniq([...arr(L.leadProviders), ...fromData('leadProvider')]),
     saleTypes: arr(L.saleTypes).length ? uniq(arr(L.saleTypes)) : NBR_SALE_TYPES.slice()};
-}
-function nbrTargets(){
-  if(nbrOnSummary()){ const t = (NBR_SUMMARY && NBR_SUMMARY.targets) || {}; return {written: n0(t.written) || 3000000, banked: n0(t.banked) || 2300000}; }
-  return {written: n0(NBR_CFG.targetWritten) || 3000000, banked: n0(NBR_CFG.targetBanked) || 2300000};
 }
 function nbrDefaultSource(){ return NBR_CFG.defaultSource || 'HLP'; }
 
@@ -14555,7 +14575,7 @@ function renderNbrBoard(){
     .sort((a,b)=> ({F:0,G:1,W:2}[a.office] ?? 3) - ({F:0,G:1,W:2}[b.office] ?? 3) || (a.special - b.special) || a.name.localeCompare(b.name));
   const monthTot = ym=> nbrSum(ids.map(id=> nbrRow(id, ym)));
   const year = yms.map(monthTot), lastYear = prev.map(monthTot), yt = nbrSum(year);
-  const T = nbrTargets();
+  const T = nbrTargets(Y);
   const upTo = Y===now.getFullYear() ? now.getMonth()+1 : 12;
   const ytd = nbrSum(year.slice(0, upTo)), lytd = nbrSum(lastYear.slice(0, upTo));
   const sel = monthTot(selYm);
@@ -14682,10 +14702,24 @@ function renderNbrBoard(){
   const bt = el.querySelector('.nbr-board-table'); if(bt) stickyHead(bt.parentElement);
 }
 
+/* The top bar: when a section's tabs don't fit beside the logo and buttons, put them on their own row. */
+function fitTopbar(){
+  const bar = document.querySelector('.topbar'), inner = bar && bar.querySelector('.topbar-inner'); if(!inner) return;
+  bar.classList.remove('tabs-row');
+  if(inner.scrollWidth > inner.clientWidth + 1) bar.classList.add('tabs-row');
+}
+let fitTopbarRaf = 0;
+function fitTopbarSoon(){ if(!fitTopbarRaf) fitTopbarRaf = requestAnimationFrame(()=>{ fitTopbarRaf = 0; fitTopbar(); }); }
+window.addEventListener('resize', fitTopbarSoon);
+try{ new MutationObserver(fitTopbarSoon).observe(document.querySelector('.topbar .topbar-inner'), {subtree:true, attributes:true, attributeFilter:['class','hidden','style'], childList:true}); }catch(e){}
+fitTopbarSoon();
+
 /* Keeps a table's column headings in view while scrolling down past it, then lets them go when the table ends.
    (The table box scrolls sideways on small screens, so plain CSS sticky can't do this.) */
 const STICKY_HEADS = [];
 function stickyHead(wrap){
+  // Drop the copies left over from tables that have since been redrawn.
+  STICKY_HEADS.slice().forEach(s=>{ if(!document.body.contains(s.wrap)){ s.box.remove(); STICKY_HEADS.splice(STICKY_HEADS.indexOf(s), 1); } });
   const table = wrap && wrap.querySelector('table'); if(!table || !table.tHead) return;
   const box = document.createElement('div'); box.className = 'sticky-head'; box.setAttribute('aria-hidden', 'true');
   const t = document.createElement('table'); t.className = table.className; t.appendChild(table.tHead.cloneNode(true)); box.appendChild(t);
@@ -14713,6 +14747,273 @@ function stickyHeadsAll(resized){ STICKY_HEADS.slice().forEach(s=>{ if(resized) 
 let stickyRaf = 0;
 window.addEventListener('scroll', ()=>{ if(!stickyRaf) stickyRaf = requestAnimationFrame(()=>{ stickyRaf = 0; stickyHeadsAll(false); }); }, {passive:true});
 window.addEventListener('resize', ()=> stickyHeadsAll(true));
+
+/* ============================== TARGETS ==============================
+   Each advisor's targets for the year (as the Adviser Targets spreadsheet), with what they've written and banked
+   so far filled in from the NBRs and the Bible. Kept in nbr/targets/<year>/<row>:
+   {name, adv (advisor id, or 'wills'), office (G/F/B/W), written, banked, dap (minimum before DAP),
+    wAct / bAct (written / banked recorded on the spreadsheet, used for years the dashboard has no figures for), note, se, order}. */
+const TGT_OFFICES = [['G','Gurkha Mortgages'],['F','Frimley'],['B','Basingstoke'],['W','Wills & Estate Planning'],['','Other']];
+function nbrTgtRows(y){
+  const ord = o=> { const i = TGT_OFFICES.findIndex(x=> x[0]===(o||'')); return i<0 ? 9 : i; };
+  return Object.entries(NBR_TGT[y] || {}).filter(([,t])=> t && typeof t==='object').map(([id,t])=> ({id, ...t}))
+    .sort((a,b)=> ord(a.office) - ord(b.office) || n0(a.order) - n0(b.order) || String(a.name||'').localeCompare(String(b.name||'')));
+}
+function nbrTgtYears(){ return Object.keys(NBR_TGT).map(Number).filter(y=> y>2000 && y<2100 && nbrTgtRows(y).length); }
+// Does the dashboard hold figures for that year (from the NBRs or the Bible)?
+function nbrTgtLive(y){ return nbrAllAdvIds().some(id=> nbrYearHasData(id, y)); }
+// Written (excluding NPWs) and banked for a target row, month by month where the dashboard has them.
+// Wills aren't in the Bible, so the Wills row counts what's written as banked, as the spreadsheet does.
+function nbrTgtActual(t, y, live){
+  if(live && t.adv){
+    const months = nbrYearMonths(y).map(ym=>{ const r = nbrRow(t.adv, ym); return {w: r.excl, b: t.adv==='wills' ? r.excl : r.banked}; });
+    return {live:true, months, w: months.reduce((s,m)=> s + m.w, 0), b: months.reduce((s,m)=> s + m.b, 0)};
+  }
+  return {live:false, months:null, w: t.wAct==null || t.wAct==='' ? null : n0(t.wAct), b: t.bAct==null || t.bAct==='' ? null : n0(t.bAct)};
+}
+// The company targets: the advisors' targets added up when there are any for the year, otherwise the ones in Advisors & upload.
+function nbrTargets(y){
+  if(nbrOnSummary()){ const t = (NBR_SUMMARY && NBR_SUMMARY.targets) || {}; return {written: n0(t.written) || 3000000, banked: n0(t.banked) || 2300000}; }
+  const rows = nbrTgtRows(y || new Date().getFullYear());
+  const s = rows.reduce((a,r)=> ({written: a.written + n0(r.written), banked: a.banked + n0(r.banked)}), {written:0, banked:0});
+  if(s.written || s.banked) return {...s, fromAdvisors:true};
+  return {written: n0(NBR_CFG.targetWritten) || 3000000, banked: n0(NBR_CFG.targetBanked) || 2300000};
+}
+// Green when at or above the mark, amber when at or above the lower mark, red below.
+function nbrTgtClass(v, good, okay){ if(!(good > 0)) return ''; return v >= good ? 'tg-good' : (okay > 0 && v >= okay) ? 'tg-mid' : 'tg-bad'; }
+function nbrTgtPctCell(act, target, pace){
+  if(act==null || !(n0(target) > 0)) return '<td class="num"><span class="nbr-zero">–</span></td>';
+  const r = act / target, onPace = pace > 0 ? r / pace : r;
+  return `<td class="num"><span class="tg-pill ${nbrTgtClass(onPace, 1, 0.8)}">${Math.round(r*100)}%</span></td>`;
+}
+function renderNbrTargets(){
+  const el = document.getElementById('nbrTargetsBody');
+  if(nbrNotReady(el)) return;
+  const now = new Date(), cy = now.getFullYear();
+  if(!nbrUI.tgtYear) nbrUI.tgtYear = cy;
+  // Every year from the earliest with targets or figures to next year.
+  const known = [...nbrTgtYears(), ...nbrAgg().years, cy, nbrUI.tgtYear], y0 = Math.min(...known), y1 = Math.max(cy + 1, ...known);
+  const years = Array.from({length: y1 - y0 + 1}, (_,i)=> y1 - i);
+  const Y = nbrUI.tgtYear, rows = nbrTgtRows(Y), live = nbrTgtLive(Y);
+  // How far through the year we are, by month (as the spreadsheet: Jan 8% … Dec 100%).
+  const upTo = Y < cy ? 12 : Y > cy ? 0 : now.getMonth() + 1, pace = upTo / 12;
+  const monthPct = i=> Math.floor((i+1)/12*100);
+  const A = rows.map(t=> ({t, a: nbrTgtActual(t, Y, live)}));
+  const prevRows = nbrTgtRows(Y-1);
+  const offices = TGT_OFFICES.filter(([c])=> A.some(x=> (x.t.office||'')===c));
+  const sumOf = list=> ({written: list.reduce((s,x)=> s + n0(x.t.written), 0), banked: list.reduce((s,x)=> s + n0(x.t.banked), 0), dap: list.reduce((s,x)=> s + n0(x.t.dap), 0),
+    w: list.some(x=> x.a.w!=null) ? list.reduce((s,x)=> s + n0(x.a.w), 0) : null, b: list.some(x=> x.a.b!=null) ? list.reduce((s,x)=> s + n0(x.a.b), 0) : null,
+    months: live ? Array.from({length:12}, (_,i)=> ({w: list.reduce((s,x)=> s + (x.a.months ? x.a.months[i].w : 0), 0), b: list.reduce((s,x)=> s + (x.a.months ? x.a.months[i].b : 0), 0)})) : null});
+  const all = sumOf(A), mort = sumOf(A.filter(x=> x.t.office!=='W'));
+  const showMonths = live && A.some(x=> x.a.live);
+  const nameCell = t=> `<td><button type="button" class="linkish" data-nbr-tgt="${esc(t.id)}">${esc(t.name || nbrAdvName(t.adv))}</button>${t.se ? ' <span class="nbr-tag" title="Self-employed">s/e</span>' : ''}${t.note ? ` <span class="nbr-tag">${esc(t.note)}</span>` : ''}${live && !t.adv ? ' <span class="nbr-tag nbr-tag-warn" title="Click to link this target to an advisor so their figures fill in">not linked</span>' : ''}${!live && (t.wAct!=null || t.bAct!=null) ? ' <span class="nbr-tag" title="The dashboard has no figures for this year, so the actual figures come from the targets spreadsheet">from spreadsheet</span>' : ''}</td>`;
+  const money = v=> v==null ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(v);
+  const futureCell = i=> i >= upTo;
+  const monthCells = (s, kind)=> !showMonths ? '' : Array.from({length:12}, (_,i)=>{
+    if(futureCell(i) && !(s.months && s.months[i][kind])) return '<td class="num"></td>';
+    if(!s.months) return '<td class="num"><span class="nbr-zero">–</span></td>';
+    const v = s.months[i][kind], cls = !v ? '' : kind==='w' ? nbrTgtClass(v, s.written/12) : nbrTgtClass(v, s.banked/12, s.dap/12);
+    return `<td class="num ${cls}">${nbrMoneyCell(v)}</td>`;
+  }).join('');
+  const monthHead = !showMonths ? '' : NBR_MONTHS.map((m,i)=> `<th class="num">${m}<span class="tg-mpct">${monthPct(i)}%</span></th>`).join('');
+  const shouldCell = target=> upTo && upTo < 12 ? `<td class="num">${n0(target) ? nbrMoney(target * pace) : '<span class="nbr-zero">–</span>'}</td>` : '';
+  const shouldHead = upTo && upTo < 12 ? `<th class="num">Should be at by end of ${NBR_MONTHS[upTo-1]}</th>` : '';
+  const wRow = (s, label, cls)=> `<tr class="${cls}">${label}<td class="num">${money(s.written || null)}</td><td class="num">${money(s.banked || null)}</td><td class="num">${s.written && s.banked ? Math.round(s.banked/s.written*100)+'%' : '–'}</td><td class="num">${money(s.dap || null)}</td><td class="num b">${money(s.w)}</td>${nbrTgtPctCell(s.w, s.written, pace)}${shouldCell(s.written)}${monthCells(s, 'w')}</tr>`;
+  const bRow = (s, label, cls)=> `<tr class="${cls}">${label}<td class="num">${money(s.banked || null)}</td><td class="num">${money(s.dap || null)}</td><td class="num b">${money(s.b)}</td>${nbrTgtPctCell(s.b, s.banked, pace)}${shouldCell(s.banked)}${monthCells(s, 'b')}</tr>`;
+  const rowSum = x=> ({written: n0(x.t.written), banked: n0(x.t.banked), dap: n0(x.t.dap), w: x.a.w, b: x.a.b, months: x.a.months});
+  const body = rowFn=>{
+    const blocks = offices.map(([c, label])=>{
+      const list = A.filter(x=> (x.t.office||'')===c);
+      return `<tr class="nbr-group"><td colspan="40">${esc(label)}</td></tr>${list.map(x=> rowFn(rowSum(x), nameCell(x.t), '')).join('')}${list.length > 1 ? rowFn(sumOf(list), `<td>${esc(label)} total</td>`, 'nbr-tot') : ''}`;
+    });
+    const mortIdx = offices.findIndex(([c])=> c==='W');
+    if(offices.some(([c])=> c==='W') && offices.some(([c])=> c!=='W')) blocks.splice(mortIdx, 0, rowFn(mort, '<td>All mortgage departments</td>', 'nbr-tot tg-mort'));
+    return blocks.join('') + rowFn(all, '<td>Total</td>', 'nbr-grand');
+  };
+  const wTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table tgt-table">
+    <thead><tr><th>Advisor</th><th class="num">Written target</th><th class="num">Banked target</th><th class="num">Banked to written</th><th class="num">Minimum before DAP</th><th class="num">Written ${Y}</th><th class="num">% of target</th>${shouldHead}${monthHead}</tr></thead>
+    <tbody>${body(wRow)}</tbody></table></div>`;
+  const bTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table tgt-table">
+    <thead><tr><th>Advisor</th><th class="num">Banked target</th><th class="num">Minimum before DAP</th><th class="num">Banked ${Y}</th><th class="num">% of target</th>${shouldHead}${monthHead}</tr></thead>
+    <tbody>${body(bRow)}</tbody></table></div>`;
+  const pctTxt = (a, t)=> t ? Math.round(n0(a)/t*100)+'%' : '–';
+  el.innerHTML = `
+    <div class="nbr-toolbar">
+      <label>Year <select id="nbrTgtYear">${years.map(y=> `<option value="${y}" ${y===Y ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+      <span class="nbr-spacer"></span>
+      ${!rows.length && prevRows.length ? `<button type="button" class="btn btn-secondary btn-sm" id="nbrTgtCopy">Copy ${Y-1}'s targets</button>` : ''}
+      <button type="button" class="btn btn-secondary btn-sm" id="nbrTgtAdd">+ Add an advisor's target</button>
+      <button type="button" class="btn btn-primary btn-sm" id="nbrTgtUpBtn">Upload the targets spreadsheet</button><input type="file" id="nbrTgtFile" accept=".xlsx,.xls" class="hidden">
+    </div>
+    <div id="nbrTgtUp"></div>
+    ${rows.length ? `
+    <div class="stat-grid">
+      <div class="stat-card accent"><div class="sv">${all.w==null ? '–' : nbrMoney(all.w)}</div><div class="sl">Written ${Y===cy ? 'so far' : 'in '+Y} · ${pctTxt(all.w, all.written)} of ${nbrMoney(all.written)}</div></div>
+      <div class="stat-card good"><div class="sv">${all.b==null ? '–' : nbrMoney(all.b)}</div><div class="sl">Banked ${Y===cy ? 'so far' : 'in '+Y} · ${pctTxt(all.b, all.banked)} of ${nbrMoney(all.banked)}</div></div>
+      ${upTo && upTo < 12 ? `<div class="stat-card"><div class="sv">${monthPct(upTo-1)}%</div><div class="sl">of the year's target should be done by the end of ${NBR_MONTHS_LONG[upTo-1]}</div></div>` : ''}
+    </div>
+    <p class="field-hint tg-key"><span class="tg-pill tg-good">On target</span> <span class="tg-pill tg-mid">80–99%</span> <span class="tg-pill tg-bad">Below 80%</span> ${upTo && upTo < 12 ? `% of target is compared with where they should be by now (${monthPct(upTo-1)}% of the year). ` : ''}${showMonths ? 'Each month is green when it reaches a twelfth of the target; banked months are amber when they reach a twelfth of the minimum before DAP.' : ''}${live ? ' Written is the total excluding NPWs, from the NBRs; banked is from the Bible.' : ' The dashboard has no figures for '+Y+', so the actual figures are the ones on the targets spreadsheet.'}</p>
+    <h2 class="nbr-h2">${Y} written</h2>
+    ${wTable}
+    <h2 class="nbr-h2">${Y} banked</h2>
+    ${bTable}` : `<div class="nbr-callout">No targets for ${Y} yet. Upload the Adviser Targets spreadsheet to bring in every year's targets at once, ${prevRows.length ? `copy ${Y-1}'s, ` : ''}or add each advisor's target by hand.</div>`}`;
+  if(nbrUI.tgtUp) renderNbrTgtUpload();
+  document.getElementById('nbrTgtYear').addEventListener('change', e=>{ nbrUI.tgtYear = +e.target.value; renderNbrTargets(); });
+  document.getElementById('nbrTgtAdd').addEventListener('click', ()=> openNbrTarget(Y, null));
+  document.getElementById('nbrTgtUpBtn').addEventListener('click', ()=> document.getElementById('nbrTgtFile').click());
+  document.getElementById('nbrTgtFile').addEventListener('change', e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) nbrTgtStartUpload(f); });
+  const copy = document.getElementById('nbrTgtCopy');
+  if(copy) copy.addEventListener('click', ()=>{
+    const out = {}; prevRows.forEach(t=>{ out[nbrKey()] = nbrClean({name: t.name, adv: t.adv, office: t.office, written: t.written, banked: t.banked, dap: t.dap, se: t.se, order: t.order}); });
+    copy.disabled = true;
+    nbrWrite({['targets/'+Y]: out}).then(()=> toast(`${Y-1}'s targets copied to ${Y}. Click a name to change one.`, 'success')).catch(err=>{ toast('Could not copy: '+err.message, 'error'); copy.disabled = false; });
+  });
+  el.querySelectorAll('[data-nbr-tgt]').forEach(b=> b.addEventListener('click', ()=> openNbrTarget(Y, b.dataset.nbrTgt)));
+  el.querySelectorAll('.tgt-table').forEach(t=> stickyHead(t.parentElement));
+}
+function nbrTgtAdvOptions(sel){ return [['', '— not linked (e.g. a former advisor) —'], ['wills', 'Wills cases'], ...nbrAdvs(true).map(a=> [a.id, a.name + (a.active===false ? ' (inactive)' : '')])].concat(sel && sel!=='wills' && !NBR_ADV[sel] ? [[sel, nbrAdvName(sel)]] : []); }
+function openNbrTarget(y, id){
+  const t = id ? ((NBR_TGT[y] || {})[id] || {}) : {};
+  openNbrForm({title: id ? `${t.name || nbrAdvName(t.adv)} · ${y} targets` : `Add an advisor's target for ${y}`, wide:false,
+    body: `<div class="nbr-grid nbr-grid-2">
+      ${nfSelect('tgAdv', 'Dashboard advisor (their figures fill in)', t.adv || '', nbrTgtAdvOptions(t.adv))}
+      ${nfText('tgName', 'Name shown', t.name || '', 'placeholder="The advisor\'s name if left blank"')}
+      ${nfSelect('tgOffice', 'Office', t.office || '', TGT_OFFICES.map(([c,l])=> [c, c ? l : '—']))}
+      ${nfText('tgNote', 'Note (optional)', t.note || '', 'placeholder="e.g. Left Feb 2024"')}
+      ${nfMoney('tgW', 'Written target', t.written)}
+      ${nfMoney('tgB', 'Banked target', t.banked)}
+      ${nfMoney('tgDap', 'Minimum required before DAP', t.dap)}
+    </div>
+    <p class="field-hint">Only needed for a year the dashboard has no figures for (or an advisor who isn't on it):</p>
+    <div class="nbr-grid nbr-grid-2">
+      ${nfMoney('tgWA', 'Written in the year', t.wAct)}
+      ${nfMoney('tgBA', 'Banked in the year', t.bAct)}
+    </div>`,
+    onSave: ()=>{
+      const adv = nfv('tgAdv'), a = NBR_ADV[adv] || {};
+      const name = nfv('tgName') || (adv==='wills' ? 'Wills' : a.name || '');
+      if(!name){ toast('Choose an advisor or type a name.', 'error'); return false; }
+      const office = nfv('tgOffice') || (adv==='wills' ? 'W' : a.office || '');
+      const num = k=> nfv(k)==='' ? null : nfn(k);
+      const rec = nbrClean({...t, name, adv: adv || null, office: office || null, note: nfv('tgNote') || null,
+        written: num('tgW'), banked: num('tgB'), dap: num('tgDap'), wAct: num('tgWA'), bAct: num('tgBA'),
+        order: t.order!=null ? t.order : 1000 + nbrTgtRows(y).length});
+      return nbrWrite({[`targets/${y}/${id || nbrKey()}`]: rec}).then(()=> toast('Target saved.', 'success'));
+    },
+    onDelete: id ? ()=> nbrWrite({[`targets/${y}/${id}`]: null}).then(()=> toast('Target removed.', 'success')) : null});
+}
+
+/* ---- Reading the Adviser Targets spreadsheet: one sheet per year (e.g. "2026 - Written", "2026 Banked", "2025", "2024"…) ---- */
+function nbrTgtNum(v){
+  if(typeof v==='number') return isFinite(v) ? v : null;
+  const s = String(v==null ? '' : v).trim(); if(!s || /^n\/?a$/i.test(s)) return null;
+  if(/[a-z]/i.test(s)) return null;
+  const x = parseFloat(s.replace(/[£,\s]/g, '')); return isFinite(x) ? x : null;
+}
+function nbrTgtOffice(s){ s = String(s||''); return /gurkha/i.test(s) ? 'G' : /frimley/i.test(s) ? 'F' : /basingstoke/i.test(s) ? 'B' : /wills/i.test(s) ? 'W' : null; }
+function nbrParseTargets(X, wb){
+  const years = {};
+  wb.SheetNames.forEach(sn=>{
+    const m = String(sn).match(/(20\d\d)/); if(!m) return;
+    const Y = +m[1], ws = wb.Sheets[sn]; if(!ws || !ws['!ref']) return;
+    const rows = X.utils.sheet_to_json(ws, {header:1, raw:true, defval:'', blankrows:true});
+    const head = (rows[0] || []).map(h=> String(h==null ? '' : h).replace(/\s+/g, ' ').trim());
+    const yrOk = h=>{ const y = h.match(/(20\d\d)/); return !y || +y[1]===Y; };
+    const find = test=> head.findIndex((h,i)=> i>0 && h && test(h));
+    const cols = {
+      written: find(h=> yrOk(h) && (/written (required|targets?)$/i.test(h) || new RegExp('^'+Y+' targets?$', 'i').test(h))),
+      banked: find(h=> yrOk(h) && /banked targets?$/i.test(h)),
+      dap: find(h=> /minimum required/i.test(h)),
+      wAct: find(h=> yrOk(h) && (/written actual/i.test(h) || new RegExp('^'+Y+' written$', 'i').test(h))),
+      // (The "2026 Banked" sheet's column is headed "2025 Banked Actual", so the year isn't checked here.)
+      bAct: find(h=> /banked actual/i.test(h) || new RegExp('^'+Y+' bank(ed)?$', 'i').test(h)),
+    };
+    if(cols.written<0 && cols.banked<0) return;
+    const yr = years[Y] || (years[Y] = {rows: [], byKey: {}, sheets: []});
+    yr.sheets.push(sn);
+    let office = nbrTgtOffice(head[0]) || '';
+    rows.slice(1).forEach(r=>{
+      const raw = String(r[0]==null ? '' : r[0]).replace(/\s+/g, ' ').trim(); if(!raw) return;
+      if(/^(total|all mortgage)/i.test(raw)) return;
+      const val = {}; let any = false, note = '';
+      Object.entries(cols).forEach(([k, c])=>{ if(c<0) return; const cell = r[c]; const v = nbrTgtNum(cell); if(v!=null){ val[k] = Math.round(v*100)/100; any = true; } else if(typeof cell==='string' && /[a-z]{3}/i.test(cell) && !/^n\/?a$/i.test(cell.trim()) && (k==='wAct' || k==='bAct')) note = cell.trim(); });
+      const off = nbrTgtOffice(raw);
+      if(off && !any){ office = off; return; }
+      if(!any && !note) return;
+      const se = /\(s\/?e\)/i.test(raw), name = raw.replace(/\s*\(s\/?e\)\s*/ig, ' ').trim(), key = name.toLowerCase();
+      let t = yr.byKey[key];
+      if(!t){ t = yr.byKey[key] = {name, office, order: yr.rows.length}; yr.rows.push(t); }
+      Object.entries(val).forEach(([k,v])=>{ if(t[k]==null) t[k] = v; });
+      if(se) t.se = true; if(note && !t.note) t.note = note;
+    });
+  });
+  Object.values(years).forEach(yr=> yr.rows = yr.rows.filter(t=> ['written','banked','dap','wAct','bAct'].some(k=> t[k]!=null) || t.note));
+  return years;
+}
+// The dashboard advisor for a name on the targets spreadsheet: same name, or the only advisor with that first name.
+function nbrTgtMatch(name, office){
+  const nm = String(name||'').trim().toLowerCase(); if(!nm) return '';
+  if(office==='W' || /^wills/.test(nm)) return 'wills';
+  const list = nbrAdvs(true);
+  const exact = list.find(a=> a.name.trim().toLowerCase()===nm); if(exact) return exact.id;
+  const first = nm.split(/\s+/)[0];
+  const byFirst = list.filter(a=> a.name.trim().toLowerCase().split(/\s+/)[0]===first);
+  if(byFirst.length===1 && nm.split(/\s+/).length===1) return byFirst[0].id;
+  if(byFirst.length) { const sur = nm.split(/\s+/).slice(1).join(' '); const s = byFirst.find(a=> sur && a.name.toLowerCase().includes(sur)); if(s) return s.id; if(byFirst.length===1 && !sur) return byFirst[0].id; }
+  return '';
+}
+function nbrTgtStartUpload(file){
+  nbrUI.tgtUp = {file: file.name, state:'reading'}; renderNbrTgtUpload();
+  loadXlsx().then(X=> file.arrayBuffer().then(buf=>{
+    const up = nbrUI.tgtUp; if(!up || up.file!==file.name) return;
+    const years = nbrParseTargets(X, X.read(buf, {type:'array'}));
+    const ys = Object.keys(years).map(Number).filter(y=> years[y].rows.length).sort((a,b)=> b-a);
+    if(!ys.length){ up.state = 'error'; up.error = 'No targets found. Each year should be on its own sheet with the year in its name (e.g. "2026 - Written"), with headings like "2026 Written Required" and "2026 Banked Target" on the first row.'; renderNbrTgtUpload(); return; }
+    const names = {};
+    ys.forEach(y=> years[y].rows.forEach(t=>{ const k = t.name.toLowerCase(); (names[k] || (names[k] = {name: t.name, office: t.office, years: []})).years.push(y); }));
+    Object.values(names).forEach(n=> n.adv = nbrTgtMatch(n.name, n.office));
+    Object.assign(up, {state:'ready', years, ys, pick: Object.fromEntries(ys.map(y=> [y, true])), names});
+    renderNbrTgtUpload();
+  })).catch(err=>{ if(nbrUI.tgtUp){ nbrUI.tgtUp.state = 'error'; nbrUI.tgtUp.error = err.message; renderNbrTgtUpload(); } });
+}
+function renderNbrTgtUpload(){
+  const box = document.getElementById('nbrTgtUp'), up = nbrUI.tgtUp; if(!box) return;
+  if(!up){ box.innerHTML = ''; return; }
+  const cancel = '<button type="button" class="btn btn-secondary btn-sm" data-tgt-up="cancel">Close</button>';
+  if(up.state==='reading'){ box.innerHTML = `<div class="nbr-ubox">Reading <b>${esc(up.file)}</b>…</div>`; return; }
+  if(up.state==='error'){ box.innerHTML = `<div class="nbr-ubox nbr-ubox-bad"><p>${esc(up.error)}</p>${cancel}</div>`; }
+  else if(up.state==='done'){ box.innerHTML = `<div class="nbr-ubox nbr-ubox-good"><p>${esc(up.msg)}</p>${cancel}</div>`; }
+  else {
+    const names = Object.entries(up.names).sort((a,b)=> Math.max(...b[1].years) - Math.max(...a[1].years) || a[1].name.localeCompare(b[1].name));
+    const picked = up.ys.filter(y=> up.pick[y]);
+    box.innerHTML = `<div class="nbr-ubox">
+      <p><b>${esc(up.file)}</b>: targets for ${up.ys.length} year${up.ys.length===1 ? '' : 's'}. Tick the years to bring in. A year that already has targets here is replaced with the spreadsheet's.</p>
+      <div class="tg-years">${up.ys.map(y=>{ const have = nbrTgtRows(y).length; return `<label class="tg-yr"><input type="checkbox" data-tgt-year="${y}" ${up.pick[y] ? 'checked' : ''}> <b>${y}</b> · ${up.years[y].rows.length} advisor${up.years[y].rows.length===1 ? '' : 's'}${have ? ` <span class="nbr-tag">replaces ${have} here</span>` : ''}</label>`; }).join('')}</div>
+      <p>Check each name is matched to the right advisor, so their written and banked figures fill in. Leave former advisors not linked: their figures for those years come from the spreadsheet.</p>
+      <div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Name on the spreadsheet</th><th>Years</th><th>Dashboard advisor</th></tr></thead><tbody>
+      ${names.map(([k,n])=> `<tr><td>${esc(n.name)}</td><td>${esc(n.years.slice().sort().join(', '))}</td><td><select data-tgt-name="${esc(k)}">${nbrTgtAdvOptions(n.adv).map(([v,l])=> `<option value="${esc(v)}" ${v===n.adv ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="nbr-row-btns" style="margin-top:12px"><button type="button" class="btn btn-primary btn-sm" data-tgt-up="go" ${picked.length ? '' : 'disabled'}>Import ${picked.length} year${picked.length===1 ? '' : 's'}</button>${cancel}</div>
+    </div>`;
+    box.querySelectorAll('[data-tgt-year]').forEach(c=> c.addEventListener('change', ()=>{ up.pick[c.dataset.tgtYear] = c.checked; renderNbrTgtUpload(); }));
+    box.querySelectorAll('[data-tgt-name]').forEach(s=> s.addEventListener('change', ()=>{ up.names[s.dataset.tgtName].adv = s.value; }));
+    box.querySelector('[data-tgt-up="go"]').addEventListener('click', function(){
+      this.disabled = true;
+      const upd = {};
+      picked.forEach(y=>{
+        const out = {};
+        up.years[y].rows.forEach(t=>{ const n = up.names[t.name.toLowerCase()] || {}; out[nbrKey()] = nbrClean({name: t.name, adv: n.adv || null, office: t.office || null, written: t.written, banked: t.banked, dap: t.dap, wAct: t.wAct, bAct: t.bAct, note: t.note || null, se: t.se || null, order: t.order}); });
+        upd['targets/'+y] = out;
+      });
+      nbrWrite(upd).then(()=>{
+        up.state = 'done'; up.msg = `Imported the targets for ${picked.slice().sort().join(', ')}.`;
+        if(!picked.includes(nbrUI.tgtYear)) nbrUI.tgtYear = Math.max(...picked);
+        renderNbrTargets();
+      }).catch(err=>{ toast('Could not import: '+err.message, 'error'); this.disabled = false; });
+    });
+  }
+  box.querySelectorAll('[data-tgt-up="cancel"]').forEach(b=> b.addEventListener('click', ()=>{ nbrUI.tgtUp = null; renderNbrTgtUpload(); }));
+}
 
 /* ============================== ADVISOR NBR ============================== */
 function renderNbrReg(){
@@ -14886,7 +15187,7 @@ function renderNbrBible(){
 function renderNbrSetup(){
   const el = document.getElementById('nbrSetupBody');
   if(nbrNotReady(el)) return;
-  const advs = nbrAdvs(true), L = NBR_CFG.lists || {}, T = nbrTargets();
+  const advs = nbrAdvs(true), L = NBR_CFG.lists || {}, T = {written: n0(NBR_CFG.targetWritten) || 3000000, banked: n0(NBR_CFG.targetBanked) || 2300000};
   const listVal = k=> (Array.isArray(L[k]) ? L[k] : Object.values(L[k]||{})).join('\n');
   const cN = {}, bN = {};
   Object.values(NBR_ENT).forEach(e=>{ if(e) cN[e.adv] = (cN[e.adv]||0) + 1; });
@@ -14913,6 +15214,7 @@ function renderNbrSetup(){
       </section>
       <section class="nbr-card">
         <div class="nbr-card-head"><h2>Targets</h2></div>
+        <p class="nbr-p">The Salesboard uses the advisors' targets added up (see <button type="button" class="linkish" data-nbr-go="nbrTargets">Targets</button>). These are only used for a year with no advisor targets.</p>
         <div class="nbr-grid nbr-grid-2">
           ${nfMoney('nbrTgtW','Written target for the year', T.written)}
           ${nfMoney('nbrTgtB','Banked target for the year', T.banked)}

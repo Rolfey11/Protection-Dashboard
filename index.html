@@ -774,6 +774,7 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-merge-h{font-weight:700; font-size:13px; margin-bottom:4px;}
 .nbr-merge select{min-width:220px;}
 .nbr-tag.nbr-tag-warn{background:color-mix(in srgb, var(--amber) 18%, var(--surface)); color:var(--text);}
+.nbr-table tr.nbr-group.nbr-this-week td{color:var(--brand);}
 .nbr-check.nbr-sub{margin-left:24px; font-size:12.5px;}
 .nbr-up-mode{border-top:1px solid var(--border); padding-top:10px; margin-top:4px;}
 .nbr-fill-sum{margin:4px 0 12px 18px; display:flex; flex-direction:column; gap:4px;}
@@ -6843,6 +6844,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-12a', date:'2026-11-12', items:[ {text:"<b>Advisor NBR</b>: each month now lists its weeks newest first, so the current week (marked <b>This week</b>) is at the top.", roles:['admin','management']} ]},
   {id:'2026-11-05q', date:'2026-11-05', items:[ {text:"<b>Bible upload</b>: each Bible code (e.g. SD, BG, Arbin) is now matched to your advisors by name or initials, and codes used only for B&amp;C are kept with no advisor, so nobody ends up on the list twice. Check the matches before importing.", roles:['admin','management']} ]},
   {id:'2026-11-05p', date:'2026-11-05', items:[ {text:"<b>New Business</b>: fixed reading NBRs laid out differently (e.g. Arbin's): an unlabelled month-total row was being counted as a case, and missing Sols/Val columns were being guessed. Upload Arbin's NBR again to correct his figures.", roles:['admin','management']} ]},
   {id:'2026-11-05o', date:'2026-11-05', items:[ {text:"<b>New Business</b>: if the same person is on the advisors list twice (e.g. \"Arbin\" from the Bible and \"Arbin Gurung\" from his NBR), it's flagged on <b>Advisors &amp; upload</b>. Open one and use <b>Merge</b> so their figures aren't counted twice.", roles:['admin','management']} ]},
@@ -14472,12 +14474,14 @@ function renderNbrReg(){
   const ents = Object.entries(NBR_ENT).filter(([,e])=> e && e.adv===adv && e.month===ym).map(([id,e])=> ({id, ...e}))
     .sort((x,y)=> (x.week||'').localeCompare(y.week||'') || (x.createdAt||0) - (y.createdAt||0));
   const weeks = []; ents.forEach(e=>{ const w = e.week || ''; let g = weeks.find(x=> x.week===w); if(!g) weeks.push(g = {week:w, rows:[]}); g.rows.push(e); });
+  // Newest week first, so the current week is at the top (weeks keep their numbers).
+  const thisWeek = ym===nbrThisYm() ? nbrWeekFor(nbrToday(), ym) : '';
   const inBible = new Set(Object.values(NBR_BIB).filter(l=> l && l.entry).map(l=> l.entry));
   const head = `<tr><th>Client - new business</th><th>Lender / insurer</th>${NBR_CATS.map(([,l])=> `<th class="num">${l.replace(' refs','')}</th>`).join('')}<th class="num">Total</th><th>Sols name</th><th>Val name</th><th>App sub</th><th>Lead provider</th><th>Type of sale</th><th>Notes</th><th class="num">£ link</th><th>Sent</th><th>Paid</th></tr>`;
   const rowHtml = e=> `<tr class="nbr-click" data-nbr-ent="${esc(e.id)}"><td><b>${esc(e.client||'')}</b>${inBible.has(e.id) ? ' <span class="nbr-tag" title="In the Bible">Bible</span>' : ''}</td><td>${esc(e.lender||'')}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(e[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(nbrEntTotal(e))}</td><td>${esc(e.solsName||'')}</td><td>${esc(e.valName||'')}</td><td>${e.appSub ? fmtDateSlash(e.appSub) : ''}</td><td>${esc(e.leadProvider||'')}</td><td>${esc(e.saleType||'')}</td><td class="nbr-notes">${esc(e.notes||'')}</td><td class="num">${nbrMoneyCell(e.linkToSend)}</td><td>${e.linkSent ? fmtDateSlash(e.linkSent) : ''}</td><td>${e.linkPaid ? fmtDateSlash(e.linkPaid) : ''}</td></tr>`;
   const totRow = (label, rows, cls)=>{ const t = nbrSum(rows.map(e=> ({...e, total: nbrEntTotal(e)}))); return `<tr class="${cls}"><td>${label}</td><td></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td colspan="10"></td></tr>`; };
   const monthHtml = ents.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-reg-table"><thead>${head}</thead><tbody>
-      ${weeks.map((g,i)=> `<tr class="nbr-group"><td colspan="18">Week ${i+1}${g.week ? ' · w/e '+esc(fmtDate(g.week)) : ''}</td></tr>${g.rows.map(rowHtml).join('')}${totRow(`Week ${i+1} totals`, g.rows, 'nbr-tot')}`).join('')}
+      ${weeks.map((g,i)=> ({g, n:i+1})).reverse().map(({g,n})=> `<tr class="nbr-group ${g.week===thisWeek ? 'nbr-this-week' : ''}"><td colspan="18">Week ${n}${g.week ? ' · w/e '+esc(fmtDate(g.week)) : ''}${g.week===thisWeek ? ' <span class="nbr-tag">This week</span>' : ''}</td></tr>${g.rows.map(rowHtml).join('')}${totRow(`Week ${n} totals`, g.rows, 'nbr-tot')}`).join('')}
       ${totRow(`${NBR_MONTHS_LONG[+ym.slice(5,7)-1]} total`, ents, 'nbr-grand')}
     </tbody></table></div>` : `<div class="nml-empty">No cases in ${esc(nbrYmLabel(ym, true))} yet.</div>`;
   // No NBR for this advisor and year: show the month from the Bible, one row per client, laid out like the NBR.

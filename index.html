@@ -1030,6 +1030,8 @@ body:not(.mode-com) .com-only{display:none !important;}
 .nml-status.ok{background:var(--green-bg); color:var(--green);}
 .nml-status.over{background:var(--amber-bg); color:var(--amber);}
 .nml-status.unknown{background:var(--bg); color:var(--text-muted);}
+.nml-status.over-age{background:var(--red-bg); color:var(--red); margin-top:4px;}
+.nml-table tr.nml-outside > td:not(:nth-last-child(2)){opacity:.55;}
 .nml-toggle{border:0; background:none; padding:0; font:inherit; font-size:12px; font-weight:600; color:var(--brand); cursor:pointer; text-decoration:underline;}
 .nml-band-list{display:flex; flex-wrap:wrap; gap:6px 14px;}
 .nml-band-list span.cur{font-weight:700; color:var(--brand);}
@@ -5119,6 +5121,22 @@ function loadNml(){
   });
 }
 
+/* Income protection: the oldest age each insurer takes a new client (as given by
+   the insurers). Friendly societies aren't in the limits file, so they're added
+   to the Income Protection view from here. An insurer's own "ip_max_entry_age"
+   in the limits file wins over this list. */
+const IP_ENTRY_AGES = [
+  {name:'Legal & General', max:61}, {name:'Aviva', max:59}, {name:'Royal London', max:59},
+  {name:'LV=', max:59}, {name:'The Exeter', min:18, max:59}, {name:'Vitality', max:60},
+  {name:'Guardian', max:59}, {name:'Zurich', max:59}, {name:'Scottish Widows', max:59},
+  {name:'Cirencester Friendly', max:54, extra:true}, {name:'British Friendly', min:18, max:59, extra:true},
+  {name:'Holloway Friendly', max:59, extra:true}, {name:'Shepherds Friendly', max:59, extra:true}
+];
+const nmlKey = n=> String(n||'').toLowerCase().replace(/[^a-z0-9=]+/g,'').replace(/^the/,'').replace(/shepards/,'shepherds');
+function nmlEntryAge(ins){
+  if(typeof ins.ip_max_entry_age==='number') return {max:ins.ip_max_entry_age, min:ins.ip_min_entry_age};
+  return IP_ENTRY_AGES.find(e=> nmlKey(e.name)===nmlKey(ins.name)) || null;
+}
 function nmlBandLabel(b){
   if(b.age_from==null && b.age_to==null) return 'All ages';
   if(b.age_from==null) return `Up to ${b.age_to}`;
@@ -5149,7 +5167,11 @@ function renderNml(){
     out.innerHTML = '<div class="nml-table-wrap"><div class="nml-empty">Enter the client\'s current age to see each insurer\'s limit.</div></div>';
     return;
   }
-  const rows = NML.insurers.map(ins=>{
+  const isIp = cover==='income_protection';
+  const insurers = NML.insurers.slice();
+  if(isIp) IP_ENTRY_AGES.filter(e=> e.extra && !insurers.some(i=> nmlKey(i.name)===nmlKey(e.name)))
+    .forEach(e=> insurers.push({name:e.name, age_basis:'cur', notes:'Income protection only. No non-medical limits in this table: check with the insurer.'}));
+  const rows = insurers.map(ins=>{
     const nb = ins.age_basis === 'nb';
     const ageUsed = nb ? age + 1 : age;
     const bands = ins[cover];
@@ -5162,22 +5184,28 @@ function renderNml(){
       else status = ['unknown', 'Check with insurer'];
     }
     const limit = !bands ? 'No published limits' : !band ? 'Not available at this age' : nmlLimitText(value, cover);
-    return {ins, ageUsed, nb, bands, band, value, limit, status};
-  }).sort((a,b)=> nmlSortValue(b.band ? b.value : null) - nmlSortValue(a.band ? a.value : null) || a.ins.name.localeCompare(b.ins.name));
+    const entry = isIp ? nmlEntryAge(ins) : null;
+    const tooOld = !!(entry && ageUsed > entry.max), tooYoung = !!(entry && entry.min!=null && ageUsed < entry.min);
+    return {ins, ageUsed, nb, bands, band, value, limit, status, entry, outside: tooOld || tooYoung, tooOld};
+  }).sort((a,b)=> (a.outside - b.outside) || nmlSortValue(b.band ? b.value : null) - nmlSortValue(a.band ? a.value : null) || a.ins.name.localeCompare(b.ins.name));
+  const nCols = 5 + (amount!=null?1:0) + (isIp?1:0);
+  const entryCell = r=> !r.entry ? '<td><span class="nml-limit none">Not known</span></td>'
+    : `<td style="white-space:nowrap;"><span class="nml-limit">${r.entry.max}</span>${r.entry.min!=null ? ` <span class="nml-notes" style="display:inline;">(from ${r.entry.min})</span>` : ''}${r.outside ? `<div><span class="nml-status over-age">${r.tooOld ? 'Over max age' : 'Under min age'}</span></div>` : ''}</td>`;
 
   out.innerHTML = `<div class="nml-table-wrap"><table class="nml-table">
-    <thead><tr><th>Insurer</th><th>Age used</th><th>Band</th><th>${esc(NML_COVER_LABEL[cover])}: max without evidence</th>${amount!=null?'<th>Your amount</th>':''}<th>Source</th></tr></thead>
+    <thead><tr><th>Insurer</th><th>Age used</th><th>Band</th><th>${esc(NML_COVER_LABEL[cover])}: max without evidence</th>${amount!=null?'<th>Your amount</th>':''}${isIp?'<th>Max entry age</th>':''}<th>Source</th></tr></thead>
     <tbody>${rows.map((r,i)=>`
-      <tr>
+      <tr${r.outside ? ' class="nml-outside"' : ''}>
         <td><div class="nml-ins">${esc(r.ins.name)}</div>${r.ins.notes ? `<div class="nml-notes">${esc(r.ins.notes)}</div>` : ''}</td>
         <td>${r.ageUsed} <span class="nml-notes" style="display:inline;">${r.nb ? '(next birthday)' : '(current)'}</span></td>
-        <td>${r.band ? esc(nmlBandLabel(r.band)) : '—'}</td>
+        <td style="white-space:nowrap;">${r.band ? esc(nmlBandLabel(r.band)) : '—'}</td>
         <td><span class="nml-limit ${typeof r.value==='number' || r.value==='unlimited' ? '' : 'none'}">${esc(r.limit)}</span>
           ${r.bands ? `<div><button type="button" class="nml-toggle" data-nml-bands="${i}">All age bands</button></div>` : ''}</td>
         ${amount!=null ? `<td><span class="nml-status ${r.status[0]}">${r.status[1]}</span></td>` : ''}
+        ${isIp ? entryCell(r) : ''}
         <td>${r.ins.url && /^https:\/\//.test(r.ins.url) ? `<a href="${esc(r.ins.url)}" target="_blank" rel="noopener">${esc(r.ins.source||'Source')}</a>` : esc(r.ins.source||'—')}</td>
       </tr>
-      ${r.bands ? `<tr class="nml-bands hidden" data-nml-band-row="${i}"><td colspan="${amount!=null?6:5}"><div class="nml-band-list">${r.bands.map(b=> `<span class="${b===r.band?'cur':''}">${esc(nmlBandLabel(b))}: ${esc(nmlLimitText(b.max_no_evidence, cover))}</span>`).join('')}</div></td></tr>` : ''}`).join('')}
+      ${r.bands ? `<tr class="nml-bands hidden" data-nml-band-row="${i}"><td colspan="${nCols}"><div class="nml-band-list">${r.bands.map(b=> `<span class="${b===r.band?'cur':''}">${esc(nmlBandLabel(b))}: ${esc(nmlLimitText(b.max_no_evidence, cover))}</span>`).join('')}</div></td></tr>` : ''}`).join('')}
     </tbody></table></div>`;
   out.querySelectorAll('[data-nml-bands]').forEach(btn=> btn.addEventListener('click', ()=>{
     const row = out.querySelector(`[data-nml-band-row="${btn.dataset.nmlBands}"]`);
@@ -7099,6 +7127,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-16a', date:'2026-11-16', items:[ {text:"<b>ASA Limits</b>: Income Protection now shows each insurer's <b>max entry age</b>, plus Cirencester, British, Holloway and Shepherds Friendly. Insurers the client is too old for are greyed out, marked <b>Over max age</b> and moved to the bottom."} ]},
   {id:'2026-11-12g', date:'2026-11-12', items:[ {text:"<b>NPWs</b>: now read the same way as the NBR's own summary. The NPW sheet's <b>Total</b> column is what comes off, so NBRs with only a Total column (e.g. Arbin's) and NPWs with a Vals fee now count. A month typed as text like \"06/26\" is now read as June 2026, and the upload lists any NPW whose month the NBR's own totals miss, so you can fix it on the NBR. <b>Upload each advisor's NBR again</b> to bring their NPWs in line.", roles:['admin','management']} ]},
   {id:'2026-11-12f', date:'2026-11-12', items:[ {text:"<b>Targets</b>: the whole year now fits across the screen, with no scrolling sideways. Figures are in whole pounds (shortened to e.g. £22.5k on smaller screens). The banked target and minimum before DAP are in the Banked table.", roles:['admin','management']} ]},
   {id:'2026-11-12e', date:'2026-11-12', items:[ {text:"🎯 <b>Targets</b>: a new page in New Business with each advisor's written and banked targets, like the Adviser Targets spreadsheet. Upload the spreadsheet to bring in every year at once; what each advisor has written and banked fills in from the NBRs and the Bible, green when on target, amber when close, red when behind. The Salesboard's targets are now the advisors' targets added up.", roles:['admin','management']} ]},

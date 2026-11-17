@@ -7135,6 +7135,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-17c', date:'2026-11-17', items:[ {text:"🏢 <b>Commercial tab</b>: uploading an NBR that has a <b>Commercial</b> tab (Joanne's, Mitch's) now also brings that tab in, onto their Commercial NBR, so it shows in the green Commercial section. Upload Joanne's and Mitch's NBRs again to bring it in.", roles:['admin','management']} ]},
   {id:'2026-11-17b', date:'2026-11-17', items:[ {text:"🏢 <b>Commercial</b> in New Business: Mitch Atkins and Joanne Currie each get a <b>Commercial NBR</b> (its own register), and a green <b>Commercial</b> section on the Salesboard between Gurkha and Wills that counts in all the totals. Commercial Bible lines (C Mort, C Remo, C Bridging, C Bus Loan) count as their commercial banked, and their Commercial NBR adds to their figures on Targets. To start: <b>Advisors &amp; upload → Add their Commercial NBRs</b>, then upload each Commercial NBR.", roles:['admin','management']},
     {text:"🏢 <b>Salesboard</b>: a new green <b>Commercial</b> section between Gurkha and Wills, included in the totals.", roles:['mapa']} ]},
   {id:'2026-11-17a', date:'2026-11-17', items:[ {text:"<b>Advisor NBRs</b>: each week's heading is now a bold pink band, so the weeks are easier to tell apart."} ]},
@@ -14218,7 +14219,7 @@ function nbrComTwinOf(id){
   return (id && nbrTwinCache.m[id]) || '';
 }
 function nbrIsComProduct(p){ return /^C /.test(String(p||'')); }
-function nbrComProduct(saleType){ const t = String(saleType||''); return /bridg/i.test(t) ? 'C Bridging' : /remo/i.test(t) ? 'C Remo' : /bus/i.test(t) ? 'C Bus Loan' : 'C Mort'; }
+function nbrComProduct(saleType){ const t = String(saleType||''); return /bridg/i.test(t) ? 'C Bridging' : /remo/i.test(t) ? 'C Remo' : /bus/i.test(t) ? 'C Bus Loan' : 'C Mort'; } // e.g. "C Dev Fin" → C Mort
 function nbrAdvCodes(a){ return String(a && a.codes || '').split(',').map(s=> s.trim()).filter(Boolean); }
 function nbrAdvs(all){
   const order = {F:0, G:1, C:2, W:3};
@@ -15444,6 +15445,37 @@ function nbrParseAdvisorNbr(wb){
     }
     out.months[ym] = n;
   });
+  // Commercial tab (e.g. Joanne's and Mitch's NBRs): one row per case, its month from "Date App Sub", as the NBR's own
+  // Cumulative Summary works it out. These go on the person's Commercial NBR, not their own.
+  const comName = wb.SheetNames.find(s=> /^\s*commercial\s*$/i.test(s));
+  if(comName){
+    const rows = nbrSheetRows(wb.Sheets[comName]), com = {entries:[], months:{}, warnings:[]};
+    const h = rows.findIndex((r,i)=> i<10 && (r||[]).some(c=> /client/i.test(nbrCellStr(c))));
+    if(h>=0){
+      const col = {}; rows[h].map(nbrCellStr).forEach((t,i)=>{ const x = t.toLowerCase().replace(/\s+/g,' ').trim(); const set = k=>{ if(col[k]==null) col[k] = i; };
+        if(!x) return;
+        if(/date/.test(x)) set('date'); else if(/client fee|mums/.test(x)) set('mums'); else if(/client/.test(x)) set('client'); else if(/lender|insurer/.test(x)) set('lender');
+        else if(/proc|comms/.test(x)) set('proc'); else if(/protection/.test(x)) set('prot'); else if(/sols/.test(x) && /amount/.test(x)) set('sols'); else if(/sols/.test(x) && /name/.test(x)) set('solsName');
+        else if(/val/.test(x) && /amount/.test(x)) set('val'); else if(/val/.test(x) && /name/.test(x)) set('valName'); else if(/lead/.test(x)) set('leadProvider');
+        else if(/type of sale/.test(x)) set('saleType'); else if(/post ?code|notes/.test(x)) set('notes'); });
+      for(let i=h+1; i<rows.length; i++){
+        const r = rows[i] || [], get = k=> col[k]==null ? null : r[col[k]];
+        if(r.slice(0,5).some(c=> /^\s*totals?\s*$/i.test(nbrCellStr(c)))) continue;
+        const vals = {proc:nbrRound(get('proc')), mums:nbrRound(get('mums')), prot:nbrRound(get('prot')), sols:nbrRound(get('sols')), val:nbrRound(get('val'))};
+        const client = nbrCellStr(get('client'));
+        if(!client && !Object.values(vals).some(Boolean)) continue;
+        const date = nbrXlDate(get('date')), ym = date ? date.slice(0,7) : '';
+        if(!ym){ com.warnings.push(`Commercial case for ${client || 'a client'} has no Date App Sub, so it was left out (the NBR's own totals leave it out too).`); continue; }
+        com.entries.push(nbrClean({month:ym, week:nbrWeekFor(date, ym), client, lender:nbrCellStr(get('lender')), ...vals,
+          solsName:nbrCellStr(get('solsName')), valName:nbrCellStr(get('valName')), appSub:date, leadProvider:nbrCellStr(get('leadProvider')),
+          saleType:nbrCellStr(get('saleType')), notes:nbrCellStr(get('notes'))}));
+      }
+    }
+    // The same months as the rest of the NBR, so a case taken off the Commercial tab comes off here too.
+    Object.keys(out.months).forEach(ym=>{ com.months[ym] = 0; });
+    com.entries.forEach(e=>{ com.months[e.month] = (com.months[e.month]||0) + 1; });
+    out.com = com;
+  }
   // NPW sheet
   const npwName = wb.SheetNames.find(s=> /npw/i.test(s));
   if(npwName){
@@ -15547,7 +15579,8 @@ function nbrReadUpload(X, file, kind, it, up){
       if(!Object.keys(p.months).length && !p.npw.length) throw new Error("This doesn't look like an Advisor NBR: there are no month sheets (e.g. \"Jan 2026\").");
       let match = nbrAdvs(true).find(a=> p.name && a.name.toLowerCase()===p.name.toLowerCase());
       // A Commercial NBR (the file or its title says so) goes to that person's Commercial advisor, never their own NBR.
-      const isCom = /commercial/i.test(file.name+' '+(p.name||''));
+      // (Not a whole NBR that has a Commercial tab: that's the person's own NBR, and the tab is imported alongside.)
+      const isCom = !p.com && /commercial/i.test(file.name+' '+(p.name||''));
       if(isCom && !(match && match.office==='C')){
         const bare = String(p.name||'').replace(/commercial|[()\-–]/gi,' ').trim().toLowerCase(), first = bare.split(/\s+/)[0] || '';
         const base = nbrAdvs(true).find(a=> a.office!=='C' && first && (a.name.trim().toLowerCase()===bare || a.name.trim().toLowerCase().split(/\s+/)[0]===first));
@@ -15555,6 +15588,14 @@ function nbrReadUpload(X, file, kind, it, up){
         match = tw ? {id: tw} : null;
       }
       Object.assign(it, {state:'ready', parsed:p, adv: match ? match.id : (p.name ? 'new' : ''), newName: p.name || '', newOffice: isCom ? 'C' : 'F'});
+      // Its Commercial tab is imported alongside, onto the person's Commercial NBR.
+      if(p.com && (p.com.entries.length || nbrComTwinOf(it.adv)) && !(match && match.office==='C')){
+        const name = ((match && match.name) || p.name || 'Advisor') + ' (Commercial)';
+        const ci = {...nbrUpItem({name: file.name}), file: file.name+' · Commercial tab', state:'ready', comOf: it, newName: name, newOffice:'C',
+          adv: nbrComTwinOf(it.adv) || 'new',
+          parsed: {name, months: p.com.months, entries: p.com.entries, npw:[], lists:{sols:[], vals:[], saleTypes:[], leadProviders:[]}, warnings: p.com.warnings}};
+        up.items.splice(up.items.indexOf(it)+1, 0, ci);
+      }
     } else if(kind==='bc'){
       const p = nbrParseBc(wb, file.name);
       if(!p.rows.length) throw new Error("No B&C policies found: this needs the B&C spreadsheet, with a sheet per month (Jan, Feb…) listing the policies on risk.");
@@ -15703,7 +15744,7 @@ document.addEventListener('change', e=>{
   const card = t.closest('[data-nbr-item]'), it = card ? up.items[+card.dataset.nbrItem] : null, f = t.dataset.nbrUf;
   if(f==='toBible'){ up.toBible = t.checked; return; }
   if(!it || it.state!=='ready') return;
-  if(f==='adv'){ it.adv = t.value; renderNbrUpload(); }
+  if(f==='adv'){ it.adv = t.value; up.items.forEach(x=>{ if(x.comOf===it) x.adv = nbrComTwinOf(it.adv) || 'new'; }); renderNbrUpload(); }
   else if(f==='newName') it.newName = t.value.trim();
   else if(f==='newOffice') it.newOffice = t.value;
   else if(f==='replace') it.replace = t.checked;
@@ -15746,10 +15787,12 @@ function nbrNbrDiff(it, advOverride){
   return (it._diff = {key, fresh, same, changed, freshNpw, gone, goneNpw});
 }
 // Bible lines with no NBR case linked yet (e.g. from a Bible upload), so a new case can be linked to its line instead of a second copy.
-function nbrBibleReuser(adv, alsoFree){
-  const lists = {}, taken = new Set();
+function nbrBibleReuser(adv, alsoFree, rec){
+  const lists = {}, taken = new Set(), A = rec || NBR_ADV[adv] || {}, ofAdv = A.office==='C' ? A.of : '';
   Object.entries(NBR_BIB).forEach(([id,l])=>{
-    if(!l || l.bc || (l.adv||'')!==adv || (l.entry && !(alsoFree && alsoFree.has(id)))) return;
+    // A Commercial NBR can also take the commercial lines under the person's own name; their own NBR leaves those alone.
+    const mine = (l && (l.adv||'')===adv && !(ofAdv==='' && nbrIsComProduct(l.product) && nbrComTwinOf(adv))) || (l && ofAdv && l.adv===ofAdv && nbrIsComProduct(l.product));
+    if(!l || l.bc || !mine || (l.entry && !(alsoFree && alsoFree.has(id)))) return;
     const k = l.kind || nbrProdKind(l.product); if(!k) return;
     (lists[k] || (lists[k] = [])).push({id, toks:nbrNameToks(l.client), m:nbrMonthNo(l.month), amt:nbrRound(l.amount)});
   });
@@ -15781,9 +15824,11 @@ function nbrNbrUploadPatches(it, toBible, made){
   let adv = it.adv;
   if(adv==='new'){
     const nm = it.newName.toLowerCase();
-    const found = made[nm] || (nbrAdvs(true).find(a=> a.name.toLowerCase()===nm) || {}).id;
+    // A Commercial tab: whose NBR it came from (perhaps an advisor made earlier in this batch).
+    const of = it.comOf ? (it.comOf.adv==='new' ? (made[String(it.comOf.newName||'').toLowerCase()] || (nbrAdvs(true).find(a=> a.name.toLowerCase()===String(it.comOf.newName||'').toLowerCase()) || {}).id || '') : it.comOf.adv) : '';
+    const found = made[nm] || (of && nbrComTwinOf(of)) || (nbrAdvs(true).find(a=> a.name.toLowerCase()===nm) || {}).id;
     if(found) adv = found;
-    else { adv = made[nm] = nbrKey(); updates['advisors/'+adv] = {name: it.newName, office: it.newOffice || 'F', active: true}; }
+    else { adv = made[nm] = nbrKey(); updates['advisors/'+adv] = nbrClean({name: it.newName, office: it.newOffice || 'F', active: true, of}); }
   }
   const months = Object.keys(p.months), years = [...new Set(months.map(m=> m.slice(0,4)))], npwMonths = [...new Set(p.npw.map(x=> x.month))];
   // A "new advisor" picked here may already exist by now (e.g. an earlier file in the same batch), so compare with whoever it really is.
@@ -15804,7 +15849,7 @@ function nbrNbrUploadPatches(it, toBible, made){
     Object.keys(updates).forEach(k=>{ const m = k.match(/^bible\/([^/]+)$/); if(m && updates[k]) freed.add(m[1]); });
   }
   const advRec = updates['advisors/'+adv] || NBR_ADV[adv] || {};
-  const reuser = toBible ? nbrBibleReuser(adv, freed) : null;
+  const reuser = toBible ? nbrBibleReuser(adv, freed, advRec) : null;
   const withAdv = fn=>{ const saved = NBR_ADV[adv]; if(!saved) NBR_ADV[adv] = advRec; try{ return fn(); } finally{ if(!saved) delete NBR_ADV[adv]; } };
   const toAdd = addOnly ? D.fresh.map(i=> p.entries[i]) : p.entries;
   toAdd.forEach(e=>{

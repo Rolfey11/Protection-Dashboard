@@ -826,6 +826,8 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
   background:var(--surface); color:var(--text); font-size:14px; transition:border-color .15s;}
 .nbr-pay-row input:focus{border-color:var(--brand-light);}
 @media (max-width:640px){ .nbr-pay-row{grid-template-columns:1fr 1fr;} }
+.nbr-board-tabs{display:inline-flex; flex-wrap:wrap; margin:18px 0 2px;}
+.nbr-board-tabs button{padding:8px 16px; font-size:13px;}
 .nbr-com-sum{font-size:11px; font-weight:500; color:var(--text-muted); margin-top:2px;}
 /* Advisor register: each week's heading is a bold pink band, like the Salesboard's. */
 .nbr-table tr.nbr-group.nbr-wk td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.6px; padding-top:9px; padding-bottom:9px; border-color:#A6297A;}
@@ -7147,6 +7149,8 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-17e', date:'2026-11-17', items:[ {text:"📊 <b>Salesboard</b>: buttons above the tables to switch between <b>Written</b>, <b>Banked</b>, <b>2026 by month</b>, <b>2026 written by product</b> and <b>Advisor month by month</b>. <b>Banked</b> is new: the month's banked by advisor and product (Life Ins, Mums Fee, Proc Fee…), like the Bible's SUM of PAID table, grouped by office like the written view.", roles:['admin','management']},
+    {text:"📊 <b>Salesboard</b>: switch between <b>Written</b> and the new <b>Banked</b> view, the month's banked by advisor and product.", roles:['mapa']} ]},
   {id:'2026-11-17d', date:'2026-11-17', items:[ {text:"💷 <b>Bible: part payments</b>. When a client pays a fee in more than one go (e.g. £100 upfront, £495 on offer), open the line and use <b>+ Add payment line</b>: each payment is banked in the month it's paid. Lines paid in full are green; part paid are amber, <b>Part-Paid</b>, with what's still to come in the new <b>Outstanding</b> column (and a <b>+ Payment</b> button). Uploading the Bible with <b>Fill in the blanks</b> now adds the later payments to their line, so <b>upload the latest Bible again</b> to bring in the ones missed so far.", roles:['admin','management']} ]},
   {id:'2026-11-17c', date:'2026-11-17', items:[ {text:"🏢 <b>Commercial tab</b>: uploading an NBR that has a <b>Commercial</b> tab (Joanne's, Mitch's) now also brings that tab in, onto their Commercial NBR, so it shows in the green Commercial section. Upload Joanne's and Mitch's NBRs again to bring it in.", roles:['admin','management']} ]},
   {id:'2026-11-17b', date:'2026-11-17', items:[ {text:"🏢 <b>Commercial</b> in New Business: Mitch Atkins and Joanne Currie each get a <b>Commercial NBR</b> (its own register), and a green <b>Commercial</b> section on the Salesboard between Gurkha and Wills that counts in all the totals. Commercial Bible lines (C Mort, C Remo, C Bridging, C Bus Loan) count as their commercial banked, and their Commercial NBR adds to their figures on Targets. To start: <b>Advisors &amp; upload → Add their Commercial NBRs</b>, then upload each Commercial NBR.", roles:['admin','management']},
@@ -14077,6 +14081,14 @@ const NBR_SALE_TYPES = ['Pur','Remo','E.R','F/ADV','Prod.Trans','Protection','BT
 // Type of sale on the NBR → the Bible's product for the proc fee line, and its mums fee type.
 const NBR_SALE_PRODUCT = {'Pur':'Proc Fee','Remo':'Remo','E.R':'ER','F/ADV':'F/Adv','Prod.Trans':'Prod Tfr','Protection':'Life Ins','BTL Pur':'Proc Fee','BTL Remo':'Remo','BTL F/ADV':'F/Adv','BTL Port':'Proc Fee','LTB':'Proc Fee','Sec Loan':'Sec Loan','Bridging':'Bridging'};
 const NBR_SALE_MUMS = {'Pur':'mort','BTL Pur':'mort','BTL Port':'mort','LTB':'mort','Remo':'Remo','BTL Remo':'Remo','Prod.Trans':'PT','E.R':'ER','F/ADV':'F/Adv','BTL F/ADV':'F/Adv'};
+// The Salesboard's Banked view: a column per product, as the Bible's "SUM of PAID" pivot (commercial products together).
+const NBR_BANK_PRODS = ['ER','F/Adv','Gen Ins','Life Ins','Mums Fee','Proc Fee','Prod Tfr','Remo','Sec Loan','Bridging','Sols Fee','Val Fee','Commercial','Wills','Clawback','Admin Fee','Other'];
+const nbrBankSlug = p=> String(p).replace(/[^A-Za-z0-9]/g,'_');
+function nbrBankProd(prod){
+  const t = String(prod||'').trim().toLowerCase(); if(!t) return 'Other';
+  if(/^c /.test(t)) return 'Commercial';
+  return NBR_BANK_PRODS.find(x=> x.toLowerCase()===t) || (/^li?fe ins/.test(t) ? 'Life Ins' : /^prod ?tfr/.test(t) ? 'Prod Tfr' : 'Other');
+}
 const NBR_PRODUCTS = ['Proc Fee','Mums Fee','Sols Fee','Val Fee','Prod Tfr','Remo','Life Ins','Gen Ins','ER','F/Adv','Sec Loan','Bridging','Clawback','Admin Fee','C Mort','C Remo','C Bridging','C Bus Loan'];
 const NBR_WHEN = ['upfront','on offer','on comp','no fee','prev app','top up','S&P'];
 const NBR_MUMS_TYPES = ['mort','Remo','PT','ER','F/Adv','admin'];
@@ -14142,6 +14154,7 @@ function nbrPublishSummary(){
   const sum = {advisors,
     w: pack(A.w, v=>{ const x = {}; BOARD_CATS.forEach(([k])=>{ if(r2(v[k])) x[k] = r2(v[k]); }); return Object.keys(x).length ? x : null; }),
     npw: pack(A.npw, v=> r2(v) || null), bank: pack(A.bank, v=> r2(v) || null),
+    bp: pack(A.bankP || {}, v=>{ const x = {}; Object.entries(v||{}).forEach(([k, a])=>{ if(r2(a)) x[nbrBankSlug(k)] = r2(a); }); return Object.keys(x).length ? x : null; }),
     fromBible: [...A.fromBible].map(k=> k.startsWith('|') ? '_'+k : k), years: A.years,
     targets: {written: nbrTargets().written, banked: nbrTargets().banked}, v: NBR_SUM_VERSION};
   const json = JSON.stringify(sum);
@@ -14285,9 +14298,13 @@ function nbrAgg(){
     const years = (Array.isArray(S.years) ? S.years : Object.values(S.years||{})).map(Number);
     if(!years.includes(new Date().getFullYear())) years.push(new Date().getFullYear());
     const fb = (Array.isArray(S.fromBible) ? S.fromBible : Object.values(S.fromBible||{})).map(k=> k.startsWith('_|') ? k.slice(1) : k);
-    return (nbrAggCache = {v:nbrVer, w, npw:unkey(S.npw), bank:unkey(S.bank), fromBible:new Set(fb), years:years.sort((a,b)=> b-a)});
+    const unslug = {}; NBR_BANK_PRODS.forEach(x=> unslug[nbrBankSlug(x)] = x);
+    const bankP = {}; Object.entries(unkey(S.bp)).forEach(([g, months])=>{ bankP[g] = {}; Object.entries(months||{}).forEach(([ym, v])=>{ const o = bankP[g][ym] = {}; Object.entries(v||{}).forEach(([k, a])=>{ o[unslug[k] || 'Other'] = n0(a); }); }); });
+    return (nbrAggCache = {v:nbrVer, w, npw:unkey(S.npw), bank:unkey(S.bank), bankP, fromBible:new Set(fb), years:years.sort((a,b)=> b-a)});
   }
-  const w = {}, npw = {}, bank = {}, years = new Set(), entYears = new Set(), fromBible = new Set(), bcYears = new Set();
+  const w = {}, npw = {}, bank = {}, bankP = {}, years = new Set(), entYears = new Set(), fromBible = new Set(), bcYears = new Set();
+  // Banked by product too, for the Salesboard's Banked view.
+  const addBP = (g, ym, prod, v)=>{ const a = bankP[g] || (bankP[g] = {}), m = a[ym] || (a[ym] = {}); m[prod] = (m[prod]||0) + v; };
   const isYm = ym=> /^\d{4}-\d{2}$/.test(ym||'');
   const cell = (g, ym)=>{ const a = w[g] || (w[g] = {}); return a[ym] || (a[ym] = {proc:0, mums:0, prot:0, sols:0, val:0, bc:0, wills:0, n:0}); };
   Object.values(NBR_ENT).forEach(e=>{ if(e && e.month) entYears.add((e.adv||'')+'|'+e.month.slice(0,4)); });
@@ -14307,7 +14324,7 @@ function nbrAgg(){
   Object.values(NBR_WILLS).forEach(x=>{
     if(!x || !isYm(x.month)) return;
     const t = nbrWillTotal(x), r = cell('wills', x.month); r.wills += t; r.n++;
-    const b = bank.wills || (bank.wills = {}); b[x.month] = (b[x.month]||0) + t/1.2; years.add(+x.month.slice(0,4));
+    const b = bank.wills || (bank.wills = {}); b[x.month] = (b[x.month]||0) + t/1.2; addBP('wills', x.month, 'Wills', t/1.2); years.add(+x.month.slice(0,4));
   });
   Object.values(NBR_BIB).forEach(l=>{
     if(!l || l.entry || l.bc || !isYm(l.month)) return;
@@ -14329,12 +14346,12 @@ function nbrAgg(){
     nbrLinePays(l).forEach(x=>{
       if(!x.datePaid) return;
       const ym = String(x.datePaid).slice(0,7), g = nbrLineGroup(l), a = bank[g] || (bank[g] = {});
-      a[ym] = (a[ym]||0) + n0(x.paid);
+      a[ym] = (a[ym]||0) + n0(x.paid); addBP(g, ym, nbrBankProd(l.product), n0(x.paid));
       years.add(+ym.slice(0,4));
     });
   });
   years.add(new Date().getFullYear());
-  return (nbrAggCache = {v:nbrVer, w, npw, bank, fromBible, years:[...years].filter(y=> y>2000 && y<2100).sort((a,b)=> b-a)});
+  return (nbrAggCache = {v:nbrVer, w, npw, bank, bankP, fromBible, years:[...years].filter(y=> y>2000 && y<2100).sort((a,b)=> b-a)});
 }
 function nbrRow(adv, ym){
   const A = nbrAgg();
@@ -14753,6 +14770,28 @@ function renderNbrBoard(){
       <tr class="nbr-grand"><td>All offices</td>${BOARD_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(grand[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(grand.total)}</td><td></td><td class="num">${grand.total ? '100%' : '–'}</td><td class="num">${nbrMoneyCell(sel.banked)}</td></tr>
     </tbody></table></div>`;
 
+  // 1b) Banked in the month by advisor and product (the Bible's "SUM of PAID" pivot), grouped by office like the written view.
+  const bpOf = id=> ((nbrAgg().bankP || {})[id] || {})[selYm] || {};
+  const bpCols = NBR_BANK_PRODS.filter(x=> ids.some(id=> nbrRound(bpOf(id)[x])));
+  const bpCells = o=> bpCols.map(x=> `<td class="num">${nbrMoneyCell(o[x])}</td>`).join('');
+  const bpSum = list=>{ const o = {}; bpCols.forEach(x=> o[x] = list.reduce((t,id)=> t + n0(bpOf(id)[x]), 0)); o.total = list.reduce((t,id)=> t + nbrRow(id, selYm).banked, 0); return o; };
+  const bankName = a=> a.special ? esc(a.name) : view ? (a.id===nbrAdvForUser(currentUser.id) ? `<b>${esc(a.name)}</b> <span class="nbr-tag">You</span>` : esc(a.name)) : `<button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">${esc(a.name)}</button>`;
+  const BP_COLS = bpCols.length + 2, bpGap = `<tr class="nbr-gap" aria-hidden="true"><td colspan="${BP_COLS}"></td></tr>`;
+  const bankBlock = (code, label)=>{
+    const list = advs.filter(a=> (a.office||'')===code); if(!list.length) return '';
+    const com = code==='C' ? ' nbr-com' : '', tot = bpSum(list.map(a=> a.id));
+    return `<tr class="nbr-group${com}"><td colspan="${BP_COLS}">${esc(label)}</td></tr>
+      ${list.map(a=>{ const o = bpSum([a.id]); return `<tr class="${a.special ? 'nbr-special' : ''} ${view && a.id===nbrAdvForUser(currentUser.id) ? 'nbr-me' : ''}"><td>${bankName(a)}</td>${bpCells(o)}<td class="num b">${nbrMoneyCell(o.total)}</td></tr>`; }).join('')}
+      <tr class="nbr-tot nbr-office-tot${com}"><td>${esc(label)} total</td>${bpCells(tot)}<td class="num b">${nbrMoneyCell(tot.total)}</td></tr>`;
+  };
+  const bpGrand = bpSum(ids);
+  const bankTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-board-table">
+    <thead><tr><th>Advisor</th>${bpCols.map(x=> `<th class="num">${esc(x)}</th>`).join('')}<th class="num">Total banked</th></tr></thead>
+    <tbody>${[...NBR_OFFICES.map(([c,l])=> bankBlock(c, l)), bankBlock('', 'No office set')].filter(Boolean).join(bpGap)}
+      ${bpGap}
+      <tr class="nbr-grand"><td>All offices</td>${bpCells(bpGrand)}<td class="num b">${nbrMoneyCell(bpGrand.total)}</td></tr>
+    </tbody></table></div>`;
+
   // 2) The year by month: written v last year, banked, NPW.
   const yoy = (a,b)=> b ? `<span class="${a>=b ? 'nbr-up' : 'nbr-down'}">${a>=b ? '+' : ''}${(Math.round((a/b-1)*1000)/10).toFixed(1)}%</span>` : '–';
   const yearTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
@@ -14819,6 +14858,10 @@ function renderNbrBoard(){
       <tbody>${yearsMine.map(y=>{ const r = yr(y), l = yr(y-1); return `<tr class="${y===Y ? 'nbr-sel' : ''}"><td>${y}</td>${catCells(r)}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td><td class="num">${yoy(r.total, l.total)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="nml-empty">Nothing yet.</div>'}`;
     }
   }
+  // Which part of the Salesboard is showing (remembered on this device). MAPAs see Written and Banked.
+  if(!nbrUI.boardTab){ try{ nbrUI.boardTab = localStorage.getItem('plt_boardTab') || ''; }catch(e){ nbrUI.boardTab = ''; } }
+  const boardTabs = [['written','Written'], ['banked','Banked'], ...(view ? [] : [['year', `${Y} by month`], ['prod', `${Y} written by product`], ['advs', 'Advisor month by month']])];
+  const tab = boardTabs.some(([k])=> k===nbrUI.boardTab) ? nbrUI.boardTab : 'written';
   const empty = view || quick ? !Object.keys((NBR_SUMMARY && NBR_SUMMARY.w) || {}).length && !Object.keys((NBR_SUMMARY && NBR_SUMMARY.bank) || {}).length : !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
   el.innerHTML = `
     ${view && !(NBR_SUMMARY && NBR_SUMMARY.updatedAt) ? `<div class="nbr-callout">The Salesboard hasn't been filled in yet. It fills in automatically the next time someone in Admin or Management logs in, so check back shortly.</div>` : empty && view ? `<div class="nbr-callout">Nothing on the Salesboard yet.</div>` : ''}
@@ -14840,16 +14883,19 @@ function renderNbrBoard(){
       <div class="stat-card"><div class="sv">${nbrMoney(ytd.banked)}</div><div class="sl">Banked ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y} · ${nbrPct(yt.banked, T.banked)} of target</div></div>
       <div class="stat-card warn"><div class="sv">${nbrMoney(yt.npw)}</div><div class="sl">NPW in ${Y}</div></div>`}
     </div>
-    ${view ? '' : `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} by advisor</h2>`}
+    <div class="cond-seg nbr-board-tabs" role="group" aria-label="Salesboard view">${boardTabs.map(([k, l])=> `<button type="button" data-board-tab="${k}" aria-pressed="${k===tab}">${esc(l)}</button>`).join('')}</div>
+    ${tab==='banked' ? `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} banked by advisor</h2>
+    <p class="field-hint nbr-bib-note">What came in during ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}, by product: the amount paid on each Bible line (and each part payment), in the month of its date paid. Wills at the net value (÷1.2).</p>
+    ${bankTable}` : ''}
+    ${tab!=='written' ? '' : `${view ? '' : `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} by advisor</h2>`}
     ${fromBibleNames.length ? `<p class="field-hint nbr-bib-note">Written figures for ${esc(fromBibleNames.length > 4 ? fromBibleNames.length+' advisors' : fromBibleNames.join(', '))} in ${Y} come from the Bible, as there's no NBR for them that year.</p>` : ''}
-    ${boardTable}
-    ${view ? myHtml : `${unassigned.banked ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
+    ${boardTable}`}
+    ${view ? myHtml : tab==='year' ? `${unassigned.banked ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
     <h2 class="nbr-h2">${Y} by month</h2>
-    ${yearTable}
-    <h2 class="nbr-h2">${Y} written by product</h2>
-    ${prodTable}
-    <h2 class="nbr-h2">Each advisor by month</h2>
-    <div class="nbr-adv-cards">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>`}`;
+    ${yearTable}` : tab==='prod' ? `<h2 class="nbr-h2">${Y} written by product</h2>
+    ${prodTable}` : tab==='advs' ? `<h2 class="nbr-h2">Each advisor by month</h2>
+    <div class="nbr-adv-cards">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>` : ''}`;
+  el.querySelectorAll('[data-board-tab]').forEach(b=> b.addEventListener('click', ()=>{ nbrUI.boardTab = b.dataset.boardTab; try{ localStorage.setItem('plt_boardTab', nbrUI.boardTab); }catch(e){} renderNbrBoard(); }));
   document.getElementById('nbrBoardYear').addEventListener('change', e=>{ nbrUI.boardYear = +e.target.value; nbrUI.boardMonth = +e.target.value===now.getFullYear() ? now.getMonth()+1 : 12; renderNbrBoard(); });
   document.getElementById('nbrBoardMonth').addEventListener('change', e=>{ nbrUI.boardMonth = +e.target.value; renderNbrBoard(); });
   const bt = el.querySelector('.nbr-board-table'); if(bt) stickyHead(bt.parentElement);

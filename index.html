@@ -810,6 +810,9 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-merge select{min-width:220px;}
 .nbr-tag.nbr-tag-warn{background:color-mix(in srgb, var(--amber) 18%, var(--surface)); color:var(--text);}
 .nbr-table tr.nbr-group.nbr-this-week td{color:var(--brand);}
+/* Advisor register: each week's heading is a bold pink band, like the Salesboard's. */
+.nbr-table tr.nbr-group.nbr-wk td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.6px; padding-top:9px; padding-bottom:9px; border-color:#A6297A;}
+.nbr-table tr.nbr-group.nbr-wk .nbr-tag{background:#fff; color:#A6297A; border-color:#fff;}
 .nbr-check.nbr-sub{margin-left:24px; font-size:12.5px;}
 .nbr-up-mode{border-top:1px solid var(--border); padding-top:10px; margin-top:4px;}
 .nbr-fill-sum{margin:4px 0 12px 18px; display:flex; flex-direction:column; gap:4px;}
@@ -7127,6 +7130,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-17a', date:'2026-11-17', items:[ {text:"<b>Advisor NBRs</b>: each week's heading is now a bold pink band, so the weeks are easier to tell apart."} ]},
   {id:'2026-11-16a', date:'2026-11-16', items:[ {text:"<b>ASA Limits</b>: Income Protection now shows each insurer's <b>max entry age</b>, plus Cirencester, British, Holloway and Shepherds Friendly. Insurers the client is too old for are greyed out, marked <b>Over max age</b> and moved to the bottom."} ]},
   {id:'2026-11-12g', date:'2026-11-12', items:[ {text:"<b>NPWs</b>: now read the same way as the NBR's own summary. The NPW sheet's <b>Total</b> column is what comes off, so NBRs with only a Total column (e.g. Arbin's) and NPWs with a Vals fee now count. A month typed as text like \"06/26\" is now read as June 2026, and the upload lists any NPW whose month the NBR's own totals miss, so you can fix it on the NBR. <b>Upload each advisor's NBR again</b> to bring their NPWs in line.", roles:['admin','management']} ]},
   {id:'2026-11-12f', date:'2026-11-12', items:[ {text:"<b>Targets</b>: the whole year now fits across the screen, with no scrolling sideways. Figures are in whole pounds (shortened to e.g. £22.5k on smaller screens). The banked target and minimum before DAP are in the Banked table.", roles:['admin','management']} ]},
@@ -15094,7 +15098,7 @@ function renderNbrReg(){
   const rowHtml = e=> `<tr class="nbr-click" data-nbr-ent="${esc(e.id)}"><td><b>${esc(e.client||'')}</b>${inBible.has(e.id) ? ' <span class="nbr-tag" title="In the Bible">Bible</span>' : ''}</td><td>${esc(e.lender||'')}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(e[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(nbrEntTotal(e))}</td><td>${esc(e.solsName||'')}</td><td>${esc(e.valName||'')}</td><td>${e.appSub ? fmtDateSlash(e.appSub) : ''}</td><td>${esc(e.leadProvider||'')}</td><td>${esc(e.saleType||'')}</td><td class="nbr-notes">${esc(e.notes||'')}</td><td class="num">${nbrMoneyCell(e.linkToSend)}</td><td>${e.linkSent ? fmtDateSlash(e.linkSent) : ''}</td><td>${e.linkPaid ? fmtDateSlash(e.linkPaid) : ''}</td></tr>`;
   const totRow = (label, rows, cls)=>{ const t = nbrSum(rows.map(e=> ({...e, total: nbrEntTotal(e)}))); return `<tr class="${cls}"><td>${label}</td><td></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td colspan="10"></td></tr>`; };
   const monthHtml = ents.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-reg-table"><thead>${head}</thead><tbody>
-      ${weeks.map((g,i)=> ({g, n:i+1})).reverse().map(({g,n})=> `<tr class="nbr-group ${g.week===thisWeek ? 'nbr-this-week' : ''}"><td colspan="18">Week ${n}${g.week ? ' · w/e '+esc(fmtDate(g.week)) : ''}${g.week===thisWeek ? ' <span class="nbr-tag">This week</span>' : ''}</td></tr>${g.rows.map(rowHtml).join('')}${totRow(`Week ${n} totals`, g.rows, 'nbr-tot')}`).join('')}
+      ${weeks.map((g,i)=> ({g, n:i+1})).reverse().map(({g,n})=> `<tr class="nbr-group nbr-wk ${g.week===thisWeek ? 'nbr-this-week' : ''}"><td colspan="18">Week ${n}${g.week ? ' · w/e '+esc(fmtDate(g.week)) : ''}${g.week===thisWeek ? ' <span class="nbr-tag">This week</span>' : ''}</td></tr>${g.rows.map(rowHtml).join('')}${totRow(`Week ${n} totals`, g.rows, 'nbr-tot')}`).join('')}
       ${totRow(`${NBR_MONTHS_LONG[+ym.slice(5,7)-1]} total`, ents, 'nbr-grand')}
     </tbody></table></div>` : `<div class="nml-empty">No cases in ${esc(nbrYmLabel(ym, true))} yet.</div>`;
   // No NBR for this advisor and year: show the month from the Bible, one row per client, laid out like the NBR.

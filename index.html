@@ -818,6 +818,53 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-table tr.nbr-group.nbr-com td{background:#0E6E5C; border-color:#0E6E5C; color:#fff;}
 .nbr-table tr.nbr-group.nbr-com .nbr-tag{color:#0E6E5C;}
 .nbr-table.nbr-board-table tr.nbr-office-tot.nbr-com td{background:color-mix(in srgb, #0E6E5C 20%, var(--surface)); border-top-color:color-mix(in srgb, #0E6E5C 55%, var(--surface)); border-bottom-color:color-mix(in srgb, #0E6E5C 55%, var(--surface));}
+/* Protection case window, laid out as one column: stage pills, the Next step card with Update case,
+   contact and case details side by side, then the History. */
+#leadOverlay .lead-detail-grid{display:block; overflow-y:auto;}
+#leadOverlay .lead-left{overflow:visible; border-right:none; padding:22px 26px 10px;}
+#leadOverlay .lead-right{background:transparent; min-height:0; padding:0 26px 22px;}
+#leadOverlay .audit-head{padding:16px 0 10px; border-bottom:none; font-family:'Poppins',sans-serif; font-size:16px; color:var(--text);}
+#leadOverlay .audit-list{overflow:visible; padding:4px 0 0;}
+#leadOverlay .ld-note-form, #leadOverlay .ld-reply-row{margin-left:0; margin-right:0;}
+.ld-more-head{width:40px; height:40px; font-size:20px; font-weight:800; line-height:1; color:var(--ink-2); display:grid; place-items:center;}
+.ld-more-head.on{border-color:var(--brand); color:var(--brand);}
+#leadOverlay .ld-track.ld-pills{border:0; padding:0; background:transparent; margin-bottom:14px;}
+.ld-pills .ld-steps{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:6px;}
+.ld-pills .ld-steps li{padding:9px 4px; border-radius:10px; background:var(--bg); color:var(--text-muted); font-size:12px; font-weight:600; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ld-pills .ld-steps li::before, .ld-pills .ld-steps li::after{display:none;}
+.ld-pills .ld-steps li.done{background:var(--green-bg); color:var(--green);} .ld-pills .ld-steps li.done::first-letter{}
+.ld-pills .ld-steps li.done span.tick{margin-right:3px;}
+.ld-pills .ld-steps li.now{background:var(--brand); color:#fff; box-shadow:none;}
+.ld-pills .ld-steps li.bad{background:var(--red-bg); color:var(--red);}
+.ld-pills .ld-next{border-top:0; margin-top:10px; padding:10px 12px; border-radius:10px; background:var(--bg);}
+.ld-nextcard{display:flex; align-items:center; flex-wrap:wrap; gap:14px 16px; padding:16px 18px; border-radius:14px; background:var(--brand-tint); border:1.5px solid color-mix(in srgb, var(--brand) 22%, var(--surface)); margin-bottom:14px;}
+.ld-nextcard.bad{background:var(--red-bg); border-color:color-mix(in srgb, var(--red) 25%, var(--surface));}
+.ld-nextcard.due{background:var(--amber-bg); border-color:color-mix(in srgb, var(--amber) 45%, var(--surface));}
+.ld-nc-ic{flex:none; display:grid; place-items:center;} .ld-nc-ic .ico{width:26px; height:26px; color:var(--brand);}
+.ld-nextcard.bad .ld-nc-ic .ico{color:var(--red);} .ld-nextcard.due .ld-nc-ic .ico{color:var(--amber);}
+.ld-nc-body{flex:1; min-width:200px;}
+.ld-nc-k{font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-muted);}
+.ld-nc-v{font-size:16px; font-weight:700; color:var(--text); margin-top:2px;}
+.ld-nc-s{font-size:12.5px; color:var(--text-muted); margin-top:2px;}
+.ld-nc-cal{flex-basis:100%;} .ld-nc-cal .cal-btns{margin-top:0;}
+.ld-nc-btns{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+.ld-refer-card-btn{min-height:50px; padding:0 18px; border-radius:12px; border:1.5px solid color-mix(in srgb, var(--brand) 35%, var(--surface)); background:var(--surface); color:var(--brand); font:inherit; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px;}
+.ld-refer-card-btn .ico{width:16px; height:16px;}
+.ld-refer-card-btn:hover, .ld-refer-card-btn.on{border-color:var(--brand); background:var(--brand-tint);}
+.ld-refer-card-btn:disabled{opacity:.45; cursor:not-allowed;}
+.ld-update-btn{min-height:50px; padding:0 26px; border:0; border-radius:12px; background:var(--brand); color:#fff; font:inherit; font-size:16px; font-weight:700; cursor:pointer; box-shadow:0 6px 16px color-mix(in srgb, var(--brand) 28%, transparent);}
+.ld-update-btn:hover{background:var(--brand-dark);}
+.ld-update-btn.on{background:var(--brand-dark); box-shadow:none;}
+.ld-update-btn:disabled{opacity:.45; cursor:not-allowed; box-shadow:none;}
+.ld-info-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; margin-top:14px;}
+.ld-info-grid > .sib-box{margin-top:0;}
+.ld-info-grid .sib-kv{grid-template-columns:auto 1fr;}
+@media (max-width:820px){ .ld-info-grid{grid-template-columns:1fr;} .ld-pills .ld-steps{grid-template-columns:repeat(3, minmax(0,1fr));} }
+#leadOverlay .sib-more-row{margin-bottom:12px;}
+.audit-filter{display:flex; flex-wrap:wrap; gap:6px; padding:0 0 12px;}
+.audit-chip{min-height:34px; padding:0 12px; border-radius:999px; border:1.5px solid var(--border-2); background:var(--surface); color:var(--text); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;}
+.audit-chip span{color:var(--text-muted); font-weight:500; margin-left:2px;}
+.audit-chip.on{background:var(--brand); border-color:var(--brand); color:#fff;} .audit-chip.on span{color:#fff;}
 /* Protection case window: Update case (step 1 What happened?, step 2 Where does it go now?) */
 .ld-upd-bar .ld-update-btn{min-height:46px; padding:0 22px; font-size:15px; font-weight:700; background:var(--brand); border-color:var(--brand); color:#fff;}
 .ld-upd-bar .ld-update-btn:hover{background:var(--brand-dark); border-color:var(--brand-dark); color:#fff;}
@@ -1562,7 +1609,7 @@ body:not(.mode-com) .com-only{display:none !important;}
 .lead-right{background:var(--bg); display:flex; flex-direction:column; min-height:0;}
 @media (max-width:800px){.lead-left{border-right:none; border-bottom:1px solid var(--border);}}
 
-#leadOverlay .lead-modal{max-width:1240px;}
+#leadOverlay .lead-modal{max-width:980px;}
 .sib-sum .status-pill{padding:3px 9px; font-size:10.5px; vertical-align:1px; margin-right:4px;}
 .ld-track{border:1px solid var(--border); border-radius:12px; padding:12px 14px 12px; margin-bottom:12px; background:var(--surface);}
 .ld-steps{display:flex; list-style:none; margin:0; padding:0;}
@@ -3624,6 +3671,7 @@ body:not(.ai-on) #askBtn{display:none;}
         <div class="ld-ma hidden" id="ldMa"></div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
+        <button type="button" class="icon-btn ld-more-head hidden" id="ldMoreBtn" aria-label="More options" aria-expanded="false" aria-controls="ldMoreRow" title="More options">⋯</button>
         <button class="icon-btn del hidden" id="leadDeleteBtn" title="Delete this case">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         </button>
@@ -3633,7 +3681,7 @@ body:not(.ai-on) #askBtn{display:none;}
     <div class="lead-detail-grid">
       <div class="lead-left" id="leadLeftPane"><!-- populated by JS --></div>
       <div class="lead-right">
-        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Audit trail<span class="ld-head-btns hidden" id="ldHeadBtns"><button type="button" class="btn btn-secondary btn-sm" id="ldRecordBtn">+ Record action</button><button type="button" class="btn btn-secondary btn-sm" id="ldAddNoteBtn">+ Add note</button></span></div>
+        <div class="audit-head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> History<span class="ld-head-btns hidden" id="ldHeadBtns"><button type="button" class="btn btn-secondary btn-sm" id="ldRecordBtn">+ Record action</button><button type="button" class="btn btn-secondary btn-sm" id="ldAddNoteBtn">+ Add note</button></span></div>
         <div class="ld-note-form hidden" id="ldActForm">
           <div class="ld-act-lbl">What did you do?</div>
           <div class="ld-chips" id="ldActKinds"></div>
@@ -3650,6 +3698,7 @@ body:not(.ai-on) #askBtn{display:none;}
         </div>
         <div class="ld-reply-row hidden" id="ldReplyRow"><button type="button" class="linkish" id="ldReplyCheck">↻ Check Gmail for client replies</button></div>
         <div class="ai-sum hidden" id="aiSum_lead"></div>
+        <div class="audit-filter hidden" id="auditFilter" role="group" aria-label="Show in the history"></div>
         <div class="audit-list" id="auditList"></div>
       </div>
     </div>
@@ -7194,6 +7243,8 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-18c', date:'2026-11-18', items:[ {text:"✨ <b>Case window</b>: a cleaner layout. The stage shows as pills, the <b>Next step</b> card holds <b>Update case</b> and <b>Refer to protection adviser</b>, contact and case details sit side by side, and the History is underneath. More options are under <b>⋯</b> at the top. In New Cases, Update case can now <b>Move to Appointments / Research</b> with an appointment or a reminder.", roles:['mapa','management','admin']},
+    {text:"🔎 <b>History filter</b>: on a case, filter the History by calls, appointments, emails, texts, reminders, notes or pot moves.", roles:['management']} ]},
   {id:'2026-11-18b', date:'2026-11-18', items:[ {text:"✨ <b>A simpler case window</b>. One <b>Update case</b> button replaces the row of buttons on a protection case. It asks two things: <b>What happened?</b> (called, no answer, text or email, appointment held, or just <b>Book appointment / Set reminder</b>) and <b>Where does the case go now?</b>, offering only the pots that make sense from where the case is. Booking still adds to your calendar and invites the client, everything is still recorded in the audit trail, and an appointment or reminder that has passed still has to be recorded first. Refer, feedback, thanks, write an email and edit details are under <b>More</b>.", roles:['mapa','management','admin']} ]},
   {id:'2026-11-17e', date:'2026-11-17', items:[ {text:"📊 <b>Salesboard</b>: buttons above the tables to switch between <b>Written</b>, <b>Banked</b>, <b>2026 by month</b>, <b>2026 written by product</b> and <b>Advisor month by month</b>. <b>Banked</b> is new: the month's banked by advisor and product (Life Ins, Mums Fee, Proc Fee…), like the Bible's SUM of PAID table, grouped by office like the written view.", roles:['admin','management']},
     {text:"📊 <b>Salesboard</b>: switch between <b>Written</b> and the new <b>Banked</b> view, the month's banked by advisor and product.", roles:['mapa']} ]},
@@ -9919,7 +9970,7 @@ function openLead(id){
   activeLeadId = id;
   ldNoteClose(); ldMa = {open:false, sel:'', note:''}; ctEditing = -1;
   setTimeout(()=> gmailReplySync(), 300);
-  actionUIState = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldFeedbackSeenBase = LEADS[id].refFeedbackSeenAt || 0; ldEditClient = false; ldEditNames = null;
+  actionUIState = null; ldMoreOpen = false; ldAuditFilter = 'all'; ldFeedbackOpen = false; ldThanksOpen = false; ldFeedbackSeenBase = LEADS[id].refFeedbackSeenAt || 0; ldEditClient = false; ldEditNames = null;
   // Tidy a left-over callback away for good (it's already hidden everywhere).
   if(['underwriting','terms'].includes(LEADS[id].status) && staleCallback(LEADS[id]) && canManageLead(LEADS[id])) db.ref('leads/'+id).update(CLEAR_CALLBACK).catch(()=>{});
   renderLeadModal();
@@ -10091,22 +10142,21 @@ function renderLeadModal(){
   const at = potKey==='new' ? 0 : potKey==='existing' ? (lead.quotesSentAt ? 2 : 1) : potKey==='underwriting' ? 3 : potKey==='terms' ? 4 : potKey==='signedup' ? 6 : (lead.quotesSentAt ? 2 : 1);
   // A declined case shows how far it got, then the decline.
   const stepsHtml = declined
-    ? STEPS.slice(0, at + 1).map(([, lbl])=> `<li class="done">${lbl}</li>`).join('') + `<li class="bad">${potKey==='completed' ? 'Fully declined' : 'Decline pending'}</li>`
-    : STEPS.map(([, lbl], i)=> `<li class="${i < at ? 'done' : i===at ? 'now' : ''}">${lbl}</li>`).join('');
+    ? STEPS.slice(0, at + 1).map(([, lbl])=> `<li class="done">✓ ${lbl}</li>`).join('') + `<li class="bad">${potKey==='completed' ? 'Fully declined' : 'Decline pending'}</li>`
+    : STEPS.map(([, lbl], i)=> `<li class="${i < at ? 'done' : i===at ? 'now' : ''}">${i < at ? '✓ ' : ''}${lbl}</li>`).join('');
   let nextHtml = '';
   if(canAction(lead) || lead.status==='decline'){
-    if(lead.status==='new') nextHtml = `<span>Next: use <b>Update case</b> to book an appointment with the client, or set a reminder to chase them. The case stays in New Cases until an appointment is booked.</span>`;
+
     if(lead.status==='existing') nextHtml = lead.quotesSentAt
       ? `<span class="quotes-done">${ico('checkCircle')} <b>Quotes sent ${esc(fmtDate(lead.quotesSentAt))}</b>${lead.quotesSentByName ? ' by '+esc(lead.quotesSentByName) : ''} · the case shows pale green on the dashboard</span><button type="button" class="linkish" id="quotesUndoBtn">Undo</button>`
       : `${currentUser.role==='mapa' && lead.researchAt
           ? `<span class="research-on">${ico('search')} In research since ${esc(fmtDate(lead.researchAt))} · the case shows pale yellow on the dashboard <button type="button" class="linkish" id="researchUndoBtn">Undo</button></span>`
-          : `<span>Next stage: <b>Quotes sent</b>. Use <b>Update case</b> once the client has their quotes (the case shows pale green on the dashboard).</span>`}`;
-    if(lead.status==='underwriting') nextHtml = `<span>Submitted / in underwriting. When the insurer issues terms, use <b>Update case</b> and choose Terms issued.</span>`;
-    if(lead.status==='terms') nextHtml = `<span>Terms issued${lead.termsNote ? ': <b>'+esc(lead.termsNote)+'</b>' : ''}. When the policy goes on risk, or the client doesn't go ahead, use <b>Update case</b>.</span>`;
+          : ''}`;
+    if(lead.status==='terms' && lead.termsNote) nextHtml = `<span>Terms: <b>${esc(lead.termsNote)}</b></span>`;
     if(lead.status==='decline' && canAction(lead)) nextHtml = `<span>This case stays in Decline Workflow until all of these are done: the decline reasoning is sent to the client, the decline email is added to the HLP Portal, and the lead is NPW'd in the HLP Swim lane.</span>
       <div class="ld-decl">${DECLINE_STEPS.map(st=> `<button type="button" class="stage-btn" data-decline-step="${st.field}" ${lead[st.field]?'disabled':''} style="background:var(--green);">${lead[st.field] ? ico('check')+' '+st.btnDone : st.btn}</button>`).join('')}</div>`;
   }
-  const trackerHtml = `<div class="ld-track"><ol class="ld-steps" aria-label="Case stage">${stepsHtml}</ol>${nextHtml ? `<div class="ld-next">${nextHtml}</div>` : ''}</div>`;
+  const trackerHtml = `<div class="ld-track ld-pills"><ol class="ld-steps" aria-label="Case stage">${stepsHtml}</ol>${nextHtml && nextHtml.trim() ? `<div class="ld-next">${nextHtml}</div>` : ''}</div>`;
 
   // Action buttons: the only way to log contact, sign up or decline.
   const booking = canAction(lead) && inBookingPot(lead); // New Cases + Appointments / Research: reminders and appointments only
@@ -10119,7 +10169,6 @@ function renderLeadModal(){
   const canFb = canSendFeedback(lead);
   // Everything that isn't a case update lives in the More menu.
   const moreItems = [
-    ...(canAction(lead) && canReferToPA(lead) && booking ? [`<button type="button" class="action-btn ld-refer-btn ${actionUIState && actionUIState.stage==='refer' ? 'on' : ''}" data-act="refer">${ico('send')}Refer to protection adviser</button>`] : []),
     ...(canAction(lead) ? [`<button type="button" class="action-btn" data-act="email">${ico('mail')}Write an email</button>`] : []),
     ...(canFb ? [`<button type="button" class="action-btn ld-refer-btn ${ldFeedbackOpen ? 'on' : ''}" id="fbBtn">${ico('message')}Feedback to ${esc(String(lead.referredByName||'MAPA').split(' ')[0])}</button>`,
       `<button type="button" class="action-btn ld-thanks-btn ${ldThanksOpen ? 'on' : ''}" id="tcBtn"><span aria-hidden="true">💐</span>Send thanks</button>`] : []),
@@ -10129,17 +10178,34 @@ function renderLeadModal(){
     ...(canChangeStatus(lead) ? [`<button type="button" class="action-btn" id="changeStatusBtn" title="Manual override: move the case to any pot">${ico('shuffle')}Change status</button>`] : []),
   ];
   const wizOpen = !!(actionUIState && (actionUIState.wiz || ['schedule','followup','decline','signupchoice'].includes(actionUIState.stage)));
+  const mb = document.getElementById('ldMoreBtn');
+  mb.classList.toggle('hidden', !moreItems.length); mb.setAttribute('aria-expanded', String(!!(ldMoreOpen && moreItems.length))); mb.classList.toggle('on', !!(ldMoreOpen && moreItems.length));
+  const referBtn = canAction(lead) && canReferToPA(lead) && booking ? `<button type="button" class="ld-refer-card-btn ${actionUIState && actionUIState.stage==='refer' ? 'on' : ''}" data-act="refer" ${due ? 'disabled' : ''}>${ico('send')}Refer to protection adviser</button>` : '';
+  const updBtn = canAction(lead) ? `<span class="ld-nc-btns">${referBtn}<button type="button" class="ld-update-btn ${wizOpen ? 'on' : ''}" data-act="update" ${due ? 'disabled' : ''}>Update case</button></span>` : '';
   const actionHtml = (canAction(lead) || moreItems.length) ? `
-    <div class="sib-acts ld-upd-bar" id="actionBar">
-      ${canAction(lead) ? `<button type="button" class="action-btn primary ld-update-btn ${wizOpen ? 'on' : ''}" data-act="update" ${due ? 'disabled' : ''}>${ico('checkCircle')}Update case</button>` : ''}
-      ${moreItems.length ? `<button type="button" class="action-btn" id="ldMoreBtn" aria-expanded="${ldMoreOpen}" aria-controls="ldMoreRow">${ldMoreOpen ? 'More ▴' : 'More ▾'}</button>` : ''}
-    </div>
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
     <div id="dynamicActionArea"></div>
     ${canFb && ldFeedbackOpen ? feedbackFormHtml(lead) : ''}${canFb && ldThanksOpen ? thanksFormHtml(lead) : ''}` : '';
 
-  const nextCallHtml = hasBookedCall(lead) && !due ? `<div class="sib-next ${inBookingPot(lead) && fuKind(lead)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${inBookingPot(lead) && fuKind(lead)==='reminder' ? '🔔' : '⏰'}</span><div><b>${inBookingPot(lead) && lead.followUpKind ? esc(fuKindLabel(lead))+': ' : ''}${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${inBookingPot(lead) && lead.followUpKind ? (fuKind(lead)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened') : 'Next call due'}${lead.followUpNote ? ' · '+esc(lead.followUpNote) : ''}${lead.meetLink && inBookingPot(lead) ? ` · <a href="${esc(lead.meetLink)}" target="_blank" rel="noopener" class="meet-link">Join Google Meet</a>` : ''}</small></div>${calButtonsHtml({id:lead.id, ...lead}, canAction(lead))}</div>`
+  const nextCallOld = hasBookedCall(lead) && !due ? `<div class="sib-next ${inBookingPot(lead) && fuKind(lead)==='reminder' ? 'info' : 'warn'}"><span class="ic" aria-hidden="true">${inBookingPot(lead) && fuKind(lead)==='reminder' ? '🔔' : '⏰'}</span><div><b>${inBookingPot(lead) && lead.followUpKind ? esc(fuKindLabel(lead))+': ' : ''}${esc(followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim())}</b><small>${inBookingPot(lead) && lead.followUpKind ? (fuKind(lead)==='reminder' ? 'Reminder to chase the client' : 'Appointment booked: record the outcome once it has happened') : 'Next call due'}${lead.followUpNote ? ' · '+esc(lead.followUpNote) : ''}${lead.meetLink && inBookingPot(lead) ? ` · <a href="${esc(lead.meetLink)}" target="_blank" rel="noopener" class="meet-link">Join Google Meet</a>` : ''}</small></div>${calButtonsHtml({id:lead.id, ...lead}, canAction(lead))}</div>`
     : booking && !lead.followUpDate ? `<div class="sib-next bad"><span class="ic" aria-hidden="true">⚠️</span><div><b>Nothing booked yet</b><small>${lead.status==='new' ? 'Set a reminder or book an appointment when you\'re ready.' : 'Set a reminder or book an appointment: every case here needs its next step booked.'}</small></div></div>` : '';
+
+  void nextCallOld;
+  // The Next step card: what's booked next, with the Update case button.
+  const nb = hasBookedCall(lead) && !due, rem = inBookingPot(lead) && fuKind(lead)==='reminder';
+  const ncWhen = nb ? followUpBadge(lead.followUpDate, lead.followUpTime).replace(/<[^>]+>/g,'').trim() : '';
+  const ncTitle = due ? (fuKind(lead)==='reminder' ? 'Reminder due: record what happened below' : 'Appointment has passed: record what happened below')
+    : nb ? `${inBookingPot(lead) && lead.followUpKind ? fuKindLabel(lead) : 'Follow-up call'} · ${ncWhen}`
+    : booking ? 'Nothing booked yet' : lead.status==='decline' ? 'Finish the decline steps above' : ['underwriting','terms'].includes(lead.status) ? 'No follow-up booked' : (STATUS_LABELS[lead.status] || '');
+  const ncSub = due ? '' : nb ? [inBookingPot(lead) && lead.followUpKind ? (rem ? 'Reminder to chase the client' : 'Record the outcome once it has happened') : '', lead.followUpNote ? esc(lead.followUpNote) : '', lead.meetLink && inBookingPot(lead) ? `<a href="${esc(lead.meetLink)}" target="_blank" rel="noopener" class="meet-link">Join Google Meet</a>` : ''].filter(Boolean).join(' · ')
+    : booking ? (lead.status==='new' ? 'Use Update case to set a reminder or book an appointment.' : 'Every case here needs its next step booked: use Update case.') : '';
+  const ncTone = due ? 'due' : booking && !nb ? 'bad' : '';
+  const nextCallHtml = (canAction(lead) || nb) ? `<div class="ld-nextcard ${ncTone}" id="ldNextCard">
+      <span class="ld-nc-ic" aria-hidden="true">${ico(due || !nb ? (booking && !nb && !due ? 'alert' : 'clock') : rem ? 'clock' : 'calendar')}</span>
+      <div class="ld-nc-body"><div class="ld-nc-k">Next step</div><div class="ld-nc-v">${esc(ncTitle)}</div>${ncSub ? `<div class="ld-nc-s">${ncSub}</div>` : ''}</div>
+      ${updBtn}
+      ${nb ? `<div class="ld-nc-cal">${calButtonsHtml({id:lead.id, ...lead}, canAction(lead))}</div>` : ''}
+    </div>` : '';
 
   // Outcome details (terms, policies, commission, decline reason) in one box.
   const pols = ['underwriting','terms','signedup'].includes(potKey) ? leadPolicies(lead) : [];
@@ -10159,7 +10225,7 @@ function renderLeadModal(){
     </div>` : '';
 
   const kv = (lbl, val)=> `<span>${lbl}</span><b>${val}</b>`;
-  const infoHtml = `
+  const infoHtml = `<div class="ld-info-grid">
     <div class="sib-box"><div class="sib-box-hd">Contact</div><div class="ld-contacts">${clientContactsHtml(lead)}</div></div>
     <div class="sib-box"><div class="sib-box-hd">Case details</div>
       <div class="sib-kv">
@@ -10168,7 +10234,7 @@ function renderLeadModal(){
         ${kv('Assigned', esc(fmtDate(lead.createdAt)))}${kv('Contact attempts', attempts.length ? `${attempts.length} · last ${esc(timeAgo(attempts[0].at))}` : '0')}
       </div>
       ${lead.sibKey ? `<div style="margin-top:10px; font-size:13px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><span>Referred from Send in Blue: mortgage product ends <b>${esc(lead.sibMonthLabel||'')}</b></span><button type="button" class="btn btn-secondary btn-sm" id="openSibFromLead">Open Send in Blue case</button></div>` : ''}
-    </div>`;
+    </div></div>`;
 
   const names = ldEditClient ? (ldEditNames || leadClientList(lead)) : [];
   const clientEditHtml = ldEditClient && canEditDetails(lead) ? `<div class="inline-form" id="ceNamesForm" style="margin-top:12px;">
@@ -10181,7 +10247,7 @@ function renderLeadModal(){
   const ro = isReferrerView(lead);
   document.getElementById('leadOverlay').classList.toggle('ro', ro);
   const roHtml = ro ? `<div class="sib-next info ro-banner"><span class="ic" aria-hidden="true">👀</span><div><b>View only</b><small>You referred this client to ${esc(lead.advisorName||'a protection adviser')}. You can follow its progress, notes and feedback here, but not change anything.</small></div></div>` : '';
-  document.getElementById('leadLeftPane').innerHTML = roHtml + trackerHtml + (due ? '' : nextCallHtml) + actionHtml + feedbackListHtml(lead) + handoverHtml + clientEditHtml + outcomeHtml + infoHtml;
+  document.getElementById('leadLeftPane').innerHTML = roHtml + trackerHtml + nextCallHtml + actionHtml + feedbackListHtml(lead) + handoverHtml + clientEditHtml + outcomeHtml + infoHtml;
   bindFeedback(lead);
   // The referring MAPA has now seen the latest feedback.
   if(ro && lead.lastFeedbackAt && (lead.refFeedbackSeenAt||0) < lead.lastFeedbackAt) db.ref('leads/'+lead.id+'/refFeedbackSeenAt').set(Date.now()).catch(()=>{});
@@ -10231,10 +10297,9 @@ function renderLeadModal(){
         .catch(err=>{ toast('Could not save: '+err.message,'error'); this.disabled = false; });
     });
   }
-  const lmb = document.getElementById('ldMoreBtn');
-  if(lmb) lmb.addEventListener('click', ()=>{ ldMoreOpen = !ldMoreOpen; refreshLeadModal(true); });
+  document.getElementById('ldMoreBtn').onclick = ()=>{ ldMoreOpen = !ldMoreOpen; refreshLeadModal(true); };
   if(canAction(lead)){
-    document.querySelectorAll('#actionBar .action-btn[data-act], #ldMoreRow .action-btn[data-act]').forEach(btn=>{
+    document.querySelectorAll('#ldNextCard [data-act], #ldMoreRow .action-btn[data-act]').forEach(btn=>{
       btn.addEventListener('click', ()=> handleActionClick(lead, btn.dataset.act));
     });
     renderDynamicArea(lead);
@@ -10293,11 +10358,20 @@ function renderLeadModal(){
     }
   }
 
-  // audit trail
+  // audit trail (the History), with a filter for Management
   const auditList = document.getElementById('auditList');
-  const entries = lead.audit ? Object.entries(lead.audit).map(([k,v])=>({...v, _key:k})).sort((a,b)=>b.at-a.at) : [];
+  const allEntries = lead.audit ? Object.entries(lead.audit).map(([k,v])=>({...v, _key:k})).sort((a,b)=>b.at-a.at) : [];
+  const fBox = document.getElementById('auditFilter'), showF = currentUser.role==='management' && allEntries.length > 0;
+  fBox.classList.toggle('hidden', !showF);
+  if(!showF) ldAuditFilter = 'all';
+  else {
+    const counts = {}; AUDIT_FILTERS.forEach(([k])=> counts[k] = k==='all' ? allEntries.length : allEntries.filter(e=> auditCats(e).has(k)).length);
+    fBox.innerHTML = AUDIT_FILTERS.filter(([k])=> k==='all' || counts[k]).map(([k, lbl])=> `<button type="button" class="audit-chip ${ldAuditFilter===k ? 'on' : ''}" data-audit-f="${k}" aria-pressed="${ldAuditFilter===k}">${esc(lbl)} <span>${counts[k]}</span></button>`).join('');
+    fBox.querySelectorAll('[data-audit-f]').forEach(b=> b.onclick = ()=>{ ldAuditFilter = b.dataset.auditF; refreshLeadModal(true); });
+  }
+  const entries = ldAuditFilter==='all' ? allEntries : allEntries.filter(e=> auditCats(e).has(ldAuditFilter));
   if(entries.length===0){
-    auditList.innerHTML = `<div class="empty-state" style="padding:30px 10px;"><p>No activity logged yet.</p></div>`;
+    auditList.innerHTML = `<div class="empty-state" style="padding:30px 10px;"><p>${allEntries.length ? 'Nothing of this kind on the case.' : 'No activity logged yet.'}</p></div>`;
   } else {
     const canDelNotes = canManageLead(lead);
     auditList.innerHTML = entries.map(e=> `
@@ -10316,6 +10390,22 @@ function renderLeadModal(){
   }
 }
 
+/* History filter (Management): what kind of activity each entry is. An entry can be more than one
+   (e.g. a decline after a call counts as a call and a pot move). */
+let ldAuditFilter = 'all';
+const AUDIT_FILTERS = [['all','All'], ['call','Calls'], ['appt','Appointments'], ['email','Emails'], ['text','Texts'], ['reminder','Reminders'], ['note','Notes'], ['move','Pot moves']];
+function auditCats(e){
+  const c = new Set(), t = e.type || '', via = e.via || '', txt = String(e.text || '');
+  if(isNoteEntry(e)) c.add('note');
+  if(t==='call' && via!=='appointment' && via!=='reminder') c.add('call');
+  if(via==='call' || /^Call\b/.test(txt)) c.add('call');
+  if(t==='appointment' || via==='appointment' || e.meeting || /^Appointment\b/.test(txt)) c.add('appt');
+  if(t==='email' || t==='emailIn' || via==='email') c.add('email');
+  if(t==='text' || via==='text') c.add('text');
+  if(t==='reminder' || via==='reminder') c.add('reminder');
+  if(['assigned','signup','underwriting','terms','quotes','research','decline','status','sent','hlp','npw'].includes(t)) c.add('move');
+  return c;
+}
 function auditIcon(type){
   const map = {
     assigned:'pin', call:'phone', text:'message', email:'mail', emailIn:'mail', appointment:'calendar', other:'note',
@@ -10562,7 +10652,10 @@ function wizEntry(lead, w, due){
 // Step 2's choices: only the pots that make sense from where the case is.
 function wizWhereOpts(l, w){
   const pot = l.status, booking = inBookingPot(l), opts = [];
-  if(booking) opts.push({k:'stay', h:`Stay in ${STATUS_LABELS[pot]} · book the next step`, d: pot==='new' ? 'Set a reminder, or book an appointment (an appointment moves it to Appointments / Research, as now)' : 'Book an appointment or set a reminder'});
+  if(pot==='new'){
+    opts.push({k:'stay', h:'Stay in New Cases · set a reminder', d:'Chase the client again later'});
+    opts.push({k:'move', h:'Move to Appointments / Research · book the next step', d:'Book an appointment or set a reminder'});
+  } else if(booking) opts.push({k:'stay', h:`Stay in ${STATUS_LABELS[pot]} · book the next step`, d:'Book an appointment or set a reminder'});
   else if(pot==='decline') opts.push({k:'stay', h:'Stay in the decline workflow', d:'Finish the decline steps above'});
   else opts.push({k:'stay', h:`Stay in ${STATUS_LABELS[pot]}`, d:'Book a follow-up to chase, or nothing to book'});
   if(w.what==='book' || pot==='decline') return opts;
@@ -10617,20 +10710,23 @@ function renderUpdateCase(lead, area){
   const opts = wizWhereOpts(l, w);
   if(!st.choice || !opts.some(o=> o.k===st.choice)) st.choice = opts.length===1 ? opts[0].k : (st.choice && opts.some(o=> o.k===st.choice) ? st.choice : null);
   const ch = st.choice, entry = wizEntry(lead, w, due);
-  if(ch==='stay' && booking && !w.next) w.next = pot==='new' ? 'reminder' : 'appointment';
+  if(ch==='stay' && pot==='new') w.next = 'reminder';
+  if(ch==='move' && !w.next) w.next = 'appointment';
+  if(ch==='stay' && booking && !w.next) w.next = 'appointment';
   if(ch==='quotes' && !w.next) w.next = 'reminder';
   if(ch==='stay' && !booking && pot!=='decline' && !w.next) w.next = w.what==='book' ? 'followup' : 'none';
   const sub = o=>{
     if(o.k!==ch) return '';
-    if((o.k==='stay' && booking) || o.k==='quotes') return `<div class="wiz-sub-row">${chip('data-wiz-next','appointment', w.next==='appointment', 'Book appointment')}${chip('data-wiz-next','reminder', w.next==='reminder', 'Set reminder')}</div>
+    if(o.k==='stay' && pot==='new') return '';
+    if((o.k==='stay' && booking) || o.k==='quotes' || o.k==='move') return `<div class="wiz-sub-row">${chip('data-wiz-next','appointment', w.next==='appointment', 'Book appointment')}${chip('data-wiz-next','reminder', w.next==='reminder', 'Set reminder')}</div>
       ${o.k==='stay' && pot==='existing' && currentUser.role==='mapa' && !l.researchAt && !l.quotesSentAt ? `<label class="wiz-check"><input type="checkbox" id="wizResearch" ${w.research ? 'checked' : ''}> Mark as in research (pale yellow on your dashboard)</label>` : ''}`;
     if(o.k==='stay' && pot!=='decline') return `<div class="wiz-sub-row">${w.what==='book' ? '' : chip('data-wiz-next','none', w.next==='none', 'Nothing to book')}${chip('data-wiz-next','followup', w.next==='followup', 'Book a follow-up')}</div>`;
     if(o.k==='terms') return `<div class="field wiz-note"><label for="wizTerms">Terms <span class="wiz-req">(optional)</span></label><input type="text" id="wizTerms" maxlength="200" value="${esc(w.terms||'')}" placeholder="e.g. Standard terms, or +50% loading on CI"></div>`;
     return '';
   };
-  const dest = !ch ? '' : ch==='stay' ? (pot==='decline' ? 'stays in the decline workflow' : `stays in ${STATUS_LABELS[pot]}`) + (w.next==='appointment' ? ' · next: an appointment' : w.next==='reminder' ? ' · next: a reminder' : w.next==='followup' ? ' · next: a follow-up' : '')
+  const dest = !ch ? '' : ch==='move' ? `Appointments / Research · next: ${w.next==='reminder' ? 'a reminder' : 'an appointment'}` : ch==='stay' ? (pot==='decline' ? 'stays in the decline workflow' : `stays in ${STATUS_LABELS[pot]}`) + (w.next==='appointment' ? ' · next: an appointment' : w.next==='reminder' ? ' · next: a reminder' : w.next==='followup' ? ' · next: a follow-up' : '')
     : ch==='quotes' ? `quotes sent · next: ${w.next==='appointment' ? 'an appointment' : 'a reminder'}` : ch==='terms' ? 'Terms Issued' : ch==='uw' ? 'Submitted / In Underwriting' : ch==='onrisk' ? 'On Risk' : 'Decline';
-  const goLabel = !ch ? 'Save' : (ch==='stay' && (booking || w.next==='followup')) || ch==='quotes' ? (w.next==='reminder' ? 'Next: set the reminder →' : w.next==='followup' ? 'Next: book the follow-up →' : 'Next: book it →')
+  const goLabel = !ch ? 'Save' : (ch==='stay' && (booking || w.next==='followup')) || ch==='quotes' || ch==='move' ? (w.next==='reminder' ? 'Next: set the reminder →' : w.next==='followup' ? 'Next: book the follow-up →' : 'Next: book it →')
     : ch==='uw' || ch==='onrisk' ? 'Next: policies →' : ch==='decline' ? 'Next: decline reason →' : 'Save';
   area.innerHTML = `<div class="wiz">
     <div class="wiz-head"><div><div class="wiz-kicker">Update case · ${esc(STATUS_LABELS[pot] || '')}</div><div class="wiz-title">2 · Where does the case go now?</div></div><span class="wiz-step">Step 2 of 2</span></div>
@@ -10654,12 +10750,12 @@ function wizGo(lead, st, btn){
   const fail = err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; };
   if(!ch) return;
   // Booking (New / Appointments / Research): the usual booking form, with what happened saved alongside.
-  if((ch==='stay' && booking) || ch==='quotes'){
+  if((ch==='stay' && booking) || ch==='quotes' || ch==='move'){
     const now = Date.now(), preludes = [];
     if(entry) preludes.push({entry});
     if(ch==='quotes') preludes.push({entry:{type:'quotes', text:`Quotes sent - ${fmtDateSlash(now)}`}, patch:{quotesSentAt:now, quotesSentBy:currentUser.id, quotesSentByName:currentUser.name}});
     if(ch==='stay' && w.research && pot==='existing') preludes.push({entry:{type:'research', text:`In research - ${fmtDateSlash(now)}`}, patch:{researchAt:now, researchBy:currentUser.id}});
-    actionUIState = {kind: w.next==='appointment' ? 'appointment' : 'reminder', stage:'schedule', preludes, back};
+    actionUIState = {kind: w.next==='appointment' ? 'appointment' : 'reminder', stage:'schedule', preludes, back, ...(ch==='move' ? {toExisting:true} : {})};
     refreshLeadModal(true); return;
   }
   btn.disabled = true;
@@ -11820,7 +11916,7 @@ function renderBookingArea(lead, area){
     const gTab = mode!=='save' && !useG ? window.open('about:blank', '_blank') : null;
     area.querySelectorAll('[data-bk]').forEach(x=> x.disabled = true);
     const when = fmtDateSlash(date) + ` at ${time}`;
-    const patch = {followUpDate:date, followUpTime:time, followUpKind:st.kind, apptType:type, followUpNote:note||null, ...(appt ? {status:'existing'} : {})};
+    const patch = {followUpDate:date, followUpTime:time, followUpKind:st.kind, apptType:type, followUpNote:note||null, ...(appt || st.toExisting ? {status:'existing'} : {})};
     const calP = useG ? tokP.then(tok=> gcalUpsert(tok, {...(LEADS[lead.id] || l), id:lead.id, ...patch}, mode==='invite')).then(r=> ({r}), err=> ({err})) : Promise.resolve(null);
     calP.then(g=>{
     const calNote = g ? (g.r ? gcalNote(g.r) : ' - Not added to Google Calendar') : mode==='invite' ? ' - Calendar invite prepared for the client' : mode==='calendar' ? ' - Added to calendar' : '';
@@ -11837,7 +11933,7 @@ function renderBookingArea(lead, area){
         }
         const cal = g ? (g.r ? (g.r.invited ? ' Added to your Google Calendar and the client has been sent the invite.' : ' Added to your Google Calendar.') + (g.r.meet ? ' Google Meet link added.' : '') : ` Saved, but it couldn't go in your Google Calendar (${g.err.message}).`)
           : mode==='invite' ? ' In Google, click Save, then Send to invite the client.' : mode==='calendar' ? ' Google Calendar opened: click Save there.' : '';
-        toast(appt ? `Appointment booked for ${fmtDate(date)} at ${time}. ${l.status==='new' ? 'Moved to Appointments / Research.' : ''}${cal}` : `Reminder set for ${fmtDate(date)} at ${time}.${l.status==='new' ? ' Still in New Cases until you speak to the client.' : ''}${cal}`, g && g.err ? 'info' : 'success');
+        toast(appt ? `Appointment booked for ${fmtDate(date)} at ${time}. ${l.status==='new' ? 'Moved to Appointments / Research.' : ''}${cal}` : `Reminder set for ${fmtDate(date)} at ${time}.${l.status==='new' ? (st.toExisting ? ' Moved to Appointments / Research.' : ' Still in New Cases until you speak to the client.') : ''}${cal}`, g && g.err ? 'info' : 'success');
         actionUIState = null; refreshLeadModal();
       });
     })

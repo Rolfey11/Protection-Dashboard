@@ -909,6 +909,9 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .wiz-preview > span{display:block; font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-muted);}
 .wiz-foot{display:flex; align-items:center; gap:10px; padding-top:12px; border-top:1px solid var(--border);}
 .wiz-spacer{flex:1;}
+.wiz-nudge{animation:wizNudge .45s ease;} .wiz-nudge .wiz-opt, .wiz-nudge .wiz-where{border-color:var(--brand);}
+@keyframes wizNudge{0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);}}
+@media (prefers-reduced-motion: reduce){ .wiz-nudge{animation:none;} }
 @media (max-width:640px){ .wiz-opts{grid-template-columns:1fr;} .wiz-where > .wiz-sub-row, .wiz-where > .wiz-check, .wiz-where > .wiz-note{padding-left:14px;} }
 .nbr-pays{margin:6px 0 14px; padding:12px; border:1px dashed var(--border-2); border-radius:10px;}
 .nbr-pays-h{margin-bottom:8px; font-size:13px;} .nbr-pays-h .field-hint{display:block; margin-top:2px;}
@@ -10180,8 +10183,8 @@ function renderLeadModal(){
   const wizOpen = !!(actionUIState && (actionUIState.wiz || ['schedule','followup','decline','signupchoice'].includes(actionUIState.stage)));
   const mb = document.getElementById('ldMoreBtn');
   mb.classList.toggle('hidden', !moreItems.length); mb.setAttribute('aria-expanded', String(!!(ldMoreOpen && moreItems.length))); mb.classList.toggle('on', !!(ldMoreOpen && moreItems.length));
-  const referBtn = canAction(lead) && canReferToPA(lead) && booking ? `<button type="button" class="ld-refer-card-btn ${actionUIState && actionUIState.stage==='refer' ? 'on' : ''}" data-act="refer" ${due ? 'disabled' : ''}>${ico('send')}Refer to protection adviser</button>` : '';
-  const updBtn = canAction(lead) ? `<span class="ld-nc-btns">${referBtn}<button type="button" class="ld-update-btn ${wizOpen ? 'on' : ''}" data-act="update" ${due ? 'disabled' : ''}>Update case</button></span>` : '';
+  const referBtn = canAction(lead) && canReferToPA(lead) && booking ? `<button type="button" class="ld-refer-card-btn ${actionUIState && actionUIState.stage==='refer' ? 'on' : ''}" data-act="refer">${ico('send')}Refer to protection adviser</button>` : '';
+  const updBtn = canAction(lead) ? `<span class="ld-nc-btns">${referBtn}${due ? '' : `<button type="button" class="ld-update-btn ${wizOpen ? 'on' : ''}" data-act="update">Update case</button>`}</span>` : '';
   const actionHtml = (canAction(lead) || moreItems.length) ? `
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
     <div id="dynamicActionArea"></div>
@@ -10685,7 +10688,7 @@ function renderUpdateCase(lead, area){
       ${w.what==='msg' ? `<div class="wiz-sub-row"><span>Which?</span>${chip('data-wiz-ch','text', w.ch!=='email', 'Text')}${chip('data-wiz-ch','email', w.ch==='email', 'Email')}</div>` : ''}
       ${w.what==='appt' ? `<div class="wiz-sub-row"><span>How did it go?</span>${Object.entries(WIZ_APPT_RES).map(([k, v])=> chip('data-wiz-res', k, (w.res||'spoke')===k, v)).join('')}</div>` : ''}
       ${w.what && w.what!=='book' ? `<div class="field wiz-note"><label for="wizNote">${due && due.kind==='appointment' && w.what==='notattempted' ? 'Why wasn\'t it attempted?' : 'Note'} <span class="wiz-req">${need ? `(at least ${MEETING_NOTE_MIN} characters)` : '(optional)'}</span></label><textarea id="wizNote" placeholder="${w.what==='appt' || due ? 'e.g. Both on the call. Wants life and CI quotes.' : 'e.g. Left a voicemail'}">${esc(w.note||'')}</textarea></div>` : ''}
-      <div class="wiz-foot">${due ? '' : '<button type="button" class="btn btn-secondary btn-sm" data-wiz="cancel">Cancel</button>'}<span class="wiz-spacer"></span><button type="button" class="btn btn-primary" data-wiz="next" ${w.what ? '' : 'disabled'}>Next: where does it go? →</button></div>
+      <div class="wiz-foot">${due ? '' : '<button type="button" class="btn btn-secondary btn-sm" data-wiz="cancel">Cancel</button>'}<span class="wiz-spacer"></span><button type="button" class="btn btn-primary" data-wiz="next">Next: where does it go? →</button></div>
     </div>`;
     const keep = ()=>{ const n = document.getElementById('wizNote'); if(n) w.note = n.value; };
     area.querySelectorAll('[data-wiz-what]').forEach(b=> b.addEventListener('click', ()=>{ keep(); w.what = b.dataset.wizWhat; renderUpdateCase(lead, area); const n = document.getElementById('wizNote'); if(n) n.focus(); }));
@@ -10695,7 +10698,7 @@ function renderUpdateCase(lead, area){
     const c = area.querySelector('[data-wiz="cancel"]'); if(c) c.addEventListener('click', ()=>{ actionUIState = null; refreshLeadModal(true); });
     area.querySelector('[data-wiz="next"]').addEventListener('click', ()=>{
       keep();
-      if(!w.what) return;
+      if(!w.what){ toast('Choose what happened first.', 'error'); const o = area.querySelector('.wiz-opts'); if(o){ o.classList.remove('wiz-nudge'); void o.offsetWidth; o.classList.add('wiz-nudge'); } return; }
       if(w.what==='msg' && !w.ch) w.ch = 'text';
       if(w.what==='appt' && !w.res) w.res = 'spoke';
       if(w.what!=='book' && wizNoteNeeded(w, due) && (w.note||'').trim().length < MEETING_NOTE_MIN){
@@ -10732,7 +10735,7 @@ function renderUpdateCase(lead, area){
     <div class="wiz-head"><div><div class="wiz-kicker">Update case · ${esc(STATUS_LABELS[pot] || '')}</div><div class="wiz-title">2 · Where does the case go now?</div></div><span class="wiz-step">Step 2 of 2</span></div>
     <div class="wiz-list">${opts.map(o=> `<div class="wiz-where ${o.k===ch ? 'on' : ''} ${o.tone ? 'tone-'+o.tone : ''}"><button type="button" class="wiz-where-btn" data-wiz-where="${o.k}" aria-pressed="${o.k===ch}"><span class="wiz-radio" aria-hidden="true"></span><span><b>${esc(o.h)}</b><span>${esc(o.d)}</span></span></button>${sub(o)}</div>`).join('')}</div>
     ${entry || ch || w.logged ? `<div class="wiz-preview"><span>Goes in the history as</span>${entry ? `<b>${esc(entry.text)}</b>` : w.logged ? '<b>Email sent (already in the history)</b>' : ''}${ch ? `${entry || w.logged ? ' → ' : ''}${esc(dest)}` : ''}</div>` : ''}
-    <div class="wiz-foot">${w.logged ? '<button type="button" class="btn btn-secondary btn-sm" data-wiz="cancel">Close</button>' : '<button type="button" class="btn btn-secondary btn-sm" data-wiz="back">← Back</button>'}<span class="wiz-spacer"></span><button type="button" class="btn btn-primary" data-wiz="go" ${ch ? '' : 'disabled'}>${esc(goLabel)}</button></div>
+    <div class="wiz-foot">${w.logged ? '<button type="button" class="btn btn-secondary btn-sm" data-wiz="cancel">Close</button>' : '<button type="button" class="btn btn-secondary btn-sm" data-wiz="back">← Back</button>'}<span class="wiz-spacer"></span><button type="button" class="btn btn-primary" data-wiz="go">${esc(goLabel)}</button></div>
   </div>`;
   const keep = ()=>{ const t = document.getElementById('wizTerms'); if(t) w.terms = t.value; const r = document.getElementById('wizResearch'); if(r) w.research = r.checked; };
   area.querySelectorAll('[data-wiz-where]').forEach(b=> b.addEventListener('click', ()=>{ keep(); st.choice = b.dataset.wizWhere; w.next = null; renderUpdateCase(lead, area); }));
@@ -10748,7 +10751,7 @@ function wizGo(lead, st, btn){
   const back = {...st, w:{...w}};
   const logFirst = ()=> entry ? logAudit(lead.id, {...entry, ...by()}) : Promise.resolve();
   const fail = err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; };
-  if(!ch) return;
+  if(!ch){ toast('Choose where the case goes now.', 'error'); const o = document.querySelector('#dynamicActionArea .wiz-list'); if(o){ o.classList.remove('wiz-nudge'); void o.offsetWidth; o.classList.add('wiz-nudge'); } return; }
   // Booking (New / Appointments / Research): the usual booking form, with what happened saved alongside.
   if((ch==='stay' && booking) || ch==='quotes' || ch==='move'){
     const now = Date.now(), preludes = [];

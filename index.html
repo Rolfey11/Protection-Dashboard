@@ -818,6 +818,51 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-table tr.nbr-group.nbr-com td{background:#0E6E5C; border-color:#0E6E5C; color:#fff;}
 .nbr-table tr.nbr-group.nbr-com .nbr-tag{color:#0E6E5C;}
 .nbr-table.nbr-board-table tr.nbr-office-tot.nbr-com td{background:color-mix(in srgb, #0E6E5C 20%, var(--surface)); border-top-color:color-mix(in srgb, #0E6E5C 55%, var(--surface)); border-bottom-color:color-mix(in srgb, #0E6E5C 55%, var(--surface));}
+/* Protection case window: Update case (step 1 What happened?, step 2 Where does it go now?) */
+.ld-upd-bar .ld-update-btn{min-height:46px; padding:0 22px; font-size:15px; font-weight:700; background:var(--brand); border-color:var(--brand); color:#fff;}
+.ld-upd-bar .ld-update-btn:hover{background:var(--brand-dark); border-color:var(--brand-dark); color:#fff;}
+.ld-upd-bar .ld-update-btn.on{background:var(--brand-dark); border-color:var(--brand-dark); color:#fff;}
+.ld-upd-bar .ld-update-btn:disabled{opacity:.5; cursor:not-allowed;}
+.ld-upd-bar .ld-update-btn svg{stroke:#fff;}
+.wiz{margin-top:12px; border:1.5px solid var(--border-2); border-radius:16px; padding:18px; background:var(--surface); display:flex; flex-direction:column; gap:14px;}
+.wiz.wiz-due{border-color:var(--amber); background:color-mix(in srgb, var(--amber) 6%, var(--surface));}
+.wiz-head{display:flex; align-items:flex-start; gap:12px;}
+.wiz-head > div{flex:1; min-width:0;}
+.wiz-kicker{font-size:12.5px; font-weight:600; color:var(--text-muted);}
+.wiz-title{font-family:'Poppins',sans-serif; font-size:18px; font-weight:700; color:var(--text); margin-top:3px; display:flex; align-items:center; gap:8px;}
+.wiz-title .ico{width:20px; height:20px;}
+.wiz-step{flex:none; font-size:12px; font-weight:700; color:var(--brand); background:var(--brand-tint); padding:5px 11px; border-radius:999px;}
+.wiz-sub{margin:-6px 0 0; font-size:13px; color:var(--text-muted);}
+.wiz-opts{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;}
+.wiz-opt{text-align:left; min-height:58px; padding:10px 14px; border-radius:12px; border:1.5px solid var(--border-2); background:var(--surface); cursor:pointer; display:flex; flex-direction:column; gap:2px; font:inherit; color:var(--text);}
+.wiz-opt b{font-size:14.5px;} .wiz-opt span{font-size:12.5px; color:var(--text-muted);}
+.wiz-opt.wide{grid-column:1 / -1;}
+.wiz-opt:hover{border-color:var(--brand-light);}
+.wiz-opt.on{border:2px solid var(--brand); background:var(--brand-tint);} .wiz-opt.on b{color:var(--brand);}
+.wiz-sub-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px;}
+.wiz-sub-row > span{font-size:13px; font-weight:600; color:var(--text-muted); margin-right:2px;}
+.wiz-chip{min-height:40px; padding:0 15px; border-radius:999px; border:1.5px solid var(--border-2); background:var(--surface); color:var(--text); font:inherit; font-size:13px; font-weight:600; cursor:pointer;}
+.wiz-chip.on{background:var(--brand); border-color:var(--brand); color:#fff;}
+.wiz-note{margin:0;} .wiz-note textarea{min-height:76px;}
+.wiz-req{font-weight:500; color:var(--text-muted);}
+.wiz-list{display:flex; flex-direction:column; gap:8px;}
+.wiz-where{border:1.5px solid var(--border-2); border-radius:12px; background:var(--surface);}
+.wiz-where.tone-good{border-color:color-mix(in srgb, var(--green) 40%, var(--surface)); background:color-mix(in srgb, var(--green) 5%, var(--surface));}
+.wiz-where.tone-bad{border-color:color-mix(in srgb, var(--red) 35%, var(--surface)); background:color-mix(in srgb, var(--red) 4%, var(--surface));}
+.wiz-where.on{border:2px solid var(--brand); background:var(--brand-tint);}
+.wiz-where > .wiz-sub-row, .wiz-where > .wiz-check, .wiz-where > .wiz-note{padding:0 14px 12px 44px;}
+.wiz-where-btn{display:flex; align-items:center; gap:12px; width:100%; min-height:54px; padding:9px 14px; border:0; background:transparent; text-align:left; cursor:pointer; font:inherit; color:var(--text);}
+.wiz-where-btn > span:last-child{display:flex; flex-direction:column; gap:1px;}
+.wiz-where-btn b{font-size:14.5px;} .wiz-where-btn > span:last-child > span{font-size:12.5px; color:var(--text-muted);}
+.wiz-where.tone-good .wiz-where-btn b{color:var(--green);} .wiz-where.tone-bad .wiz-where-btn b{color:var(--red);}
+.wiz-radio{flex:none; width:18px; height:18px; border-radius:50%; border:2px solid var(--text-faint); box-sizing:border-box; background:var(--surface);}
+.wiz-where.on .wiz-radio{border:5px solid var(--brand);}
+.wiz-check{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text);}
+.wiz-preview{padding:10px 13px; border-radius:10px; background:var(--bg); font-size:13px; line-height:1.5; color:var(--text);}
+.wiz-preview > span{display:block; font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-muted);}
+.wiz-foot{display:flex; align-items:center; gap:10px; padding-top:12px; border-top:1px solid var(--border);}
+.wiz-spacer{flex:1;}
+@media (max-width:640px){ .wiz-opts{grid-template-columns:1fr;} .wiz-where > .wiz-sub-row, .wiz-where > .wiz-check, .wiz-where > .wiz-note{padding-left:14px;} }
 .nbr-pays{margin:6px 0 14px; padding:12px; border:1px dashed var(--border-2); border-radius:10px;}
 .nbr-pays-h{margin-bottom:8px; font-size:13px;} .nbr-pays-h .field-hint{display:block; margin-top:2px;}
 .nbr-pay-row{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)) 34px; gap:8px; align-items:end; margin-bottom:8px;}
@@ -7149,6 +7194,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-18b', date:'2026-11-18', items:[ {text:"✨ <b>A simpler case window</b>. One <b>Update case</b> button replaces the row of buttons on a protection case. It asks two things: <b>What happened?</b> (called, no answer, text or email, appointment held, or just <b>Book appointment / Set reminder</b>) and <b>Where does the case go now?</b>, offering only the pots that make sense from where the case is. Booking still adds to your calendar and invites the client, everything is still recorded in the audit trail, and an appointment or reminder that has passed still has to be recorded first. Refer, feedback, thanks, write an email and edit details are under <b>More</b>.", roles:['mapa','management','admin']} ]},
   {id:'2026-11-17e', date:'2026-11-17', items:[ {text:"📊 <b>Salesboard</b>: buttons above the tables to switch between <b>Written</b>, <b>Banked</b>, <b>2026 by month</b>, <b>2026 written by product</b> and <b>Advisor month by month</b>. <b>Banked</b> is new: the month's banked by advisor and product (Life Ins, Mums Fee, Proc Fee…), like the Bible's SUM of PAID table, grouped by office like the written view.", roles:['admin','management']},
     {text:"📊 <b>Salesboard</b>: switch between <b>Written</b> and the new <b>Banked</b> view, the month's banked by advisor and product.", roles:['mapa']} ]},
   {id:'2026-11-17d', date:'2026-11-17', items:[ {text:"💷 <b>Bible: part payments</b>. When a client pays a fee in more than one go (e.g. £100 upfront, £495 on offer), open the line and use <b>+ Add payment line</b>: each payment is banked in the month it's paid. Lines paid in full are green; part paid are amber, <b>Part-Paid</b>, with what's still to come in the new <b>Outstanding</b> column (and a <b>+ Payment</b> button). Uploading the Bible with <b>Fill in the blanks</b> now adds the later payments to their line, so <b>upload the latest Bible again</b> to bring in the ones missed so far.", roles:['admin','management']} ]},
@@ -10049,19 +10095,14 @@ function renderLeadModal(){
     : STEPS.map(([, lbl], i)=> `<li class="${i < at ? 'done' : i===at ? 'now' : ''}">${lbl}</li>`).join('');
   let nextHtml = '';
   if(canAction(lead) || lead.status==='decline'){
-    if(lead.status==='new') nextHtml = `<span>Next: <b>book an appointment</b> with the client, or <b>set a reminder</b> to chase them. The case stays in New Cases until an appointment is booked.</span>`;
+    if(lead.status==='new') nextHtml = `<span>Next: use <b>Update case</b> to book an appointment with the client, or set a reminder to chase them. The case stays in New Cases until an appointment is booked.</span>`;
     if(lead.status==='existing') nextHtml = lead.quotesSentAt
       ? `<span class="quotes-done">${ico('checkCircle')} <b>Quotes sent ${esc(fmtDate(lead.quotesSentAt))}</b>${lead.quotesSentByName ? ' by '+esc(lead.quotesSentByName) : ''} · the case shows pale green on the dashboard</span><button type="button" class="linkish" id="quotesUndoBtn">Undo</button>`
       : `${currentUser.role==='mapa' && lead.researchAt
           ? `<span class="research-on">${ico('search')} In research since ${esc(fmtDate(lead.researchAt))} · the case shows pale yellow on the dashboard <button type="button" class="linkish" id="researchUndoBtn">Undo</button></span>`
-          : `<span>Next stage: <b>Quotes sent</b>. Mark it once the client has their quotes (the case shows pale green on the dashboard).</span>`}
-        <span style="display:flex; gap:8px; flex-wrap:wrap;">${currentUser.role==='mapa' && !lead.researchAt ? `<button type="button" class="stage-btn" id="researchBtn" style="background:#B98F00;" title="Shows the case pale yellow on your dashboard, so you can tell research cases from appointments">${ico('search')} In Research</button>` : ''}<button type="button" class="stage-btn" id="quotesSentBtn" style="background:var(--green);">✓ Quotes Sent</button></span>`;
-    if(lead.status==='underwriting') nextHtml = `<span>Submitted / in underwriting. When the insurer issues terms, mark it here.</span><button type="button" class="stage-btn" id="termsIssuedBtn" style="background:var(--indigo);">Terms issued</button>
-      <div id="termsForm" class="hidden" style="width:100%;">
-        <div class="field" style="margin-bottom:8px;"><label for="termsNote">Terms (optional)</label><input type="text" id="termsNote" maxlength="200" placeholder="e.g. Standard terms, or +50% loading on CI"></div>
-        <button class="btn btn-primary btn-sm" id="termsSave">Save: terms issued</button>
-      </div>`;
-    if(lead.status==='terms') nextHtml = `<span>Terms issued${lead.termsNote ? ': <b>'+esc(lead.termsNote)+'</b>' : ''}. If the client goes ahead and the policy goes on risk, mark it here. If they don't, use an action below and choose Decline.</span><button type="button" class="stage-btn" id="nowOnRiskBtn" style="background:var(--green);">On Risk</button>`;
+          : `<span>Next stage: <b>Quotes sent</b>. Use <b>Update case</b> once the client has their quotes (the case shows pale green on the dashboard).</span>`}`;
+    if(lead.status==='underwriting') nextHtml = `<span>Submitted / in underwriting. When the insurer issues terms, use <b>Update case</b> and choose Terms issued.</span>`;
+    if(lead.status==='terms') nextHtml = `<span>Terms issued${lead.termsNote ? ': <b>'+esc(lead.termsNote)+'</b>' : ''}. When the policy goes on risk, or the client doesn't go ahead, use <b>Update case</b>.</span>`;
     if(lead.status==='decline' && canAction(lead)) nextHtml = `<span>This case stays in Decline Workflow until all of these are done: the decline reasoning is sent to the client, the decline email is added to the HLP Portal, and the lead is NPW'd in the HLP Swim lane.</span>
       <div class="ld-decl">${DECLINE_STEPS.map(st=> `<button type="button" class="stage-btn" data-decline-step="${st.field}" ${lead[st.field]?'disabled':''} style="background:var(--green);">${lead[st.field] ? ico('check')+' '+st.btnDone : st.btn}</button>`).join('')}</div>`;
   }
@@ -10072,32 +10113,26 @@ function renderLeadModal(){
   const due = booking && fuDue(lead);
   // Something due: the outcome / reminder panel shows first and the case can't move on without it.
   const dueStage = fuKind(lead)==='reminder' ? 'reminderdue' : 'meeting';
-  if(due && (!actionUIState || (actionUIState.auto && actionUIState.stage!==dueStage))) actionUIState = {kind: fuKind(lead), stage: dueStage, auto:true};
-  if(!due && actionUIState && actionUIState.auto) actionUIState = null;
+  void dueStage;
+  if(due && (!actionUIState || (actionUIState.auto && !actionUIState.wiz))) actionUIState = {wiz:true, stage:'wiz1', due:true, auto:true, w:{}};
+  if(!due && actionUIState && actionUIState.auto && (!actionUIState.wiz || actionUIState.due)) actionUIState = null;
+  const canFb = canSendFeedback(lead);
+  // Everything that isn't a case update lives in the More menu.
   const moreItems = [
-    ...(canAction(lead) && !booking ? [`<button type="button" class="action-btn" data-act="other">${ico('dots')}Other</button>`] : []),
+    ...(canAction(lead) && canReferToPA(lead) && booking ? [`<button type="button" class="action-btn ld-refer-btn ${actionUIState && actionUIState.stage==='refer' ? 'on' : ''}" data-act="refer">${ico('send')}Refer to protection adviser</button>`] : []),
+    ...(canAction(lead) ? [`<button type="button" class="action-btn" data-act="email">${ico('mail')}Write an email</button>`] : []),
+    ...(canFb ? [`<button type="button" class="action-btn ld-refer-btn ${ldFeedbackOpen ? 'on' : ''}" id="fbBtn">${ico('message')}Feedback to ${esc(String(lead.referredByName||'MAPA').split(' ')[0])}</button>`,
+      `<button type="button" class="action-btn ld-thanks-btn ${ldThanksOpen ? 'on' : ''}" id="tcBtn"><span aria-hidden="true">💐</span>Send thanks</button>`] : []),
     ...(canReassign() ? [`<button type="button" class="action-btn" id="reassignBtn">${ico('users')}Reassign</button>`] : []),
     ...(canEditDetails(lead) ? [`<button type="button" class="action-btn ${ldEditClient ? 'on' : ''}" id="editClientBtn">${ico('users')}Edit client name(s)</button>`] : []),
     ...(canManageLead(lead) ? [`<button type="button" class="action-btn" id="editSourceBtn">${ico('pin')}Edit client source</button>`] : []),
     ...(canChangeStatus(lead) ? [`<button type="button" class="action-btn" id="changeStatusBtn" title="Manual override: move the case to any pot">${ico('shuffle')}Change status</button>`] : []),
   ];
-  const canFb = canSendFeedback(lead);
-  const actionHtml = (canAction(lead) || moreItems.length || canFb) ? `
-    <div class="sib-acts" id="actionBar">
-      ${booking ? (due ? '' : `<button type="button" class="action-btn ${actionUIState && actionUIState.kind==='appointment' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="bookappt">${ico('calendar')}Book appointment</button>
-      <button type="button" class="action-btn ${actionUIState && actionUIState.kind==='reminder' && actionUIState.stage==='schedule' ? 'on' : ''}" data-act="setreminder">${ico('clock')}Set reminder</button>
-      ${lead.status==='existing' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>
-      <button type="button" class="action-btn ld-signup-btn ${actionUIState && actionUIState.stage==='signupchoice' ? 'on' : ''}" data-act="signup">${ico('checkCircle')}Sign Up</button>` : ''}
-      ${canReferToPA(lead) ? `<button type="button" class="action-btn ld-refer-btn ${actionUIState && actionUIState.stage==='refer' ? 'on' : ''}" data-act="refer">${ico('send')}Refer to protection adviser</button>` : ''}`)
-      : canAction(lead) ? `<button type="button" class="action-btn primary" data-act="call">${ico('phone')}Call</button>
-      <button type="button" class="action-btn" data-act="text">${ico('message')}Text</button>
-      <button type="button" class="action-btn" data-act="email">${ico('mail')}Email</button>
-      <button type="button" class="action-btn" data-act="appointment">${ico('calendar')}Appointment</button>` : ''}
-      ${canFb ? `<button type="button" class="action-btn ld-refer-btn ${ldFeedbackOpen ? 'on' : ''}" id="fbBtn">${ico('message')}Feedback to ${esc(String(lead.referredByName||'MAPA').split(' ')[0])}</button>
-      <button type="button" class="action-btn ld-thanks-btn ${ldThanksOpen ? 'on' : ''}" id="tcBtn"><span aria-hidden="true">💐</span>Send thanks</button>` : ''}
-      ${booking && !due && lead.status==='new' ? `<button type="button" class="action-btn ld-decline-btn ${actionUIState && actionUIState.stage==='decline' && !actionUIState.kind ? 'on' : ''}" data-act="decline">${ico('xCircle')}Decline</button>
-      <button type="button" class="action-btn ld-signup-btn ${actionUIState && actionUIState.stage==='signupchoice' ? 'on' : ''}" data-act="signup">${ico('checkCircle')}Sign Up</button>` : ''}
-      ${moreItems.length ? `<button type="button" class="action-btn" id="ldMoreBtn" aria-expanded="${ldMoreOpen}" aria-controls="ldMoreRow">${ldMoreOpen ? 'Less ▴' : 'More ▾'}</button>` : ''}
+  const wizOpen = !!(actionUIState && (actionUIState.wiz || ['schedule','followup','decline','signupchoice'].includes(actionUIState.stage)));
+  const actionHtml = (canAction(lead) || moreItems.length) ? `
+    <div class="sib-acts ld-upd-bar" id="actionBar">
+      ${canAction(lead) ? `<button type="button" class="action-btn primary ld-update-btn ${wizOpen ? 'on' : ''}" data-act="update" ${due ? 'disabled' : ''}>${ico('checkCircle')}Update case</button>` : ''}
+      ${moreItems.length ? `<button type="button" class="action-btn" id="ldMoreBtn" aria-expanded="${ldMoreOpen}" aria-controls="ldMoreRow">${ldMoreOpen ? 'More ▴' : 'More ▾'}</button>` : ''}
     </div>
     ${ldMoreOpen && moreItems.length ? `<div class="sib-acts sib-more-row" id="ldMoreRow">${moreItems.join('')}</div>` : ''}
     <div id="dynamicActionArea"></div>
@@ -10477,7 +10512,177 @@ function contactAttempts(lead){ return Object.values((lead && lead.audit)||{}).f
    itself is fire-and-forget with a toast on failure. */
 const ACTION_LABELS = {call:'Call', text:'Text', email:'Email', appointment:'Appointment', other:'Other contact'};
 
+/* ---- Update case: one button, two questions ----
+   1) What happened? logs the contact in the history (a contact attempt, as the old Call / Text / Email /
+      Appointment buttons did). "Book appointment / Set reminder" logs nothing and goes straight on.
+   2) Where does the case go now? offers only the pots that make sense from where the case is, then hands
+      over to the same forms as before (booking with calendar and client invite, follow-up, sign up,
+      decline, terms issued), so the rules and the audit trail are unchanged.
+   An appointment or reminder that has passed opens this by itself, and the case can't move on until
+   it's recorded, as before. */
+const WIZ_APPT_RES = {spoke:'Went ahead', noanswer:'Client didn\'t answer', notattempted:'Didn\'t happen'};
+function wizDue(lead){
+  const l = LEADS[lead.id] || lead;
+  return fuDue(l) ? {kind: fuKind(l), when: bookingWhen(l), type: l.apptType || null, dueAt: callDueAt(l.followUpDate, l.followUpTime).getTime()} : null;
+}
+// Step 1's choices for this case.
+function wizWhatOpts(l, due){
+  if(due && due.kind==='appointment') return [
+    ['spoke', 'It went ahead', 'You spoke to the client'], ['noanswer', 'No answer', 'The client didn\'t pick up or join'], ['notattempted', 'Didn\'t happen', 'It wasn\'t attempted: say why']];
+  const booking = inBookingPot(l), pot = l.status;
+  return [
+    ['spoke', 'Called · spoke to client', 'Phone call that got through'],
+    ['noanswer', 'Called · no answer', 'Counts as a contact attempt'],
+    ['msg', 'Text or email sent', 'Choose which below'],
+    ...(due ? [] : [['appt', 'Appointment held', 'Phone, video or face to face']]),
+    ...(due || pot==='decline' ? [] : [['book', booking ? 'Book appointment / Set reminder' : 'Book a follow-up', 'Nothing to log: just book the next step']]),
+  ];
+}
+// Notes are needed for appointments and for anything that was due, as before.
+function wizNoteNeeded(w, due){ return !!due || w.what==='appt'; }
+// The history line for step 1 (null when there's nothing to log).
+function wizEntry(lead, w, due){
+  if(w.logged || !w.what || w.what==='book') return null;
+  const l = LEADS[lead.id] || lead, note = (w.note||'').trim(), tail = note ? ' - '+note : '';
+  if(due && due.kind==='appointment'){
+    const res = w.what;
+    return {type: res==='notattempted' ? 'status' : 'call', via:'appointment', meeting:res, dueAt:due.dueAt, apptType:due.type, text:`Outcome of meeting (${APPT_TYPES[due.type] || 'Appointment'} ${due.when}): ${{spoke:'Spoke to client', noanswer:'No answer', notattempted:'Not attempted'}[res]}${tail}`};
+  }
+  const what = w.what==='spoke' ? 'Called, spoke to client' : w.what==='noanswer' ? 'Called, no answer' : w.what==='msg' ? (w.ch==='email' ? 'Email sent' : 'Text sent') : '';
+  if(due) return {type: w.what==='msg' ? (w.ch==='email' ? 'email' : 'text') : 'call', via:'reminder', dueAt:due.dueAt, text:`Reminder chase (${due.when}): ${what}${tail}`};
+  if(w.what==='spoke') return {type:'call', text:`Call - spoke to client${tail}`};
+  if(w.what==='noanswer') return {type:'call', text:`Call - no answer${tail}`};
+  if(w.what==='msg') return {type: w.ch==='email' ? 'email' : 'text', text:`${w.ch==='email' ? 'Email' : 'Text'} sent${tail}`};
+  if(w.what==='appt'){
+    const r = w.res || 'spoke', type = l.followUpKind==='appointment' && l.apptType ? l.apptType : null;
+    return {type: r==='notattempted' ? 'status' : 'appointment', meeting:r, ...(type ? {apptType:type} : {}), text:`Appointment${type ? ' ('+APPT_TYPES[type]+')' : ''} - ${WIZ_APPT_RES[r].toLowerCase()}${tail}`};
+  }
+  return null;
+}
+// Step 2's choices: only the pots that make sense from where the case is.
+function wizWhereOpts(l, w){
+  const pot = l.status, booking = inBookingPot(l), opts = [];
+  if(booking) opts.push({k:'stay', h:`Stay in ${STATUS_LABELS[pot]} · book the next step`, d: pot==='new' ? 'Set a reminder, or book an appointment (an appointment moves it to Appointments / Research, as now)' : 'Book an appointment or set a reminder'});
+  else if(pot==='decline') opts.push({k:'stay', h:'Stay in the decline workflow', d:'Finish the decline steps above'});
+  else opts.push({k:'stay', h:`Stay in ${STATUS_LABELS[pot]}`, d:'Book a follow-up to chase, or nothing to book'});
+  if(w.what==='book' || pot==='decline') return opts;
+  if(pot==='existing' && !l.quotesSentAt) opts.push({k:'quotes', h:'Quotes sent', d:'The client has their quotes · then book when to chase'});
+  if(pot==='underwriting') opts.push({k:'terms', h:'Terms issued', d:'Add the terms if you like'});
+  if(booking) opts.push({k:'uw', h:'Submitted to underwriting', d:'Asks for the policies and commission'});
+  opts.push({k:'onrisk', h:'Signed up · on risk', d:'Policies and commission', tone:'good'});
+  opts.push({k:'decline', h:'Decline', d:'Asks for the reason, then the decline steps as now', tone:'bad'});
+  return opts;
+}
+function renderUpdateCase(lead, area){
+  const st = actionUIState, w = st.w || (st.w = {}), l = LEADS[lead.id] || lead;
+  const due = st.due ? wizDue(lead) : null;
+  const pot = l.status, booking = inBookingPot(l);
+  const chip = (attr, val, on, label)=> `<button type="button" class="wiz-chip ${on ? 'on' : ''}" ${attr}="${esc(val)}" aria-pressed="${on}">${esc(label)}</button>`;
+  if(st.stage==='wiz1'){
+    const opts = wizWhatOpts(l, due), need = wizNoteNeeded(w, due);
+    const head = due ? (due.kind==='appointment'
+        ? `Your ${esc((APPT_TYPES[due.type] || 'appointment').toLowerCase())} on ${esc(due.when)} has passed`
+        : `Reminder due · chase ${esc(l.clientName || 'the client')} (${esc(due.when)})`)
+      : '1 · What happened?';
+    area.innerHTML = `<div class="wiz ${due ? 'wiz-due' : ''}">
+      <div class="wiz-head"><div><div class="wiz-kicker">${due ? 'Record what happened before you move on. It goes in the history.' : 'Update case'}</div><div class="wiz-title">${due ? ico(due.kind==='appointment' ? 'calendar' : 'clock')+' ' : ''}${head}</div></div><span class="wiz-step">Step 1 of 2</span></div>
+      ${due && due.kind==='reminder' && l.followUpNote ? `<p class="wiz-sub">Reminder note: ${esc(l.followUpNote)}</p>` : ''}
+      ${leadPhones(l).length ? `<p class="wiz-sub">Client: ${leadPhones(l).map(ph=> `<a href="${esc(telHref(ph))}" class="tel-link">${esc(ph)}</a>`).join(' ')}</p>` : ''}
+      <div class="wiz-opts">${opts.map(([k, h, d])=> `<button type="button" class="wiz-opt ${w.what===k ? 'on' : ''} ${k==='book' ? 'wide' : ''}" data-wiz-what="${k}" aria-pressed="${w.what===k}"><b>${esc(h)}</b><span>${esc(d)}</span></button>`).join('')}</div>
+      ${w.what==='msg' ? `<div class="wiz-sub-row"><span>Which?</span>${chip('data-wiz-ch','text', w.ch!=='email', 'Text')}${chip('data-wiz-ch','email', w.ch==='email', 'Email')}</div>` : ''}
+      ${w.what==='appt' ? `<div class="wiz-sub-row"><span>How did it go?</span>${Object.entries(WIZ_APPT_RES).map(([k, v])=> chip('data-wiz-res', k, (w.res||'spoke')===k, v)).join('')}</div>` : ''}
+      ${w.what && w.what!=='book' ? `<div class="field wiz-note"><label for="wizNote">${due && due.kind==='appointment' && w.what==='notattempted' ? 'Why wasn\'t it attempted?' : 'Note'} <span class="wiz-req">${need ? `(at least ${MEETING_NOTE_MIN} characters)` : '(optional)'}</span></label><textarea id="wizNote" placeholder="${w.what==='appt' || due ? 'e.g. Both on the call. Wants life and CI quotes.' : 'e.g. Left a voicemail'}">${esc(w.note||'')}</textarea></div>` : ''}
+      <div class="wiz-foot">${due ? '' : '<button type="button" class="btn btn-secondary btn-sm" data-wiz="cancel">Cancel</button>'}<span class="wiz-spacer"></span><button type="button" class="btn btn-primary" data-wiz="next" ${w.what ? '' : 'disabled'}>Next: where does it go? →</button></div>
+    </div>`;
+    const keep = ()=>{ const n = document.getElementById('wizNote'); if(n) w.note = n.value; };
+    area.querySelectorAll('[data-wiz-what]').forEach(b=> b.addEventListener('click', ()=>{ keep(); w.what = b.dataset.wizWhat; renderUpdateCase(lead, area); const n = document.getElementById('wizNote'); if(n) n.focus(); }));
+    area.querySelectorAll('[data-wiz-ch]').forEach(b=> b.addEventListener('click', ()=>{ keep(); w.ch = b.dataset.wizCh; renderUpdateCase(lead, area); }));
+    area.querySelectorAll('[data-wiz-res]').forEach(b=> b.addEventListener('click', ()=>{ keep(); w.res = b.dataset.wizRes; renderUpdateCase(lead, area); }));
+    const n = document.getElementById('wizNote'); if(n) n.addEventListener('input', ()=>{ w.note = n.value; n.classList.remove('missing'); });
+    const c = area.querySelector('[data-wiz="cancel"]'); if(c) c.addEventListener('click', ()=>{ actionUIState = null; refreshLeadModal(true); });
+    area.querySelector('[data-wiz="next"]').addEventListener('click', ()=>{
+      keep();
+      if(!w.what) return;
+      if(w.what==='msg' && !w.ch) w.ch = 'text';
+      if(w.what==='appt' && !w.res) w.res = 'spoke';
+      if(w.what!=='book' && wizNoteNeeded(w, due) && (w.note||'').trim().length < MEETING_NOTE_MIN){
+        const el = document.getElementById('wizNote'); if(el){ el.classList.add('missing'); el.focus(); }
+        toast(`Please add a note of at least ${MEETING_NOTE_MIN} characters about what happened.`,'error'); return;
+      }
+      st.stage = 'wiz2'; st.choice = null; renderUpdateCase(lead, area);
+    });
+    return;
+  }
+  // Step 2
+  const opts = wizWhereOpts(l, w);
+  if(!st.choice || !opts.some(o=> o.k===st.choice)) st.choice = opts.length===1 ? opts[0].k : (st.choice && opts.some(o=> o.k===st.choice) ? st.choice : null);
+  const ch = st.choice, entry = wizEntry(lead, w, due);
+  if(ch==='stay' && booking && !w.next) w.next = pot==='new' ? 'reminder' : 'appointment';
+  if(ch==='quotes' && !w.next) w.next = 'reminder';
+  if(ch==='stay' && !booking && pot!=='decline' && !w.next) w.next = w.what==='book' ? 'followup' : 'none';
+  const sub = o=>{
+    if(o.k!==ch) return '';
+    if((o.k==='stay' && booking) || o.k==='quotes') return `<div class="wiz-sub-row">${chip('data-wiz-next','appointment', w.next==='appointment', 'Book appointment')}${chip('data-wiz-next','reminder', w.next==='reminder', 'Set reminder')}</div>
+      ${o.k==='stay' && pot==='existing' && currentUser.role==='mapa' && !l.researchAt && !l.quotesSentAt ? `<label class="wiz-check"><input type="checkbox" id="wizResearch" ${w.research ? 'checked' : ''}> Mark as in research (pale yellow on your dashboard)</label>` : ''}`;
+    if(o.k==='stay' && pot!=='decline') return `<div class="wiz-sub-row">${w.what==='book' ? '' : chip('data-wiz-next','none', w.next==='none', 'Nothing to book')}${chip('data-wiz-next','followup', w.next==='followup', 'Book a follow-up')}</div>`;
+    if(o.k==='terms') return `<div class="field wiz-note"><label for="wizTerms">Terms <span class="wiz-req">(optional)</span></label><input type="text" id="wizTerms" maxlength="200" value="${esc(w.terms||'')}" placeholder="e.g. Standard terms, or +50% loading on CI"></div>`;
+    return '';
+  };
+  const dest = !ch ? '' : ch==='stay' ? (pot==='decline' ? 'stays in the decline workflow' : `stays in ${STATUS_LABELS[pot]}`) + (w.next==='appointment' ? ' · next: an appointment' : w.next==='reminder' ? ' · next: a reminder' : w.next==='followup' ? ' · next: a follow-up' : '')
+    : ch==='quotes' ? `quotes sent · next: ${w.next==='appointment' ? 'an appointment' : 'a reminder'}` : ch==='terms' ? 'Terms Issued' : ch==='uw' ? 'Submitted / In Underwriting' : ch==='onrisk' ? 'On Risk' : 'Decline';
+  const goLabel = !ch ? 'Save' : (ch==='stay' && (booking || w.next==='followup')) || ch==='quotes' ? (w.next==='reminder' ? 'Next: set the reminder →' : w.next==='followup' ? 'Next: book the follow-up →' : 'Next: book it →')
+    : ch==='uw' || ch==='onrisk' ? 'Next: policies →' : ch==='decline' ? 'Next: decline reason →' : 'Save';
+  area.innerHTML = `<div class="wiz">
+    <div class="wiz-head"><div><div class="wiz-kicker">Update case · ${esc(STATUS_LABELS[pot] || '')}</div><div class="wiz-title">2 · Where does the case go now?</div></div><span class="wiz-step">Step 2 of 2</span></div>
+    <div class="wiz-list">${opts.map(o=> `<div class="wiz-where ${o.k===ch ? 'on' : ''} ${o.tone ? 'tone-'+o.tone : ''}"><button type="button" class="wiz-where-btn" data-wiz-where="${o.k}" aria-pressed="${o.k===ch}"><span class="wiz-radio" aria-hidden="true"></span><span><b>${esc(o.h)}</b><span>${esc(o.d)}</span></span></button>${sub(o)}</div>`).join('')}</div>
+    ${entry || ch || w.logged ? `<div class="wiz-preview"><span>Goes in the history as</span>${entry ? `<b>${esc(entry.text)}</b>` : w.logged ? '<b>Email sent (already in the history)</b>' : ''}${ch ? `${entry || w.logged ? ' → ' : ''}${esc(dest)}` : ''}</div>` : ''}
+    <div class="wiz-foot">${w.logged ? '<button type="button" class="btn btn-secondary btn-sm" data-wiz="cancel">Close</button>' : '<button type="button" class="btn btn-secondary btn-sm" data-wiz="back">← Back</button>'}<span class="wiz-spacer"></span><button type="button" class="btn btn-primary" data-wiz="go" ${ch ? '' : 'disabled'}>${esc(goLabel)}</button></div>
+  </div>`;
+  const keep = ()=>{ const t = document.getElementById('wizTerms'); if(t) w.terms = t.value; const r = document.getElementById('wizResearch'); if(r) w.research = r.checked; };
+  area.querySelectorAll('[data-wiz-where]').forEach(b=> b.addEventListener('click', ()=>{ keep(); st.choice = b.dataset.wizWhere; w.next = null; renderUpdateCase(lead, area); }));
+  area.querySelectorAll('[data-wiz-next]').forEach(b=> b.addEventListener('click', ()=>{ keep(); w.next = b.dataset.wizNext; renderUpdateCase(lead, area); }));
+  const bk = area.querySelector('[data-wiz="back"]'); if(bk) bk.addEventListener('click', ()=>{ keep(); st.stage = 'wiz1'; renderUpdateCase(lead, area); });
+  const cl = area.querySelector('[data-wiz="cancel"]'); if(cl) cl.addEventListener('click', ()=>{ actionUIState = null; refreshLeadModal(true); });
+  area.querySelector('[data-wiz="go"]').addEventListener('click', function(){ keep(); wizGo(lead, st, this); });
+}
+function wizGo(lead, st, btn){
+  const w = st.w, l = LEADS[lead.id] || lead, pot = l.status, booking = inBookingPot(l);
+  const due = st.due ? wizDue(lead) : null, entry = wizEntry(lead, w, due), ch = st.choice;
+  const by = ()=> ({byId:currentUser.id, byName:currentUser.name, at:Date.now()});
+  const back = {...st, w:{...w}};
+  const logFirst = ()=> entry ? logAudit(lead.id, {...entry, ...by()}) : Promise.resolve();
+  const fail = err=>{ toast('Could not save: '+err.message,'error'); btn.disabled = false; };
+  if(!ch) return;
+  // Booking (New / Appointments / Research): the usual booking form, with what happened saved alongside.
+  if((ch==='stay' && booking) || ch==='quotes'){
+    const now = Date.now(), preludes = [];
+    if(entry) preludes.push({entry});
+    if(ch==='quotes') preludes.push({entry:{type:'quotes', text:`Quotes sent - ${fmtDateSlash(now)}`}, patch:{quotesSentAt:now, quotesSentBy:currentUser.id, quotesSentByName:currentUser.name}});
+    if(ch==='stay' && w.research && pot==='existing') preludes.push({entry:{type:'research', text:`In research - ${fmtDateSlash(now)}`}, patch:{researchAt:now, researchBy:currentUser.id}});
+    actionUIState = {kind: w.next==='appointment' ? 'appointment' : 'reminder', stage:'schedule', preludes, back};
+    refreshLeadModal(true); return;
+  }
+  btn.disabled = true;
+  if(ch==='stay'){
+    if(w.next==='followup') return logFirst().then(()=>{ actionUIState = {stage:'followup', back}; refreshLeadModal(true); }).catch(fail);
+    if(!entry){ actionUIState = null; refreshLeadModal(true); return; }
+    return logFirst().then(()=>{ toast(`Saved. Still in ${STATUS_LABELS[pot]}.`, 'success'); actionUIState = null; refreshLeadModal(); }).catch(fail);
+  }
+  if(ch==='terms'){
+    const note = (w.terms||'').trim();
+    return logFirst().then(()=> logAudit(lead.id, {type:'terms', text:`Terms issued - ${fmtDateSlash(Date.now())}${note ? ' - '+note : ''}`, ...by(), at:Date.now()+1},
+        {status:'terms', termsIssuedAt:Date.now(), termsNote:note||null, ...CLEAR_CALLBACK}))
+      .then(()=>{ celebrate('Terms issued ✨', false); toast('Terms issued. Moved to Terms Issued.','success'); actionUIState = null; refreshLeadModal(); }).catch(fail);
+  }
+  if(ch==='uw' || ch==='onrisk'){
+    const mode = ch==='uw' ? 'underwriting' : (pot==='terms' || pot==='underwriting') ? 'nowonrisk' : 'onrisk';
+    return logFirst().then(()=>{ actionUIState = null; refreshLeadModal(); openSignup(lead.id, '', mode, l.commission!=null ? l.commission : null); }).catch(fail);
+  }
+  if(ch==='decline') return logFirst().then(()=>{ actionUIState = {stage:'decline', back}; refreshLeadModal(true); }).catch(fail);
+}
+
 function handleActionClick(lead, type){
+  if(type==='update'){ actionUIState = actionUIState && (actionUIState.wiz || actionUIState.stage) ? null : {wiz:true, stage:'wiz1', w:{}}; refreshLeadModal(true); return; }
   // Email: write it first; the outcome buttons appear once it's sent.
   if(type==='email'){ openEmailCompose(lead.id, true); return; }
   if(type==='decline'){ // New Cases and Appointments / Research: decline straight from the case
@@ -10504,6 +10709,9 @@ function handleActionClick(lead, type){
 function renderDynamicArea(lead){
   const area = document.getElementById('dynamicActionArea');
   if(!area) return;
+  if(actionUIState && actionUIState.wiz){ renderUpdateCase(lead, area); return; }
+  // An email just sent from the case (it's already in the history): straight to "where does the case go now?"
+  if(actionUIState && actionUIState.kind && !actionUIState.stage){ actionUIState = {wiz:true, stage:'wiz2', w:{what:'msg', ch:actionUIState.kind, logged:true}}; renderUpdateCase(lead, area); return; }
   if(actionUIState && ['schedule','meeting','reminderdue'].includes(actionUIState.stage)){ renderBookingArea(lead, area); return; }
   if(actionUIState && actionUIState.stage==='refer'){ renderReferArea(lead, area); return; }
   if(actionUIState && actionUIState.stage==='signupchoice'){
@@ -10684,7 +10892,7 @@ function renderDynamicArea(lead){
           <div class="check-tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
           <label>${st.ask}</label>
         </div>`).join('')}
-        <button class="btn btn-primary btn-sm" id="dcSave">Submit decline</button>${actionUIState.back ? ` <button type="button" class="linkish" data-ui-back style="font-size:13px; margin-left:8px;">← Back to the reminder</button>` : ''}
+        <button class="btn btn-primary btn-sm" id="dcSave">Submit decline</button>${actionUIState.back ? ` <button type="button" class="linkish" data-ui-back style="font-size:13px; margin-left:8px;">← Back</button>` : ''}
       </div>`;
 
     document.getElementById('dcReason').addEventListener('change', function(){
@@ -11578,7 +11786,7 @@ function renderBookingArea(lead, area){
   const appt = st.kind==='appointment', gOn = gApiOn();
   const tmr = new Date(Date.now() + 86400000);
   area.innerHTML = `<div class="inline-form bk-form">
-      <div class="op-title" style="font-weight:700; margin-bottom:10px;">${appt ? 'Book an appointment' : 'Set a reminder'}${st.prelude ? ' <span class="mt-sub" style="font-weight:500;">(your note is saved with it)</span>' : ''}</div>
+      <div class="op-title" style="font-weight:700; margin-bottom:10px;">${appt ? 'Book an appointment' : 'Set a reminder'}${st.prelude || (st.preludes && st.preludes.length) ? ' <span class="mt-sub" style="font-weight:500;">(what happened is saved with it)</span>' : ''}</div>
       ${appt ? `<div class="field"><label for="apType">Type of appointment</label><select id="apType">${Object.entries(APPT_TYPES).map(([k, v])=> `<option value="${k}">${esc(v)}</option>`).join('')}</select></div>` : ''}
       <div class="field-row">
         <div class="field"><label for="fuDate">${appt ? 'Date' : 'Remind me on'}</label><input type="date" id="fuDate" min="${isoDay(new Date())}" value="${isoDay(tmr)}"></div>
@@ -11619,8 +11827,9 @@ function renderBookingArea(lead, area){
     if(g && g.r) Object.assign(patch, gcalFields(g.r));
     const entry = appt ? {type:'followup', via:'appointment', text:`Appointment booked (${APPT_TYPES[type]}) - ${when}${note ? ' - '+note : ''}${calNote}`}
       : {type:'reminder', text:`Reminder set - ${when}${note ? ' - '+note : ''}${calNote}`};
-    return (st.prelude ? logAudit(lead.id, {...st.prelude, ...by()}) : Promise.resolve())
-      .then(()=> logAudit(lead.id, {...entry, ...by(), at:Date.now()+1}, patch))
+    const pre = st.preludes || (st.prelude ? [{entry: st.prelude}] : []);
+    return pre.reduce((pr, x, i)=> pr.then(()=> logAudit(lead.id, {...x.entry, ...by(), at:Date.now()+i}, x.patch || {})), Promise.resolve())
+      .then(()=> logAudit(lead.id, {...entry, ...by(), at:Date.now()+pre.length+1}, patch))
       .then(()=>{
         if(gTab){
           const url = googleCalUrl({...(LEADS[lead.id] || l), id:lead.id, ...patch}, {invite: mode==='invite'});

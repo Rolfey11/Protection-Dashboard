@@ -917,7 +917,8 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-switch-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; align-items:start;}
 .nbr-switch-days{font-size:12.5px;}
 .nbr-notpt{margin:14px 0 4px; padding:10px 14px; border-radius:10px; background:var(--amber-bg); font-size:13px;}
-.nbr-notpt summary{cursor:pointer;} .nbr-notpt .nml-table-wrap{margin-top:10px;}
+.nbr-notpt summary{cursor:pointer;}
+.nbr-combined{margin:4px 0 10px; padding:8px 12px; border-radius:8px; background:var(--blue-bg); color:var(--text);} .nbr-notpt .nml-table-wrap{margin-top:10px;}
 @media (max-width:820px){ .nbr-switch-grid{grid-template-columns:1fr;} }
 .nbr-paid-cards{grid-template-columns:repeat(3, minmax(0,1fr)); margin-bottom:10px;}
 .nbr-paid-table tr.nbr-group td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.4px; padding-top:9px; padding-bottom:9px;}
@@ -7271,6 +7272,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19h', date:'2026-11-19', items:[ {text:"🧾 <b>Bible</b>: when an NBR has a fee as two lines (e.g. a change of lender adds a small second proc fee) but the Bible has one line for the total, uploading the Bible now makes them one line with the Bible's lender and amount, so reports match the Bible. <b>Upload the Bible again</b> with Fill in the blanks to put existing ones right.", roles:['admin','management']} ]},
   {id:'2026-11-19g', date:'2026-11-19', items:[ {text:"📊 <b>Charts and PowerPoint in Ask Claude</b>: ask for a chart (bar, line, pie…) and Claude draws it; save it as a picture, or press <b>⬇ PowerPoint</b> on any report for slides with its tables and charts, ready to edit. Needs the newest AI assistant code in Cloudflare.", roles:['admin','management']} ]},
   {id:'2026-11-19f', date:'2026-11-19', items:[ {text:"✨ <b>Ask Claude for a report</b>: Claude can now look at the tracker's data to answer, e.g. \u201cbanked by advisor last month\u201d or \u201cprotection cases with no contact for 30 days\u201d, with tables you can download to Excel. Press <b>Wider</b> for room. Needs the AI assistant updating in Cloudflare first.", roles:['admin','management']} ]},
   {id:'2026-11-19e', date:'2026-11-19', items:[ {text:"🔁 <b>BTL PT</b> is now its own product, separate from <b>Prod Tfr</b> (which includes Prod.Trans and PT), in the Bible, the Salesboard's Banked view and the Switch dates projection (with a Product choice and a column for each). <b>Upload the advisors' NBRs again</b> to put existing BTL product transfers right.", roles:['admin','management']} ]},
@@ -15104,6 +15106,12 @@ const BIB_STATUS = {pipe:['Written','Written, not yet offered'], offer:['Offered
 const NBR_PAGE = 150;
 
 let NBR_ADV = {}, NBR_ENT = {}, NBR_NPW = {}, NBR_BIB = {}, NBR_CFG = {}, NBR_BC = {}, NBR_WILLS = {}, NBR_TGT = {};
+/* Combined lines: where an NBR has one fee as two or more lines (e.g. a change of lender adds a second, small proc fee)
+   and the Bible has one line for the lot, the Bible upload makes them one line, as the Bible: the main line carries the
+   Bible's amount and lender and lists the others in "covers"; each other line keeps its link to its NBR case but has
+   "coveredBy" and isn't shown or counted. NBR_BIB_ALL has every line (for the links); NBR_BIB the ones on show. */
+let NBR_BIB_ALL = {};
+function nbrBibVisible(v){ const o = {}; Object.entries(v || {}).forEach(([k, l])=>{ if(l && !(l.coveredBy && v[l.coveredBy])) o[k] = l; }); return o; }
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
 const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
@@ -15184,7 +15192,7 @@ function startNbrListener(){
   Object.keys(nbrLoaded).forEach(k=>{
     db.ref('nbr/'+k).on('value', snap=>{
       const v = snap.val() || {};
-      if(k==='advisors') NBR_ADV = v; else if(k==='entries') NBR_ENT = v; else if(k==='npw') NBR_NPW = v; else if(k==='bible') NBR_BIB = v; else if(k==='bc') NBR_BC = v; else if(k==='wills') NBR_WILLS = v; else if(k==='targets') NBR_TGT = v; else NBR_CFG = v;
+      if(k==='advisors') NBR_ADV = v; else if(k==='entries') NBR_ENT = v; else if(k==='npw') NBR_NPW = v; else if(k==='bible'){ NBR_BIB_ALL = v; NBR_BIB = nbrBibVisible(v); } else if(k==='bc') NBR_BC = v; else if(k==='wills') NBR_WILLS = v; else if(k==='targets') NBR_TGT = v; else NBR_CFG = v;
       nbrLoaded[k] = true; nbrVer++; nbrRenderSoon(); nbrPublishSoon();
       if(nbrFullReady() && nbrSumListening) stopNbrSummary();
     }, ()=>{
@@ -15197,7 +15205,7 @@ function stopNbrListener(){
   clearTimeout(nbrPublishTimer); nbrPublished = '';
   if(nbrSumListening) stopNbrSummary();
   Object.keys(nbrLoaded).forEach(k=>{ db.ref('nbr/'+k).off(); nbrLoaded[k] = false; });
-  nbrListening = false; NBR_ADV = {}; NBR_ENT = {}; NBR_NPW = {}; NBR_BIB = {}; NBR_CFG = {}; NBR_BC = {}; NBR_WILLS = {}; NBR_TGT = {}; nbrVer++; nbrUI.upload = null; nbrUI.tgtUp = null;
+  nbrListening = false; NBR_ADV = {}; NBR_ENT = {}; NBR_NPW = {}; NBR_BIB = {}; NBR_BIB_ALL = {}; NBR_CFG = {}; NBR_BC = {}; NBR_WILLS = {}; NBR_TGT = {}; nbrVer++; nbrUI.upload = null; nbrUI.tgtUp = null;
 }
 function nbrRenderSoon(){ clearTimeout(nbrRenderTimer); nbrRenderTimer = setTimeout(renderNbrVisible, nbrFullReady() || nbrViewer() ? 80 : 30); }
 function nbrPageShown(p){ const el = document.getElementById('page-'+p); return el && !el.classList.contains('hidden'); }
@@ -15439,7 +15447,7 @@ const nbrKey = ()=> db.ref('nbr').push().key;
 /* ---- NBR case → Bible lines ---- */
 function nbrLinePatches(entryId, e, opts={}){
   const out = {}, adv = NBR_ADV[e.adv] || {};
-  const linked = {}; Object.entries(NBR_BIB).forEach(([lid,l])=>{ if(l && l.entry===entryId && l.kind) linked[l.kind] = [lid,l]; });
+  const linked = {}; Object.entries(NBR_BIB_ALL).forEach(([lid,l])=>{ if(l && l.entry===entryId && l.kind) linked[l.kind] = [lid,l]; });
   const src = nbrDefaultSource();
   const spec = {
     proc: {product: adv.office==='C' ? nbrComProduct(e.saleType) : nbrSaleProduct(e.saleType), provider: e.lender || '', source: src},
@@ -15452,7 +15460,7 @@ function nbrLinePatches(entryId, e, opts={}){
     const amt = nbrRound(e[k]), ex = linked[k];
     const shared = nbrClean({adv:e.adv, office:(adv.office==='C' ? (NBR_ADV[adv.of] || {}).office : adv.office) || '', client:e.client || '', appDate:e.appSub || '', switchDate:e.switchDate || '', month:e.month, address:e.notes || ''});
     if(amt){
-      if(ex){ const [lid, l] = ex; out['bible/'+lid] = {...l, ...shared, amount:amt, updatedAt:Date.now()}; }
+      if(ex){ const [lid, l] = ex; out['bible/'+lid] = {...l, ...shared, amount:l.covers ? l.amount : amt, updatedAt:Date.now()}; }
       else if(opts.create!==false){
         const reuse = opts.reuse && opts.reuse(k, amt);
         if(reuse){ out['bible/'+reuse+'/entry'] = entryId; out['bible/'+reuse+'/kind'] = k;
@@ -15468,11 +15476,17 @@ function nbrLinePatches(entryId, e, opts={}){
   });
   return out;
 }
+// A combined line going: the lines it covered are shown again.
+function nbrUncoverPatches(lid, already={}){
+  const l = NBR_BIB_ALL[lid], out = {};
+  Object.keys((l && l.covers) || {}).forEach(c=>{ if(NBR_BIB_ALL[c] && already['bible/'+c]===undefined) out['bible/'+c+'/coveredBy'] = null; });
+  return out;
+}
 function nbrEntryDeletePatches(entryId){
   const out = {['entries/'+entryId]: null};
-  Object.entries(NBR_BIB).forEach(([lid,l])=>{
+  Object.entries(NBR_BIB_ALL).forEach(([lid,l])=>{
     if(!l || l.entry!==entryId) return;
-    if(!nbrLineAnyPaid(l)) out['bible/'+lid] = null;
+    if(!nbrLineAnyPaid(l)){ out['bible/'+lid] = null; Object.assign(out, nbrUncoverPatches(lid, out)); }
     else { const keep = {...l}; delete keep.entry; delete keep.kind; out['bible/'+lid] = keep; }
   });
   return out;
@@ -15483,7 +15497,7 @@ function openNbrEntry(id, preset={}){
   const e = id ? (NBR_ENT[id] || {}) : {adv: nbrUI.regAdv || '', month: nbrUI.regMonth || nbrThisYm(), ...preset};
   if(id && !NBR_ENT[id]) return;
   const L = nbrLists();
-  const linked = id ? Object.values(NBR_BIB).filter(l=> l && l.entry===id).length : 0;
+  const linked = id ? Object.values(NBR_BIB_ALL).filter(l=> l && l.entry===id).length : 0;
   const week = e.week || nbrWeekFor(nbrToday().slice(0,7)===e.month ? nbrToday() : e.month+'-01', e.month);
   const body = `
     <div class="nbr-grid">
@@ -15602,6 +15616,8 @@ function openNbrLine(id, opts={}){
       ${nfSelect('blLife','Life', l.life||'', [['','—'],['Y','Y'],['SA','SA']])}
     </div>
     <div class="field"><label for="blAddress">Address / notes</label><input type="text" id="blAddress" value="${esc(l.address||'')}"></div>
+    ${l.covers && Object.keys(l.covers).some(c=> NBR_BIB_ALL[c]) ? `<p class="field-hint nbr-combined">One line, as in the Bible, for ${Object.keys(l.covers).filter(c=> NBR_BIB_ALL[c]).length + 1} lines on the NBR: ${
+      [l, ...Object.keys(l.covers).map(c=> NBR_BIB_ALL[c]).filter(Boolean)].map(x=>{ const e = NBR_ENT[x.entry] || {}; return esc(`${e.lender || x.provider || '—'} £${nbrRound(x.entry && e[x.kind]!=null ? e[x.kind] : x.amount).toFixed(2)}`); }).join(' + ')}.</p>` : ''}
     <div class="nbr-pays">
       <div class="nbr-pays-h"><b>More payments</b> <span class="field-hint">When the client doesn't pay in one go (e.g. £100 upfront, the rest on offer): the Date paid and Paid above are the first payment, each line here is another. Each is banked in the month it's paid.</span></div>
       <div id="blPays">${nbrLineExtraPays(l).map(x=> nbrPayRowHtml(x)).join('')}</div>
@@ -15636,12 +15652,12 @@ function openNbrLine(id, opts={}){
       if(Object.keys(pays).length) data.pays = pays;
       if(!data.office && NBR_ADV[data.adv]) data.office = NBR_ADV[data.adv].office || '';
       const old = id ? NBR_BIB[id] : null;
-      ['entry','kind','src','createdAt','npwNote'].forEach(k=>{ if(old && old[k]!=null) data[k] = old[k]; });
+      ['entry','kind','src','createdAt','npwNote','covers'].forEach(k=>{ if(old && old[k]!=null) data[k] = old[k]; });
       if(!old) data.createdAt = Date.now();
       data.updatedAt = Date.now(); data.updatedBy = currentUser.name;
       return nbrWrite({['bible/'+(id || nbrKey())]: data}).then(()=> toast(id ? 'Bible line saved.' : 'Bible line added.', 'success'));
     },
-    onDelete: id ? ()=> nbrWrite({['bible/'+id]: null}).then(()=> toast('Bible line deleted.', 'success')) : null});
+    onDelete: id ? ()=> nbrWrite({['bible/'+id]: null, ...nbrUncoverPatches(id)}).then(()=> toast('Bible line deleted.', 'success')) : null});
   document.getElementById('blAddPay').addEventListener('click', ()=>{
     const box = document.getElementById('blPays'); box.insertAdjacentHTML('beforeend', nbrPayRowHtml({k: nbrKey()}));
     const row = box.lastElementChild; row.querySelector('[data-pay="amount"]').focus();
@@ -15676,7 +15692,7 @@ function nbrLikelySame(id){
 function nbrMergeAdvisor(fromId, toId){
   const a = NBR_ADV[fromId], b = NBR_ADV[toId];
   if(!a || !b){ toast('Choose the advisor to merge into.', 'error'); return; }
-  const ents = Object.entries(NBR_ENT).filter(([,e])=> e && e.adv===fromId), npws = Object.entries(NBR_NPW).filter(([,x])=> x && x.adv===fromId), lines = Object.entries(NBR_BIB).filter(([,l])=> l && l.adv===fromId);
+  const ents = Object.entries(NBR_ENT).filter(([,e])=> e && e.adv===fromId), npws = Object.entries(NBR_NPW).filter(([,x])=> x && x.adv===fromId), lines = Object.entries(NBR_BIB_ALL).filter(([,l])=> l && l.adv===fromId);
   if(!confirm(`Move ${ents.length} case${ents.length===1?'':'s'}, ${npws.length} NPW${npws.length===1?'':'s'} and ${lines.length} Bible line${lines.length===1?'':'s'} from "${a.name}" to "${b.name}", and remove "${a.name}"?`)) return;
   const up = {};
   ents.forEach(([k])=>{ up['entries/'+k+'/adv'] = toId; });
@@ -16251,7 +16267,7 @@ function renderNbrReg(){
   const weeks = []; ents.forEach(e=>{ const w = e.week || ''; let g = weeks.find(x=> x.week===w); if(!g) weeks.push(g = {week:w, rows:[]}); g.rows.push(e); });
   // Newest week first, so the current week is at the top (weeks keep their numbers).
   const thisWeek = ym===nbrThisYm() ? nbrWeekFor(nbrToday(), ym) : '';
-  const inBible = new Set(Object.values(NBR_BIB).filter(l=> l && l.entry).map(l=> l.entry));
+  const inBible = new Set(Object.values(NBR_BIB_ALL).filter(l=> l && l.entry).map(l=> l.entry));
   const head = `<tr><th>Client - new business</th><th>Lender / insurer</th>${NBR_CATS.map(([,l])=> `<th class="num">${l.replace(' refs','')}</th>`).join('')}<th class="num">Total</th><th>Sols name</th><th>Val name</th><th>App sub</th><th>Switch date</th><th>Lead provider</th><th>Type of sale</th><th>Notes</th><th class="num">£ link</th><th>Sent</th><th>Paid</th></tr>`;
   const rowHtml = e=> `<tr class="nbr-click" data-nbr-ent="${esc(e.id)}"><td><b>${esc(e.client||'')}</b>${inBible.has(e.id) ? ' <span class="nbr-tag" title="In the Bible">Bible</span>' : ''}</td><td>${esc(e.lender||'')}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(e[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(nbrEntTotal(e))}</td><td>${esc(e.solsName||'')}</td><td>${esc(e.valName||'')}</td><td>${e.appSub ? fmtDateSlash(e.appSub) : ''}</td><td>${e.switchDate ? fmtDateSlash(e.switchDate) : ''}</td><td>${esc(e.leadProvider||'')}</td><td>${esc(e.saleType||'')}</td><td class="nbr-notes">${esc(e.notes||'')}</td><td class="num">${nbrMoneyCell(e.linkToSend)}</td><td>${e.linkSent ? fmtDateSlash(e.linkSent) : ''}</td><td>${e.linkPaid ? fmtDateSlash(e.linkPaid) : ''}</td></tr>`;
   const totRow = (label, rows, cls)=>{ const t = nbrSum(rows.map(e=> ({...e, total: nbrEntTotal(e)}))); return `<tr class="${cls}"><td>${label}</td><td></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td colspan="11"></td></tr>`; };
@@ -17214,7 +17230,7 @@ function nbrBibleUploadPatches(it){
     else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
   });
   const fys = Object.keys(p.fys);
-  if(it.replace) Object.entries(NBR_BIB).forEach(([id,l])=>{ if(l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')) updates['bible/'+id] = null; });
+  if(it.replace) Object.entries(NBR_BIB_ALL).forEach(([id,l])=>{ if(l && fys.includes(l.month ? nbrFyOf(l.month) : '(no period)')) updates['bible/'+id] = null; });
   let n = 0, skipped = 0;
   p.lines.forEach(l=>{
     if(l.code && !(l.code in ids)){ skipped++; return; }
@@ -17263,8 +17279,9 @@ function nbrBibleMatch(it){
   // What the rows can be matched to, by advisor + kind of fee.
   const targets = {}, add = (key, t)=> (targets[key] || (targets[key] = [])).push(t);
   const linked = new Set();
+  Object.values(NBR_BIB_ALL).forEach(l=>{ if(l && l.entry && l.kind) linked.add(l.entry+'|'+l.kind); });
   Object.entries(NBR_BIB).forEach(([id,l])=>{
-    if(!l) return; if(l.entry && l.kind) linked.add(l.entry+'|'+l.kind);
+    if(!l) return;
     const k = l.kind || nbrProdKind(l.product) || 'x:'+String(l.product||'').toLowerCase();
     const g = k==='bc' ? 'bc:'+nbrLineOffice(l) : l.adv; if(!g) return; // B&C lines are matched by office
     add(g+'|'+k, {type:'line', id, l, toks:nbrNameToks(l.client), m:nbrMonthNo(l.month), amt:nbrRound(l.amount)});
@@ -17325,12 +17342,32 @@ function nbrBibleMatch(it){
     pick.forEach(r=> splitRow.add(r.i));
     split.set(r0, {t, rows: [rows[r0], ...pick]});
   });
-  const out = {fill:[], same:0, link:[], extra:[], unmatched:[], skipped:0, paidAdded:0, split:[], paysAdded:0};
+  /* Combined fees: the NBR sometimes has one fee as two or more lines (e.g. a change of lender adds a second, small proc
+     fee) where the Bible has one line for the lot. When a Bible row is more than the line (or NBR case) it matched and other
+     unpaid lines or cases for the same client and fee make up the difference exactly, they're one fee, shown as one line. */
+  const combine = new Map();
+  [...tFirst.entries()].forEach(([tk, r0])=>{
+    if(split.has(r0)) return;
+    const t = rowDone.get(r0), r = rows[r0];
+    if(!(t.type==='entry' || (t.type==='line' && !t.l.covers && !t.l.bc))) return;
+    const need = nbrRound(r.amt - t.amt); if(need < 0.01) return;
+    const key = tk.slice(0, tk.lastIndexOf('|'));
+    const cands = (targets[key] || []).filter(x=> x!==t && !tDone.has(key+'|'+x.ti) && x.amt > 0 && (x.type==='entry' || (x.type==='line' && x.l.entry && !x.l.covers && !nbrLineAnyPaid(x.l)))
+      && (x.m==null || r.m==null || Math.abs(x.m - r.m) <= 3) && nbrNameScore(r.toks, x.toks) >= 2);
+    let pick = null;
+    for(let i=0; i<cands.length && !pick; i++){ if(Math.abs(cands[i].amt - need) < 0.01) pick = [cands[i]]; }
+    for(let i=0; i<cands.length && !pick; i++) for(let j=i+1; j<cands.length && !pick; j++){ if(Math.abs(cands[i].amt + cands[j].amt - need) < 0.01) pick = [cands[i], cands[j]]; }
+    if(!pick) return;
+    pick.forEach(x=> tDone.add(key+'|'+x.ti));
+    combine.set(r0, {row:r, members:[t, ...pick]});
+  });
+  const out = {fill:[], same:0, link:[], extra:[], unmatched:[], skipped:0, paidAdded:0, split:[], paysAdded:0, combine:[]};
   split.forEach(sp=> out.split.push(sp));
+  combine.forEach(c=> out.combine.push(c));
   rows.forEach(r=>{
     const l = r.l;
     if(r.adv===null){ out.skipped++; return; }
-    if(split.has(r.i) || splitRow.has(r.i)) return;
+    if(split.has(r.i) || splitRow.has(r.i) || combine.has(r.i)) return;
     const t = rowDone.get(r.i);
     if(t && t.type==='line'){
       const set = {};
@@ -17357,7 +17394,7 @@ function nbrBibleFillPatches(it){
     else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
   });
   const M = nbrBibleMatch(it);
-  const newLine = (l, extra)=>{ const data = {...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now, ...extra}; delete data.code; if(!data.adv) delete data.adv; updates['bible/'+nbrKey()] = data; };
+  const newLine = (l, extra, key)=>{ const data = nbrClean({...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now, ...extra}); delete data.code; const id = key || nbrKey(); updates['bible/'+id] = data; return id; };
   M.fill.forEach(f=>{ Object.entries(f.set).forEach(([k,v])=>{ updates['bible/'+f.id+'/'+k] = v; }); updates['bible/'+f.id+'/updatedAt'] = now; updates['bible/'+f.id+'/updatedBy'] = by; });
   // Part payments: the earliest row is the line's own payment, the others are its payment lines.
   const PAY_FIELDS = ['when','how','datePaid','paid'];
@@ -17387,6 +17424,31 @@ function nbrBibleFillPatches(it){
     });
     if(touched){ updates[base+'updatedAt'] = now; updates[base+'updatedBy'] = by; } else M.same++;
   });
+  // Combined fees: the biggest becomes the one line, with the Bible's amount and lender; the others are covered by it.
+  M.combine.forEach(({row, members})=>{
+    const l = row.l, main = members.slice().sort((a,b)=> b.amt - a.amt)[0], others = members.filter(x=> x!==main);
+    const otherIds = others.map(x=> x.type==='line' ? x.id : nbrKey()), covers = Object.fromEntries(otherIds.map(k=> [k, true]));
+    let mainId;
+    if(main.type==='line'){
+      mainId = main.id; const L = main.l, base = 'bible/'+mainId+'/';
+      NBR_FILL_FIELDS.forEach(f=>{ if(f!=='amount' && !nbrBlank(l[f]) && nbrBlank(L[f])){ updates[base+f] = l[f]; if(f==='datePaid') M.paidAdded++; } });
+      if(nbrBibleProductFix(L, l)) updates[base+'product'] = l.product;
+      updates[base+'amount'] = nbrRound(l.amount);
+      if(!nbrBlank(l.provider)) updates[base+'provider'] = l.provider;
+      otherIds.forEach(k=>{ updates[base+'covers/'+k] = true; });
+      updates[base+'updatedAt'] = now; updates[base+'updatedBy'] = by;
+    } else {
+      const e = NBR_ENT[main.id] || {}, a = NBR_ADV[e.adv] || {};
+      mainId = newLine(l, {entry:main.id, kind:main.k, covers, ...(l.office ? {} : a.office ? {office:a.office} : {})});
+      if(l.datePaid) M.paidAdded++;
+    }
+    others.forEach((x, j)=>{
+      if(x.type==='line'){ updates['bible/'+x.id+'/coveredBy'] = mainId; return; }
+      const e = NBR_ENT[x.id] || {}, a = NBR_ADV[e.adv] || {};
+      newLine({...l, amount:x.amt, provider:e.lender || l.provider, datePaid:null, paid:null, when:null, how:null, pays:null},
+        {entry:x.id, kind:x.k, coveredBy:mainId, ...(l.office ? {} : a.office ? {office:a.office} : {})}, otherIds[j]);
+    });
+  });
   M.link.forEach(x=>{
     if(x.bc){ const b = NBR_BC[x.bc] || {}; newLine(x.row, {bc:x.bc, kind:'bc', ...(x.row.office ? {} : b.office ? {office:b.office} : {})}); return; }
     const e = NBR_ENT[x.entry] || {}, a = NBR_ADV[e.adv] || {}; newLine(x.row, {entry:x.entry, kind:x.kind, ...(x.row.office ? {} : a.office ? {office:a.office} : {})});
@@ -17399,6 +17461,7 @@ function nbrBibleFillPatches(it){
   if(M.fill.length) bits.push(`filled in the blanks on ${M.fill.length} Bible line${M.fill.length===1?'':'s'}`);
   if(M.link.length) bits.push(`added ${M.link.length} line${M.link.length===1?'':'s'} to NBR cases that didn't have one yet`);
   if(M.paidAdded) bits.push(`${M.paidAdded} date${M.paidAdded===1?'':'s'} paid added`);
+  if(M.combine.length) bits.push(`${M.combine.length} fee${M.combine.length===1?'':'s'} the NBR has as two or more lines (e.g. a change of lender) made into one line, as in the Bible`);
   if(M.split.length) bits.push(`${M.split.length} fee${M.split.length===1?'':'s'} paid in more than one go (${M.paysAdded} later payment${M.paysAdded===1?'':'s'} added to ${M.split.length===1?'its':'their'} line)`);
   if(added) bits.push(`added ${added} other line${added===1?'':'s'}`);
   if(M.same) bits.push(`${M.same} already up to date`);

@@ -7273,6 +7273,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19j', date:'2026-11-19', items:[ {text:"🚫 <b>NPWs in the Bible</b>: every NPW row in your Excel Bible now comes in on upload, even when its case is no longer on the advisor's NBR (it usually comes off the month sheet when it goes NPW), so the Bible page's NPW card matches the Excel Bible. They don't count as written or owed. <b>Upload the Bible again</b> with Fill in the blanks.", roles:['admin','management']} ]},
   {id:'2026-11-19i', date:'2026-11-19', items:[ {text:"🏠 <b>B&C and Life Ins</b>: a Life Ins policy the B&C team wrote (e.g. \u201cLV GI\u201d on the register, LV Life Ins in the Bible) now matches its Bible row, so it shows as Life Ins with the Bible's lender and its date paid, still under B&C. B&C register dates typed day/month into a month/day cell (10/02 read as 2 October) are put right by the month's sheet. <b>Upload the B&C registers and then the Bible again</b> to put existing ones right.", roles:['admin','management']} ]},
   {id:'2026-11-19h', date:'2026-11-19', items:[ {text:"🧾 <b>Bible</b>: when an NBR has a fee as two lines (e.g. a change of lender adds a small second proc fee) but the Bible has one line for the total, uploading the Bible now makes them one line with the Bible's lender and amount, so reports match the Bible. <b>Upload the Bible again</b> with Fill in the blanks to put existing ones right.", roles:['admin','management']} ]},
   {id:'2026-11-19g', date:'2026-11-19', items:[ {text:"📊 <b>Charts and PowerPoint in Ask Claude</b>: ask for a chart (bar, line, pie…) and Claude draws it; save it as a picture, or press <b>⬇ PowerPoint</b> on any report for slides with its tables and charts, ready to edit. Needs the newest AI assistant code in Cloudflare.", roles:['admin','management']} ]},
@@ -16973,7 +16974,7 @@ function nbrFillPreview(it){
     </ul>
     ${M.extra.length ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="addExtra" ${it.addExtra ? 'checked' : ''}> <span>Add the <b>${M.extra.length}</b> row${n(M.extra.length)} that aren't on any NBR uploaded here: earlier years, clawbacks and admin fees, or advisors with no NBR. <span class="field-hint">(Leave ticked to keep past banked figures.)</span></span></label>
       <details class="nbr-up-det"><summary>See these rows</summary>${rowTable(M.extra)}</details>` : ''}
-    ${M.unmatched.length ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="addUnmatched" ${it.addUnmatched ? 'checked' : ''}> <span>Also add the <b>${M.unmatched.length}</b> row${n(M.unmatched.length)} from years the advisor's NBR covers where no matching case was found. <span class="field-hint">(Check these first: the client name may be spelt differently, or the case may be missing from the NBR.)</span></span></label>
+    ${M.unmatched.length ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="addUnmatched" ${it.addUnmatched ? 'checked' : ''}> <span>Also add the <b>${M.unmatched.length}</b> row${n(M.unmatched.length)} from years the advisor's NBR covers where no matching case was found. <span class="field-hint">(Check these first: the client name may be spelt differently, or the case may be missing from the NBR.)${(()=>{ const k = M.unmatched.filter(l=> l.npw).length; return k ? ` ${k} of them ${k===1?'is an NPW':'are NPWs'}: NPWs are added anyway, so the NPWs here match the Bible's.` : ''; })()}</span></span></label>
       <details class="nbr-up-det" open><summary>See these rows</summary>${rowTable(M.unmatched)}</details>` : ''}`;
 }
 function renderNbrUpload(){
@@ -17485,7 +17486,11 @@ function nbrBibleFillPatches(it){
   let added = 0;
   if(it.addExtra) M.extra.forEach(l=>{ newLine(l); added++; });
   if(it.addUnmatched) M.unmatched.forEach(l=>{ newLine(l); added++; });
-  const left = (it.addExtra ? 0 : M.extra.length) + (it.addUnmatched ? 0 : M.unmatched.length) + M.skipped;
+  // NPWs: every NPW row in the Bible is kept, matched to a case or not (when a case goes NPW it usually comes off the
+  // NBR's month sheet, so there's no case to match), so the NPWs here are the Bible's. They don't count as written or owed.
+  const npwIn = [...(it.addExtra ? [] : M.extra), ...(it.addUnmatched ? [] : M.unmatched)].filter(l=> l.npw);
+  npwIn.forEach(l=>{ newLine(l); });
+  const left = (it.addExtra ? 0 : M.extra.length) + (it.addUnmatched ? 0 : M.unmatched.length) + M.skipped - npwIn.length;
   const bits = [];
   if(M.fill.length) bits.push(`filled in the blanks on ${M.fill.length} Bible line${M.fill.length===1?'':'s'}`);
   if(M.link.length) bits.push(`added ${M.link.length} line${M.link.length===1?'':'s'} to NBR cases that didn't have one yet`);
@@ -17493,6 +17498,7 @@ function nbrBibleFillPatches(it){
   if(M.combine.length) bits.push(`${M.combine.length} fee${M.combine.length===1?'':'s'} the NBR has as two or more lines (e.g. a change of lender) made into one line, as in the Bible`);
   if(M.split.length) bits.push(`${M.split.length} fee${M.split.length===1?'':'s'} paid in more than one go (${M.paysAdded} later payment${M.paysAdded===1?'':'s'} added to ${M.split.length===1?'its':'their'} line)`);
   if(added) bits.push(`added ${added} other line${added===1?'':'s'}`);
+  if(npwIn.length) bits.push(`added ${npwIn.length} NPW${npwIn.length===1?'':'s'} with no case on the NBR`);
   if(M.same) bits.push(`${M.same} already up to date`);
   if(left) bits.push(`left out ${left}`);
   return {updates, msg: (bits.join('; ') || 'nothing to change') + '.'};

@@ -7255,6 +7255,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19e', date:'2026-11-19', items:[ {text:"🔁 <b>BTL PT</b> is now its own product, separate from <b>Prod Tfr</b> (which includes Prod.Trans and PT), in the Bible, the Salesboard's Banked view and the Switch dates projection (with a Product choice and a column for each). <b>Upload the advisors' NBRs again</b> to put existing BTL product transfers right.", roles:['admin','management']} ]},
   {id:'2026-11-19d', date:'2026-11-19', items:[ {text:"🔁 <b>Switch dates</b>: product transfers with a blank or different Type of sale on the NBR (e.g. \u201cBTL PT\u201d) were going into the Bible as Proc Fee, so they weren't in the projection. Uploading the Bible again now takes the product from the Bible (e.g. Prod Tfr), and the Switch dates view lists any lines with a switch date that aren't counted. <b>Upload the Bible again</b> with Fill in the blanks.", roles:['admin','management']} ]},
   {id:'2026-11-19c', date:'2026-11-19', items:[ {text:"🔁 <b>Switch dates</b>. Uploading an advisor's NBR now reads its <b>Switch Date</b> column (when the mortgage product switches), or the switch date written in the notes (e.g. ‘Switching 01/12/2026’). It shows on the Advisor NBR and goes into the Bible. A new <b>Switch dates</b> view on the Bible gives the projection, as the Bible's PT Switch Dates pivot: product transfer fees not paid yet, by month, by date and by advisor, with the cases behind them. <b>Upload the NBRs again</b> once the switch dates are added to bring them in.", roles:['admin','management']} ]},
   {id:'2026-11-19b', date:'2026-11-19', items:[ {text:"💷 <b>Bible: Paid by month</b>. A new view at the top of the Bible: choose a month and see every payment that came in that month, by advisor, with each advisor's total, whatever month the case was written in. Part payments show in the month each one was paid. You can also click a figure in <b>Banked … by the month paid</b> to see the payments behind it.", roles:['admin','management']} ]},
@@ -14408,27 +14409,28 @@ const NBR_CATS = [['proc','Proc fee'],['mums','Mums fee'],['prot','Protection'],
 // The Salesboard also has B&C (per office) and Wills columns.
 const BOARD_CATS = [...NBR_CATS, ['bc','B&C'], ['wills','Wills']], BOARD_COLS = BOARD_CATS.length + 5;
 const NBR_OFFICES = [['F','Frimley'],['G','Gurkha'],['C','Commercial'],['W','Wills']];
-const NBR_SALE_TYPES = ['Pur','Remo','E.R','F/ADV','Prod.Trans','Protection','BTL Pur','BTL Remo','BTL F/ADV','BTL Port','LTB','Sec Loan','Bridging'];
+const NBR_SALE_TYPES = ['Pur','Remo','E.R','F/ADV','Prod.Trans','Protection','BTL Pur','BTL Remo','BTL F/ADV','BTL Port','BTL PT','LTB','Sec Loan','Bridging'];
 // Type of sale on the NBR → the Bible's product for the proc fee line, and its mums fee type.
 // The Bible product for an NBR case's fee, from its Type of sale ("BTL PT", "PT", "Product transfer" are product transfers too).
 function nbrSaleProduct(t){
   const v = String(t||'').trim();
   if(NBR_SALE_PRODUCT[v]) return NBR_SALE_PRODUCT[v];
-  if(/\bp\.?\s*t\b|prod|transfer/i.test(v)) return 'Prod Tfr';
+  // Buy-to-let product transfers are reported on their own (BTL PT); the rest are Prod Tfr.
+  if(/\bp\.?\s*t\b|prod|transfer/i.test(v)) return /btl|buy\s*to\s*let/i.test(v) ? 'BTL PT' : 'Prod Tfr';
   if(/remo/i.test(v)) return 'Remo';
   return 'Proc Fee';
 }
 const NBR_SALE_PRODUCT = {'Pur':'Proc Fee','Remo':'Remo','E.R':'ER','F/ADV':'F/Adv','Prod.Trans':'Prod Tfr','Protection':'Life Ins','BTL Pur':'Proc Fee','BTL Remo':'Remo','BTL F/ADV':'F/Adv','BTL Port':'Proc Fee','LTB':'Proc Fee','Sec Loan':'Sec Loan','Bridging':'Bridging'};
 const NBR_SALE_MUMS = {'Pur':'mort','BTL Pur':'mort','BTL Port':'mort','LTB':'mort','Remo':'Remo','BTL Remo':'Remo','Prod.Trans':'PT','E.R':'ER','F/ADV':'F/Adv','BTL F/ADV':'F/Adv'};
 // The Salesboard's Banked view: a column per product, as the Bible's "SUM of PAID" pivot (commercial products together).
-const NBR_BANK_PRODS = ['ER','F/Adv','Gen Ins','Life Ins','Mums Fee','Proc Fee','Prod Tfr','Remo','Sec Loan','Bridging','Sols Fee','Val Fee','Commercial','Wills','Clawback','Admin Fee','Other'];
+const NBR_BANK_PRODS = ['ER','F/Adv','Gen Ins','Life Ins','Mums Fee','Proc Fee','Prod Tfr','BTL PT','Remo','Sec Loan','Bridging','Sols Fee','Val Fee','Commercial','Wills','Clawback','Admin Fee','Other'];
 const nbrBankSlug = p=> String(p).replace(/[^A-Za-z0-9]/g,'_');
 function nbrBankProd(prod){
   const t = String(prod||'').trim().toLowerCase(); if(!t) return 'Other';
   if(/^c /.test(t)) return 'Commercial';
-  return NBR_BANK_PRODS.find(x=> x.toLowerCase()===t) || (/^li?fe ins/.test(t) ? 'Life Ins' : /^prod ?tfr/.test(t) ? 'Prod Tfr' : 'Other');
+  return NBR_BANK_PRODS.find(x=> x.toLowerCase()===t) || (/^li?fe ins/.test(t) ? 'Life Ins' : /^btl\s*p\.?\s*t\b/.test(t) ? 'BTL PT' : /^prod ?tfr/.test(t) ? 'Prod Tfr' : 'Other');
 }
-const NBR_PRODUCTS = ['Proc Fee','Mums Fee','Sols Fee','Val Fee','Prod Tfr','Remo','Life Ins','Gen Ins','ER','F/Adv','Sec Loan','Bridging','Clawback','Admin Fee','C Mort','C Remo','C Bridging','C Bus Loan'];
+const NBR_PRODUCTS = ['Proc Fee','Mums Fee','Sols Fee','Val Fee','Prod Tfr','BTL PT','Remo','Life Ins','Gen Ins','ER','F/Adv','Sec Loan','Bridging','Clawback','Admin Fee','C Mort','C Remo','C Bridging','C Bus Loan'];
 const NBR_WHEN = ['upfront','on offer','on comp','no fee','prev app','top up','S&P'];
 const NBR_MUMS_TYPES = ['mort','Remo','PT','ER','F/Adv','admin'];
 const NBR_HOW = ['LINK','EPDQ','BACS','VIRTUAL','CASH'];
@@ -14439,7 +14441,7 @@ let NBR_ADV = {}, NBR_ENT = {}, NBR_NPW = {}, NBR_BIB = {}, NBR_CFG = {}, NBR_BC
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
 const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
-  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', upload:null, tgtYear:null, tgtUp:null};
+  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
@@ -14787,7 +14789,9 @@ function nbrLinePatches(entryId, e, opts={}){
       if(ex){ const [lid, l] = ex; out['bible/'+lid] = {...l, ...shared, amount:amt, updatedAt:Date.now()}; }
       else if(opts.create!==false){
         const reuse = opts.reuse && opts.reuse(k, amt);
-        if(reuse){ out['bible/'+reuse+'/entry'] = entryId; out['bible/'+reuse+'/kind'] = k; }
+        if(reuse){ out['bible/'+reuse+'/entry'] = entryId; out['bible/'+reuse+'/kind'] = k;
+          // The Bible calls every product transfer Prod Tfr; the NBR's Type of sale says when it's a BTL PT.
+          if(k==='proc' && spec.proc.product==='BTL PT') out['bible/'+reuse+'/product'] = 'BTL PT'; }
         else out['bible/'+nbrKey()] = nbrClean({...shared, ...spec[k], amount:amt, entry:entryId, kind:k, src:'nbr', createdAt:Date.now()});
       }
     } else if(ex){
@@ -15743,14 +15747,17 @@ function renderNbrBiblePaid(el){
 }
 /* Switch dates: product transfer fees still to come, by the date the mortgage product switches, as the
    Bible's "Pivot - PT Switch Dates": Prod Tfr lines with a switch date, not paid yet and not NPW, amount added up. */
-const nbrIsPT = l=> /^prod\s*tfr$/i.test(String(l && l.product || '').trim());
+const nbrIsPTName = p=> /^(prod\s*tfr|btl\s*p\.?\s*t)$/i.test(String(p || '').trim());
+const nbrIsPT = l=> nbrIsPTName(l && l.product);
+const nbrIsBtlPT = l=> /^btl/i.test(String(l && l.product || '').trim());
 function nbrSwitchLines(){
   return Object.entries(NBR_BIB).filter(([, l])=> l && nbrIsPT(l) && /^\d{4}-\d{2}-\d{2}/.test(l.switchDate||'') && !l.npw && !nbrLineAnyPaid(l))
     .map(([id, l])=> ({id, ...l}));
 }
 function renderNbrBibleSwitch(el){
   const all = nbrSwitchLines(), thisYm = nbrThisYm();
-  const lines = all.filter(l=> !nbrUI.bibAdv || (l.adv||'')===(nbrUI.bibAdv==='none' ? '' : nbrUI.bibAdv));
+  const lines = all.filter(l=> (!nbrUI.bibAdv || (l.adv||'')===(nbrUI.bibAdv==='none' ? '' : nbrUI.bibAdv))
+    && (!nbrUI.bibPT || (nbrUI.bibPT==='btl') === nbrIsBtlPT(l)));
   const ymOf = l=> l.switchDate.slice(0,7);
   const months = [...new Set(lines.map(ymOf))].sort();
   const sumOf = list=> list.reduce((t,l)=> t + n0(l.amount), 0);
@@ -15759,9 +15766,10 @@ function renderNbrBibleSwitch(el){
   const advIds = [...new Set(lines.map(l=> l.adv||''))].sort((a,b)=> nbrAdvName(a).localeCompare(nbrAdvName(b)));
   const nameOf = id=> id ? nbrAdvName(id) : '(no advisor)';
   const lateTag = ym=> ym < thisYm ? ' <span class="nbr-tag nbr-tag-warn" title="The switch date has passed but it isn\'t marked paid yet">not paid yet</span>' : '';
-  const monthTable = months.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Switch month</th><th class="num">Cases</th><th class="num">Amount</th></tr></thead><tbody>
-      ${months.map(ym=>{ const L = byMonth(ym); return `<tr class="nbr-click ${nbrUI.bibSwitchYm===ym ? 'nbr-sel' : ''}" data-switch-ym="${ym}"><td>${esc(nbrYmLabel(ym, true))}${lateTag(ym)}</td><td class="num">${L.length}</td><td class="num b">${nbrMoney(sumOf(L))}</td></tr>`; }).join('')}
-      <tr class="nbr-grand"><td>Grand total</td><td class="num">${lines.length}</td><td class="num b">${nbrMoney(total)}</td></tr></tbody></table></div>` : '';
+  const split = !nbrUI.bibPT, pt = L=> L.filter(l=> !nbrIsBtlPT(l)), btl = L=> L.filter(nbrIsBtlPT);
+  const monthTable = months.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Switch month</th><th class="num">Cases</th>${split ? '<th class="num">Prod Tfr</th><th class="num">BTL PT</th>' : ''}<th class="num">Amount</th></tr></thead><tbody>
+      ${months.map(ym=>{ const L = byMonth(ym); return `<tr class="nbr-click ${nbrUI.bibSwitchYm===ym ? 'nbr-sel' : ''}" data-switch-ym="${ym}"><td>${esc(nbrYmLabel(ym, true))}${lateTag(ym)}</td><td class="num">${L.length}</td>${split ? `<td class="num">${nbrMoneyCell(sumOf(pt(L)))}</td><td class="num">${nbrMoneyCell(sumOf(btl(L)))}</td>` : ''}<td class="num b">${nbrMoney(sumOf(L))}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Grand total</td><td class="num">${lines.length}</td>${split ? `<td class="num">${nbrMoneyCell(sumOf(pt(lines)))}</td><td class="num">${nbrMoneyCell(sumOf(btl(lines)))}</td>` : ''}<td class="num b">${nbrMoney(total)}</td></tr></tbody></table></div>` : '';
   const advTable = months.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Switch month</th>${advIds.map(id=> `<th class="num">${esc(nameOf(id))}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
       ${months.map(ym=>{ const L = byMonth(ym); return `<tr><td>${esc(nbrYmLabel(ym))}</td>${advIds.map(id=> `<td class="num">${nbrMoneyCell(sumOf(L.filter(l=> (l.adv||'')===id)))}</td>`).join('')}<td class="num b">${nbrMoney(sumOf(L))}</td></tr>`; }).join('')}
       <tr class="nbr-grand"><td>Grand total</td>${advIds.map(id=> `<td class="num">${nbrMoneyCell(sumOf(lines.filter(l=> (l.adv||'')===id)))}</td>`).join('')}<td class="num b">${nbrMoney(total)}</td></tr></tbody></table></div>` : '';
@@ -15778,7 +15786,7 @@ function renderNbrBibleSwitch(el){
   // Mums / Sols / Val fees on a product transfer carry its switch date too, but are never counted, so they're not listed.
   const notPT = Object.entries(NBR_BIB).filter(([, l])=> l && !nbrIsPT(l) && nbrProdKind(l.product)==='proc' && /^\d{4}-\d{2}-\d{2}/.test(l.switchDate||'') && !l.npw && !nbrLineAnyPaid(l) && l.switchDate.slice(0,7) >= thisYm
       && (!nbrUI.bibAdv || (l.adv||'')===(nbrUI.bibAdv==='none' ? '' : nbrUI.bibAdv))).map(([id, l])=> ({id, ...l})).sort((a,b)=> a.switchDate.localeCompare(b.switchDate));
-  const notPTHtml = notPT.length ? `<details class="nbr-notpt"><summary><b>${notPT.length}</b> other line${notPT.length===1 ? ' has' : 's have'} a switch date but ${notPT.length===1 ? 'isn\'t' : 'aren\'t'} counted, as ${notPT.length===1 ? 'it isn\'t' : 'they aren\'t'} Prod Tfr (${esc([...new Set(notPT.map(l=> l.product || 'no product'))].join(', '))}). Open a line to change its product if it's a product transfer.</summary>
+  const notPTHtml = notPT.length ? `<details class="nbr-notpt"><summary><b>${notPT.length}</b> other line${notPT.length===1 ? ' has' : 's have'} a switch date but ${notPT.length===1 ? 'isn\'t' : 'aren\'t'} counted, as ${notPT.length===1 ? 'it isn\'t' : 'they aren\'t'} Prod Tfr or BTL PT (${esc([...new Set(notPT.map(l=> l.product || 'no product'))].join(', '))}). Open a line to change its product if it's a product transfer.</summary>
       <div class="nml-table-wrap"><table class="nml-table nbr-table nbr-bib-table"><thead><tr><th>Switch date</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Amount</th></tr></thead><tbody>
       ${notPT.map(l=> `<tr class="nbr-click" data-nbr-line="${esc(l.id)}"><td>${esc(fmtDateSlash(l.switchDate))}</td><td>${esc(nameOf(l.adv))}</td><td><b>${esc(l.client||'')}</b></td><td>${esc(l.product||'—')}</td><td class="num">${nbrMoney(l.amount)}</td></tr>`).join('')}</tbody></table></div></details>` : '';
   const noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
@@ -15787,13 +15795,14 @@ function renderNbrBibleSwitch(el){
     ${nbrBibViewSwitch()}
     <div class="nbr-toolbar nbr-filters">
       <label>Advisor <select id="nbrBibAdv">${advOpts.map(([v,t])=> `<option value="${esc(v)}" ${v===nbrUI.bibAdv ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+      <label>Product <select id="nbrBibPT">${[['','Prod Tfr and BTL PT'], ['pt','Prod Tfr only'], ['btl','BTL PT only']].map(([v,t])=> `<option value="${v}" ${v===(nbrUI.bibPT||'') ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
     </div>
     <div class="stat-grid nbr-paid-cards">
       <div class="stat-card good"><div class="sv">${nbrMoney(ahead)}</div><div class="sl">To come from ${esc(nbrYmLabel(thisYm, true))} on</div></div>
       <div class="stat-card"><div class="sv">${lines.length}</div><div class="sl">Product transfers not paid yet</div></div>
       <div class="stat-card ${late.length ? 'warn' : ''}"><div class="sv">${nbrMoney(sumOf(late))}</div><div class="sl">Switch date passed, not paid yet · ${late.length} case${late.length===1 ? '' : 's'}</div></div>
     </div>
-    <p class="field-hint nbr-bib-note">Product transfer (Prod Tfr) fees in the Bible with a switch date that aren't paid yet and aren't NPW, by the date the mortgage product switches, as the Bible's "Pivot - PT Switch Dates". Switch dates come from the advisors' NBRs (the Switch Date column, or a date written in the notes such as ‘Switching 01/12/2026’) and the Bible.</p>
+    <p class="field-hint nbr-bib-note">Product transfer fees (Prod Tfr and BTL PT) in the Bible with a switch date that aren't paid yet and aren't NPW, by the date the mortgage product switches, as the Bible's "Pivot - PT Switch Dates". Switch dates come from the advisors' NBRs (the Switch Date column, or a date written in the notes such as ‘Switching 01/12/2026’) and the Bible.</p>
     ${lines.length ? `<div class="nbr-switch-grid">
       <div><h2 class="nbr-h2">Summary by month</h2>${monthTable}</div>
       <div><h2 class="nbr-h2">By switch date</h2>${dayTable}</div>
@@ -15803,6 +15812,7 @@ function renderNbrBibleSwitch(el){
     <h2 class="nbr-h2">The cases${nbrUI.bibSwitchYm ? ` · ${esc(nbrYmLabel(nbrUI.bibSwitchYm, true))} <button type="button" class="linkish" id="nbrSwitchAll">Show every month</button>` : ''}</h2>${caseTable}`
     : '<div class="nml-empty">No product transfers with a switch date are waiting to be paid. Switch dates come in from the Switch Date column on the advisors\' NBRs when they\'re uploaded, or from the Bible.</div>'}`;
   document.getElementById('nbrBibAdv').addEventListener('change', e=>{ nbrUI.bibAdv = e.target.value; renderNbrBible(); });
+  document.getElementById('nbrBibPT').addEventListener('change', e=>{ nbrUI.bibPT = e.target.value; renderNbrBible(); });
   el.querySelectorAll('[data-switch-ym]').forEach(r=> r.addEventListener('click', ()=>{ nbrUI.bibSwitchYm = nbrUI.bibSwitchYm===r.dataset.switchYm ? '' : r.dataset.switchYm; renderNbrBible(); }));
   const sa = document.getElementById('nbrSwitchAll'); if(sa) sa.addEventListener('click', ()=>{ nbrUI.bibSwitchYm = ''; renderNbrBible(); });
   nbrBindBibViews(el);
@@ -16397,8 +16407,8 @@ function nbrNbrDiff(it, advOverride){
   const key = advId+'|'+nbrVer; if(it._diff && it._diff.key===key) return it._diff;
   const pool = {};
   if(advId) Object.entries(NBR_ENT).forEach(([id,e])=>{ if(e && e.adv===advId){ const k = e.month+'|'+nbrClientKey(e.client); (pool[k] || (pool[k] = [])).push({id, e}); } });
-  const fresh = [], same = [], changed = [], done = new Set();
-  p.entries.forEach((e,i)=>{ const L = pool[e.month+'|'+nbrClientKey(e.client)] || [], x = L.find(y=> !y.used && nbrFeeKey(y.e)===nbrFeeKey(e)); if(x){ x.used = true; same.push(i); done.add(i); } });
+  const fresh = [], same = [], sameIds = [], changed = [], done = new Set();
+  p.entries.forEach((e,i)=>{ const L = pool[e.month+'|'+nbrClientKey(e.client)] || [], x = L.find(y=> !y.used && nbrFeeKey(y.e)===nbrFeeKey(e)); if(x){ x.used = true; same.push(i); sameIds.push({i, id:x.id}); done.add(i); } });
   p.entries.forEach((e,i)=>{ if(done.has(i)) return; const L = pool[e.month+'|'+nbrClientKey(e.client)] || [], x = L.find(y=> !y.used); if(x){ x.used = true; changed.push({i, id:x.id}); } else fresh.push(i); });
   // Cases here for the months in the file that aren't on the NBR any more (deleted, or the client renamed).
   const months = new Set(Object.keys(p.months)), gone = [];
@@ -16409,7 +16419,7 @@ function nbrNbrDiff(it, advOverride){
   const usedNpw = new Set();
   const freshNpw = p.npw.filter(x=>{ const L = haveNpw[npwKey(x)] || [], id = L.find(j=> !usedNpw.has(j)); if(id){ usedNpw.add(id); return false; } return true; });
   const goneNpw = advId ? Object.entries(NBR_NPW).filter(([id,x])=> x && x.adv===advId && !usedNpw.has(id) && (npwMonths.has(x.month) || years.has(String(x.month||'').slice(0,4)))).map(([id])=> id) : [];
-  return (it._diff = {key, fresh, same, changed, freshNpw, gone, goneNpw});
+  return (it._diff = {key, fresh, same, sameIds, changed, freshNpw, gone, goneNpw});
 }
 // Bible lines with no NBR case linked yet (e.g. from a Bible upload), so a new case can be linked to its line instead of a second copy.
 function nbrBibleReuser(adv, alsoFree, rec){
@@ -16487,6 +16497,17 @@ function nbrNbrUploadPatches(it, toBible, made){
     const cur = NBR_ENT[id] || {}, data = {...cur, ...p.entries[i], adv, updatedAt:now, updatedBy:by};
     updates['entries/'+id] = data; updated++;
     if(toBible) nbrMergePatch(updates, withAdv(()=> nbrLinePatches(id, data, {reuse: reuser(data)})));
+  });
+  // A product transfer's fee line follows the NBR's Type of sale: BTL PT or Prod Tfr (a Bible upload can't tell them apart).
+  if(addOnly && D) [...(D.sameIds||[]), ...D.changed].forEach(({i, id})=>{
+    const want = nbrSaleProduct(p.entries[i].saleType);
+    Object.entries(NBR_BIB).forEach(([lid, l])=>{
+      if(!l || l.entry!==id || l.kind!=='proc') return;
+      const cur = String(l.product||'');
+      const to = want==='BTL PT' && cur!=='BTL PT' && nbrProdKind(cur)==='proc' ? 'BTL PT' : want==='Prod Tfr' && cur==='BTL PT' ? 'Prod Tfr' : '';
+      if(!to) return;
+      if(updates['bible/'+lid] && typeof updates['bible/'+lid]==='object') updates['bible/'+lid].product = to; else updates['bible/'+lid+'/product'] = to;
+    });
   });
   const npwAdd = addOnly ? D.freshNpw : p.npw;
   npwAdd.forEach(x=>{ updates['npw/'+nbrKey()] = {...x, adv, src:'upload', updatedAt:now, updatedBy:by}; });
@@ -16568,6 +16589,7 @@ const nbrBlank = v=> v==null || v==='' || (typeof v==='number' && !v);
 // names it: e.g. the Bible says Prod Tfr where the NBR's blank Type of sale gave Proc Fee. Same kind of fee only.
 function nbrBibleProductFix(line, row){
   const a = String(line && line.product || '').trim(), b = String(row && row.product || '').trim();
+  if(nbrIsPTName(a) && nbrIsPTName(b)) return false;
   return !!(line && line.entry && b && a.toLowerCase()!==b.toLowerCase() && nbrProdKind(a)===nbrProdKind(b) && nbrProdKind(b)==='proc');
 }
 function nbrBibleMatch(it){

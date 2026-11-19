@@ -924,6 +924,7 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-nofee input{accent-color:var(--red); width:17px; height:17px;}
 .nbr-off{opacity:.45;}
 .nbr-tag-nofee{background:var(--red-bg); color:var(--red); border-color:transparent;}
+.speed-pre{margin:0; padding:14px 16px; border-radius:10px; background:var(--surface); border:1px solid var(--border); font-size:12.5px; line-height:1.5; white-space:pre-wrap; overflow-x:auto;}
 .nbr-junk{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:10px 0; padding:10px 14px; border-radius:10px; background:var(--amber-bg); font-size:13px;}
 .nbr-combined{margin:4px 0 10px; padding:8px 12px; border-radius:8px; background:var(--blue-bg); color:var(--text);} .nbr-notpt .nml-table-wrap{margin-top:10px;}
 @media (max-width:820px){ .nbr-switch-grid{grid-template-columns:1fr;} }
@@ -3335,6 +3336,15 @@ body:not(.ai-on) #askBtn{display:none;}
           <div id="recycleBinEmpty" class="settings-empty hidden">Recycle Bin is empty.</div>
         </div>
       </div>
+      <div id="settingsSpeedSection" class="hidden" style="margin-top:34px;">
+        <div class="page-head" style="margin-bottom:16px;">
+          <div>
+            <h1 style="font-size:19px;">Speed check</h1>
+            <p class="sub">How long the dashboard takes on this computer with your real data, since this page was opened. Use the dashboard as normal for a few minutes (open each section and page), then come back here and press Copy to send it on.</p>
+          </div>
+        </div>
+        <div id="speedBody"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -4069,6 +4079,7 @@ const WEAK_PIN_HELP = 'Avoid repeated digits (like 0000 or 1111) and runs (like 
    ---------------------------------------------------------------------------- */
 let USERS = {};        // uid -> {name, role, pin}
 let LEADS = {};        // leadId -> lead object (incl. audit)
+const SPEED = {marks:{}, sizes:{}, pages:[]}; // Speed check timings (see renderSpeedCheck)
 let NOTIFS = {};        // notifId -> notif object
 let CLIENTSOURCES = {}; // sourceId -> name string, managed from Settings
 /* PINs live at /pins/{colleagueId}, readable only by signed-in colleagues.
@@ -4844,6 +4855,7 @@ function celebrate(msg, big=true){
 
 let entryFromPin = false; // the sign-in animation plays after typing a PIN, not on a refresh
 function enterApp(){
+  speedMark('Signed in, app shown');
   if(forcePinActive) return;
   aiSync(); mySigListen();
   const ls = document.getElementById('loginScreen'), shell = document.getElementById('appShell');
@@ -4896,6 +4908,7 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
   tab.addEventListener('click', ()=>{ if(tab.dataset.page==='settings') settingsSel = null; goPage(tab.dataset.page); });
 });
 function goPage(page){
+  const speedT = performance.now(); requestAnimationFrame(()=> requestAnimationFrame(()=> speedPage(page, performance.now() - speedT)));
   if(/^nbr/.test(page) && page!=='nbrBoard' && currentUser && !nbrAccess()) page = 'nbrBoard';
   document.querySelectorAll('.nav-tab').forEach(t=> t.classList.toggle('active', t.dataset.page===page));
   document.getElementById('page-dashboard').classList.toggle('hidden', page!=='dashboard');
@@ -4924,6 +4937,8 @@ function goPage(page){
     document.getElementById('settingsUploadSection').classList.toggle('hidden', currentUser.role!=='management');
     ['settingsBulkDeleteSection','settingsBackupSection','settingsRecycleBinSection'].forEach(id=>
       document.getElementById(id).classList.toggle('hidden', isMapa));
+    document.getElementById('settingsSpeedSection').classList.toggle('hidden', !(currentUser.role==='management' || currentUser.role==='admin'));
+    renderSpeedCheck();
     renderMyAccount();
     renderAppSettings();
     document.getElementById('settingsContentSection').classList.toggle('hidden', currentUser.role!=='management');
@@ -5846,6 +5861,7 @@ function startSibListener(){
   sibListening = true;
   db.ref('sib/cases').on('value', snap=>{
     SIB = snap.val() || {}; sibLoaded = true;
+    if(SPEED.marks['Send in Blue loaded']==null){ speedMark('Send in Blue loaded'); speedSizeLater('Send in Blue', ()=> SIB); }
     if(!document.getElementById('page-sib').classList.contains('hidden')) renderSib();
     renderSibInsights();
     if(sibOpenKey && document.getElementById('sibOverlay').classList.contains('open')) renderSibCase();
@@ -7279,6 +7295,8 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19n', date:'2026-11-19', items:[ {text:"⏱️ <b>Speed check</b> in Settings: how long loading and each page take on this computer with the real data. Use the dashboard for a few minutes, then copy it and send it on.", roles:['admin','management']},
+    {text:"🧾 <b>+ Add case</b> on an advisor's NBR now works like an NBR upload: it goes in its Friday week, picks up a switch date written in the notes, and links to a line the Bible already has for the case instead of adding it twice.", roles:['admin','management']} ]},
   {id:'2026-11-19m', date:'2026-11-19', items:[ {text:"🚫 <b>No fee to be charged for client</b>: a red tick box on the NBR case form (between Sols and Val). Ticked, the case has no mums fee, shows <b>No fee</b> on the advisor's NBR, and its Bible line says \u201cno fee\u201d in When / How, as the Bible does; a case with no fees at all still gets a £0 Bible line saying \u201cno fee\u201d for reporting.", roles:['admin','management']} ]},
   {id:'2026-11-19l', date:'2026-11-19', items:[ {text:"🚫 <b>NPWs follow the Excel Bible</b>: a Bible upload now gives each NPW line the Excel Bible's amount and period (a line made from an NBR case used to keep the NBR's), and a line that's an NPW here but not in the Excel Bible stops being one, so the NPW figures match. NPWs don't count as written, banked or owed. <b>Upload the Bible again</b>.", roles:['admin','management']} ]},
   {id:'2026-11-19k', date:'2026-11-19', items:[ {text:"🚫 <b>NPW check</b>: uploading the Bible now ends with an NPW check for each year (the Excel Bible's NPW rows and total against the dashboard's) and lists any Excel NPW rows that aren't an NPW here. NPWs on fees paid in parts or combined into one line are now kept.", roles:['admin','management']} ]},
@@ -7635,6 +7653,35 @@ function showWhatsNew(all){
 document.getElementById('whatsNewBtn').addEventListener('click', ()=>{ document.getElementById('bellPanel').classList.remove('open'); showWhatsNew(true); });
 
 
+/* ---- Speed check (Management / Admin): timings on this computer with the real data, to send on ----
+   Times are from when this page was opened (the browser's own clock). Sizes are how much data each section holds. */
+function speedMark(k){ if(SPEED.marks[k]==null) SPEED.marks[k] = Math.round(performance.now()); }
+function speedSizeLater(k, get){ setTimeout(()=>{ if(SPEED.sizes[k]!=null) return; try{ SPEED.sizes[k] = JSON.stringify(get() || {}).length; }catch(e){} }, 8000); }
+const SPEED_PAGE_NAMES = {dashboard:'Protection board', calendar:'Calendar', insights:'Insights', useful:'Useful Info', settings:'Settings', logins:'Logins', themes:'Themes', sib:'Send in Blue', sibInsights:'Send in Blue Insights',
+  com:'Commercial', nbrBoard:'Salesboard', nbrReg:'Advisor NBR', nbrBible:'Bible', nbrBC:'B&C', nbrWills:'Wills', nbrTargets:'Targets', nbrSetup:'New Business uploads'};
+function speedPage(page, ms){ SPEED.pages.push({page, ms:Math.round(ms)}); if(SPEED.pages.length > 200) SPEED.pages.shift(); }
+function speedText(){
+  const lines = ['Dashboard speed check', `When: ${new Date().toLocaleString('en-GB')}`, `Who: ${currentUser ? currentUser.role : ''}`,
+    `Computer: ${navigator.hardwareConcurrency || '?'} cores, ${navigator.deviceMemory ? navigator.deviceMemory+' GB' : '? GB'} memory; ${(navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || ''}; ${/Edg\//.test(navigator.userAgent) ? 'Edge' : /Chrome\//.test(navigator.userAgent) ? 'Chrome' : /Firefox\//.test(navigator.userAgent) ? 'Firefox' : /Safari\//.test(navigator.userAgent) ? 'Safari' : 'browser'}`,
+    `Connection: ${navigator.connection ? `${navigator.connection.effectiveType || '?'}, about ${navigator.connection.downlink || '?'} Mbit/s, ${navigator.connection.rtt || '?'} ms` : 'not reported'}`, '', 'Loading (seconds after the page was opened):'];
+  Object.entries(SPEED.marks).sort((a,b)=> a[1]-b[1]).forEach(([k, v])=> lines.push(`  ${k}: ${(v/1000).toFixed(1)} s`));
+  lines.push('', 'Data held:');
+  Object.entries(SPEED.sizes).forEach(([k, v])=> lines.push(`  ${k}: ${(v/1048576).toFixed(1)} MB`));
+  if(LEADS) lines.push(`  Protection cases: ${Object.keys(LEADS).length}`); if(sibLoaded) lines.push(`  Send in Blue cases: ${Object.keys(SIB).length}`);
+  if(nbrFullReady && nbrFullReady()) lines.push(`  Bible lines: ${Object.keys(NBR_BIB_ALL).length}, NBR cases: ${Object.keys(NBR_ENT).length}`);
+  lines.push('', 'Opening each page (milliseconds: typical / slowest, times opened):');
+  const by = {}; SPEED.pages.forEach(x=> (by[x.page] || (by[x.page] = [])).push(x.ms));
+  Object.entries(by).sort((a,b)=> Math.max(...b[1]) - Math.max(...a[1])).forEach(([pg, v])=>{ const srt = v.slice().sort((a,b)=> a-b);
+    lines.push(`  ${SPEED_PAGE_NAMES[pg] || pg}: ${srt[Math.floor(srt.length/2)]} / ${srt[srt.length-1]} (${v.length}x)`); });
+  return lines.join('\n');
+}
+function renderSpeedCheck(){
+  const el = document.getElementById('speedBody'); if(!el) return;
+  el.innerHTML = `<pre class="speed-pre">${esc(speedText())}</pre><div style="display:flex; gap:10px; margin-top:10px;"><button type="button" class="btn btn-primary btn-sm" id="speedCopy">Copy</button><button type="button" class="btn btn-secondary btn-sm" id="speedRefresh">Refresh</button></div>`;
+  document.getElementById('speedCopy').addEventListener('click', ()=>{ const t = speedText(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(()=> toast('Speed check copied. Paste it into your message.', 'success'), ()=> toast('Select the text above and copy it.', 'error')); });
+  document.getElementById('speedRefresh').addEventListener('click', renderSpeedCheck);
+}
+
 /* ---- Settings home: picture buttons that each open a section ----
    Sections a role can't use stay hidden (class "hidden"); the chosen one is
    shown on its own (class "set-off" on the rest) with a "← Settings" link. */
@@ -7649,6 +7696,7 @@ const SETTINGS_SECTIONS = [
   ['settingsBulkDeleteSection', 'Bulk delete', 'trash', 'Delete protection leads by Task Created date.'],
   ['settingsRecycleBinSection', 'Recycle Bin', 'restore', 'Restore protection leads deleted in the last 30 days.'],
   ['settingsBackupSection', 'Backup', 'backup', 'Daily backups and downloading a backup now.'],
+  ['settingsSpeedSection', 'Speed check', 'bell', 'How long loading and each page take on this computer, to send on.'],
 ];
 let settingsSel = null; // null = the Settings home page
 function renderSettingsNav(){
@@ -8258,6 +8306,7 @@ function startAuthedListeners(){
 
   db.ref('leads').on('value', snap=>{
     LEADS = snap.val() || {};
+    if(SPEED.marks['Protection cases loaded']==null){ speedMark('Protection cases loaded'); requestAnimationFrame(()=> speedMark('Protection board drawn')); speedSizeLater('Protection cases', ()=> LEADS); }
     leadsLoaded = true; leadsLive = true;
     saveBootCache();
     setTimeout(()=>{ openPendingLead(); checkCallReminders(); }, 0);
@@ -11966,7 +12015,7 @@ const AIQ_SETS = {
       ['protection','n','Protection £'], ['sols_ref','n','Sols referral £'], ['val_ref','n','Val referral £'], ['total','n','All the fees £'],
       ['app_submitted','d','Date the application was submitted'], ['switch_date','d','Date a product transfer switches']],
     rows: ()=> Object.values(NBR_ENT).filter(e=> e && e.month).map(e=> ({advisor:nbrAdvName(e.adv), office:aiqAdvOffice(e.adv), month:aiqYm(e.month), week:aiqDate(e.week),
-      client:e.client || '', lender:e.lender || '', sale_type:e.saleType || '', lead_source:e.leadProv || '', proc_fee:aiqNum(e.proc), mums_fee:aiqNum(e.mums),
+      client:e.client || '', lender:e.lender || '', sale_type:e.saleType || '', lead_source:e.leadProvider || e.leadProv || '', proc_fee:aiqNum(e.proc), mums_fee:aiqNum(e.mums),
       protection:aiqNum(e.prot), sols_ref:aiqNum(e.sols), val_ref:aiqNum(e.val), total:nbrRound(nbrEntTotal(e)), app_submitted:aiqDate(e.appSub), switch_date:aiqDate(e.switchDate)})),
   },
   nbr_npw: {
@@ -14569,6 +14618,7 @@ function startComListener(){
   comListening = true;
   db.ref('commercial/cases').on('value', snap=>{
     COM = snap.val() || {}; comLoaded = true;
+    if(SPEED.marks['Commercial loaded']==null){ speedMark('Commercial loaded'); speedSizeLater('Commercial', ()=> COM); }
     if(!document.getElementById('page-com').classList.contains('hidden')) renderCom();
     if(comOpenId && document.getElementById('comOverlay').classList.contains('open')) renderComCase();
     if(APP_MODE==='com' && !document.getElementById('page-calendar').classList.contains('hidden')) renderCalendar();
@@ -15206,6 +15256,7 @@ function startNbrListener(){
       const v = snap.val() || {};
       if(k==='advisors') NBR_ADV = v; else if(k==='entries') NBR_ENT = v; else if(k==='npw') NBR_NPW = v; else if(k==='bible'){ NBR_BIB_ALL = v; NBR_BIB = nbrBibVisible(v); } else if(k==='bc') NBR_BC = v; else if(k==='wills') NBR_WILLS = v; else if(k==='targets') NBR_TGT = v; else NBR_CFG = v;
       nbrLoaded[k] = true; nbrVer++; nbrRenderSoon(); nbrPublishSoon();
+      if(nbrFullReady() && SPEED.marks['New Business loaded']==null){ speedMark('New Business loaded'); speedSizeLater('New Business (NBRs, Bible, B&C, Wills)', ()=> ({a:NBR_ADV, e:NBR_ENT, n:NBR_NPW, b:NBR_BIB_ALL, c:NBR_BC, w:NBR_WILLS, t:NBR_TGT})); }
       if(nbrFullReady() && nbrSumListening) stopNbrSummary();
     }, ()=>{
       nbrError = 'Could not load New Business. Publish the updated Firebase rules, then refresh.';
@@ -15552,13 +15603,17 @@ function openNbrEntry(id, preset={}){
       if(!data.adv){ toast('Choose the advisor.', 'error'); return false; }
       if(!data.month){ toast('Choose the register month.', 'error'); return false; }
       if(!data.client){ toast('Enter the client.', 'error'); return false; }
-      if(!data.week || data.week.slice(0,7)!==data.month) data.week = nbrWeekFor(data.week || data.month+'-01', data.month);
+      // As an NBR upload does: the case goes in its Friday week block, and a switch date written in the notes is used.
+      data.week = nbrWeekFor(data.week && data.week.slice(0,7)===data.month ? data.week : data.month+'-01', data.month);
+      if(!data.switchDate){ const sd = nbrSwitchFromNotes(data.notes, data.month); if(sd) data.switchDate = sd; }
       const key = id || nbrKey(), old = id ? NBR_ENT[id] : null;
       data.createdAt = old && old.createdAt || Date.now(); data.createdBy = old && old.createdBy || currentUser.name;
       if(old && old.src) data.src = old.src;
       data.updatedAt = Date.now(); data.updatedBy = currentUser.name;
       const toBible = !!nfv('nfToBible') || (id && linked > 0);
-      const updates = {['entries/'+key]: data, ...(toBible ? nbrLinePatches(key, data) : {})};
+      // A new case is linked to a line the Bible already has for it (e.g. from a Bible upload), as an NBR upload does, not added twice.
+      const reuse = toBible && !linked ? nbrBibleReuser(data.adv)(data) : null;
+      const updates = {['entries/'+key]: data, ...(toBible ? nbrLinePatches(key, data, reuse ? {reuse} : {}) : {})};
       nbrUI.regAdv = data.adv; nbrUI.regMonth = data.month; nbrUI.regYear = +data.month.slice(0,4);
       return nbrWrite(updates).then(()=> toast(id ? 'Case saved.' : 'Case added'+(toBible ? ' (and to the Bible).' : '.'), 'success'));
     },

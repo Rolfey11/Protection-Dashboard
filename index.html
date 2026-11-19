@@ -918,6 +918,8 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-switch-days{font-size:12.5px;}
 .nbr-notpt{margin:14px 0 4px; padding:10px 14px; border-radius:10px; background:var(--amber-bg); font-size:13px;}
 .nbr-notpt summary{cursor:pointer;}
+.nbr-npwcheck{margin-top:10px; padding:10px 12px; border-radius:8px; background:var(--surface); border:1px solid var(--border); font-size:13px;}
+.nbr-npwcheck ul{margin:4px 0 6px; padding-left:18px;} .nbr-npwcheck p{margin:4px 0 0;} .nbr-npwcheck summary{cursor:pointer;} .nbr-npwcheck .nml-table-wrap{margin-top:8px; max-height:320px; overflow:auto;}
 .nbr-junk{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:10px 0; padding:10px 14px; border-radius:10px; background:var(--amber-bg); font-size:13px;}
 .nbr-combined{margin:4px 0 10px; padding:8px 12px; border-radius:8px; background:var(--blue-bg); color:var(--text);} .nbr-notpt .nml-table-wrap{margin-top:10px;}
 @media (max-width:820px){ .nbr-switch-grid{grid-template-columns:1fr;} }
@@ -7273,6 +7275,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19k', date:'2026-11-19', items:[ {text:"🚫 <b>NPW check</b>: uploading the Bible now ends with an NPW check for each year (the Excel Bible's NPW rows and total against the dashboard's) and lists any Excel NPW rows that aren't an NPW here. NPWs on fees paid in parts or combined into one line are now kept.", roles:['admin','management']} ]},
   {id:'2026-11-19j', date:'2026-11-19', items:[ {text:"🚫 <b>NPWs in the Bible</b>: every NPW row in your Excel Bible now comes in on upload, even when its case is no longer on the advisor's NBR (it usually comes off the month sheet when it goes NPW), so the Bible page's NPW card matches the Excel Bible. They don't count as written or owed. <b>Upload the Bible again</b> with Fill in the blanks.", roles:['admin','management']} ]},
   {id:'2026-11-19i', date:'2026-11-19', items:[ {text:"🏠 <b>B&C and Life Ins</b>: a Life Ins policy the B&C team wrote (e.g. \u201cLV GI\u201d on the register, LV Life Ins in the Bible) now matches its Bible row, so it shows as Life Ins with the Bible's lender and its date paid, still under B&C. B&C register dates typed day/month into a month/day cell (10/02 read as 2 October) are put right by the month's sheet. <b>Upload the B&C registers and then the Bible again</b> to put existing ones right.", roles:['admin','management']} ]},
   {id:'2026-11-19h', date:'2026-11-19', items:[ {text:"🧾 <b>Bible</b>: when an NBR has a fee as two lines (e.g. a change of lender adds a small second proc fee) but the Bible has one line for the total, uploading the Bible now makes them one line with the Bible's lender and amount, so reports match the Bible. <b>Upload the Bible again</b> with Fill in the blanks to put existing ones right.", roles:['admin','management']} ]},
@@ -17415,6 +17418,49 @@ function nbrBibleMatch(it){
   });
   return out;
 }
+// The Bible as it will be once these updates are written (to check the result before it's saved).
+function nbrBibAfter(updates){
+  const B = {};
+  Object.entries(NBR_BIB_ALL).forEach(([k, l])=>{ if(l) B[k] = JSON.parse(JSON.stringify(l)); });
+  Object.entries(updates).forEach(([k, v])=>{
+    const parts = k.split('/'); if(parts[0]!=='bible' || !parts[1]) return;
+    const id = parts[1];
+    if(parts.length===2){ if(v===null) delete B[id]; else B[id] = JSON.parse(JSON.stringify(v)); return; }
+    let o = B[id] || (B[id] = {});
+    for(let i=2; i<parts.length-1; i++) o = o[parts[i]] && typeof o[parts[i]]==='object' ? o[parts[i]] : (o[parts[i]] = {});
+    if(v===null) delete o[parts[parts.length-1]]; else o[parts[parts.length-1]] = v;
+  });
+  return nbrBibVisible(B);
+}
+/* NPW check: for each year in the file, the NPW rows in the Excel Bible against the NPW lines here once the upload is in,
+   and why they differ: an Excel NPW row with no NPW line here; one whose line here is in another year (a line made from
+   an NBR case keeps the NBR's month); and NPW lines here the Excel Bible doesn't have as NPW. A fee the Bible has as two
+   or more rows (paid in parts) is one line here, so the line count can be lower while the total agrees. */
+function nbrNpwCheck(p, ids, updates){
+  const rows = p.lines.filter(l=> l.npw && !(l.code && !(l.code in ids)));
+  if(!rows.length) return '';
+  const fyOf = ym=> ym ? nbrFyOf(ym) : '(no period)', fyName = fy=> fy==='(no period)' ? 'No period' : nbrFyLabel(fy);
+  const fys = [...new Set(rows.map(l=> fyOf(l.month)))].sort();
+  const B = Object.values(nbrBibAfter(updates)).filter(l=> l && l.npw);
+  const near = (a, b)=>{ const x = nbrMonthNo(a), y = nbrMonthNo(b); return x==null || y==null || Math.abs(x - y) <= 3; };
+  const same = (a, b)=> nbrNameScore(nbrNameToks(a.client), nbrNameToks(b.client)) >= 2 && near(a.month, b.month);
+  const notHere = [], otherYear = [], notThere = [];
+  rows.forEach(r=>{ const m = B.filter(l=> same(r, l)); if(!m.length) notHere.push(r); else if(!m.some(l=> fyOf(l.month)===fyOf(r.month))) otherYear.push([r, m[0]]); });
+  B.filter(l=> fys.includes(fyOf(l.month))).forEach(l=>{ if(!rows.some(r=> same(r, l))) notThere.push(l); });
+  const sum = list=> list.reduce((t, l)=> t + n0(l.amount), 0), money = v=> esc(nbrMoney(v)), per = l=> esc(l.month ? nbrYmLabel(l.month) : '—');
+  const yr = fy=>{ const R = rows.filter(l=> fyOf(l.month)===fy), H = B.filter(l=> fyOf(l.month)===fy);
+    return `<li>${esc(fyName(fy))}: Excel Bible <b>${R.length}</b> NPW row${R.length===1?'':'s'}, ${money(sum(R))} · here <b>${H.length}</b> line${H.length===1?'':'s'}, ${money(sum(H))}</li>`; };
+  const table = (title, head, body)=> body.length ? `<details><summary>${title}</summary><div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr>${head}</tr></thead><tbody>${body.join('')}</tbody></table></div></details>` : '';
+  const advOf = l=> esc(l.code || (l.adv ? nbrAdvName(l.adv) : ''));
+  return `<div class="nbr-npwcheck"><b>NPW check</b><ul>${fys.map(yr).join('')}</ul>${
+    table(`${notHere.length} NPW row${notHere.length===1?'':'s'} in the Excel Bible ${notHere.length===1?'isn\'t an NPW':'aren\'t NPWs'} here`, '<th>Period</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Amount</th>',
+      notHere.map(r=> `<tr><td>${per(r)}</td><td>${advOf(r)}</td><td>${esc(r.client||'')}</td><td>${esc(r.product||'')}</td><td class="num">${money(r.amount)}</td></tr>`))}${
+    table(`${otherYear.length} ${otherYear.length===1?'is an NPW':'are NPWs'} here but in another year (the line keeps the NBR's month)`, '<th>Excel period</th><th>Here</th><th>Client</th><th>Product</th><th class="num">Excel amount</th><th class="num">Here</th>',
+      otherYear.map(([r, l])=> `<tr><td>${per(r)}</td><td>${per(l)}</td><td>${esc(r.client||'')}</td><td>${esc(r.product||'')}</td><td class="num">${money(r.amount)}</td><td class="num">${money(l.amount)}</td></tr>`))}${
+    table(`${notThere.length} NPW line${notThere.length===1?'':'s'} here ${notThere.length===1?'isn\'t an NPW':'aren\'t NPWs'} in the Excel Bible`, '<th>Period</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Amount</th>',
+      notThere.map(l=> `<tr><td>${per(l)}</td><td>${advOf(l)}</td><td>${esc(l.client||'')}</td><td>${esc(l.product||'')}</td><td class="num">${money(l.amount)}</td></tr>`))}${
+    !notHere.length && !otherYear.length && !notThere.length ? '<p>The NPWs here match the Excel Bible.</p>' : ''}</div>`;
+}
 function nbrBibleFillPatches(it){
   const p = it.parsed, updates = {}, now = Date.now(), by = currentUser.name, ids = {};
   Object.entries(it.map).forEach(([code, v])=>{
@@ -17435,13 +17481,14 @@ function nbrBibleFillPatches(it){
     if(t.type==='entry'){
       const e = NBR_ENT[t.id] || {}, a = NBR_ADV[e.adv] || {}, pays = {};
       rest.forEach(r=>{ pays[nbrKey()] = payOf(r.l); if(r.l.datePaid) M.paysAdded++; });
-      newLine(first, {entry:t.id, kind:t.k, amount: nbrRound(t.amt), pays, ...(first.office ? {} : a.office ? {office:a.office} : {})});
+      newLine(first, {entry:t.id, kind:t.k, amount: nbrRound(t.amt), pays, ...(rows.some(r=> r.l.npw) ? {npw:true} : {}), ...(first.office ? {} : a.office ? {office:a.office} : {})});
       if(first.datePaid) M.paidAdded++;
       return;
     }
     const L = t.l, base = 'bible/'+t.id+'/';
     // The line's own payment: fill in only what's blank.
     let touched = false;
+    if(rows.some(r=> r.l.npw) && !L.npw){ updates[base+'npw'] = true; touched = true; }
     if(nbrBibleProductFix(L, first)){ updates[base+'product'] = first.product; touched = true; }
     NBR_FILL_FIELDS.filter(f=> f!=='amount').forEach(f=>{ if(!nbrBlank(first[f]) && nbrBlank(L[f])){ updates[base+f] = first[f]; touched = true; if(f==='datePaid') M.paidAdded++; } });
     // The others: matched to a payment line already here (same date paid, else same amount), otherwise added.
@@ -17463,6 +17510,7 @@ function nbrBibleFillPatches(it){
       mainId = main.id; const L = main.l, base = 'bible/'+mainId+'/';
       NBR_FILL_FIELDS.forEach(f=>{ if(f!=='amount' && !nbrBlank(l[f]) && nbrBlank(L[f])){ updates[base+f] = l[f]; if(f==='datePaid') M.paidAdded++; } });
       if(nbrBibleProductFix(L, l)) updates[base+'product'] = l.product;
+      if(l.npw && !L.npw) updates[base+'npw'] = true;
       updates[base+'amount'] = nbrRound(l.amount);
       if(!nbrBlank(l.provider)) updates[base+'provider'] = l.provider;
       otherIds.forEach(k=>{ updates[base+'covers/'+k] = true; });
@@ -17501,7 +17549,7 @@ function nbrBibleFillPatches(it){
   if(npwIn.length) bits.push(`added ${npwIn.length} NPW${npwIn.length===1?'':'s'} with no case on the NBR`);
   if(M.same) bits.push(`${M.same} already up to date`);
   if(left) bits.push(`left out ${left}`);
-  return {updates, msg: (bits.join('; ') || 'nothing to change') + '.'};
+  return {updates, msg: (bits.join('; ') || 'nothing to change') + '.' + nbrNpwCheck(p, ids, updates)};
 }
 // Writes in chunks so a big file doesn't hit the size limit, showing progress on the file's card.
 function nbrWriteChunks(updates, it){

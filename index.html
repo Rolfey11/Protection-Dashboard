@@ -1992,6 +1992,10 @@ body:not(.ai-on) #askBtn{display:none;}
 .ask-tbl td.num, .ask-tbl th.num{text-align:right; font-variant-numeric:tabular-nums;}
 .ask-tbl tr:last-child td{border-bottom:0;}
 .ask-xl{font-size:12px; margin-top:4px;}
+.ask-chart{margin:8px 0 12px; padding:12px 14px 8px; border:1px solid var(--border); border-radius:10px; background:var(--surface);}
+.ask-chart svg text{font-variant-numeric:tabular-nums;}
+.ask-chart-err{font-size:12px; color:var(--text-muted);}
+.ask-ppt{display:flex; align-items:center; gap:10px; margin-top:10px; padding-top:10px; border-top:1px solid color-mix(in srgb, #7C3AED 18%, var(--border)); font-size:12px; color:var(--text-muted);}
 .ask-empty{color:var(--text-muted); font-size:13px;}
 .ask-empty .ask-eg{display:block; width:100%; text-align:left; margin-top:8px; padding:8px 11px; border:1px solid var(--border); border-radius:10px; background:var(--surface); font:inherit; font-size:12.5px; color:var(--text); cursor:pointer;}
 .ask-empty .ask-eg:hover{border-color:#7C3AED;}
@@ -7267,6 +7271,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19g', date:'2026-11-19', items:[ {text:"📊 <b>Charts and PowerPoint in Ask Claude</b>: ask for a chart (bar, line, pie…) and Claude draws it; save it as a picture, or press <b>⬇ PowerPoint</b> on any report for slides with its tables and charts, ready to edit. Needs the newest AI assistant code in Cloudflare.", roles:['admin','management']} ]},
   {id:'2026-11-19f', date:'2026-11-19', items:[ {text:"✨ <b>Ask Claude for a report</b>: Claude can now look at the tracker's data to answer, e.g. \u201cbanked by advisor last month\u201d or \u201cprotection cases with no contact for 30 days\u201d, with tables you can download to Excel. Press <b>Wider</b> for room. Needs the AI assistant updating in Cloudflare first.", roles:['admin','management']} ]},
   {id:'2026-11-19e', date:'2026-11-19', items:[ {text:"🔁 <b>BTL PT</b> is now its own product, separate from <b>Prod Tfr</b> (which includes Prod.Trans and PT), in the Bible, the Salesboard's Banked view and the Switch dates projection (with a Product choice and a column for each). <b>Upload the advisors' NBRs again</b> to put existing BTL product transfers right.", roles:['admin','management']} ]},
   {id:'2026-11-19d', date:'2026-11-19', items:[ {text:"🔁 <b>Switch dates</b>: product transfers with a blank or different Type of sale on the NBR (e.g. \u201cBTL PT\u201d) were going into the Bible as Proc Fee, so they weren't in the projection. Uploading the Bible again now takes the product from the Bible (e.g. Prod Tfr), and the Switch dates view lists any lines with a switch date that aren't counted. <b>Upload the Bible again</b> with Fill in the blanks.", roles:['admin','management']} ]},
@@ -11781,10 +11786,12 @@ function askRender(){
       : 'Ask anything: about a case, mortgages or protection, or help wording something. Open a case first to ask about it.'}${egs.map(e=> `<button type="button" class="ask-eg">${esc(e)}</button>`).join('')}</div>`;
     return;
   }
-  log.innerHTML = askMsgs.map(m=> m.role==='user'
+  askCharts = [];
+  log.innerHTML = askMsgs.map((m, mi)=> m.role==='user'
     ? `<div class="ask-msg me">${esc(m.show)}${m.caseName ? `<span class="ask-case">with ${esc(m.caseName)}'s case</span>` : ''}</div>`
     : m.note ? `<div class="ask-msg ai ask-note">${esc(m.content)}</div>`
-    : (()=>{ const h = aiMdRich(m.content); return `<div class="ask-msg ai${/class="ask-tbl"/.test(h) ? ' has-tbl' : ''}">${h}</div>`; })()).join('')
+    : (()=>{ const h = aiMdRich(m.content), rich = /class="ask-(tbl|chart)"/.test(h);
+        return `<div class="ask-msg ai${rich ? ' has-tbl' : ''}">${h}${rich ? `<div class="ask-ppt"><button type="button" class="btn btn-secondary btn-sm" data-ask-ppt="${mi}">⬇ PowerPoint</button><span>This answer as slides, with its tables and charts</span></div>` : ''}</div>`; })()).join('')
     + (askBusy ? `<div class="ask-msg ai"><div class="ai-loading" style="padding:0;"><span class="spin"></span>${esc(askStep || 'Thinking…')}</div></div>` : '');
   log.scrollTop = log.scrollHeight;
 }
@@ -11843,6 +11850,8 @@ document.getElementById('askInput').addEventListener('keydown', e=>{
 document.getElementById('askInput').addEventListener('focus', askCtxRender);
 document.getElementById('askLog').addEventListener('click', e=>{
   const xl = e.target.closest('[data-ask-xl]'); if(xl){ askTableDownload(+xl.dataset.askXl); return; }
+  const png = e.target.closest('[data-ask-png]'); if(png){ askChartPng(+png.dataset.askPng); return; }
+  const ppt = e.target.closest('[data-ask-ppt]'); if(ppt){ askPowerPoint(+ppt.dataset.askPpt); return; }
   const b = e.target.closest('.ask-eg'); if(!b) return;
   const inp = document.getElementById('askInput'); inp.value = b.textContent; inp.focus();
 });
@@ -12174,35 +12183,285 @@ async function aiqConverse(onStep){
   throw new Error('That took Claude too many steps. Try asking for something narrower.');
 }
 
-/* Claude's reply with tables: "### " headings, "- " bullets, **bold** and markdown tables, each with a download to Excel. */
+/* Charts in Claude's reports. Claude writes a ```chart block with a small JSON spec:
+   {type: bar | hbar | stacked | line | pie, title, labels: [...], series: [{name, values: [...]}], format: money | number | percent}
+   Drawn here as an SVG with everything inside it (title, legend), so it can be saved as a picture.
+   Colours: a fixed colour-blind-checked order, never cycled; a 9th series folds into "Other". */
+const AIQ_CAT = {light:['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'],
+  dark:['#3987e5','#d95926','#199e70','#c98500','#d55181','#0ca30c','#9085e9','#e66767']};
+let askCharts = [];
+function aiqFmt(v, f, compact){
+  if(v==null || !isFinite(v)) return '–';
+  if(f==='percent') return (compact ? Math.round(v*10)/10 : nbrRound(v)) + '%';
+  const a = Math.abs(v), s = v < 0 ? '-' : '', p = f==='money' ? '£' : '';
+  if(compact && a >= 1e6) return s + p + (a/1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/,'') + 'M';
+  if(compact && a >= 10000) return s + p + (a/1e3).toFixed(a >= 1e5 ? 0 : 1).replace(/\.0$/,'') + 'K';
+  return s + p + a.toLocaleString('en-GB', f==='money' && !compact ? {minimumFractionDigits:2, maximumFractionDigits:2} : {maximumFractionDigits:compact ? 0 : 2});
+}
+function aiqChartSpec(raw){
+  const s = JSON.parse(raw);
+  let type = ['bar','hbar','stacked','line','pie'].includes(s.type) ? s.type : 'bar';
+  let labels = (Array.isArray(s.labels) ? s.labels : []).slice(0, 60).map(x=> String(x==null ? '' : x));
+  let series = (Array.isArray(s.series) ? s.series : []).filter(x=> x && Array.isArray(x.values))
+    .map(x=> ({name:String(x.name || ''), values:labels.map((_, i)=>{ const v = Number(x.values[i]); return x.values[i]==null || x.values[i]==='' || !isFinite(v) ? null : v; })}));
+  if(!labels.length || !series.length) throw new Error('No data to draw.');
+  const sumAt = (list, i)=> list.reduce((t, x)=> t + (x.values[i] || 0), 0);
+  if(type==='pie'){
+    // One series, its slices: up to 7 kept and the rest as "Other".
+    const v = series[0].values.map(x=> Math.max(0, x || 0));
+    let items = labels.map((l, i)=> ({l, v:v[i]})).filter(x=> x.v > 0);
+    if(items.length > 8){ const rest = items.slice(7); items = items.slice(0, 7).concat([{l:'Other', v:rest.reduce((t, x)=> t + x.v, 0)}]); }
+    labels = items.map(x=> x.l); series = [{name:series[0].name, values:items.map(x=> x.v)}];
+    if(!labels.length) throw new Error('No data to draw.');
+  } else if(series.length > 8){
+    const rest = series.slice(7); series = series.slice(0, 7).concat([{name:'Other', values:labels.map((_, i)=> sumAt(rest, i))}]);
+  }
+  if(type==='bar' && (labels.length > 12 || (labels.length > 5 && Math.max(...labels.map(l=> l.length)) > 12))) type = 'hbar';
+  const format = ['money','number','percent'].includes(s.format) ? s.format : s.money ? 'money' : 'number';
+  return {type, title:String(s.title || ''), labels, series, format};
+}
+// Clean axis steps: 1, 2, 2.5 or 5 × a power of ten, about four of them.
+function aiqAxis(lo, hi){
+  if(hi===lo) hi = lo + 1;
+  const raw = (hi - lo) / 4, e = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / e;
+  const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e;
+  const a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step, ticks = [];
+  for(let v = a; v <= b + step/1e6; v += step) ticks.push(Math.round(v / step) * step);
+  return {lo:a, hi:b, ticks};
+}
+// A bar with a 4px rounded data end and a square baseline. Works up, down, left or right.
+function aiqBar(x, y, w, h, end){
+  if(w <= 0 || h <= 0) return '';
+  const r = Math.min(4, (end==='top' || end==='bottom' ? w : h) / 2, end==='top' || end==='bottom' ? h : w);
+  const X = x + w, Y = y + h;
+  if(end==='top') return `M${x},${Y}V${y+r}Q${x},${y} ${x+r},${y}H${X-r}Q${X},${y} ${X},${y+r}V${Y}Z`;
+  if(end==='bottom') return `M${x},${y}V${Y-r}Q${x},${Y} ${x+r},${Y}H${X-r}Q${X},${Y} ${X},${Y-r}V${y}Z`;
+  if(end==='right') return `M${x},${y}H${X-r}Q${X},${y} ${X},${y+r}V${Y-r}Q${X},${Y} ${X-r},${Y}H${x}Z`;
+  return `M${X},${y}H${x+r}Q${x},${y} ${x},${y+r}V${Y-r}Q${x},${Y} ${x+r},${Y}H${X}Z`;
+}
+function aiqChartSvg(c){
+  const css = getComputedStyle(document.documentElement), tok = (k, d)=> (css.getPropertyValue(k) || '').trim() || d;
+  const dark = document.documentElement.getAttribute('data-theme')==='dark';
+  const surf = tok('--surface', dark ? '#1a1a19' : '#ffffff'), ink = tok('--text', dark ? '#f0efec' : '#241c22'), muted = tok('--text-muted', '#7b6e77'), grid = tok('--border', '#e9e0e6');
+  const cols = AIQ_CAT[dark ? 'dark' : 'light'], font = getComputedStyle(document.body).fontFamily.replace(/"/g, "'");
+  const W = 640, tw = (t, px=11)=> String(t).length * px * 0.56, cut = (t, n)=> t.length > n ? t.slice(0, n-1) + '…' : t;
+  const fmt = v=> aiqFmt(v, c.format), fmtC = v=> aiqFmt(v, c.format, true);
+  const T = (x, y, t, o={})=> `<text x="${x}" y="${y}" font-size="${o.size||11}" fill="${o.fill||muted}"${o.anchor ? ` text-anchor="${o.anchor}"` : ''}${o.weight ? ` font-weight="${o.weight}"` : ''}${o.rot ? ` transform="rotate(${o.rot} ${x} ${y})"` : ''}>${esc(t)}</text>`;
+  const tip = t=> `<title>${esc(t)}</title>`;
+  let top = 8, head = '';
+  if(c.title){ head += T(0, top + 13, cut(c.title, 90), {size:13.5, fill:ink, weight:600}); top += 24; }
+  // Legend for two or more series (pie: its slices, with values), wrapping onto more rows.
+  const legendItems = c.type==='pie' ? c.labels.map((l, i)=> `${cut(l, 28)} · ${fmt(c.series[0].values[i])}`) : c.series.length > 1 ? c.series.map(s=> cut(s.name, 28)) : [];
+  if(legendItems.length && c.type!=='pie'){
+    let x = 0; top += 4;
+    legendItems.forEach((t, i)=>{ const w = 18 + tw(t) + 16; if(x && x + w > W){ x = 0; top += 18; }
+      head += `<rect x="${x}" y="${top}" width="10" height="10" rx="2" fill="${cols[i]}"/>` + T(x + 15, top + 9, t, {fill:ink}); x += w; });
+    top += 22;
+  }
+  let body = '', H;
+  if(c.type==='pie'){
+    const R = 100, r = 60, cx = R + 4, cy = top + R + 4, vals = c.series[0].values, tot = vals.reduce((t, v)=> t + v, 0);
+    let a0 = -Math.PI/2;
+    vals.forEach((v, i)=>{
+      const a1 = a0 + (v / tot) * Math.PI * 2, big = a1 - a0 > Math.PI ? 1 : 0, p = (a, rr)=> `${cx + rr*Math.cos(a)},${cy + rr*Math.sin(a)}`;
+      const d = vals.length===1 ? `M${cx-R},${cy}A${R},${R} 0 1 1 ${cx+R},${cy}A${R},${R} 0 1 1 ${cx-R},${cy}M${cx-r},${cy}A${r},${r} 0 1 0 ${cx+r},${cy}A${r},${r} 0 1 0 ${cx-r},${cy}Z`
+        : `M${p(a0, R)}A${R},${R} 0 ${big} 1 ${p(a1, R)}L${p(a1, r)}A${r},${r} 0 ${big} 0 ${p(a0, r)}Z`;
+      body += `<path d="${d}" fill="${cols[i]}" stroke="${surf}" stroke-width="2" fill-rule="evenodd">${tip(`${c.labels[i]}: ${fmt(v)} (${Math.round(v/tot*1000)/10}%)`)}</path>`;
+      a0 = a1;
+    });
+    body += T(cx, cy + 4, fmtC(tot), {anchor:'middle', fill:ink, size:13, weight:600});
+    let ly = top + 14; const lx = cx + R + 30;
+    c.labels.forEach((l, i)=>{ body += `<rect x="${lx}" y="${ly-9}" width="10" height="10" rx="2" fill="${cols[i]}"/>` + T(lx + 16, ly, `${cut(l, 30)}  ${fmt(vals[i])} · ${Math.round(vals[i]/tot*1000)/10}%`, {fill:ink}); ly += 20; });
+    H = Math.max(cy + R + 8, ly);
+  } else if(c.type==='hbar'){
+    const n = c.series.length, bh = Math.min(18, Math.max(8, (26 - (n-1)*2) / n)), rowH = Math.max(26, n*bh + (n-1)*2 + 10);
+    const labW = Math.min(170, Math.max(...c.labels.map(l=> tw(cut(l, 26)))) + 10);
+    const vals = c.series.flatMap(s=> s.values.filter(v=> v!=null)), ax = aiqAxis(Math.min(0, ...vals), Math.max(0, ...vals));
+    const x0 = labW, pw = W - labW - (n===1 ? 64 : 16), X = v=> x0 + pw * (v - ax.lo) / (ax.hi - ax.lo), plotH = c.labels.length * rowH;
+    ax.ticks.forEach(t=>{ body += `<line x1="${X(t)}" x2="${X(t)}" y1="${top}" y2="${top + plotH}" stroke="${grid}" stroke-width="1"/>` + T(X(t), top + plotH + 14, fmtC(t), {anchor:'middle'}); });
+    c.labels.forEach((l, i)=>{
+      const y = top + i*rowH + (rowH - (n*bh + (n-1)*2)) / 2;
+      body += T(labW - 8, top + i*rowH + rowH/2 + 4, cut(l, 26), {anchor:'end', fill:ink});
+      c.series.forEach((s, k)=>{ const v = s.values[i]; if(v==null) return; const a = X(Math.min(0, v)), b = X(Math.max(0, v)), yy = y + k*(bh + 2);
+        body += `<path d="${aiqBar(a, yy, Math.max(b - a, 0.5), bh, v < 0 ? 'left' : 'right')}" fill="${cols[k]}">${tip(`${l}${n > 1 ? ' · ' + s.name : ''}: ${fmt(v)}`)}</path>`;
+        if(n===1) body += T(b + 6, yy + bh/2 + 4, fmtC(v), {fill:ink}); });
+    });
+    H = top + plotH + 22;
+  } else {
+    const stacked = c.type==='stacked', n = stacked ? 1 : c.series.length, L = c.labels.length;
+    const vals = stacked ? c.labels.map((_, i)=> c.series.reduce((t, s)=> t + Math.max(0, s.values[i] || 0), 0)) : c.series.flatMap(s=> s.values.filter(v=> v!=null));
+    const capLabels = c.type!=='line' && (stacked || n===1) && L <= 12;
+    const ax = aiqAxis(Math.min(0, ...vals), Math.max(0, ...vals) * (capLabels ? 1.12 : 1));
+    top += 8;
+    const padL = Math.max(...ax.ticks.map(t=> tw(fmtC(t)))) + 10, band = (W - padL - 8) / L, rot = band < 58 || Math.max(...c.labels.map(l=> tw(cut(l, 18)))) > band - 6;
+    const every = Math.max(1, Math.ceil(L / (rot ? 30 : 16))), ph = 200, Y = v=> top + ph * (1 - (v - ax.lo) / (ax.hi - ax.lo)), y0 = Y(0);
+    ax.ticks.forEach(t=>{ body += `<line x1="${padL}" x2="${W}" y1="${Y(t)}" y2="${Y(t)}" stroke="${grid}" stroke-width="1"/>` + T(padL - 6, Y(t) + 4, fmtC(t), {anchor:'end'}); });
+    c.labels.forEach((l, i)=>{ if(i % every) return; const x = padL + band*i + band/2;
+      body += rot ? T(x, top + ph + 14, cut(l, 18), {anchor:'end', rot:-35}) : T(x, top + ph + 16, cut(l, 18), {anchor:'middle'}); });
+    if(c.type==='line'){
+      c.series.forEach((s, k)=>{
+        const pts = s.values.map((v, i)=> v==null ? null : [padL + band*i + band/2, Y(v), v, i]);
+        let d = '', on = false; pts.forEach(p=>{ if(!p){ on = false; return; } d += (on ? 'L' : 'M') + p[0] + ',' + p[1]; on = true; });
+        body += `<path d="${d}" fill="none" stroke="${cols[k]}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+        pts.forEach(p=>{ if(p && (L <= 24 || p[3]===L-1)) body += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${cols[k]}" stroke="${surf}" stroke-width="2">${tip(`${c.labels[p[3]]}${c.series.length > 1 ? ' · ' + s.name : ''}: ${fmt(p[2])}`)}</circle>`
+          + `<circle cx="${p[0]}" cy="${p[1]}" r="10" fill="transparent">${tip(`${c.labels[p[3]]}${c.series.length > 1 ? ' · ' + s.name : ''}: ${fmt(p[2])}`)}</circle>`; });
+        const last = [...pts].reverse().find(Boolean);
+        if(last && c.series.length===1) body += T(Math.min(last[0] + 6, W - 2), last[1] - 8, fmtC(last[2]), {anchor:last[0] > W - 60 ? 'end' : 'start', fill:ink});
+      });
+    } else {
+      const bw = Math.max(3, Math.min(24, (band*0.72 - (n-1)*2) / n)), gw = n*bw + (n-1)*2;
+      c.labels.forEach((l, i)=>{
+        const x = padL + band*i + (band - gw)/2;
+        if(stacked){
+          let cum = 0; const segs = c.series.map((s, k)=> ({k, v:Math.max(0, s.values[i] || 0), name:s.name})).filter(x=> x.v > 0);
+          segs.forEach((g, j)=>{ const yt = Y(cum + g.v), yb = Y(cum) - (j ? 2 : 0), isTop = j===segs.length-1;
+            body += `<path d="${isTop ? aiqBar(x, yt, bw, yb - yt, 'top') : `M${x},${yt}H${x+bw}V${yb}H${x}Z`}" fill="${cols[g.k]}">${tip(`${l} · ${g.name}: ${fmt(g.v)}`)}</path>`; cum += g.v; });
+          if(segs.length && L <= 12) body += T(x + bw/2, Y(cum) - 6, fmtC(cum), {anchor:'middle', fill:ink});
+        } else c.series.forEach((s, k)=>{ const v = s.values[i]; if(v==null) return; const xx = x + k*(bw + 2), a = Y(Math.max(0, v)), b = Y(Math.min(0, v));
+          body += `<path d="${aiqBar(xx, a, bw, Math.max(b - a, 0.5), v < 0 ? 'bottom' : 'top')}" fill="${cols[k]}">${tip(`${l}${n > 1 ? ' · ' + s.name : ''}: ${fmt(v)}`)}</path>`;
+          if(n===1 && L <= 12) body += T(xx + bw/2, v < 0 ? b + 13 : a - 6, fmtC(v), {anchor:'middle', fill:ink}); });
+      });
+    }
+    body += `<line x1="${padL}" x2="${W}" y1="${y0}" y2="${y0}" stroke="${muted}" stroke-width="1" opacity=".5"/>`;
+    H = top + ph + (rot ? 78 : 26);
+  }
+  return {bg:surf, svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -2 ${W} ${H + 4}" width="100%" role="img" aria-label="${esc(c.title || 'Chart')}" font-family="${esc(font)}" style="display:block; max-width:${W}px; overflow:visible;">${head}${body}</svg>`};
+}
+function aiqChartHtml(raw){
+  let c;
+  try{ c = aiqChartSpec(raw); }catch(e){ return `<p class="ask-chart-err">(A chart couldn't be drawn from this answer.)</p>`; }
+  const {svg, bg} = aiqChartSvg(c), n = askCharts.push({title:c.title, bg}) - 1;
+  return `<div class="ask-chart" data-ask-chart="${n}">${svg}<button type="button" class="linkish ask-xl" data-ask-png="${n}">⬇ Save chart as a picture</button></div>`;
+}
+function askChartPng(n){
+  const box = document.querySelector(`[data-ask-chart="${n}"]`), svg = box && box.querySelector('svg'), meta = askCharts[n]; if(!svg || !meta) return;
+  const vb = svg.viewBox.baseVal, img = new Image();
+  img.onload = ()=>{
+    const cv = document.createElement('canvas'), g = cv.getContext('2d'); cv.width = vb.width * 2 + 48; cv.height = vb.height * 2 + 48;
+    g.fillStyle = meta.bg; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 24, 24, vb.width * 2, vb.height * 2);
+    cv.toBlob(b=>{ if(!b){ toast("Couldn't save the chart.",'error'); return; } const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+      a.download = ((meta.title || 'Claude chart').replace(/[^\w\s&-]/g, '').trim() || 'Claude chart') + '.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(a.href), 3000); }, 'image/png');
+  };
+  img.onerror = ()=> toast("Couldn't save the chart.",'error');
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+}
+
+/* Claude's reply, split into pieces: paragraphs, "- " bullets, "### " headings, markdown tables and ```chart blocks.
+   The same pieces draw the reply on screen and make its PowerPoint. */
 let askTables = [];
-function aiMdRich(t){
-  const lines = String(t||'').split('\n'), fmt = x=> esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-  let html = '', para = [], list = [], i = 0;
-  const flushP = ()=>{ if(para.length){ html += `<p>${para.map(fmt).join('<br>')}</p>`; para = []; } };
-  const flushL = ()=>{ if(list.length){ html += `<ul>${list.map(x=> `<li>${fmt(x)}</li>`).join('')}</ul>`; list = []; } };
+function aiqBlocks(t){
+  const lines = String(t||'').split('\n'), out = [];
+  let para = [], list = [], i = 0;
+  const flushP = ()=>{ if(para.length){ out.push({k:'p', lines:para}); para = []; } };
+  const flushL = ()=>{ if(list.length){ out.push({k:'ul', items:list}); list = []; } };
   const isRow = l=> /^\s*\|.*\|\s*$/.test(l), cells = l=> l.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=> c.trim());
   while(i < lines.length){
     const l = lines[i];
+    if(/^\s*```\s*chart\s*$/i.test(l)){
+      flushP(); flushL(); const raw = []; i++;
+      while(i < lines.length && !/^\s*```\s*$/.test(lines[i])){ raw.push(lines[i]); i++; }
+      out.push({k:'chart', raw:raw.join('\n')}); i++; continue;
+    }
     if(isRow(l) && i+1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i+1])){
       flushP(); flushL();
       const head = cells(l), body = []; i += 2;
       while(i < lines.length && isRow(lines[i])){ body.push(cells(lines[i])); i++; }
-      const n = askTables.push({head, body}) - 1;
-      const numCls = c=> /^-?£?-?[\d,]+(\.\d+)?%?$/.test(c.replace(/\*\*/g,'')) ? ' class="num"' : '';
-      const numCol = ci=> body.length && body.every(r=> !r[ci] || numCls(r[ci]));
-      html += `<div class="ask-tbl"><div class="ask-tbl-scroll"><table><thead><tr>${head.map((h, ci)=> `<th${numCol(ci) ? ' class="num"' : ''}>${fmt(h)}</th>`).join('')}</tr></thead><tbody>${
-        body.map(r=> `<tr>${r.map(c=> `<td${numCls(c)}>${fmt(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><button type="button" class="linkish ask-xl" data-ask-xl="${n}">⬇ Download to Excel</button></div>`;
-      continue;
+      out.push({k:'table', head, body}); continue;
     }
-    if(/^\s*#{1,4}\s+/.test(l)){ flushP(); flushL(); html += `<h4>${fmt(l.replace(/^\s*#+\s+/,''))}</h4>`; }
+    if(/^\s*```/.test(l)){ i++; continue; } // any other code fence: show what's inside as text
+    if(/^\s*#{1,4}\s+/.test(l)){ flushP(); flushL(); out.push({k:'h', text:l.replace(/^\s*#+\s+/,'')}); }
     else if(/^\s*[-*•]\s+/.test(l)){ flushP(); list.push(l.replace(/^\s*[-*•]\s+/,'')); }
     else if(!l.trim()){ flushP(); flushL(); }
     else { flushL(); para.push(l); }
     i++;
   }
   flushP(); flushL();
-  return html;
+  return out;
+}
+const aiqIsNum = c=> /^-?£?-?[\d,]+(\.\d+)?%?$/.test(String(c||'').replace(/\*\*/g,'').trim());
+function aiMdRich(t){
+  const fmt = x=> esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  return aiqBlocks(t).map(b=>{
+    if(b.k==='p') return `<p>${b.lines.map(fmt).join('<br>')}</p>`;
+    if(b.k==='ul') return `<ul>${b.items.map(x=> `<li>${fmt(x)}</li>`).join('')}</ul>`;
+    if(b.k==='h') return `<h4>${fmt(b.text)}</h4>`;
+    if(b.k==='chart') return aiqChartHtml(b.raw);
+    const n = askTables.push({head:b.head, body:b.body}) - 1, numCol = ci=> b.body.length && b.body.every(r=> !r[ci] || aiqIsNum(r[ci]));
+    return `<div class="ask-tbl"><div class="ask-tbl-scroll"><table><thead><tr>${b.head.map((h, ci)=> `<th${numCol(ci) ? ' class="num"' : ''}>${fmt(h)}</th>`).join('')}</tr></thead><tbody>${
+      b.body.map(r=> `<tr>${r.map(c=> `<td${aiqIsNum(c) ? ' class="num"' : ''}>${fmt(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><button type="button" class="linkish ask-xl" data-ask-xl="${n}">⬇ Download to Excel</button></div>`;
+  }).join('');
+}
+
+/* ⬇ PowerPoint: a reply as slides, made here in the browser (no extra call to Claude). A title slide, the summary,
+   then a slide for each table (12 rows a slide) and each chart, as real PowerPoint tables and charts you can edit. */
+let pptxLoading = null;
+function loadPptx(){
+  if(window.PptxGenJS) return Promise.resolve(window.PptxGenJS);
+  if(!pptxLoading) pptxLoading = new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+    s.onload = ()=> res(window.PptxGenJS); s.onerror = ()=>{ pptxLoading = null; rej(new Error('Could not load the PowerPoint maker. Check your connection.')); };
+    document.head.appendChild(s);
+  });
+  return pptxLoading;
+}
+function askPowerPoint(i){
+  const m = askMsgs[i], q = askMsgs.slice(0, i).reverse().find(x=> x.role==='user'); if(!m) return;
+  loadPptx().then(P=>{
+    const pptx = new P(); pptx.layout = 'LAYOUT_WIDE'; // 13.33 × 7.5 inches
+    const BRAND = 'A6297A', INK = '241C22', MUTED = '7B6E77', FONT = 'Calibri', plain = x=> String(x||'').replace(/\*\*(.+?)\*\*/g, '$1');
+    const rich = x=> String(x||'').split(/(\*\*.+?\*\*)/).filter(Boolean).map(s=> /^\*\*.+\*\*$/.test(s) ? {text:s.slice(2,-2), options:{bold:true}} : {text:s});
+    const today = fmtDateSlash(aiqDate(Date.now()));
+    const slide = title=>{ const s = pptx.addSlide(); s.background = {color:'FFFFFF'};
+      s.addShape(pptx.ShapeType.rect, {x:0, y:0, w:13.33, h:0.12, fill:{color:BRAND}, line:{color:BRAND}});
+      if(title) s.addText(plain(title), {x:0.6, y:0.35, w:12.1, h:0.7, fontFace:FONT, fontSize:26, bold:true, color:INK});
+      s.addText(`Michael Usher Mortgage Services · ${today}`, {x:0.6, y:7.0, w:12.1, h:0.3, fontFace:FONT, fontSize:10, color:MUTED});
+      return s; };
+    const blocks = aiqBlocks(m.content);
+    // Title slide
+    const t0 = pptx.addSlide(); t0.background = {color:BRAND};
+    t0.addText(plain(q ? q.show : 'Report').slice(0, 140), {x:0.8, y:2.3, w:11.7, h:1.8, fontFace:FONT, fontSize:34, bold:true, color:'FFFFFF', valign:'bottom'});
+    t0.addText(`Report from the Protection Lead Tracker · ${today}`, {x:0.8, y:4.3, w:11.7, h:0.5, fontFace:FONT, fontSize:16, color:'FFFFFF'});
+    // Summary: the words (not the tables or charts), on one slide, or more when long
+    const words = [];
+    blocks.forEach(b=>{ if(b.k==='p') b.lines.forEach(l=> words.push({t:rich(l)})); else if(b.k==='ul') b.items.forEach(x=> words.push({t:rich(x), bullet:true})); else if(b.k==='h') words.push({t:[{text:plain(b.text), options:{bold:true}}], head:true}); });
+    for(let k = 0; k < words.length; k += 9){
+      const s = slide(k ? 'Summary (continued)' : 'Summary');
+      const runs = []; words.slice(k, k+9).forEach((w, j, arr)=> w.t.forEach((r, ri)=> runs.push({text:r.text, options:{...(r.options||{}), ...(ri===0 && w.bullet ? {bullet:true} : {}), ...(ri===w.t.length-1 && j < arr.length-1 ? {breakLine:true} : {})}})));
+      s.addText(runs, {x:0.6, y:1.25, w:12.1, h:5.5, fontFace:FONT, fontSize:18, color:INK, valign:'top', paraSpaceAfter:8});
+    }
+    // Tables and charts, each titled by the heading before it
+    let head = '', nT = 0, nC = 0;
+    blocks.forEach(b=>{
+      if(b.k==='h'){ head = plain(b.text); return; }
+      if(b.k==='table'){
+        nT++; const numCol = ci=> b.body.length && b.body.every(r=> !r[ci] || aiqIsNum(r[ci]));
+        for(let k = 0; k < Math.max(1, b.body.length); k += 12){
+          const s = slide((head || `Table ${nT}`) + (k ? ' (continued)' : ''));
+          const hdr = b.head.map((h, ci)=> ({text:plain(h), options:{bold:true, color:'FFFFFF', fill:{color:BRAND}, align:numCol(ci) ? 'right' : 'left'}}));
+          const rows = b.body.slice(k, k+12).map((r, ri)=> b.head.map((_, ci)=> ({text:plain(r[ci]), options:{align:numCol(ci) ? 'right' : 'left', bold:/\*\*/.test(r[ci]||''), fill:{color:ri % 2 ? 'FFFFFF' : 'FBF5F9'}}})));
+          s.addTable([hdr, ...rows], {x:0.6, y:1.25, w:12.1, fontFace:FONT, fontSize:13, color:INK, border:{type:'solid', pt:0.5, color:'E9E0E6'}, rowH:0.38, autoPage:false});
+        }
+        return;
+      }
+      if(b.k==='chart'){
+        let c; try{ c = aiqChartSpec(b.raw); }catch(e){ return; }
+        nC++; const s = slide(c.title || head || `Chart ${nC}`);
+        const kind = c.type==='line' ? pptx.ChartType.line : c.type==='pie' ? pptx.ChartType.doughnut : pptx.ChartType.bar;
+        const data = c.series.map(x=> ({name:x.name || 'Value', labels:c.labels, values:x.values.map(v=> v==null ? (c.type==='line' ? null : 0) : v)}));
+        const one = c.type!=='pie' && c.series.length===1;
+        const numFmt = c.format==='money' ? '£#,##0' : c.format==='percent' ? '0"%"' : '#,##0';
+        s.addChart(kind, data, {x:0.6, y:1.2, w:12.1, h:5.6, chartColors:AIQ_CAT.light.slice(0, one ? 1 : 8).map(x=> x.slice(1)), displayBlanksAs:'gap',
+          barDir:c.type==='hbar' ? 'bar' : 'col', catAxisOrientation:c.type==='hbar' ? 'maxMin' : 'minMax', barGrouping:c.type==='stacked' ? 'stacked' : 'clustered', barGapWidthPct:60,
+          showLegend:c.type==='pie' || c.series.length > 1, legendPos:c.type==='pie' ? 'r' : 'b', legendFontSize:12, legendFontFace:FONT,
+          showValue:c.type!=='pie' && one && c.labels.length <= 12, dataLabelFormatCode:c.type==='pie' ? '0%' : numFmt, dataLabelFontSize:11, dataLabelColor:c.type==='pie' ? 'FFFFFF' : INK,
+          showPercent:c.type==='pie', holeSize:55, valAxisLabelFormatCode:numFmt, catAxisLabelFontSize:12, valAxisLabelFontSize:11, catAxisLabelFontFace:FONT, valAxisLabelFontFace:FONT,
+          valGridLine:{color:'E9E0E6', style:'solid', size:0.5}, catGridLine:{style:'none'}, lineSize:2, lineDataSymbolSize:7});
+      }
+    });
+    const name = (plain(q ? q.show : 'Claude report').replace(/[^\w\s&-]/g, '').trim().slice(0, 60) || 'Claude report');
+    return pptx.writeFile({fileName:`${name}.pptx`});
+  }).catch(e=> toast(e.message || "Couldn't make the PowerPoint.", 'error'));
 }
 function askTableDownload(n){
   const t = askTables[n]; if(!t) return;

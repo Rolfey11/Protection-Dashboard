@@ -913,6 +913,10 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 @keyframes wizNudge{0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);}}
 @media (prefers-reduced-motion: reduce){ .wiz-nudge{animation:none;} }
 @media (max-width:640px){ .wiz-opts{grid-template-columns:1fr;} .wiz-where > .wiz-sub-row, .wiz-where > .wiz-check, .wiz-where > .wiz-note{padding-left:14px;} }
+.nbr-bib-views{display:inline-flex; margin:0 0 14px;} .nbr-bib-views button{padding:8px 16px; font-size:13px;}
+.nbr-paid-cards{grid-template-columns:repeat(3, minmax(0,1fr)); margin-bottom:10px;}
+.nbr-paid-table tr.nbr-group td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.4px; padding-top:9px; padding-bottom:9px;}
+.nbr-paid-n{font-weight:500; text-transform:none; letter-spacing:0; opacity:.85; margin-left:6px;}
 .nbr-pays{margin:6px 0 14px; padding:12px; border:1px dashed var(--border-2); border-radius:10px;}
 .nbr-pays-h{margin-bottom:8px; font-size:13px;} .nbr-pays-h .field-hint{display:block; margin-top:2px;}
 .nbr-pay-row{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)) 34px; gap:8px; align-items:end; margin-bottom:8px;}
@@ -7246,6 +7250,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19b', date:'2026-11-19', items:[ {text:"💷 <b>Bible: Paid by month</b>. A new view at the top of the Bible: choose a month and see every payment that came in that month, by advisor, with each advisor's total, whatever month the case was written in. Part payments show in the month each one was paid. You can also click a figure in <b>Banked … by the month paid</b> to see the payments behind it.", roles:['admin','management']} ]},
   {id:'2026-11-19a', date:'2026-11-19', items:[ {text:"🔎 <b>Search</b>: the search box on the dashboard finds cases by the client's <b>email</b> or <b>phone number</b> as well as their name and source. Phone numbers match from the first digit you type, narrowing as you go, however they're written (07700 900123, +44 7700 900123, 07700-900-123), including each client on a joint case.", roles:['mapa','management','admin']} ]},
   {id:'2026-11-18c', date:'2026-11-18', items:[ {text:"✨ <b>Case window</b>: a cleaner layout. The stage shows as pills, the <b>Next step</b> card holds <b>Update case</b> and <b>Refer to protection adviser</b>, contact and case details sit side by side, and the History is underneath. More options are under <b>⋯</b> at the top. In New Cases, Update case can now <b>Move to Appointments / Research</b> with an appointment or a reminder.", roles:['mapa','management','admin']},
     {text:"🔎 <b>History filter</b>: on a case, filter the History by calls, appointments, emails, texts, reminders, notes or pot moves.", roles:['management']} ]},
@@ -14419,7 +14424,7 @@ let NBR_ADV = {}, NBR_ENT = {}, NBR_NPW = {}, NBR_BIB = {}, NBR_CFG = {}, NBR_BC
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
 const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
-  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, upload:null, tgtYear:null, tgtUp:null};
+  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', upload:null, tgtYear:null, tgtUp:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
@@ -15652,9 +15657,83 @@ function nbrBibFiltered(){
 }
 // Dates as 14/03/25 so the Bible table fits on the screen.
 function nbrShortDate(iso){ return /^\d{4}-\d{2}-\d{2}/.test(iso||'') ? `${iso.slice(8,10)}/${iso.slice(5,7)}/${iso.slice(2,4)}` : ''; }
+/* The Bible's "Paid by month" view: every payment that came in during a month, by advisor, with each
+   advisor's total (the same figures as "Banked … by the month paid" below the lines). A fee paid in two
+   goes shows once for each payment, in the month it was paid. */
+function nbrPaidMonths(){
+  const s = new Set();
+  Object.values(NBR_BIB).forEach(l=>{ if(l) nbrLinePays(l).forEach(x=>{ if(x.datePaid) s.add(String(x.datePaid).slice(0,7)); }); });
+  return [...s].filter(ym=> /^\d{4}-\d{2}$/.test(ym)).sort().reverse();
+}
+function nbrBibViewSwitch(){
+  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
+}
+function renderNbrBiblePaid(el){
+  const months = nbrPaidMonths(), thisYm = nbrThisYm();
+  if(!nbrUI.bibPaidYm || !months.includes(nbrUI.bibPaidYm)) nbrUI.bibPaidYm = months.includes(thisYm) ? thisYm : (months[0] || thisYm);
+  const ym = nbrUI.bibPaidYm, q = nbrUI.bibSearch.toLowerCase();
+  const rows = [];
+  Object.entries(NBR_BIB).forEach(([id, l])=>{
+    if(!l) return;
+    if(nbrUI.bibAdv && (l.adv||'')!==(nbrUI.bibAdv==='none' ? '' : nbrUI.bibAdv)) return;
+    if(nbrUI.bibProduct && (l.product||'')!==nbrUI.bibProduct) return;
+    if(q && ![l.client, l.provider, l.source, l.address, l.dept, l.product].some(v=> String(v||'').toLowerCase().includes(q))) return;
+    const pays = nbrLinePays(l), many = pays.length > 1;
+    pays.forEach((x, i)=>{
+      if(!x.datePaid || String(x.datePaid).slice(0,7)!==ym) return;
+      rows.push({id, l, date:x.datePaid, paid:n0(x.paid), when: x.own ? l.when : x.when, how: x.own ? l.how : x.how, part: many ? `Payment ${i+1} of ${pays.length}` : ''});
+    });
+  });
+  const groups = {}; rows.forEach(r=>{ (groups[r.l.adv||''] || (groups[r.l.adv||''] = [])).push(r); });
+  const advIds = Object.keys(groups).sort((a,b)=> nbrAdvName(a).localeCompare(nbrAdvName(b)));
+  const total = rows.reduce((t,r)=> t + r.paid, 0);
+  const products = [...new Set(Object.values(NBR_BIB).map(l=> l && l.product).filter(Boolean))].sort();
+  const noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
+  const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])].concat(noAdv ? [['none','(no advisor)']] : []);
+  const COLS = 9;
+  const table = rows.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table nbr-paid-table">
+    <thead><tr><th>Date paid</th><th>Client</th><th>Product</th><th>Provider</th><th>Period written</th><th>When / how</th><th class="num">Fee</th><th class="num">Paid</th><th>Status</th></tr></thead>
+    <tbody>${advIds.map(id=>{
+      const list = groups[id].sort((a,b)=> String(a.date).localeCompare(String(b.date)) || String(a.l.client||'').localeCompare(String(b.l.client||'')));
+      const sub = list.reduce((t,r)=> t + r.paid, 0);
+      return `<tr class="nbr-group"><td colspan="${COLS}">${esc(id ? nbrAdvName(id) : '(no advisor)')} <span class="nbr-paid-n">${list.length} payment${list.length===1 ? '' : 's'}</span></td></tr>
+        ${list.map(r=>{ const st = nbrBibStatus(r.l); return `<tr class="nbr-click" data-nbr-line="${esc(r.id)}"><td>${nbrShortDate(r.date)}</td><td class="wrap nbr-bib-client"><b>${esc(r.l.client||'')}</b>${r.part ? ` <span class="nbr-tag">${esc(r.part)}</span>` : ''}</td><td>${esc(r.l.product||'')}</td><td class="wrap">${esc(r.l.provider||'')}</td><td>${esc(r.l.month ? nbrYmLabel(r.l.month) : '—')}</td><td class="wrap">${esc([r.when, r.how].filter(Boolean).join(' · '))}</td><td class="num">${nbrMoneyCell(r.l.amount)}</td><td class="num b">${nbrMoneyCell(r.paid)}</td><td><span class="bl-chip bl-chip-${st}">${BIB_STATUS[st][0]}</span></td></tr>`; }).join('')}
+        <tr class="nbr-tot"><td colspan="${COLS-2}">${esc(id ? nbrAdvName(id) : '(no advisor)')} total</td><td class="num b">${nbrMoneyCell(sub)}</td><td></td></tr>`;
+    }).join('')}
+      <tr class="nbr-grand"><td colspan="${COLS-2}">Total paid in ${esc(nbrYmLabel(ym, true))}</td><td class="num b">${nbrMoneyCell(total)}</td><td></td></tr>
+    </tbody></table></div>`
+    : `<div class="nml-empty">Nothing paid in ${esc(nbrYmLabel(ym, true))}${nbrUI.bibAdv || nbrUI.bibProduct || q ? ' that matches these filters' : ''}.</div>`;
+  const yms = months.includes(ym) ? months : [ym, ...months];
+  el.innerHTML = `
+    ${nbrBibViewSwitch()}
+    <div class="nbr-toolbar nbr-filters">
+      <label>Month paid <select id="nbrPaidYm">${yms.map(m=> `<option value="${m}" ${m===ym ? 'selected' : ''}>${esc(nbrYmLabel(m, true))}</option>`).join('')}</select></label>
+      <label>Advisor <select id="nbrBibAdv">${advOpts.map(([v,t])=> `<option value="${esc(v)}" ${v===nbrUI.bibAdv ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+      <label>Product <select id="nbrBibProduct"><option value="">All</option>${products.map(x=> `<option ${x===nbrUI.bibProduct ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
+      <input type="search" id="nbrBibSearch" placeholder="Search client, provider, address…" value="${esc(nbrUI.bibSearch)}">
+    </div>
+    <div class="stat-grid nbr-paid-cards">
+      <div class="stat-card good"><div class="sv">${nbrMoney(total)}</div><div class="sl">Paid in ${esc(nbrYmLabel(ym, true))}</div></div>
+      <div class="stat-card"><div class="sv">${rows.length}</div><div class="sl">Payment${rows.length===1 ? '' : 's'}</div></div>
+      <div class="stat-card"><div class="sv">${advIds.length}</div><div class="sl">Advisor${advIds.length===1 ? '' : 's'}</div></div>
+    </div>
+    <p class="field-hint nbr-bib-note">Every payment with a date paid in ${esc(nbrYmLabel(ym, true))}, whatever month the case was written in. A fee paid in more than one go shows each payment in the month it came in. Click a line to open it.</p>
+    ${table}`;
+  const set = (id, key)=> document.getElementById(id).addEventListener('change', e=>{ nbrUI[key] = e.target.value; renderNbrBible(); });
+  set('nbrPaidYm','bibPaidYm'); set('nbrBibAdv','bibAdv'); set('nbrBibProduct','bibProduct');
+  let t = null;
+  document.getElementById('nbrBibSearch').addEventListener('input', e=>{ clearTimeout(t); t = setTimeout(()=>{ nbrUI.bibSearch = e.target.value.trim(); renderNbrBible(); const sb = document.getElementById('nbrBibSearch'); sb.focus(); sb.setSelectionRange(sb.value.length, sb.value.length); }, 250); });
+  nbrBindBibViews(el);
+}
+function nbrBindBibViews(el){
+  el.querySelectorAll('[data-bib-view]').forEach(b=> b.addEventListener('click', ()=>{ nbrUI.bibView = b.dataset.bibView; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); }));
+  // A month in "Banked … by the month paid": open that month (and advisor) in Paid by month.
+  el.querySelectorAll('[data-paid-ym]').forEach(c=> c.addEventListener('click', ()=>{ nbrUI.bibView = 'paid'; nbrUI.bibPaidYm = c.dataset.paidYm; nbrUI.bibAdv = c.dataset.paidAdv || ''; renderNbrBible(); window.scrollTo(0, 0); }));
+}
 function renderNbrBible(){
   const el = document.getElementById('nbrBibleBody');
   if(nbrNotReady(el)) return;
+  if(nbrUI.bibView==='paid'){ renderNbrBiblePaid(el); return; }
   const fys = nbrBibFys();
   if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = fys[0];
   const fy = nbrUI.bibFY, fyMonths = fy==='none' ? [] : nbrFyMonths(fy);
@@ -15676,8 +15755,8 @@ function renderNbrBible(){
     const advIds = Object.keys(bank).sort((a,b)=> nbrAdvName(a).localeCompare(nbrAdvName(b)));
     const colT = fyMonths.map(ym=> advIds.reduce((s,id)=> s + (bank[id][ym]||0), 0)), all = colT.reduce((s,v)=> s+v, 0);
     bankedHtml = advIds.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Adv</th>${fyMonths.map(ym=> `<th class="num">${NBR_MONTHS[+ym.slice(5,7)-1]}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
-      ${advIds.map(id=>{ const r = fyMonths.map(ym=> bank[id][ym]||0); return `<tr><td>${esc(id ? nbrAdvName(id) : '(no advisor)')}</td>${r.map(v=> `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.reduce((s,v)=> s+v, 0))}</td></tr>`; }).join('')}
-      <tr class="nbr-grand"><td>Total</td>${colT.map(v=> `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(all)}</td></tr></tbody></table></div>`
+      ${advIds.map(id=>{ const r = fyMonths.map(ym=> bank[id][ym]||0); return `<tr><td>${esc(id ? nbrAdvName(id) : '(no advisor)')}</td>${r.map((v, i)=> v ? `<td class="num"><button type="button" class="linkish" data-paid-ym="${fyMonths[i]}" data-paid-adv="${esc(id || 'none')}" title="See these payments">${nbrMoney(v)}</button></td>` : `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.reduce((s,v)=> s+v, 0))}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Total</td>${colT.map((v, i)=> v ? `<td class="num"><button type="button" class="linkish" data-paid-ym="${fyMonths[i]}" title="See these payments">${nbrMoney(v)}</button></td>` : `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(all)}</td></tr></tbody></table></div>`
       : `<div class="nml-empty">Nothing paid in ${esc(fy)} yet.</div>`;
   }
   // By advisor and product, for the lines matching the filters (the Bible's pipe / offered / completed pivots).
@@ -15689,6 +15768,7 @@ function renderNbrBible(){
 
   const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])].concat(noAdv ? [['none','(no advisor)']] : []);
   el.innerHTML = `
+    ${nbrBibViewSwitch()}
     <div class="nbr-toolbar nbr-filters">
       <label>Financial year <select id="nbrBibFY">${fys.map(f=> `<option value="${f}" ${f===fy ? 'selected' : ''}>${esc(nbrFyLabel(f))}</option>`).join('')}${noMonth ? `<option value="none" ${fy==='none' ? 'selected' : ''}>No period set</option>` : ''}</select></label>
       <label>Period <select id="nbrBibMonth"><option value="">Whole year</option>${fyMonths.map(ym=> `<option value="${ym}" ${ym===nbrUI.bibMonth ? 'selected' : ''}>${esc(nbrYmLabel(ym))}</option>`).join('')}</select></label>
@@ -15709,6 +15789,7 @@ function renderNbrBible(){
   document.getElementById('nbrBibSearch').addEventListener('input', e=>{ clearTimeout(t); t = setTimeout(()=>{ nbrUI.bibSearch = e.target.value.trim(); nbrUI.bibShown = NBR_PAGE; renderNbrBible(); const s = document.getElementById('nbrBibSearch'); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }, 250); });
   document.getElementById('nbrAddLine').addEventListener('click', ()=> openNbrLine(null));
   const more = document.getElementById('nbrBibMore'); if(more) more.addEventListener('click', ()=>{ nbrUI.bibShown += NBR_PAGE; renderNbrBible(); });
+  nbrBindBibViews(el);
 }
 
 /* ============================== ADVISORS & UPLOAD ============================== */

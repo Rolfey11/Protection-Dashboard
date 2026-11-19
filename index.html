@@ -7275,6 +7275,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19l', date:'2026-11-19', items:[ {text:"🚫 <b>NPWs follow the Excel Bible</b>: a Bible upload now gives each NPW line the Excel Bible's amount and period (a line made from an NBR case used to keep the NBR's), and a line that's an NPW here but not in the Excel Bible stops being one, so the NPW figures match. NPWs don't count as written, banked or owed. <b>Upload the Bible again</b>.", roles:['admin','management']} ]},
   {id:'2026-11-19k', date:'2026-11-19', items:[ {text:"🚫 <b>NPW check</b>: uploading the Bible now ends with an NPW check for each year (the Excel Bible's NPW rows and total against the dashboard's) and lists any Excel NPW rows that aren't an NPW here. NPWs on fees paid in parts or combined into one line are now kept.", roles:['admin','management']} ]},
   {id:'2026-11-19j', date:'2026-11-19', items:[ {text:"🚫 <b>NPWs in the Bible</b>: every NPW row in your Excel Bible now comes in on upload, even when its case is no longer on the advisor's NBR (it usually comes off the month sheet when it goes NPW), so the Bible page's NPW card matches the Excel Bible. They don't count as written or owed. <b>Upload the Bible again</b> with Fill in the blanks.", roles:['admin','management']} ]},
   {id:'2026-11-19i', date:'2026-11-19', items:[ {text:"🏠 <b>B&C and Life Ins</b>: a Life Ins policy the B&C team wrote (e.g. \u201cLV GI\u201d on the register, LV Life Ins in the Bible) now matches its Bible row, so it shows as Life Ins with the Bible's lender and its date paid, still under B&C. B&C register dates typed day/month into a month/day cell (10/02 read as 2 October) are put right by the month's sheet. <b>Upload the B&C registers and then the Bible again</b> to put existing ones right.", roles:['admin','management']} ]},
@@ -17407,6 +17408,9 @@ function nbrBibleMatch(it){
       if(nbrBibleProductFix(t.l, l)) set.product = l.product;
       if(t.l.kind==='bc' && r.kind!=='bc'){ if(l.product && l.product!==t.l.product) set.product = l.product; if(l.provider && l.provider!==t.l.provider) set.provider = l.provider; }
       if(l.npw && !t.l.npw) set.npw = true;
+      else if(!l.npw && t.l.npw) set.npw = null; // the Excel Bible has it as proceeding
+      // An NPW is the Excel Bible's record: the line takes its amount and period (NPWs don't count as written, banked or owed).
+      if(l.npw){ if(!nbrBlank(l.amount) && Math.abs(n0(l.amount) - n0(t.l.amount)) >= 0.01) set.amount = nbrRound(l.amount); if(l.month && l.month!==t.l.month) set.month = l.month; }
       if(Object.keys(set).length){ out.fill.push({id:t.id, set, row:l}); if(set.datePaid) out.paidAdded++; } else out.same++;
     } else if(t && t.type==='entry'){ out.link.push({row:l, entry:t.id, kind:t.k}); if(l.datePaid) out.paidAdded++; }
     else if(t && t.type==='bcentry'){ out.link.push({row:l, bc:t.id}); if(l.datePaid) out.paidAdded++; }
@@ -17521,6 +17525,7 @@ function nbrBibleFillPatches(it){
     // The line's own payment: fill in only what's blank.
     let touched = false;
     if(rows.some(r=> r.l.npw) && !L.npw){ updates[base+'npw'] = true; touched = true; }
+    if(rows.some(r=> r.l.npw) && first.month && first.month!==L.month){ updates[base+'month'] = first.month; touched = true; }
     if(nbrBibleProductFix(L, first)){ updates[base+'product'] = first.product; touched = true; }
     NBR_FILL_FIELDS.filter(f=> f!=='amount').forEach(f=>{ if(!nbrBlank(first[f]) && nbrBlank(L[f])){ updates[base+f] = first[f]; touched = true; if(f==='datePaid') M.paidAdded++; } });
     // The others: matched to a payment line already here (same date paid, else same amount), otherwise added.
@@ -17543,6 +17548,7 @@ function nbrBibleFillPatches(it){
       NBR_FILL_FIELDS.forEach(f=>{ if(f!=='amount' && !nbrBlank(l[f]) && nbrBlank(L[f])){ updates[base+f] = l[f]; if(f==='datePaid') M.paidAdded++; } });
       if(nbrBibleProductFix(L, l)) updates[base+'product'] = l.product;
       if(l.npw && !L.npw) updates[base+'npw'] = true;
+      if(l.npw && l.month && l.month!==L.month) updates[base+'month'] = l.month;
       updates[base+'amount'] = nbrRound(l.amount);
       if(!nbrBlank(l.provider)) updates[base+'provider'] = l.provider;
       otherIds.forEach(k=>{ updates[base+'covers/'+k] = true; });

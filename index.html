@@ -1980,6 +1980,18 @@ body:not(.ai-on) #askBtn{display:none;}
 .ask-msg.me{align-self:flex-end; background:var(--brand); color:#fff; white-space:pre-wrap;}
 .ask-msg.ai{align-self:flex-start; background:color-mix(in srgb, #7C3AED 6%, var(--surface)); border:1px solid color-mix(in srgb, #7C3AED 22%, var(--border));}
 .ask-case{display:block; font-size:11px; opacity:.8; margin-top:4px;}
+.ask-panel.wide{width:min(980px, 100vw);}
+.ask-msg.has-tbl{max-width:100%; width:100%;}
+.ask-msg h4{margin:8px 0 4px; font-size:13.5px;}
+.ask-msg.ask-note{font-size:12.5px; color:var(--text-muted);}
+.ask-tbl{margin:6px 0 10px;}
+.ask-tbl-scroll{overflow-x:auto; max-width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface);}
+.ask-tbl table{border-collapse:collapse; width:100%; font-size:12.5px;}
+.ask-tbl th, .ask-tbl td{padding:5px 9px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; overflow-wrap:normal;}
+.ask-tbl th{background:var(--surface-2, #f5f5f7); font-weight:600;}
+.ask-tbl td.num, .ask-tbl th.num{text-align:right; font-variant-numeric:tabular-nums;}
+.ask-tbl tr:last-child td{border-bottom:0;}
+.ask-xl{font-size:12px; margin-top:4px;}
 .ask-empty{color:var(--text-muted); font-size:13px;}
 .ask-empty .ask-eg{display:block; width:100%; text-align:left; margin-top:8px; padding:8px 11px; border:1px solid var(--border); border-radius:10px; background:var(--surface); font:inherit; font-size:12.5px; color:var(--text); cursor:pointer;}
 .ask-empty .ask-eg:hover{border-color:#7C3AED;}
@@ -3937,7 +3949,7 @@ body:not(.ai-on) #askBtn{display:none;}
 <aside class="ask-panel" id="askPanel" aria-label="Ask Claude" aria-hidden="true">
   <div class="ask-hd">
     <b>✨ Ask Claude</b>
-    <div style="display:flex; gap:12px; align-items:center;"><button type="button" class="linkish" id="askNew">New chat</button><button type="button" class="modal-close" id="askClose" aria-label="Close">✕</button></div>
+    <div style="display:flex; gap:12px; align-items:center;"><button type="button" class="linkish" id="askWide" title="Make the panel wider or narrower">Wider</button><button type="button" class="linkish" id="askNew">New chat</button><button type="button" class="modal-close" id="askClose" aria-label="Close">✕</button></div>
   </div>
   <div class="ask-log" id="askLog"></div>
   <div class="ask-foot">
@@ -7255,6 +7267,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19f', date:'2026-11-19', items:[ {text:"✨ <b>Ask Claude for a report</b>: Claude can now look at the tracker's data to answer, e.g. \u201cbanked by advisor last month\u201d or \u201cprotection cases with no contact for 30 days\u201d, with tables you can download to Excel. Press <b>Wider</b> for room. Needs the AI assistant updating in Cloudflare first.", roles:['admin','management']} ]},
   {id:'2026-11-19e', date:'2026-11-19', items:[ {text:"🔁 <b>BTL PT</b> is now its own product, separate from <b>Prod Tfr</b> (which includes Prod.Trans and PT), in the Bible, the Salesboard's Banked view and the Switch dates projection (with a Product choice and a column for each). <b>Upload the advisors' NBRs again</b> to put existing BTL product transfers right.", roles:['admin','management']} ]},
   {id:'2026-11-19d', date:'2026-11-19', items:[ {text:"🔁 <b>Switch dates</b>: product transfers with a blank or different Type of sale on the NBR (e.g. \u201cBTL PT\u201d) were going into the Bible as Proc Fee, so they weren't in the projection. Uploading the Bible again now takes the product from the Bible (e.g. Prod Tfr), and the Switch dates view lists any lines with a switch date that aren't counted. <b>Upload the Bible again</b> with Fill in the blanks.", roles:['admin','management']} ]},
   {id:'2026-11-19c', date:'2026-11-19', items:[ {text:"🔁 <b>Switch dates</b>. Uploading an advisor's NBR now reads its <b>Switch Date</b> column (when the mortgage product switches), or the switch date written in the notes (e.g. ‘Switching 01/12/2026’). It shows on the Advisor NBR and goes into the Bible. A new <b>Switch dates</b> view on the Bible gives the projection, as the Bible's PT Switch Dates pivot: product transfer fees not paid yet, by month, by date and by advisor, with the cases behind them. <b>Upload the NBRs again</b> once the switch dates are added to bring them in.", roles:['admin','management']} ]},
@@ -11747,14 +11760,7 @@ document.addEventListener('click', e=>{
   }).catch(err=>{ toast(err.message,'error'); b.textContent = '✨ Tidy up'; }).finally(()=>{ b.disabled = false; });
 });
 // ✨ Ask Claude: a chat panel from the top bar. The conversation lives only in this tab.
-let askMsgs = [], askBusy = false; // {role, content (what Claude gets), show (what's on screen), caseName}
-function aiMd(t){ // Claude's plain-text reply: paragraphs, "- " bullets and **bold**
-  return String(t||'').split(/\n{2,}/).map(block=>{
-    const lines = block.split('\n'), fmt = x=> esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-    if(lines.every(x=> /^\s*[-*•] /.test(x))) return `<ul>${lines.map(x=> `<li>${fmt(x.replace(/^\s*[-*•] /,''))}</li>`).join('')}</ul>`;
-    return lines.map(x=> /^\s*[-*•] /.test(x) ? `<ul><li>${fmt(x.replace(/^\s*[-*•] /,''))}</li></ul>` : `<p>${fmt(x)}</p>`).join('');
-  }).join('');
-}
+let askMsgs = [], askBusy = false, askStep = ''; // {role, content (what Claude gets), show (what's on screen), caseName}
 function askCase(){
   for(const k of ['sib','com','lead']){ const cur = aiSumOpen(k); if(cur) return {name: cur.rec.clientName || cur.rec.mailingName || 'this case', ctx: cur.ctx(cur.rec)}; }
   return null;
@@ -11766,15 +11772,20 @@ function askCtxRender(){
 }
 function askRender(){
   const log = document.getElementById('askLog');
+  askTables = [];
   if(!askMsgs.length){
-    const egs = ['What should I do next on the case I have open?', "Explain the difference between level and decreasing term cover in plain English.", "Help me word a message to a client who's gone quiet after quotes."];
-    log.innerHTML = `<div class="ask-empty">Ask anything: about a case, mortgages or protection, or help wording something. Open a case first to ask about it.${egs.map(e=> `<button type="button" class="ask-eg">${esc(e)}</button>`).join('')}</div>`;
+    const data = aiqOn() && !aiqOld;
+    const egs = data ? ['How much did each advisor bank last month, and how does it compare with the month before?', 'Which protection cases have had no contact for 30 days or more, by advisor?', 'Send in Blue this year: retained, not converted and no opportunity by servicing adviser.', 'What should I do next on the case I have open?']
+      : ['What should I do next on the case I have open?', "Explain the difference between level and decreasing term cover in plain English.", "Help me word a message to a client who's gone quiet after quotes."];
+    log.innerHTML = `<div class="ask-empty">${data ? '<b>Ask anything, or for a report from the tracker.</b> Claude can look at the protection cases, Send in Blue, Commercial, the NBRs, the Bible and targets to answer, and you can download any table to Excel. Open a case first to ask about it.'
+      : 'Ask anything: about a case, mortgages or protection, or help wording something. Open a case first to ask about it.'}${egs.map(e=> `<button type="button" class="ask-eg">${esc(e)}</button>`).join('')}</div>`;
     return;
   }
   log.innerHTML = askMsgs.map(m=> m.role==='user'
     ? `<div class="ask-msg me">${esc(m.show)}${m.caseName ? `<span class="ask-case">with ${esc(m.caseName)}'s case</span>` : ''}</div>`
-    : `<div class="ask-msg ai">${aiMd(m.content)}</div>`).join('')
-    + (askBusy ? `<div class="ask-msg ai"><div class="ai-loading" style="padding:0;"><span class="spin"></span>Thinking…</div></div>` : '');
+    : m.note ? `<div class="ask-msg ai ask-note">${esc(m.content)}</div>`
+    : (()=>{ const h = aiMdRich(m.content); return `<div class="ask-msg ai${/class="ask-tbl"/.test(h) ? ' has-tbl' : ''}">${h}</div>`; })()).join('')
+    + (askBusy ? `<div class="ask-msg ai"><div class="ai-loading" style="padding:0;"><span class="spin"></span>${esc(askStep || 'Thinking…')}</div></div>` : '');
   log.scrollTop = log.scrollHeight;
 }
 function askOpen(){
@@ -11782,14 +11793,35 @@ function askOpen(){
   askCtxRender(); askRender(); setTimeout(()=> document.getElementById('askInput').focus(), 60);
 }
 function askClose(){ const p = document.getElementById('askPanel'); if(!p) return; p.classList.remove('open'); p.setAttribute('aria-hidden','true'); }
-function askReset(){ askMsgs = []; askBusy = false; document.getElementById('askInput').value = ''; askClose(); }
+function askReset(){ askMsgs = []; askApi = []; askBusy = false; aiqOld = false; document.getElementById('askInput').value = ''; askClose(); }
 function askSend(){
   const inp = document.getElementById('askInput'), q = inp.value.trim();
   if(!q || askBusy) return;
   const c = document.getElementById('askCtx').checked ? askCase() : null;
   askMsgs.push({role:'user', show:q, caseName: c ? c.name : '', content: c ? `The case I have open:\n${c.ctx}\n\nMy question (I'm ${currentUser.name}): ${q}` : `(I'm ${currentUser.name}.) ${q}`});
-  inp.value = ''; askBusy = true; askRender();
-  aiAsk('ask', askMsgs.map(m=> ({role:m.role, content:m.content}))).then(r=>{
+  inp.value = ''; askBusy = true; askStep = ''; askRender();
+  if(aiqOn() && !aiqOld){
+    // Reports mode: Claude can look at the data. If anything fails, the conversation goes back to how it was.
+    const back = askApi.length;
+    let retry = '';
+    askApi.push({role:'user', content:askMsgs[askMsgs.length-1].content});
+    aiqConverse(step=>{ askStep = step; askRender(); }).then(text=>{
+      askMsgs.push({role:'assistant', content:text});
+    }, e=>{
+      askApi.length = back;
+      const last = askMsgs.pop();
+      // An AI assistant that hasn't been updated yet doesn't know reports: ask again as a plain chat.
+      if(/unknown request/i.test(e.message)){
+        aiqOld = true; retry = last.show;
+        askMsgs.push({role:'assistant', note:true, content:"Reports from the tracker's data need the AI assistant updating (its code in Cloudflare). Until then, Claude answers without the data."});
+        return;
+      }
+      if(!inp.value) inp.value = last.show;
+      toast(e.message,'error');
+    }).finally(()=>{ askBusy = false; askStep = ''; askRender(); if(retry){ inp.value = retry; askSend(); } });
+    return;
+  }
+  aiAsk('ask', askMsgs.filter(m=> !m.note).map(m=> ({role:m.role, content:m.content}))).then(r=>{
     askMsgs.push({role:'assistant', content: String(r || '').trim() || '(No answer.)'});
   }, e=>{
     const last = askMsgs.pop(); if(!inp.value) inp.value = last.show; // put the question back to try again
@@ -11798,7 +11830,11 @@ function askSend(){
 }
 document.getElementById('askBtn').addEventListener('click', ()=> document.getElementById('askPanel').classList.contains('open') ? askClose() : askOpen());
 document.getElementById('askClose').addEventListener('click', askClose);
-document.getElementById('askNew').addEventListener('click', ()=>{ if(askBusy) return; askMsgs = []; askRender(); document.getElementById('askInput').focus(); });
+document.getElementById('askNew').addEventListener('click', ()=>{ if(askBusy) return; askMsgs = []; askApi = []; askRender(); document.getElementById('askInput').focus(); });
+// Wider panel for reports, remembered on this device.
+function askWideSet(on){ document.getElementById('askPanel').classList.toggle('wide', on); document.getElementById('askWide').textContent = on ? 'Narrower' : 'Wider'; }
+try{ askWideSet(localStorage.getItem('plt_askWide')==='1'); }catch(e){ askWideSet(false); }
+document.getElementById('askWide').addEventListener('click', ()=>{ const on = !document.getElementById('askPanel').classList.contains('wide'); askWideSet(on); try{ localStorage.setItem('plt_askWide', on ? '1' : '0'); }catch(e){ /* not remembered */ } });
 document.getElementById('askSend').addEventListener('click', askSend);
 document.getElementById('askInput').addEventListener('keydown', e=>{
   if(e.key==='Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); askSend(); }
@@ -11806,9 +11842,380 @@ document.getElementById('askInput').addEventListener('keydown', e=>{
 });
 document.getElementById('askInput').addEventListener('focus', askCtxRender);
 document.getElementById('askLog').addEventListener('click', e=>{
+  const xl = e.target.closest('[data-ask-xl]'); if(xl){ askTableDownload(+xl.dataset.askXl); return; }
   const b = e.target.closest('.ask-eg'); if(!b) return;
   const inp = document.getElementById('askInput'); inp.value = b.textContent; inp.focus();
 });
+
+/* ---- ✨ Ask Claude reports (Admin and Management) ----
+   Claude asks for figures with two tools, describe_data and query_data. They run here, on the data this colleague can
+   already see, and only their results go back to Claude. The prompt and the tools' definitions live in the AI
+   assistant (claude-worker.js). Phone numbers and email addresses are never in these data sets. */
+function aiqOn(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
+let aiqOld = false; // the AI assistant hasn't been updated for reports yet, so Ask Claude stays a plain chat
+let askApi = [];    // the reports conversation as Claude sees it, tool calls and results included
+const aiqPad = n=> String(n).padStart(2,'0');
+function aiqDate(v){
+  if(v==null || v==='') return '';
+  if(typeof v==='number'){ if(!isFinite(v) || v<=0) return ''; const d = new Date(v); return `${d.getFullYear()}-${aiqPad(d.getMonth()+1)}-${aiqPad(d.getDate())}`; }
+  const s = String(v).trim();
+  let m = s.match(/^\d{4}-\d{2}-\d{2}/); if(m) return m[0];
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return `${m[3]}-${aiqPad(m[2])}-${aiqPad(m[1])}`;
+  return '';
+}
+const aiqYm = v=> /^\d{4}-\d{2}/.test(String(v||'')) ? String(v).slice(0,7) : '';
+const aiqNum = v=> v==null || v==='' || isNaN(Number(v)) ? null : nbrRound(Number(v));
+const aiqYN = v=> v ? 'Yes' : 'No';
+const AIQ_OFFICE = {F:'Frimley', G:'Gurkha', C:'Commercial', W:'Wills', B:'Basingstoke'};
+const aiqAdvOffice = id=> AIQ_OFFICE[(NBR_ADV[id] || {}).office] || '';
+const AIQ_TYPES = {t:'text', n:'number', d:'date (YYYY-MM-DD)', m:'month (YYYY-MM)', b:'Yes / No'};
+const AIQ_KIND = [['appt','Appointment'], ['call','Call'], ['email','Email'], ['text','Text'], ['reminder','Reminder'], ['move','Pot move'], ['note','Note']];
+const aiqNbrOk = ()=> nbrAccess() && nbrFullReady();
+// The data sets. Each: what it is, whether it's ready, its fields [name, type, meaning] and its rows.
+const AIQ_SETS = {
+  protection_cases: {
+    about: 'Protection cases, one row per case. stage is the pot it is in now: New Cases, Appointments / Research, Submitted / In Underwriting, Terms Issued, On Risk (signed up), Declined · email pending, Fully Declined. Dates come from the case history.',
+    ready: ()=> leadsLoaded,
+    fields: [['client','t','Client name(s)'], ['stage','t','Pot the case is in now'], ['advisor','t','Protection advisor (Unassigned if none)'],
+      ['lead_source','t','Where the lead came from'], ['referred_by','t','Who referred it (e.g. a MAPA)'], ['referred_date','d','When it was referred'],
+      ['created_date','d','When the case was created'], ['research_date','d','When it went into research'], ['quotes_sent_date','d','When quotes were sent'],
+      ['submitted_date','d','First submitted to underwriting'], ['terms_date','d','Terms issued'], ['on_risk_date','d','Signed up / put on risk'], ['declined_date','d','Declined'],
+      ['decline_reason','t','Why it was declined'], ['commission','n','Commission £ (cases on risk)'], ['policies','t','Policy types on the case'], ['policy_count','n','Number of policies'],
+      ['next_booked_date','d','Next call, appointment or reminder booked'], ['next_booked_kind','t','What is booked next'], ['last_activity_date','d','Latest entry in the case history'],
+      ['calls','n','Calls logged'], ['appointments','n','Appointments logged'], ['emails','n','Emails logged'], ['texts','n','Texts logged']],
+    rows: ()=> Object.values(LEADS).filter(l=> l && !l.deleted).map(l=>{
+      const audit = Object.values(l.audit||{}).filter(a=> a && a.at).sort((a,b)=> a.at-b.at);
+      const first = t=>{ const a = audit.find(x=> x.type===t); return a ? aiqDate(a.at) : ''; };
+      const count = c=> audit.filter(a=> auditCats(a).has(c)).length;
+      const pols = leadPolicies(l);
+      return {client:l.clientName || l.mailingName || '', stage:STATUS_LABELS[potOf(l)] || l.status || '', advisor:l.advisorName || 'Unassigned',
+        lead_source:l.clientSource || '', referred_by:l.referredByName || '', referred_date:aiqDate(l.referredAt), created_date:aiqDate(l.createdAt || l.appDate),
+        research_date:aiqDate(l.researchAt) || first('research'), quotes_sent_date:aiqDate(l.quotesSentAt) || first('quotes'), submitted_date:first('underwriting'),
+        terms_date:first('terms'), on_risk_date:first('signup'), declined_date:first('decline'), decline_reason:l.declineReason || '',
+        commission:aiqNum(l.commission), policies:[...new Set(pols.map(p=> p.type))].join(', '), policy_count:pols.length,
+        next_booked_date:aiqDate(l.followUpDate), next_booked_kind:l.followUpDate ? (l.followUpKind ? fuKindLabel(l) : 'Call') : '',
+        last_activity_date:audit.length ? aiqDate(audit[audit.length-1].at) : '', calls:count('call'), appointments:count('appt'), emails:count('email'), texts:count('text')};
+    }),
+  },
+  protection_activity: {
+    about: "Every entry in the protection cases' history: calls, appointments, emails, texts, reminders, notes and pot moves, with who did it and when. Use it for activity by colleague or period.",
+    ready: ()=> leadsLoaded,
+    fields: [['date','d','When it happened'], ['kind','t','Call, Appointment, Email, Text, Reminder, Pot move, Note or Other'], ['by','t','Colleague who logged it'],
+      ['client','t','The case'], ['advisor','t',"The case's protection advisor"], ['stage','t','Pot the case is in now'], ['text','t','What was logged (shortened)']],
+    rows: ()=>{
+      const out = [];
+      Object.values(LEADS).forEach(l=>{ if(!l || l.deleted) return;
+        Object.values(l.audit||{}).forEach(a=>{ if(!a || !a.at) return; const c = auditCats(a), k = AIQ_KIND.find(([x])=> c.has(x));
+          out.push({date:aiqDate(a.at), kind:k ? k[1] : 'Other', by:a.byName || 'System', client:l.clientName || '', advisor:l.advisorName || 'Unassigned',
+            stage:STATUS_LABELS[potOf(l)] || '', text:String(a.text || '').replace(/\s+/g,' ').slice(0,160)}); }); });
+      return out;
+    },
+  },
+  sib_cases: {
+    about: 'Send in Blue (mortgage retentions): one row per client whose mortgage product ends in that month. outcome is Open, Retained, No Opportunity or Not Converted.',
+    start: ()=> startSibListener(), ready: ()=> sibLoaded,
+    fields: [['month','m','Month the product ends'], ['client','t','Client'], ['servicing_adviser','t','Servicing adviser'], ['ex_adviser','t','Original adviser'],
+      ['outcome','t','Open, Retained, No Opportunity or Not Converted'], ['outcome_reason','t','Reason for the outcome'], ['lost_to','t','Who the client went to, if lost'],
+      ['previous_lender','t','Lender of the ending product'], ['case_value','n','Loan value £'], ['email_client','t','Email client? (YES, NO, UNSUBSCRIBED, See Notes)'],
+      ['last_contact','d','Date of last contact'], ['retained_product','t','Product they were retained on'], ['protection_referred','b','Referred for protection'],
+      ['do_not_contact','b','Marked do not contact']],
+    rows: ()=> Object.values(SIB).filter(c=> c && !c.deleted).map(c=> ({month:aiqYm(c.month), client:c.mailingName || '', servicing_adviser:c.servicingAdviser || '',
+      ex_adviser:c.exAdviser || '', outcome:sibOutcome(c), outcome_reason:c.outcomeReason || '', lost_to:c.lostTo || '', previous_lender:c.previousLender || '',
+      case_value:aiqNum(c.caseValue), email_client:c.emailClient || '', last_contact:aiqDate(c.lastContact), retained_product:c.retainedProduct || '',
+      protection_referred:aiqYN(c.protectionReferredAt || c.protectionLeadId), do_not_contact:aiqYN(c.doNotContact)})),
+  },
+  commercial_cases: {
+    about: 'Commercial finance cases (the Commercial section). stage is New Case, Research, Waiting for docs/info, Terms issued / Application submitted, Complete, or Not proceeding.',
+    start: ()=> startComListener(), ready: ()=> comLoaded, allowed: ()=> comAccess(),
+    fields: [['client','t','Client'], ['business','t','Business name'], ['source','t','Lead source'], ['category','t','Type of finance'], ['stage','t','Where the case is now'],
+      ['advisor','t','Adviser'], ['lender','t','Lender'], ['value','n','Loan value £'], ['created_date','d','Created'], ['completed_date','d','Completed'],
+      ['lost_reason','t','Why it is not proceeding'], ['lost_date','d','When it stopped'], ['next_booked_date','d','Next call or appointment booked']],
+    rows: ()=> Object.values(COM).filter(c=> c && !c.deleted).map(c=> ({client:c.clientName || '', business:c.businessName || '', source:c.source || '', category:c.category || '',
+      stage:c.stage==='lost' ? 'Not proceeding' : ((COM_STAGES.find(s=> s[0]===c.stage) || ['','New Case'])[1]), advisor:c.advisorName || '', lender:c.lender || '',
+      value:aiqNum(c.value), created_date:aiqDate(c.createdAt), completed_date:aiqDate(c.completedAt), lost_reason:c.lostReason || '', lost_date:aiqDate(c.lostAt),
+      next_booked_date:aiqDate(c.followUpDate)})),
+  },
+  nbr_cases: {
+    about: "The advisors' NBRs (new business registers): one row per mortgage case, in the month it was written. Written for a month = the fees added up (proc fee + mums fee + protection + sols ref + val ref), less that month's NPWs (nbr_npw). Advisors with an NBR are in offices Frimley, Gurkha, Commercial and Wills.",
+    start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
+    fields: [['advisor','t','Advisor'], ['office','t','Office'], ['month','m','Month written'], ['week','d','Week (its start)'], ['client','t','Client'], ['lender','t','Lender'],
+      ['sale_type','t','Type of sale (Pur, Remo, Prod.Trans, BTL PT…)'], ['lead_source','t','Lead provider'], ['proc_fee','n','Proc fee £'], ['mums_fee','n','Mums (client) fee £'],
+      ['protection','n','Protection £'], ['sols_ref','n','Sols referral £'], ['val_ref','n','Val referral £'], ['total','n','All the fees £'],
+      ['app_submitted','d','Date the application was submitted'], ['switch_date','d','Date a product transfer switches']],
+    rows: ()=> Object.values(NBR_ENT).filter(e=> e && e.month).map(e=> ({advisor:nbrAdvName(e.adv), office:aiqAdvOffice(e.adv), month:aiqYm(e.month), week:aiqDate(e.week),
+      client:e.client || '', lender:e.lender || '', sale_type:e.saleType || '', lead_source:e.leadProv || '', proc_fee:aiqNum(e.proc), mums_fee:aiqNum(e.mums),
+      protection:aiqNum(e.prot), sols_ref:aiqNum(e.sols), val_ref:aiqNum(e.val), total:nbrRound(nbrEntTotal(e)), app_submitted:aiqDate(e.appSub), switch_date:aiqDate(e.switchDate)})),
+  },
+  nbr_npw: {
+    about: "NPWs (not proceeding) from the advisors' NBRs, taken off written in the month they are recorded.",
+    start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
+    fields: [['advisor','t','Advisor'], ['office','t','Office'], ['month','m','Month recorded'], ['client','t','Client'], ['lender','t','Lender / insurer'],
+      ['proc_fee','n','Proc fee £'], ['mums_fee','n','Mums fee £'], ['protection','n','Protection £'], ['sols_ref','n','Sols £'], ['total','n','Total £']],
+    rows: ()=> Object.values(NBR_NPW).filter(x=> x && x.month).map(x=> ({advisor:nbrAdvName(x.adv), office:aiqAdvOffice(x.adv), month:aiqYm(x.month), client:x.client || '',
+      lender:x.lender || '', proc_fee:aiqNum(x.proc), mums_fee:aiqNum(x.mums), protection:aiqNum(x.prot), sols_ref:aiqNum(x.sols), total:nbrRound(nbrNpwTotal(x))})),
+  },
+  bible_lines: {
+    about: 'The Bible: one line per piece of income (a fee) with what has been paid. Products include Proc Fee, Prod Tfr, BTL PT, Remo, Mums Fee, Sols Fee, Val Fee, Life Ins, Gen Ins (B&C), Commercial (C …). status is Written, Offered, Completed, Part-Paid, Paid or NPW. The financial year runs March to February (FY26 = Mar 2026 to Feb 2027). For money banked use bible_payments.',
+    start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
+    fields: [['advisor','t','Advisor (as on the Salesboard)'], ['office','t','Office'], ['client','t','Client'], ['product','t','Product'], ['provider','t','Lender / provider'],
+      ['lead_source','t','Source'], ['amount','n','The fee £'], ['month_written','m','Month written'], ['status','t','Written, Offered, Completed, Part-Paid, Paid or NPW'],
+      ['paid','n','Paid so far £'], ['outstanding','n','Still to come £'], ['date_paid','d','First payment date'], ['last_date_paid','d','Latest payment date'],
+      ['app_date','d','Application date'], ['offer_date','d','Offer date'], ['completion_date','d','Completion date'], ['switch_date','d','Product transfer switch date'],
+      ['npw','b','Not proceeding'], ['from_nbr','b','Made from an NBR case']],
+    rows: ()=> Object.values(NBR_BIB).filter(Boolean).map(l=>{ const pays = nbrLinePays(l).map(x=> aiqDate(x.datePaid)).filter(Boolean).sort();
+      return {advisor:nbrAdvName(nbrLineGroup(l)), office:AIQ_OFFICE[nbrLineOffice(l)] || '', client:l.client || '', product:l.product || '', provider:l.provider || '',
+        lead_source:l.source || '', amount:aiqNum(l.amount), month_written:aiqYm(l.month), status:(BIB_STATUS[nbrBibStatus(l)] || [''])[0], paid:nbrRound(nbrLinePaidTotal(l)),
+        outstanding:nbrRound(nbrLineOutstanding(l)), date_paid:pays[0] || '', last_date_paid:pays[pays.length-1] || '', app_date:aiqDate(l.appDate), offer_date:aiqDate(l.offerDate),
+        completion_date:aiqDate(l.compDate), switch_date:aiqDate(l.switchDate), npw:aiqYN(l.npw), from_nbr:aiqYN(l.entry)}; }),
+  },
+  bible_payments: {
+    about: "Money banked: one row per payment received on a Bible line, in the month it was paid (a fee paid in parts has a row per part). Banked on the Salesboard = these payments by month paid, plus Wills (wills_cases banked_net).",
+    start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
+    fields: [['date_paid','d','Date paid'], ['advisor','t','Advisor (as on the Salesboard)'], ['office','t','Office'], ['client','t','Client'], ['product','t','Product'],
+      ['provider','t','Lender / provider'], ['paid','n','Amount paid £'], ['fee','n','The fee (or part of it) this payment is for £'], ['how','t','How it was paid']],
+    rows: ()=>{ const out = [];
+      Object.values(NBR_BIB).forEach(l=>{ if(!l) return; nbrLinePays(l).forEach(x=>{ if(!x.datePaid) return;
+        out.push({date_paid:aiqDate(x.datePaid), advisor:nbrAdvName(nbrLineGroup(l)), office:AIQ_OFFICE[nbrLineOffice(l)] || '', client:l.client || '', product:l.product || '',
+          provider:l.provider || '', paid:nbrRound(n0(x.paid)), fee:aiqNum(x.own ? l.amount : x.amount), how:x.how || (x.own ? l.how : '') || ''}); }); });
+      return out; },
+  },
+  bc_cases: {
+    about: 'B&C (general insurance) cases by office and month, with commission.',
+    start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
+    fields: [['office','t','Office'], ['month','m','Month'], ['client','t','Client'], ['insurer','t','Insurer'], ['policy_type','t','Policy type'], ['commission','n','Commission £'],
+      ['on_risk','t','On risk'], ['lead_provider','t','Lead provider'], ['quoted_by','t','Quoted by']],
+    rows: ()=> Object.values(NBR_BC).filter(b=> b && b.month).map(b=> ({office:nbrBcOfficeName(b.office), month:aiqYm(b.month), client:b.client || '', insurer:b.insurer || '',
+      policy_type:b.policyType || '', commission:aiqNum(b.commission), on_risk:String(b.onRisk==null ? '' : b.onRisk), lead_provider:b.leadProvider || '', quoted_by:b.quotedBy || ''})),
+  },
+  wills_cases: {
+    about: 'Wills & estate planning cases. Written = the total; banked on the Salesboard = the total ÷ 1.2 (banked_net) in the same month.',
+    start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
+    fields: [['date','d','Date'], ['client','t','Client'], ['broker','t','Broker'], ['source','t','Source'], ['wills','n','Wills £'], ['lpa','n',"LPA's £"], ['other','n','Other £'],
+      ['total','n','Total £'], ['banked_net','n','Banked (total ÷ 1.2) £']],
+    rows: ()=> Object.values(NBR_WILLS).filter(w=> w && w.month).map(w=> ({date:aiqDate(w.date) || w.month+'-01', client:nbrWillName(w), broker:w.broker || '', source:w.source || '',
+      wills:aiqNum(w.wills), lpa:aiqNum(w.lpa), other:aiqNum(w.other), total:nbrRound(nbrWillTotal(w)), banked_net:nbrRound(nbrWillTotal(w)/1.2)})),
+  },
+  targets: {
+    about: "Each advisor's yearly targets (calendar year), as on the Targets page.",
+    start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
+    fields: [['year','n','Year'], ['name','t','Advisor'], ['office','t','Office'], ['written_target','n','Written target £'], ['banked_target','n','Banked target £'], ['dap_minimum','n','Minimum before DAP £']],
+    rows: ()=>{ const out = []; Object.keys(NBR_TGT).forEach(y=> nbrTgtRows(+y).forEach(t=> out.push({year:+y, name:t.name || '', office:(TGT_OFFICES.find(o=> o[0]===(t.office||'')) || ['',''])[1],
+      written_target:aiqNum(t.written), banked_target:aiqNum(t.banked), dap_minimum:aiqNum(t.dap)}))); return out; },
+  },
+  colleagues: {
+    about: 'Colleagues with a tracker login and their role (management, admin, mapa = MAPA, user = protection advisor).',
+    ready: ()=> true,
+    fields: [['name','t','Name'], ['role','t','Role']],
+    rows: ()=> Object.values(USERS).filter(u=> u && u.name).map(u=> ({name:u.name, role:u.role || ''})),
+  },
+};
+const aiqAllowed = s=> !s.allowed || s.allowed();
+// Start whatever isn't loaded yet and wait for it (up to 25 seconds).
+async function aiqEnsure(){
+  Object.values(AIQ_SETS).forEach(s=>{ if(aiqAllowed(s) && s.start && !s.ready()) s.start(); });
+  const until = Date.now() + 25000;
+  while(Date.now() < until && Object.values(AIQ_SETS).some(s=> aiqAllowed(s) && !s.ready())) await new Promise(r=> setTimeout(r, 250));
+}
+const aiqCache = {};
+function aiqRows(name){ const s = AIQ_SETS[name], c = aiqCache[name], ver = name.startsWith('nbr') || name.startsWith('bible') || ['bc_cases','wills_cases','targets'].includes(name) ? nbrVer : 0;
+  // Rows are worked out once per question; the data can change between questions.
+  if(c && c.ver===ver && Date.now() - c.at < 60000) return c.rows;
+  const rows = s.rows(); aiqCache[name] = {ver, at:Date.now(), rows}; return rows; }
+async function aiqDescribe(){
+  await aiqEnsure();
+  const sets = [], missing = [];
+  Object.entries(AIQ_SETS).forEach(([name, s])=>{
+    if(!aiqAllowed(s)){ missing.push(`${name}: this colleague doesn't have access`); return; }
+    if(!s.ready()){ missing.push(`${name}: still loading, try again in a moment`); return; }
+    const rows = aiqRows(name);
+    sets.push({name, about:s.about, rows:rows.length, fields:s.fields.map(([f, t, about])=>{
+      const o = {name:f, type:AIQ_TYPES[t], about};
+      if(t==='t'){ const n = {}; rows.forEach(r=>{ const v = r[f]; if(v!=null && v!=='') n[v] = (n[v]||0) + 1; });
+        const vals = Object.keys(n); if(vals.length && vals.length <= 40) o.values = vals.sort((a,b)=> n[b]-n[a]).slice(0,25); }
+      return o; })});
+  });
+  return {today:aiqDate(Date.now()), you:`${currentUser.name} (${currentUser.role})`, periods:'Add :month, :year, :quarter, :fin_year (March-February), :week or :weekday to a date field to group or filter by period.', datasets:sets, not_available:missing};
+}
+function aiqPart(v, part){
+  v = String(v||''); if(!v) return '';
+  const y = +v.slice(0,4), m = +v.slice(5,7);
+  if(part==='month') return v.slice(0,7);
+  if(part==='year') return v.slice(0,4);
+  if(part==='quarter') return m ? `${y}-Q${Math.ceil(m/3)}` : '';
+  if(part==='fin_year') return m ? nbrFyOf(v.slice(0,7)) : '';
+  if(v.length < 10) return '';
+  const d = new Date(y, m-1, +v.slice(8,10));
+  if(part==='weekday') return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  d.setDate(d.getDate() - ((d.getDay()+6) % 7)); return aiqDate(d.getTime()); // week: its Monday
+}
+const AIQ_PARTS = ['month','year','quarter','fin_year','week','weekday'];
+function aiqField(set, name, spec){
+  const [f, part] = String(spec||'').split(':'), def = set.fields.find(x=> x[0]===f);
+  if(!def) throw new Error(`There's no field "${f}" in ${name}. Its fields: ${set.fields.map(x=> x[0]).join(', ')}.`);
+  if(part!==undefined){
+    if(!AIQ_PARTS.includes(part)) throw new Error(`":${part}" isn't a period. Use :${AIQ_PARTS.join(', :')}.`);
+    if(def[1]!=='d' && !(def[1]==='m' && !['week','weekday'].includes(part))) throw new Error(`"${f}" isn't a date, so it can't take :${part}.`);
+  }
+  return {spec:String(spec), type:part!==undefined ? 't' : def[1], get:part!==undefined ? r=> aiqPart(r[f], part) : r=> r[f]};
+}
+function aiqTest(fl, r){
+  const v = fl.f.get(r), blank = v==null || v==='', op = fl.op, num = fl.f.type==='n';
+  if(op==='blank') return blank;
+  if(op==='not_blank') return !blank;
+  const norm = x=> x===true ? 'yes' : x===false ? 'no' : String(x==null ? '' : x).trim().toLowerCase();
+  const list = Array.isArray(fl.value) ? fl.value : String(fl.value==null ? '' : fl.value).split(',');
+  if(num && !['contains','not_contains','in','not_in'].includes(op)){
+    if(blank) return op==='!=';
+    const a = Number(v), b = Number(fl.value), c = Number(fl.value2);
+    return op==='=' ? a===b : op==='!=' ? a!==b : op==='>' ? a>b : op==='>=' ? a>=b : op==='<' ? a<b : op==='<=' ? a<=b : op==='between' ? a>=b && a<=c : false;
+  }
+  const s = norm(v), b = norm(fl.value), c = norm(fl.value2);
+  // A date compared with a month (or a year) compares that much of it: "= 2026-11" is any day in November.
+  const cut = x=> fl.f.type==='d' || fl.f.type==='m' ? s.slice(0, x.length) : s;
+  switch(op){
+    case '=': return cut(b)===b;
+    case '!=': return cut(b)!==b;
+    case 'in': return list.map(norm).some(x=> cut(x)===x);
+    case 'not_in': return !list.map(norm).some(x=> cut(x)===x);
+    case 'contains': return s.includes(b);
+    case 'not_contains': return !s.includes(b);
+    case '>': return !blank && cut(b) > b;
+    case '>=': return !blank && s >= b;
+    case '<': return !blank && s < b;
+    case '<=': return !blank && cut(b) <= b;
+    case 'between': return !blank && s >= b && cut(c) <= c;
+  }
+  throw new Error(`Unknown filter "${op}".`);
+}
+const AIQ_MAX_CHARS = 60000;
+async function aiqQuery(q){
+  await aiqEnsure();
+  const name = String(q.dataset||''), set = AIQ_SETS[name];
+  if(!set) throw new Error(`There's no data set "${name}". Use one of: ${Object.keys(AIQ_SETS).join(', ')}.`);
+  if(!aiqAllowed(set)) throw new Error(`This colleague doesn't have access to ${name}.`);
+  if(!set.ready()) throw new Error(`${name} is still loading. Try again in a moment.`);
+  const filters = (Array.isArray(q.filters) ? q.filters : []).map(x=> ({...x, op:String(x.op||'='), f:aiqField(set, name, x.field)}));
+  let rows = aiqRows(name).filter(r=> filters.every(fl=> aiqTest(fl, r)));
+  const groups = (Array.isArray(q.group_by) ? q.group_by : q.group_by ? [q.group_by] : []).slice(0,3).map(g=> aiqField(set, name, g));
+  const metrics = (Array.isArray(q.metrics) ? q.metrics : []).map(m=>{
+    const fn = String(m.fn||'count'); if(!['count','sum','avg','min','max','count_distinct'].includes(fn)) throw new Error(`Unknown metric "${fn}".`);
+    if(fn==='count') return {fn, name:'count'};
+    const f = aiqField(set, name, m.field); if(['sum','avg'].includes(fn) && f.type!=='n') throw new Error(`"${m.field}" isn't a number, so it can't be ${fn}med.`);
+    return {fn, f, name:`${fn}_${f.spec.replace(':','_')}`};
+  });
+  const limit = Math.max(1, Math.min(500, parseInt(q.limit, 10) || 200));
+  const matched = rows.length;
+  let columns, out, totals = null;
+  if(groups.length || metrics.length){
+    const ms = metrics.length ? metrics : [{fn:'count', name:'count'}];
+    const calc = (list, m)=>{
+      if(m.fn==='count') return list.length;
+      const vals = list.map(r=> m.f.get(r)).filter(v=> v!=null && v!=='');
+      if(m.fn==='count_distinct') return new Set(vals.map(v=> String(v).toLowerCase())).size;
+      if(m.fn==='sum') return nbrRound(vals.reduce((s,v)=> s + Number(v), 0));
+      if(m.fn==='avg') return vals.length ? nbrRound(vals.reduce((s,v)=> s + Number(v), 0) / vals.length) : null;
+      if(!vals.length) return null;
+      const sorted = m.f.type==='n' ? vals.map(Number).sort((a,b)=> a-b) : vals.map(String).sort();
+      return m.fn==='min' ? sorted[0] : sorted[sorted.length-1];
+    };
+    const map = new Map();
+    rows.forEach(r=>{ const key = groups.map(g=>{ const v = g.get(r); return v==null || v==='' ? '(blank)' : v; }), k = JSON.stringify(key);
+      (map.get(k) || map.set(k, {key, rows:[]}).get(k)).rows.push(r); });
+    columns = [...groups.map(g=> g.spec), ...ms.map(m=> m.name)];
+    out = [...map.values()].map(g=> [...g.key, ...ms.map(m=> calc(g.rows, m))]);
+    if(groups.length && !metrics.length && !rows.length) out = [];
+    if(groups.length) totals = Object.fromEntries(ms.filter(m=> ['count','sum'].includes(m.fn)).map(m=> [m.name, calc(rows, m)]));
+  } else {
+    columns = (Array.isArray(q.columns) && q.columns.length ? q.columns : set.fields.map(x=> x[0])).map(c=> aiqField(set, name, c));
+    out = rows.map(r=> columns.map(c=>{ const v = c.get(r); return v==null ? '' : v; }));
+    columns = columns.map(c=> c.spec);
+  }
+  const sorts = Array.isArray(q.sort) ? q.sort : [];
+  if(sorts.length){
+    const idx = sorts.map(s=>{ const i = columns.indexOf(String(s.by||'')); if(i<0) throw new Error(`Can't sort by "${s.by}": the result's columns are ${columns.join(', ')}.`); return [i, !!s.desc]; });
+    out.sort((a,b)=>{ for(const [i, d] of idx){ const x = a[i], y = b[i];
+      const c = typeof x==='number' && typeof y==='number' ? x-y : String(x==null ? '' : x).localeCompare(String(y==null ? '' : y), undefined, {numeric:true});
+      if(c) return d ? -c : c; } return 0; });
+  } else if(groups.length) out.sort((a,b)=>{ for(let i=0; i<groups.length; i++){ const c = String(a[i]).localeCompare(String(b[i]), undefined, {numeric:true}); if(c) return c; } return 0; });
+  const all = out.length;
+  out = out.slice(0, limit);
+  const res = {dataset:name, matched_rows:matched, columns, rows:out};
+  if(totals) res.totals_over_all_matched = totals;
+  if(all > out.length) res.note = `Showing ${out.length} of ${all} ${groups.length ? 'groups' : 'rows'}.`;
+  // Keep a result to a size Claude can read: fewer rows, and say so.
+  let json = JSON.stringify(res);
+  while(json.length > AIQ_MAX_CHARS && res.rows.length > 10){ res.rows = res.rows.slice(0, Math.floor(res.rows.length * 0.6)); res.note = `Cut to ${res.rows.length} of ${all} ${groups.length ? 'groups' : 'rows'} to fit; filter, group or choose fewer columns to see the rest.`; json = JSON.stringify(res); }
+  return res;
+}
+const AIQ_STEP = {describe_data:'Looking at what data there is…'};
+async function aiqTool(c){
+  try{
+    let out;
+    if(c.name==='describe_data') out = await aiqDescribe();
+    else if(c.name==='query_data') out = await aiqQuery(c.input || {});
+    else throw new Error(`There's no tool called ${c.name}.`);
+    return {type:'tool_result', tool_use_id:c.id, content:JSON.stringify(out)};
+  }catch(e){ return {type:'tool_result', tool_use_id:c.id, content:'Error: ' + (e && e.message || e), is_error:true}; }
+}
+// The reports conversation: send it, run the tools Claude asks for, and repeat until it answers (at most 16 rounds).
+async function aiqConverse(onStep){
+  for(let round = 0; round < 16; round++){
+    const r = await aiAsk('data', askApi) || {};
+    const content = Array.isArray(r.content) && r.content.length ? r.content : [{type:'text', text:'(No answer.)'}];
+    askApi.push({role:'assistant', content});
+    const calls = content.filter(b=> b.type==='tool_use');
+    if(r.stop_reason!=='tool_use' || !calls.length) return content.filter(b=> b.type==='text').map(b=> b.text).join('\n\n').trim() || '(No answer.)';
+    const q = calls.find(b=> b.name==='query_data');
+    onStep(q && q.input && AIQ_SETS[q.input.dataset] ? `Looking at ${String(q.input.dataset).replace(/_/g,' ')}…` : AIQ_STEP[calls[0].name] || 'Working it out…');
+    const results = [];
+    for(const c of calls) results.push(await aiqTool(c));
+    askApi.push({role:'user', content:results});
+  }
+  throw new Error('That took Claude too many steps. Try asking for something narrower.');
+}
+
+/* Claude's reply with tables: "### " headings, "- " bullets, **bold** and markdown tables, each with a download to Excel. */
+let askTables = [];
+function aiMdRich(t){
+  const lines = String(t||'').split('\n'), fmt = x=> esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  let html = '', para = [], list = [], i = 0;
+  const flushP = ()=>{ if(para.length){ html += `<p>${para.map(fmt).join('<br>')}</p>`; para = []; } };
+  const flushL = ()=>{ if(list.length){ html += `<ul>${list.map(x=> `<li>${fmt(x)}</li>`).join('')}</ul>`; list = []; } };
+  const isRow = l=> /^\s*\|.*\|\s*$/.test(l), cells = l=> l.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=> c.trim());
+  while(i < lines.length){
+    const l = lines[i];
+    if(isRow(l) && i+1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i+1])){
+      flushP(); flushL();
+      const head = cells(l), body = []; i += 2;
+      while(i < lines.length && isRow(lines[i])){ body.push(cells(lines[i])); i++; }
+      const n = askTables.push({head, body}) - 1;
+      const numCls = c=> /^-?£?-?[\d,]+(\.\d+)?%?$/.test(c.replace(/\*\*/g,'')) ? ' class="num"' : '';
+      const numCol = ci=> body.length && body.every(r=> !r[ci] || numCls(r[ci]));
+      html += `<div class="ask-tbl"><div class="ask-tbl-scroll"><table><thead><tr>${head.map((h, ci)=> `<th${numCol(ci) ? ' class="num"' : ''}>${fmt(h)}</th>`).join('')}</tr></thead><tbody>${
+        body.map(r=> `<tr>${r.map(c=> `<td${numCls(c)}>${fmt(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><button type="button" class="linkish ask-xl" data-ask-xl="${n}">⬇ Download to Excel</button></div>`;
+      continue;
+    }
+    if(/^\s*#{1,4}\s+/.test(l)){ flushP(); flushL(); html += `<h4>${fmt(l.replace(/^\s*#+\s+/,''))}</h4>`; }
+    else if(/^\s*[-*•]\s+/.test(l)){ flushP(); list.push(l.replace(/^\s*[-*•]\s+/,'')); }
+    else if(!l.trim()){ flushP(); flushL(); }
+    else { flushL(); para.push(l); }
+    i++;
+  }
+  flushP(); flushL();
+  return html;
+}
+function askTableDownload(n){
+  const t = askTables[n]; if(!t) return;
+  loadXlsx().then(X=>{
+    const val = c=>{ const s = String(c||'').replace(/\*\*/g,'').trim(), m = s.match(/^(-?)£?(-?)([\d,]+(?:\.\d+)?)$/);
+      return m ? {v:Number((m[1]||m[2] ? '-' : '') + m[3].replace(/,/g,'')), t:'n', z:/£/.test(s) ? '£#,##0.00' : undefined} : {v:s, t:'s'}; };
+    const ws = X.utils.aoa_to_sheet([t.head.map(h=> h.replace(/\*\*/g,'')), ...t.body.map(r=> r.map(c=> String(c||'').replace(/\*\*/g,'')))]);
+    t.body.forEach((r, ri)=> r.forEach((c, ci)=>{ const v = val(c); if(v.t==='n'){ const a = X.utils.encode_cell({r:ri+1, c:ci}); ws[a] = {t:'n', v:v.v, ...(v.z ? {z:v.z} : {})}; } }));
+    ws['!cols'] = t.head.map((h, ci)=> ({wch:Math.min(40, Math.max(10, ...[h, ...t.body.map(r=> r[ci]||'')].map(x=> String(x).length + 2)))}));
+    const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Report');
+    X.writeFile(wb, `Claude report ${aiqDate(Date.now())}.xlsx`);
+  }, e=> toast(e.message, 'error'));
+}
 
 // Settings: the assistant's address
 function aiUrlValid(u){ return /^https:\/\/[^\s/]+(\/\S*)?$/.test(u); }

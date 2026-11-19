@@ -914,6 +914,9 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 @media (prefers-reduced-motion: reduce){ .wiz-nudge{animation:none;} }
 @media (max-width:640px){ .wiz-opts{grid-template-columns:1fr;} .wiz-where > .wiz-sub-row, .wiz-where > .wiz-check, .wiz-where > .wiz-note{padding-left:14px;} }
 .nbr-bib-views{display:inline-flex; margin:0 0 14px;} .nbr-bib-views button{padding:8px 16px; font-size:13px;}
+.nbr-switch-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; align-items:start;}
+.nbr-switch-days{font-size:12.5px;}
+@media (max-width:820px){ .nbr-switch-grid{grid-template-columns:1fr;} }
 .nbr-paid-cards{grid-template-columns:repeat(3, minmax(0,1fr)); margin-bottom:10px;}
 .nbr-paid-table tr.nbr-group td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.4px; padding-top:9px; padding-bottom:9px;}
 .nbr-paid-n{font-weight:500; text-transform:none; letter-spacing:0; opacity:.85; margin-left:6px;}
@@ -7250,6 +7253,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19c', date:'2026-11-19', items:[ {text:"🔁 <b>Switch dates</b>. Uploading an advisor's NBR now reads its <b>Switch Date</b> column (when the mortgage product switches), or the switch date written in the notes (e.g. ‘Switching 01/12/2026’). It shows on the Advisor NBR and goes into the Bible. A new <b>Switch dates</b> view on the Bible gives the projection, as the Bible's PT Switch Dates pivot: product transfer fees not paid yet, by month, by date and by advisor, with the cases behind them. <b>Upload the NBRs again</b> once the switch dates are added to bring them in.", roles:['admin','management']} ]},
   {id:'2026-11-19b', date:'2026-11-19', items:[ {text:"💷 <b>Bible: Paid by month</b>. A new view at the top of the Bible: choose a month and see every payment that came in that month, by advisor, with each advisor's total, whatever month the case was written in. Part payments show in the month each one was paid. You can also click a figure in <b>Banked … by the month paid</b> to see the payments behind it.", roles:['admin','management']} ]},
   {id:'2026-11-19a', date:'2026-11-19', items:[ {text:"🔎 <b>Search</b>: the search box on the dashboard finds cases by the client's <b>email</b> or <b>phone number</b> as well as their name and source. Phone numbers match from the first digit you type, narrowing as you go, however they're written (07700 900123, +44 7700 900123, 07700-900-123), including each client on a joint case.", roles:['mapa','management','admin']} ]},
   {id:'2026-11-18c', date:'2026-11-18', items:[ {text:"✨ <b>Case window</b>: a cleaner layout. The stage shows as pills, the <b>Next step</b> card holds <b>Update case</b> and <b>Refer to protection adviser</b>, contact and case details sit side by side, and the History is underneath. More options are under <b>⋯</b> at the top. In New Cases, Update case can now <b>Move to Appointments / Research</b> with an appointment or a reminder.", roles:['mapa','management','admin']},
@@ -14424,7 +14428,7 @@ let NBR_ADV = {}, NBR_ENT = {}, NBR_NPW = {}, NBR_BIB = {}, NBR_CFG = {}, NBR_BC
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
 const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
-  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', upload:null, tgtYear:null, tgtUp:null};
+  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', upload:null, tgtYear:null, tgtUp:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
@@ -14767,7 +14771,7 @@ function nbrLinePatches(entryId, e, opts={}){
   };
   NBR_CATS.forEach(([k])=>{
     const amt = nbrRound(e[k]), ex = linked[k];
-    const shared = nbrClean({adv:e.adv, office:(adv.office==='C' ? (NBR_ADV[adv.of] || {}).office : adv.office) || '', client:e.client || '', appDate:e.appSub || '', month:e.month, address:e.notes || ''});
+    const shared = nbrClean({adv:e.adv, office:(adv.office==='C' ? (NBR_ADV[adv.of] || {}).office : adv.office) || '', client:e.client || '', appDate:e.appSub || '', switchDate:e.switchDate || '', month:e.month, address:e.notes || ''});
     if(amt){
       if(ex){ const [lid, l] = ex; out['bible/'+lid] = {...l, ...shared, amount:amt, updatedAt:Date.now()}; }
       else if(opts.create!==false){
@@ -14816,6 +14820,7 @@ function openNbrEntry(id, preset={}){
       ${nfMoney('nfVal','Val amount', e.val)}
       ${nfList('nfValName','Val name', e.valName, L.vals)}
       ${nfDate('nfAppSub','Date app submitted', e.appSub)}
+      ${nfDate('nfSwitch','Switch date', e.switchDate)}
       ${nfList('nfLead','Lead provider', e.leadProvider, L.leadProviders)}
     </div>
     <div class="field"><label for="nfNotes">Postcode, 1st line of address, switch date for PTs &amp; notes</label><input type="text" id="nfNotes" value="${esc(e.notes||'')}"></div>
@@ -14831,7 +14836,7 @@ function openNbrEntry(id, preset={}){
     onSave: ()=>{
       const data = nbrClean({adv:nfv('nfAdv'), month:nfv('nfMonth'), week:nfv('nfWeek'), client:nfv('nfClient'), lender:nfv('nfLender'), saleType:nfv('nfSale'),
         proc:nfn('nfProc'), mums:nfn('nfMums'), prot:nfn('nfProt'), sols:nfn('nfSols'), solsName:nfv('nfSolsName'), val:nfn('nfVal'), valName:nfv('nfValName'),
-        appSub:nfv('nfAppSub'), leadProvider:nfv('nfLead'), notes:nfv('nfNotes'), linkToSend:nfn('nfLink'), linkSent:nfv('nfLinkSent'), linkPaid:nfv('nfLinkPaid')});
+        appSub:nfv('nfAppSub'), switchDate:nfv('nfSwitch'), leadProvider:nfv('nfLead'), notes:nfv('nfNotes'), linkToSend:nfn('nfLink'), linkSent:nfv('nfLinkSent'), linkPaid:nfv('nfLinkPaid')});
       if(!data.adv){ toast('Choose the advisor.', 'error'); return false; }
       if(!data.month){ toast('Choose the register month.', 'error'); return false; }
       if(!data.client){ toast('Enter the client.', 'error'); return false; }
@@ -15566,11 +15571,11 @@ function renderNbrReg(){
   // Newest week first, so the current week is at the top (weeks keep their numbers).
   const thisWeek = ym===nbrThisYm() ? nbrWeekFor(nbrToday(), ym) : '';
   const inBible = new Set(Object.values(NBR_BIB).filter(l=> l && l.entry).map(l=> l.entry));
-  const head = `<tr><th>Client - new business</th><th>Lender / insurer</th>${NBR_CATS.map(([,l])=> `<th class="num">${l.replace(' refs','')}</th>`).join('')}<th class="num">Total</th><th>Sols name</th><th>Val name</th><th>App sub</th><th>Lead provider</th><th>Type of sale</th><th>Notes</th><th class="num">£ link</th><th>Sent</th><th>Paid</th></tr>`;
-  const rowHtml = e=> `<tr class="nbr-click" data-nbr-ent="${esc(e.id)}"><td><b>${esc(e.client||'')}</b>${inBible.has(e.id) ? ' <span class="nbr-tag" title="In the Bible">Bible</span>' : ''}</td><td>${esc(e.lender||'')}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(e[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(nbrEntTotal(e))}</td><td>${esc(e.solsName||'')}</td><td>${esc(e.valName||'')}</td><td>${e.appSub ? fmtDateSlash(e.appSub) : ''}</td><td>${esc(e.leadProvider||'')}</td><td>${esc(e.saleType||'')}</td><td class="nbr-notes">${esc(e.notes||'')}</td><td class="num">${nbrMoneyCell(e.linkToSend)}</td><td>${e.linkSent ? fmtDateSlash(e.linkSent) : ''}</td><td>${e.linkPaid ? fmtDateSlash(e.linkPaid) : ''}</td></tr>`;
-  const totRow = (label, rows, cls)=>{ const t = nbrSum(rows.map(e=> ({...e, total: nbrEntTotal(e)}))); return `<tr class="${cls}"><td>${label}</td><td></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td colspan="10"></td></tr>`; };
+  const head = `<tr><th>Client - new business</th><th>Lender / insurer</th>${NBR_CATS.map(([,l])=> `<th class="num">${l.replace(' refs','')}</th>`).join('')}<th class="num">Total</th><th>Sols name</th><th>Val name</th><th>App sub</th><th>Switch date</th><th>Lead provider</th><th>Type of sale</th><th>Notes</th><th class="num">£ link</th><th>Sent</th><th>Paid</th></tr>`;
+  const rowHtml = e=> `<tr class="nbr-click" data-nbr-ent="${esc(e.id)}"><td><b>${esc(e.client||'')}</b>${inBible.has(e.id) ? ' <span class="nbr-tag" title="In the Bible">Bible</span>' : ''}</td><td>${esc(e.lender||'')}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(e[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(nbrEntTotal(e))}</td><td>${esc(e.solsName||'')}</td><td>${esc(e.valName||'')}</td><td>${e.appSub ? fmtDateSlash(e.appSub) : ''}</td><td>${e.switchDate ? fmtDateSlash(e.switchDate) : ''}</td><td>${esc(e.leadProvider||'')}</td><td>${esc(e.saleType||'')}</td><td class="nbr-notes">${esc(e.notes||'')}</td><td class="num">${nbrMoneyCell(e.linkToSend)}</td><td>${e.linkSent ? fmtDateSlash(e.linkSent) : ''}</td><td>${e.linkPaid ? fmtDateSlash(e.linkPaid) : ''}</td></tr>`;
+  const totRow = (label, rows, cls)=>{ const t = nbrSum(rows.map(e=> ({...e, total: nbrEntTotal(e)}))); return `<tr class="${cls}"><td>${label}</td><td></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td colspan="11"></td></tr>`; };
   const monthHtml = ents.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-reg-table"><thead>${head}</thead><tbody>
-      ${weeks.map((g,i)=> ({g, n:i+1})).reverse().map(({g,n})=> `<tr class="nbr-group nbr-wk ${a && a.office==='C' ? 'nbr-com' : ''} ${g.week===thisWeek ? 'nbr-this-week' : ''}"><td colspan="18">Week ${n}${g.week ? ' · w/e '+esc(fmtDate(g.week)) : ''}${g.week===thisWeek ? ' <span class="nbr-tag">This week</span>' : ''}</td></tr>${g.rows.map(rowHtml).join('')}${totRow(`Week ${n} totals`, g.rows, 'nbr-tot')}`).join('')}
+      ${weeks.map((g,i)=> ({g, n:i+1})).reverse().map(({g,n})=> `<tr class="nbr-group nbr-wk ${a && a.office==='C' ? 'nbr-com' : ''} ${g.week===thisWeek ? 'nbr-this-week' : ''}"><td colspan="19">Week ${n}${g.week ? ' · w/e '+esc(fmtDate(g.week)) : ''}${g.week===thisWeek ? ' <span class="nbr-tag">This week</span>' : ''}</td></tr>${g.rows.map(rowHtml).join('')}${totRow(`Week ${n} totals`, g.rows, 'nbr-tot')}`).join('')}
       ${totRow(`${NBR_MONTHS_LONG[+ym.slice(5,7)-1]} total`, ents, 'nbr-grand')}
     </tbody></table></div>` : `<div class="nml-empty">No cases in ${esc(nbrYmLabel(ym, true))} yet.</div>`;
   // No NBR for this advisor and year: show the month from the Bible, one row per client, laid out like the NBR.
@@ -15666,7 +15671,7 @@ function nbrPaidMonths(){
   return [...s].filter(ym=> /^\d{4}-\d{2}$/.test(ym)).sort().reverse();
 }
 function nbrBibViewSwitch(){
-  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
+  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month'], ['switch','Switch dates']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
 }
 function renderNbrBiblePaid(el){
   const months = nbrPaidMonths(), thisYm = nbrThisYm();
@@ -15725,6 +15730,64 @@ function renderNbrBiblePaid(el){
   document.getElementById('nbrBibSearch').addEventListener('input', e=>{ clearTimeout(t); t = setTimeout(()=>{ nbrUI.bibSearch = e.target.value.trim(); renderNbrBible(); const sb = document.getElementById('nbrBibSearch'); sb.focus(); sb.setSelectionRange(sb.value.length, sb.value.length); }, 250); });
   nbrBindBibViews(el);
 }
+/* Switch dates: product transfer fees still to come, by the date the mortgage product switches, as the
+   Bible's "Pivot - PT Switch Dates": Prod Tfr lines with a switch date, not paid yet and not NPW, amount added up. */
+const nbrIsPT = l=> /^prod\s*tfr$/i.test(String(l && l.product || '').trim());
+function nbrSwitchLines(){
+  return Object.entries(NBR_BIB).filter(([, l])=> l && nbrIsPT(l) && /^\d{4}-\d{2}-\d{2}/.test(l.switchDate||'') && !l.npw && !nbrLineAnyPaid(l))
+    .map(([id, l])=> ({id, ...l}));
+}
+function renderNbrBibleSwitch(el){
+  const all = nbrSwitchLines(), thisYm = nbrThisYm();
+  const lines = all.filter(l=> !nbrUI.bibAdv || (l.adv||'')===(nbrUI.bibAdv==='none' ? '' : nbrUI.bibAdv));
+  const ymOf = l=> l.switchDate.slice(0,7);
+  const months = [...new Set(lines.map(ymOf))].sort();
+  const sumOf = list=> list.reduce((t,l)=> t + n0(l.amount), 0);
+  const total = sumOf(lines), ahead = sumOf(lines.filter(l=> ymOf(l) >= thisYm)), late = lines.filter(l=> ymOf(l) < thisYm);
+  const byMonth = ym=> lines.filter(l=> ymOf(l)===ym);
+  const advIds = [...new Set(lines.map(l=> l.adv||''))].sort((a,b)=> nbrAdvName(a).localeCompare(nbrAdvName(b)));
+  const nameOf = id=> id ? nbrAdvName(id) : '(no advisor)';
+  const lateTag = ym=> ym < thisYm ? ' <span class="nbr-tag nbr-tag-warn" title="The switch date has passed but it isn\'t marked paid yet">not paid yet</span>' : '';
+  const monthTable = months.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Switch month</th><th class="num">Cases</th><th class="num">Amount</th></tr></thead><tbody>
+      ${months.map(ym=>{ const L = byMonth(ym); return `<tr class="nbr-click ${nbrUI.bibSwitchYm===ym ? 'nbr-sel' : ''}" data-switch-ym="${ym}"><td>${esc(nbrYmLabel(ym, true))}${lateTag(ym)}</td><td class="num">${L.length}</td><td class="num b">${nbrMoney(sumOf(L))}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Grand total</td><td class="num">${lines.length}</td><td class="num b">${nbrMoney(total)}</td></tr></tbody></table></div>` : '';
+  const advTable = months.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Switch month</th>${advIds.map(id=> `<th class="num">${esc(nameOf(id))}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
+      ${months.map(ym=>{ const L = byMonth(ym); return `<tr><td>${esc(nbrYmLabel(ym))}</td>${advIds.map(id=> `<td class="num">${nbrMoneyCell(sumOf(L.filter(l=> (l.adv||'')===id)))}</td>`).join('')}<td class="num b">${nbrMoney(sumOf(L))}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Grand total</td>${advIds.map(id=> `<td class="num">${nbrMoneyCell(sumOf(lines.filter(l=> (l.adv||'')===id)))}</td>`).join('')}<td class="num b">${nbrMoney(total)}</td></tr></tbody></table></div>` : '';
+  const days = [...new Set(lines.map(l=> l.switchDate.slice(0,10)))].sort();
+  const dayTable = days.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-switch-days"><thead><tr><th>Switch date</th><th class="num">Cases</th><th class="num">Amount</th></tr></thead><tbody>
+      ${days.map(d=>{ const L = lines.filter(l=> l.switchDate.slice(0,10)===d); return `<tr><td>${esc(fmtDateSlash(d))}</td><td class="num">${L.length}</td><td class="num">${nbrMoney(sumOf(L))}</td></tr>`; }).join('')}
+      <tr class="nbr-grand"><td>Grand total</td><td class="num">${lines.length}</td><td class="num b">${nbrMoney(total)}</td></tr></tbody></table></div>` : '';
+  if(nbrUI.bibSwitchYm && !months.includes(nbrUI.bibSwitchYm)) nbrUI.bibSwitchYm = '';
+  const shown = (nbrUI.bibSwitchYm ? byMonth(nbrUI.bibSwitchYm) : lines).sort((a,b)=> a.switchDate.localeCompare(b.switchDate) || nameOf(a.adv).localeCompare(nameOf(b.adv)) || String(a.client||'').localeCompare(String(b.client||'')));
+  const caseTable = shown.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table"><thead><tr><th>Switch date</th><th>Adv</th><th>Client</th><th>Provider</th><th>Product</th><th>Period written</th><th class="num">Amount</th></tr></thead><tbody>
+      ${shown.map(l=> `<tr class="nbr-click" data-nbr-line="${esc(l.id)}"><td>${esc(fmtDateSlash(l.switchDate))}</td><td>${esc(nameOf(l.adv))}</td><td class="wrap nbr-bib-client"><b>${esc(l.client||'')}</b></td><td class="wrap">${esc(l.provider||'')}</td><td>${esc(l.product||'')}</td><td>${esc(l.month ? nbrYmLabel(l.month) : '—')}</td><td class="num b">${nbrMoney(l.amount)}</td></tr>`).join('')}
+      <tr class="nbr-grand"><td colspan="6">${nbrUI.bibSwitchYm ? esc(nbrYmLabel(nbrUI.bibSwitchYm, true))+' total' : 'Total'}</td><td class="num b">${nbrMoney(sumOf(shown))}</td></tr></tbody></table></div>` : '';
+  const noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
+  const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])].concat(noAdv ? [['none','(no advisor)']] : []);
+  el.innerHTML = `
+    ${nbrBibViewSwitch()}
+    <div class="nbr-toolbar nbr-filters">
+      <label>Advisor <select id="nbrBibAdv">${advOpts.map(([v,t])=> `<option value="${esc(v)}" ${v===nbrUI.bibAdv ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+    </div>
+    <div class="stat-grid nbr-paid-cards">
+      <div class="stat-card good"><div class="sv">${nbrMoney(ahead)}</div><div class="sl">To come from ${esc(nbrYmLabel(thisYm, true))} on</div></div>
+      <div class="stat-card"><div class="sv">${lines.length}</div><div class="sl">Product transfers not paid yet</div></div>
+      <div class="stat-card ${late.length ? 'warn' : ''}"><div class="sv">${nbrMoney(sumOf(late))}</div><div class="sl">Switch date passed, not paid yet · ${late.length} case${late.length===1 ? '' : 's'}</div></div>
+    </div>
+    <p class="field-hint nbr-bib-note">Product transfer (Prod Tfr) fees in the Bible with a switch date that aren't paid yet and aren't NPW, by the date the mortgage product switches, as the Bible's "Pivot - PT Switch Dates". Switch dates come from the advisors' NBRs (the Switch Date column, or a date written in the notes such as ‘Switching 01/12/2026’) and the Bible.</p>
+    ${lines.length ? `<div class="nbr-switch-grid">
+      <div><h2 class="nbr-h2">Summary by month</h2>${monthTable}</div>
+      <div><h2 class="nbr-h2">By switch date</h2>${dayTable}</div>
+    </div>
+    <h2 class="nbr-h2">By advisor and month</h2>${advTable}
+    <h2 class="nbr-h2">The cases${nbrUI.bibSwitchYm ? ` · ${esc(nbrYmLabel(nbrUI.bibSwitchYm, true))} <button type="button" class="linkish" id="nbrSwitchAll">Show every month</button>` : ''}</h2>${caseTable}`
+    : '<div class="nml-empty">No product transfers with a switch date are waiting to be paid. Switch dates come in from the Switch Date column on the advisors\' NBRs when they\'re uploaded, or from the Bible.</div>'}`;
+  document.getElementById('nbrBibAdv').addEventListener('change', e=>{ nbrUI.bibAdv = e.target.value; renderNbrBible(); });
+  el.querySelectorAll('[data-switch-ym]').forEach(r=> r.addEventListener('click', ()=>{ nbrUI.bibSwitchYm = nbrUI.bibSwitchYm===r.dataset.switchYm ? '' : r.dataset.switchYm; renderNbrBible(); }));
+  const sa = document.getElementById('nbrSwitchAll'); if(sa) sa.addEventListener('click', ()=>{ nbrUI.bibSwitchYm = ''; renderNbrBible(); });
+  nbrBindBibViews(el);
+}
 function nbrBindBibViews(el){
   el.querySelectorAll('[data-bib-view]').forEach(b=> b.addEventListener('click', ()=>{ nbrUI.bibView = b.dataset.bibView; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); }));
   // A month in "Banked … by the month paid": open that month (and advisor) in Paid by month.
@@ -15734,6 +15797,7 @@ function renderNbrBible(){
   const el = document.getElementById('nbrBibleBody');
   if(nbrNotReady(el)) return;
   if(nbrUI.bibView==='paid'){ renderNbrBiblePaid(el); return; }
+  if(nbrUI.bibView==='switch'){ renderNbrBibleSwitch(el); return; }
   const fys = nbrBibFys();
   if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = fys[0];
   const fy = nbrUI.bibFY, fyMonths = fy==='none' ? [] : nbrFyMonths(fy);
@@ -15743,8 +15807,8 @@ function renderNbrBible(){
   const noMonth = Object.values(NBR_BIB).some(l=> l && !l.month), noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
   const shown = lines.slice(0, nbrUI.bibShown);
   const tableHtml = lines.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table">
-    <thead><tr><th>Period</th><th>Adv</th><th>Client</th><th>App</th><th>Offer / terms</th><th>Comp</th><th>Provider</th><th>Product</th><th>Income source</th><th class="num">Amount</th><th>When / how</th><th>Date paid</th><th class="num">Paid</th><th>Status</th><th class="num">Outstanding</th></tr></thead>
-    <tbody>${shown.map(l=>{ const s = nbrBibStatus(l); return `<tr class="nbr-click bl-${s}" data-nbr-line="${esc(l.id)}"><td>${esc(l.month ? nbrYmLabel(l.month) : '—')}</td><td>${esc(l.adv ? nbrAdvName(l.adv) : '—')}${l.office ? ` <span class="nbr-office">${esc(l.office)}</span>` : ''}</td><td class="wrap nbr-bib-client"><b>${esc(l.client||'')}</b>${l.life ? ` <span class="nbr-tag">Life ${esc(l.life)}</span>` : ''}</td><td>${nbrShortDate(l.appDate)}</td><td>${nbrShortDate(l.offerDate)}</td><td>${nbrShortDate(l.compDate)}</td><td class="wrap">${esc(l.provider||'')}</td><td>${esc(l.product||'')}</td><td class="wrap">${esc(l.source||'')}</td><td class="num b">${nbrMoneyCell(l.amount)}</td><td class="wrap">${esc([l.when, l.how].filter(Boolean).join(' · '))}</td><td>${nbrLineExtraPays(l).length ? nbrLinePays(l).map(x=> x.datePaid ? nbrShortDate(x.datePaid) : '<span class="nbr-zero">to come</span>').join('<br>') : nbrShortDate(l.datePaid)}</td><td class="num">${nbrLineExtraPays(l).length ? nbrLinePays(l).map(x=> nbrMoneyCell(x.paid)).join('<br>') : nbrMoneyCell(l.paid)}</td><td class="nbr-bib-st"><span class="bl-chip bl-chip-${s}">${BIB_STATUS[s][0]}</span>${s!=='paid' && s!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(l.id)}" title="${s==='part' ? 'Add the next payment' : 'Mark as paid'}">${s==='part' ? '+ Payment' : 'Paid'}</button>` : ''}</td><td class="num ${s==='part' ? 'nbr-owed' : ''}">${s==='npw' ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(nbrLineOutstanding(l))}</td></tr>`; }).join('')}</tbody></table></div>
+    <thead><tr><th>Period</th><th>Adv</th><th>Client</th><th>App</th><th>Offer / terms</th><th>Comp</th><th>Switch</th><th>Provider</th><th>Product</th><th>Income source</th><th class="num">Amount</th><th>When / how</th><th>Date paid</th><th class="num">Paid</th><th>Status</th><th class="num">Outstanding</th></tr></thead>
+    <tbody>${shown.map(l=>{ const s = nbrBibStatus(l); return `<tr class="nbr-click bl-${s}" data-nbr-line="${esc(l.id)}"><td>${esc(l.month ? nbrYmLabel(l.month) : '—')}</td><td>${esc(l.adv ? nbrAdvName(l.adv) : '—')}${l.office ? ` <span class="nbr-office">${esc(l.office)}</span>` : ''}</td><td class="wrap nbr-bib-client"><b>${esc(l.client||'')}</b>${l.life ? ` <span class="nbr-tag">Life ${esc(l.life)}</span>` : ''}</td><td>${nbrShortDate(l.appDate)}</td><td>${nbrShortDate(l.offerDate)}</td><td>${nbrShortDate(l.compDate)}</td><td>${nbrShortDate(l.switchDate)}</td><td class="wrap">${esc(l.provider||'')}</td><td>${esc(l.product||'')}</td><td class="wrap">${esc(l.source||'')}</td><td class="num b">${nbrMoneyCell(l.amount)}</td><td class="wrap">${esc([l.when, l.how].filter(Boolean).join(' · '))}</td><td>${nbrLineExtraPays(l).length ? nbrLinePays(l).map(x=> x.datePaid ? nbrShortDate(x.datePaid) : '<span class="nbr-zero">to come</span>').join('<br>') : nbrShortDate(l.datePaid)}</td><td class="num">${nbrLineExtraPays(l).length ? nbrLinePays(l).map(x=> nbrMoneyCell(x.paid)).join('<br>') : nbrMoneyCell(l.paid)}</td><td class="nbr-bib-st"><span class="bl-chip bl-chip-${s}">${BIB_STATUS[s][0]}</span>${s!=='paid' && s!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(l.id)}" title="${s==='part' ? 'Add the next payment' : 'Mark as paid'}">${s==='part' ? '+ Payment' : 'Paid'}</button>` : ''}</td><td class="num ${s==='part' ? 'nbr-owed' : ''}">${s==='npw' ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(nbrLineOutstanding(l))}</td></tr>`; }).join('')}</tbody></table></div>
     ${lines.length > shown.length ? `<div class="nbr-more"><button type="button" class="btn btn-secondary btn-sm" id="nbrBibMore">Show ${Math.min(NBR_PAGE, lines.length - shown.length)} more (${lines.length - shown.length} not shown)</button></div>` : ''}`
     : '<div class="nml-empty">No Bible lines match.</div>';
 
@@ -15913,6 +15977,25 @@ function nbrSheetMonth(name){
 }
 
 // An advisor's NBR workbook: a sheet per month (weekly blocks), an NPW sheet and a DATA sheet of lists.
+// The switch date written in an NBR's notes ("Switching 01/12/2026", "TO SWITCH 03/11", "Switching on 01 March 2026").
+// A date with no year is the next one on or after the case's month. Nothing is guessed from a mistyped year.
+function nbrSwitchFromNotes(notes, ym){
+  const t = String(notes||''), pad = n=> String(n).padStart(2,'0');
+  const MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
+  const lead = /switch\w*(?:\s+(?:on|date|from))?\s*[:\-–]?\s*/i.source;
+  let d, mo, y = null;
+  let m = t.match(new RegExp(lead + /(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d+))?(?!\d)/.source, 'i'));
+  if(m){ d = +m[1]; mo = +m[2]; if(m[3]!=null){ if(m[3].length===2) y = 2000 + +m[3]; else if(m[3].length===4) y = +m[3]; else return ''; } }
+  else {
+    m = t.match(new RegExp(lead + /(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?(?:\s+(\d{4}))?/.source, 'i'));
+    if(!m) return '';
+    d = +m[1]; mo = MON[m[2].toLowerCase()] || MON[m[2].toLowerCase().slice(0,3)]; if(m[3]) y = +m[3];
+  }
+  if(!(d>=1 && d<=31 && mo>=1 && mo<=12)) return '';
+  if(y==null){ const cy = +String(ym||'').slice(0,4), cm = +String(ym||'').slice(5,7); if(!cy) return ''; y = mo >= cm ? cy : cy + 1; }
+  if(y < 2000 || y > 2100) return '';
+  return `${y}-${pad(mo)}-${pad(d)}`;
+}
 function nbrParseAdvisorNbr(wb){
   const out = {name:'', months:{}, entries:[], npw:[], lists:{sols:[], vals:[], saleTypes:[], leadProviders:[]}, warnings:[]};
   const take = s=>{ if(out.name) return; const m = nbrCellStr(s).match(/^(.*?)\s+new business register/i); if(m && m[1] && !/^adv name$/i.test(m[1].trim())) out.name = m[1].trim(); };
@@ -15924,14 +16007,15 @@ function nbrParseAdvisorNbr(wb){
     const isFormula = (i, c)=>{ const cell = ws[window.XLSX.utils.encode_cell({r: rg.s.r + i, c: rg.s.c + c})]; return !!(cell && cell.f); };
     rows.slice(0,3).forEach(r=> (r||[]).forEach(take));
     let h = rows.findIndex((r,i)=> i<8 && (r||[]).some(c=> /client/i.test(nbrCellStr(c))));
-    const col = {client:1, lender:2, proc:3, mums:4, prot:5, sols:6, solsName:7, val:8, valName:9, appSub:10, leadProvider:11, saleType:12, notes:13, linkToSend:14, linkSent:15, linkPaid:16};
+    const col = {client:1, lender:2, proc:3, mums:4, prot:5, sols:6, solsName:7, val:8, valName:9, appSub:10, leadProvider:11, saleType:12, notes:13, linkToSend:14, linkSent:15, linkPaid:16, switchDate:null};
     let start = 3;
     if(h>=0){
       const hr = rows[h].map(nbrCellStr), sub = (rows[h+1]||[]).map(nbrCellStr), found = {};
       hr.forEach((t,i)=>{ const s = t.toLowerCase().replace(/\s+/g,' ');
         if(!s) return;
         const set = k=>{ if(found[k]==null) found[k] = i; };
-        if(/client/.test(s)) set('client'); else if(/lender|insurer/.test(s)) set('lender'); else if(/proc/.test(s)) set('proc'); else if(/mum/.test(s)) set('mums');
+        // The Switch Date column (not the notes column, headed "… Switch Date for PT'S & Notes").
+        if(/switch/.test(s) && !/notes|post ?code|address/.test(s)) set('switchDate'); else if(/client/.test(s)) set('client'); else if(/lender|insurer/.test(s)) set('lender'); else if(/proc/.test(s)) set('proc'); else if(/mum/.test(s)) set('mums');
         else if(/protection/.test(s)) set('prot'); else if(/sols/.test(s) && /amount/.test(s)) set('sols'); else if(/sols/.test(s) && /name/.test(s)) set('solsName');
         else if(/val/.test(s) && /amount/.test(s)) set('val'); else if(/val/.test(s) && /name/.test(s)) set('valName'); else if(/date app|app sub/.test(s)) set('appSub');
         else if(/lead/.test(s)) set('leadProvider'); else if(/type of sale/.test(s)) set('saleType'); else if(/post ?code|notes/.test(s)) set('notes');
@@ -15957,9 +16041,11 @@ function nbrParseAdvisorNbr(wb){
       if(!client && ['proc','mums','prot','sols','val'].some(k=> col[k]!=null && vals[k] && isFormula(i, col[k]))) continue;
       const cv = k=> col[k]==null ? null : r[col[k]];
       const e = nbrClean({month:ym, week: wk || lastWeek || '', client, lender:nbrCellStr(cv('lender')), ...vals,
-        solsName:nbrCellStr(cv('solsName')), valName:nbrCellStr(cv('valName')), appSub:nbrXlDate(cv('appSub')) || '', leadProvider:nbrCellStr(cv('leadProvider')),
+        solsName:nbrCellStr(cv('solsName')), valName:nbrCellStr(cv('valName')), appSub:nbrXlDate(cv('appSub')) || '', switchDate:nbrXlDate(cv('switchDate')) || '', leadProvider:nbrCellStr(cv('leadProvider')),
         saleType:nbrCellStr(cv('saleType')), notes: cv('notes')!=null && typeof cv('notes')==='number' && nbrXlDate(cv('notes')) ? fmtDateSlash(nbrXlDate(cv('notes'))) : nbrCellStr(cv('notes')),
         linkToSend: nbrRound(cv('linkToSend')) || '', linkSent: nbrXlDate(cv('linkSent')), linkPaid: nbrXlDate(cv('linkPaid'))});
+      // No Switch Date column (or it's blank): the date written in the notes, e.g. "Switching 01/12/2026".
+      if(!e.switchDate){ const sd = nbrSwitchFromNotes(e.notes, ym); if(sd) e.switchDate = sd; }
       if(!e.week || e.week.slice(0,7)!==ym) e.week = nbrWeekFor(e.week || ym+'-01', ym);
       out.entries.push(e); n++;
     }
@@ -15974,7 +16060,7 @@ function nbrParseAdvisorNbr(wb){
     if(h>=0){
       const col = {}; rows[h].map(nbrCellStr).forEach((t,i)=>{ const x = t.toLowerCase().replace(/\s+/g,' ').trim(); const set = k=>{ if(col[k]==null) col[k] = i; };
         if(!x) return;
-        if(/date/.test(x)) set('date'); else if(/client fee|mums/.test(x)) set('mums'); else if(/client/.test(x)) set('client'); else if(/lender|insurer/.test(x)) set('lender');
+        if(/switch/.test(x) && !/notes|post ?code|address/.test(x)) set('switchDate'); else if(/date/.test(x)) set('date'); else if(/client fee|mums/.test(x)) set('mums'); else if(/client/.test(x)) set('client'); else if(/lender|insurer/.test(x)) set('lender');
         else if(/proc|comms/.test(x)) set('proc'); else if(/protection/.test(x)) set('prot'); else if(/sols/.test(x) && /amount/.test(x)) set('sols'); else if(/sols/.test(x) && /name/.test(x)) set('solsName');
         else if(/val/.test(x) && /amount/.test(x)) set('val'); else if(/val/.test(x) && /name/.test(x)) set('valName'); else if(/lead/.test(x)) set('leadProvider');
         else if(/type of sale/.test(x)) set('saleType'); else if(/post ?code|notes/.test(x)) set('notes'); });
@@ -15987,7 +16073,7 @@ function nbrParseAdvisorNbr(wb){
         const date = nbrXlDate(get('date')), ym = date ? date.slice(0,7) : '';
         if(!ym){ com.warnings.push(`Commercial case for ${client || 'a client'} has no Date App Sub, so it was left out (the NBR's own totals leave it out too).`); continue; }
         com.entries.push(nbrClean({month:ym, week:nbrWeekFor(date, ym), client, lender:nbrCellStr(get('lender')), ...vals,
-          solsName:nbrCellStr(get('solsName')), valName:nbrCellStr(get('valName')), appSub:date, leadProvider:nbrCellStr(get('leadProvider')),
+          solsName:nbrCellStr(get('solsName')), valName:nbrCellStr(get('valName')), appSub:date, switchDate:nbrXlDate(get('switchDate')) || '', leadProvider:nbrCellStr(get('leadProvider')),
           saleType:nbrCellStr(get('saleType')), notes:nbrCellStr(get('notes'))}));
       }
     }
@@ -16286,7 +16372,7 @@ document.addEventListener('input', e=>{
 /* "Add new cases only": each row in the file is matched to this advisor's cases already here (same month and client).
    Same figures → already here; same client but different figures → changed; otherwise it's new. */
 const nbrClientKey = c=> String(c||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-const nbrFeeKey = e=> NBR_CATS.map(([k])=> nbrRound(e[k])).join('|');
+const nbrFeeKey = e=> NBR_CATS.map(([k])=> nbrRound(e[k])).join('|') + '|' + (e.switchDate || '');
 function nbrNbrDiff(it, advOverride){
   const p = it.parsed, advId = advOverride || (it.adv && it.adv!=='new' ? it.adv : null);
   const key = advId+'|'+nbrVer; if(it._diff && it._diff.key===key) return it._diff;

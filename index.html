@@ -17432,39 +17432,63 @@ function nbrBibAfter(updates){
   });
   return nbrBibVisible(B);
 }
-/* NPW check: for each year in the file, the NPW rows in the Excel Bible against the NPW lines here once the upload is in,
-   and why they differ: an Excel NPW row with no NPW line here; one whose line here is in another year (a line made from
-   an NBR case keeps the NBR's month); and NPW lines here the Excel Bible doesn't have as NPW. A fee the Bible has as two
-   or more rows (paid in parts) is one line here, so the line count can be lower while the total agrees. */
+/* NPW check: for each year in the file, the NPW rows in the Excel Bible against the NPW lines here once the upload is in.
+   Each client's NPWs of one kind of fee in a year are compared as a group (all the Excel rows against all the lines here),
+   so a fee paid in parts or a client with two fees isn't flagged. Names match despite a one-letter slip (Madayese / Medayese).
+   Differences: Excel NPWs with no NPW here; NPWs here in another year (a line from an NBR case keeps the NBR's month);
+   different amounts (a line from an NBR case keeps the NBR's amount); and NPWs here the Excel Bible doesn't have. */
+function nbrNameNear(a, b){
+  if(a===b) return true;
+  if(a.length < 5 || b.length < 5 || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, slips = 0;
+  while(i < a.length && j < b.length){
+    if(a[i]===b[j]){ i++; j++; continue; }
+    if(++slips > 1) return false;
+    if(a.length > b.length) i++; else if(b.length > a.length) j++; else { i++; j++; }
+  }
+  return slips + (a.length - i) + (b.length - j) <= 1;
+}
+function nbrSameClient(x, y){
+  const a = [...nbrNameToks(x)], b = [...nbrNameToks(y)]; if(!a.length || !b.length) return false;
+  const hit = a.filter(w=> b.some(v=> nbrNameNear(w, v))).length;
+  return hit >= 2 || (hit===a.length && hit===b.length);
+}
 function nbrNpwCheck(p, ids, updates){
   const rows = p.lines.filter(l=> l.npw && !(l.code && !(l.code in ids)));
   if(!rows.length) return '';
   const fyOf = ym=> ym ? nbrFyOf(ym) : '(no period)', fyName = fy=> fy==='(no period)' ? 'No period' : nbrFyLabel(fy);
   const fys = [...new Set(rows.map(l=> fyOf(l.month)))].sort();
   const B = Object.values(nbrBibAfter(updates)).filter(l=> l && l.npw);
+  const kindOf = x=> nbrProdKind(x.product) || String(x.product||'').toLowerCase();
   const near = (a, b)=>{ const x = nbrMonthNo(a), y = nbrMonthNo(b); return x==null || y==null || Math.abs(x - y) <= 3; };
-  const same = (a, b)=> nbrNameScore(nbrNameToks(a.client), nbrNameToks(b.client)) >= 2 && near(a.month, b.month);
-  const notHere = [], otherYear = [], notThere = [];
-  rows.forEach(r=>{ const m = B.filter(l=> same(r, l)); if(!m.length) notHere.push(r); else if(!m.some(l=> fyOf(l.month)===fyOf(r.month))) otherYear.push([r, m[0]]); });
-  B.filter(l=> fys.includes(fyOf(l.month))).forEach(l=>{ if(!rows.some(r=> same(r, l))) notThere.push(l); });
-  // Same NPW in both, same year and kind of fee, different amount (a line from an NBR case keeps the NBR's amount).
-  const kindOf = x=> nbrProdKind(x.product) || String(x.product||'').toLowerCase(), amtDiff = [];
-  B.filter(l=> fys.includes(fyOf(l.month))).forEach(l=>{
-    const R = rows.filter(r=> same(r, l) && fyOf(r.month)===fyOf(l.month) && kindOf(r)===kindOf(l)); if(!R.length) return;
-    const ex = nbrRound(R.reduce((t, r)=> t + n0(r.amount), 0)); if(Math.abs(ex - n0(l.amount)) >= 0.01) amtDiff.push([l, ex]);
+  // Groups: same year, same kind of fee, same client.
+  const groups = [];
+  const put = (x, side)=>{ const fy = fyOf(x.month), k = kindOf(x);
+    let g = groups.find(g=> g.fy===fy && g.k===k && [...g.ex, ...g.here].some(y=> nbrSameClient(x.client, y.client)));
+    if(!g) groups.push(g = {fy, k, ex:[], here:[]}); g[side].push(x); };
+  rows.forEach(r=> put(r, 'ex'));
+  B.filter(l=> fys.includes(fyOf(l.month))).forEach(l=> put(l, 'here'));
+  const sum = list=> nbrRound(list.reduce((t, l)=> t + n0(l.amount), 0));
+  const notHere = [], otherYear = [], amtDiff = [], notThere = [];
+  groups.forEach(g=>{
+    if(g.ex.length && !g.here.length){
+      g.ex.forEach(r=>{ const o = B.find(l=> fyOf(l.month)!==g.fy && kindOf(l)===g.k && nbrSameClient(r.client, l.client) && near(r.month, l.month)); if(o) otherYear.push([r, o]); else notHere.push(r); });
+    } else if(!g.ex.length && g.here.length){
+      g.here.forEach(l=>{ if(!rows.some(r=> fyOf(r.month)!==g.fy && kindOf(r)===g.k && nbrSameClient(r.client, l.client) && near(r.month, l.month))) notThere.push(l); });
+    } else if(Math.abs(sum(g.ex) - sum(g.here)) >= 0.01) amtDiff.push(g);
   });
-  const sum = list=> list.reduce((t, l)=> t + n0(l.amount), 0), money = v=> esc(nbrMoney(v)), per = l=> esc(l.month ? nbrYmLabel(l.month) : '—');
+  const money = v=> esc(nbrMoney(v)), per = l=> esc(l.month ? nbrYmLabel(l.month) : '—'), advOf = l=> esc(l.code || (l.adv ? nbrAdvName(l.adv) : ''));
   const yr = fy=>{ const R = rows.filter(l=> fyOf(l.month)===fy), H = B.filter(l=> fyOf(l.month)===fy);
     return `<li>${esc(fyName(fy))}: Excel Bible <b>${R.length}</b> NPW row${R.length===1?'':'s'}, ${money(sum(R))} · here <b>${H.length}</b> line${H.length===1?'':'s'}, ${money(sum(H))}</li>`; };
   const table = (title, head, body)=> body.length ? `<details><summary>${title}</summary><div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr>${head}</tr></thead><tbody>${body.join('')}</tbody></table></div></details>` : '';
-  const advOf = l=> esc(l.code || (l.adv ? nbrAdvName(l.adv) : ''));
+  const more = nbrRound(amtDiff.reduce((t, g)=> t + sum(g.here) - sum(g.ex), 0));
   return `<div class="nbr-npwcheck"><b>NPW check</b><ul>${fys.map(yr).join('')}</ul>${
     table(`${notHere.length} NPW row${notHere.length===1?'':'s'} in the Excel Bible ${notHere.length===1?'isn\'t an NPW':'aren\'t NPWs'} here`, '<th>Period</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Amount</th>',
       notHere.map(r=> `<tr><td>${per(r)}</td><td>${advOf(r)}</td><td>${esc(r.client||'')}</td><td>${esc(r.product||'')}</td><td class="num">${money(r.amount)}</td></tr>`))}${
     table(`${otherYear.length} ${otherYear.length===1?'is an NPW':'are NPWs'} here but in another year (the line keeps the NBR's month)`, '<th>Excel period</th><th>Here</th><th>Client</th><th>Product</th><th class="num">Excel amount</th><th class="num">Here</th>',
       otherYear.map(([r, l])=> `<tr><td>${per(r)}</td><td>${per(l)}</td><td>${esc(r.client||'')}</td><td>${esc(r.product||'')}</td><td class="num">${money(r.amount)}</td><td class="num">${money(l.amount)}</td></tr>`))}${
-    table(`${amtDiff.length} NPW${amtDiff.length===1?' is':'s are'} in both but with a different amount (${money(amtDiff.reduce((t, [l, ex])=> t + n0(l.amount) - ex, 0))} more here)`, '<th>Period</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Excel Bible</th><th class="num">Here</th>',
-      amtDiff.map(([l, ex])=> `<tr><td>${per(l)}</td><td>${advOf(l)}</td><td>${esc(l.client||'')}</td><td>${esc(l.product||'')}</td><td class="num">${money(ex)}</td><td class="num">${money(l.amount)}</td></tr>`))}${
+    table(`${amtDiff.length} client${amtDiff.length===1?'\'s NPW is':'s\' NPWs are'} in both with a different amount (${more >= 0 ? money(more)+' more' : money(-more)+' less'} here)`, '<th>Year</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Excel Bible</th><th class="num">Here</th>',
+      amtDiff.map(g=> `<tr><td>${esc(g.fy)}</td><td>${advOf(g.here[0])}</td><td>${esc(g.here[0].client || g.ex[0].client || '')}</td><td>${esc(g.here[0].product || '')}${g.ex.length + g.here.length > 2 ? ` <span class="nbr-note">(${g.ex.length} row${g.ex.length===1?'':'s'} / ${g.here.length} line${g.here.length===1?'':'s'})</span>` : ''}</td><td class="num">${money(sum(g.ex))}</td><td class="num">${money(sum(g.here))}</td></tr>`))}${
     table(`${notThere.length} NPW line${notThere.length===1?'':'s'} here ${notThere.length===1?'isn\'t an NPW':'aren\'t NPWs'} in the Excel Bible`, '<th>Period</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Amount</th>',
       notThere.map(l=> `<tr><td>${per(l)}</td><td>${advOf(l)}</td><td>${esc(l.client||'')}</td><td>${esc(l.product||'')}</td><td class="num">${money(l.amount)}</td></tr>`))}${
     !notHere.length && !otherYear.length && !notThere.length && !amtDiff.length ? '<p>The NPWs here match the Excel Bible.</p>' : ''}</div>`;

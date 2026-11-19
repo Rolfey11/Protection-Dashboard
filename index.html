@@ -7272,6 +7272,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19i', date:'2026-11-19', items:[ {text:"🏠 <b>B&C in the Bible</b>: B&C policies now go in the Bible only once your Excel Bible has them, so the two match. B&C written on the Salesboard still comes from the B&C registers; when you upload a Bible with the policy (and its date paid) it's linked and shows as paid / banked. <b>Upload the Bible again</b> to take out the B&C lines it doesn't have yet.", roles:['admin','management']} ]},
   {id:'2026-11-19h', date:'2026-11-19', items:[ {text:"🧾 <b>Bible</b>: when an NBR has a fee as two lines (e.g. a change of lender adds a small second proc fee) but the Bible has one line for the total, uploading the Bible now makes them one line with the Bible's lender and amount, so reports match the Bible. <b>Upload the Bible again</b> with Fill in the blanks to put existing ones right.", roles:['admin','management']} ]},
   {id:'2026-11-19g', date:'2026-11-19', items:[ {text:"📊 <b>Charts and PowerPoint in Ask Claude</b>: ask for a chart (bar, line, pie…) and Claude draws it; save it as a picture, or press <b>⬇ PowerPoint</b> on any report for slides with its tables and charts, ready to edit. Needs the newest AI assistant code in Cloudflare.", roles:['admin','management']} ]},
   {id:'2026-11-19f', date:'2026-11-19', items:[ {text:"✨ <b>Ask Claude for a report</b>: Claude can now look at the tracker's data to answer, e.g. \u201cbanked by advisor last month\u201d or \u201cprotection cases with no contact for 30 days\u201d, with tables you can download to Excel. Press <b>Wider</b> for room. Needs the AI assistant updating in Cloudflare first.", roles:['admin','management']} ]},
@@ -17029,7 +17030,7 @@ function renderNbrUpload(){
     const missing = isBc ? ready.filter(it=> !it.office || !it.year).length : 0;
     box.innerHTML = `${many ? `<p class="nbr-p"><b>${items.length} files.</b> Each file is imported on its own.</p>` : ''}
       <div class="nbr-up-list">${cards}</div>
-      ${isBc && ready.length && !up.finished ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="toBible" ${up.toBible ? 'checked' : ''} ${dis}> Also add these policies to the Bible <span class="field-hint">(as Gen Ins lines; a policy that's already in the Bible is linked to its line rather than added twice)</span></label>` : ''}
+      ${isBc && ready.length && !up.finished ? `<p class="field-hint">Policies go in the Bible once your Excel Bible has them: a Bible upload links each one to its Gen Ins line, with its date paid. Policies already in the Bible are linked now.</p>` : ''}
       ${!isBc && ready.length && !up.finished ? `<p class="field-hint">Wills don't go into the Bible.</p>` : ''}
       ${missing && !busy ? `<p class="nbr-warn">Choose the office and year for ${missing===1 ? 'the file' : missing+' files'}.</p>` : ''}
       ${foot(cancelBtn + (ready.length && !busy && !up.finished ? `<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go" ${reading ? 'disabled' : ''}>Import</button>` : ''))}`;
@@ -17361,7 +17362,9 @@ function nbrBibleMatch(it){
     pick.forEach(x=> tDone.add(key+'|'+x.ti));
     combine.set(r0, {row:r, members:[t, ...pick]});
   });
-  const out = {fill:[], same:0, link:[], extra:[], unmatched:[], skipped:0, paidAdded:0, split:[], paysAdded:0, combine:[]};
+  const out = {fill:[], same:0, link:[], extra:[], unmatched:[], skipped:0, paidAdded:0, split:[], paysAdded:0, combine:[], seen:new Set()};
+  rowDone.forEach(t=>{ if(t.type==='line') out.seen.add(t.id); });
+  combine.forEach(c=> c.members.forEach(x=>{ if(x.type==='line') out.seen.add(x.id); }));
   split.forEach(sp=> out.split.push(sp));
   combine.forEach(c=> out.combine.push(c));
   rows.forEach(r=>{
@@ -17450,8 +17453,15 @@ function nbrBibleFillPatches(it){
     });
   });
   M.link.forEach(x=>{
-    if(x.bc){ const b = NBR_BC[x.bc] || {}; newLine(x.row, {bc:x.bc, kind:'bc', ...(x.row.office ? {} : b.office ? {office:b.office} : {})}); return; }
+    if(x.bc){ const b = NBR_BC[x.bc] || {}; newLine(x.row, {bc:x.bc, kind:'bc', inBible:true, ...(x.row.office ? {} : b.office ? {office:b.office} : {})}); return; }
     const e = NBR_ENT[x.entry] || {}, a = NBR_ADV[e.adv] || {}; newLine(x.row, {entry:x.entry, kind:x.kind, ...(x.row.office ? {} : a.office ? {office:a.office} : {})});
+  });
+  // B&C: the lines this Bible has are marked as in it; lines only the register made, for the years in this file, come out.
+  const fysIn = Object.keys(p.fys || {}); let bcOut = 0;
+  Object.entries(NBR_BIB_ALL).forEach(([id, l])=>{
+    if(!l || !l.bc) return;
+    if(M.seen.has(id)){ if(!l.inBible) updates['bible/'+id+'/inBible'] = true; return; }
+    if(nbrBcRegisterOnly(l) && fysIn.includes(l.month ? nbrFyOf(l.month) : '(no period)')){ updates['bible/'+id] = null; bcOut++; }
   });
   let added = 0;
   if(it.addExtra) M.extra.forEach(l=>{ newLine(l); added++; });
@@ -17461,6 +17471,7 @@ function nbrBibleFillPatches(it){
   if(M.fill.length) bits.push(`filled in the blanks on ${M.fill.length} Bible line${M.fill.length===1?'':'s'}`);
   if(M.link.length) bits.push(`added ${M.link.length} line${M.link.length===1?'':'s'} to NBR cases that didn't have one yet`);
   if(M.paidAdded) bits.push(`${M.paidAdded} date${M.paidAdded===1?'':'s'} paid added`);
+  if(bcOut) bits.push(`took out ${bcOut} B&C polic${bcOut===1?'y':'ies'} this Bible doesn't have yet (${bcOut===1?'it goes':'they go'} back in when it does)`);
   if(M.combine.length) bits.push(`${M.combine.length} fee${M.combine.length===1?'':'s'} the NBR has as two or more lines (e.g. a change of lender) made into one line, as in the Bible`);
   if(M.split.length) bits.push(`${M.split.length} fee${M.split.length===1?'':'s'} paid in more than one go (${M.paysAdded} later payment${M.paysAdded===1?'':'s'} added to ${M.split.length===1?'its':'their'} line)`);
   if(added) bits.push(`added ${added} other line${added===1?'':'s'}`);
@@ -17548,17 +17559,19 @@ function nbrWillLists(){
   return {sources: uniq(Object.values(NBR_WILLS).map(w=> w && w.source)), brokers: uniq([NBR_WILLS_BROKER, ...Object.values(NBR_WILLS).map(w=> w && w.broker)])};
 }
 
-/* ---- B&C policy → its Bible line ---- */
-function nbrBcLine(id){ const f = Object.entries(NBR_BIB).find(([,l])=> l && l.bc===id); return f || null; }
+/* ---- B&C policy → its Bible line ----
+   A B&C policy is in the Bible only once the Excel Bible has it (a Bible upload links the policy to that Gen Ins line).
+   B&C written comes from the registers as before; the Bible line brings its date paid, so it's banked when paid. */
+function nbrBcLine(id){ const f = Object.entries(NBR_BIB_ALL).find(([,l])=> l && l.bc===id); return f || null; }
+// A line the B&C register made (before this rule) that the Excel Bible hasn't got and nothing has been paid on.
+function nbrBcRegisterOnly(l){ return !!(l && l.bc && l.src==='bc' && !l.inBible && !nbrLineAnyPaid(l)); }
 function nbrBcLinePatches(id, b, opts={}){
-  const out = {}, now = Date.now(), ex = nbrBcLine(id), amt = nbrRound(b.commission);
-  const shared = nbrClean({office:b.office||'', month:b.month, client:b.client||'', provider:b.insurer||'', appDate:b.onRisk||'', compDate:b.onRisk||'', dept:b.policyNo||'', quotedBy:b.quotedBy||'', adv: nbrQuoterAdv(b.quotedBy)});
+  const out = {}, ex = nbrBcLine(id), amt = nbrRound(b.commission);
   if(amt){
-    if(ex){ const [lid, l] = ex; const keep = {...l}; delete keep.adv; out['bible/'+lid] = {...keep, ...shared, amount:amt, updatedAt:now}; }
+    if(ex){ /* left as it is: a Bible upload decides what's in the Bible */ }
     else {
       const reuse = opts.reuse && opts.reuse(b, amt);
-      if(reuse){ out['bible/'+reuse+'/bc'] = id; out['bible/'+reuse+'/kind'] = 'bc'; }
-      else out['bible/'+nbrKey()] = nbrClean({...shared, product:'Gen Ins', source: nbrDefaultSource(), amount:amt, bc:id, kind:'bc', src:'bc', createdAt:now});
+      if(reuse){ out['bible/'+reuse+'/bc'] = id; out['bible/'+reuse+'/kind'] = 'bc'; out['bible/'+reuse+'/inBible'] = true; }
     }
   } else if(ex){
     const [lid, l] = ex;
@@ -17578,7 +17591,7 @@ function nbrBcDeletePatches(id){
 function nbrBcReuser(office, freed){
   const list = [], taken = new Set();
   Object.entries(NBR_BIB).forEach(([id,l])=>{
-    if(!l || l.entry || (l.bc && !(freed && freed.has(id)))) return;
+    if(!l || l.entry || (l.bc && !(freed && freed.has(id))) || l.src==='bc') return;
     if((l.kind || nbrProdKind(l.product))!=='bc') return;
     const o = nbrLineOffice(l); if(o && office && o!==office) return;
     list.push({id, toks:nbrNameToks(l.client), m:nbrMonthNo(l.month), amt:nbrRound(l.amount)});
@@ -17615,7 +17628,12 @@ function openNbrBc(id, preset={}){
       ${nfList('bcLead','Lead provider', b.leadProvider, NBR_BC_LEADS)}
     </div>
     ${nfText('bcNotes','Notes', b.notes)}
-    <p class="field-hint">${line ? `In the Bible: <button type="button" class="linkish" data-nbr-line="${esc(line[0])}">${esc(BIB_STATUS[nbrBibStatus(line[1])][0])}${line[1].datePaid ? ' '+esc(fmtDateSlash(line[1].datePaid)) : ''}</button>. ` : ''}Each policy goes into the Bible as a Gen Ins line, so you can mark it paid there.</p>`;
+    <div class="nbr-grid">
+      ${nfDate('bcPaidDate','Date paid', line ? line[1].datePaid : '')}
+      ${nfMoney('bcPaid','Paid', line ? line[1].paid : '')}
+    </div>
+    <p class="field-hint">${line ? `In the Bible: <button type="button" class="linkish" data-nbr-line="${esc(line[0])}">${esc(BIB_STATUS[nbrBibStatus(line[1])][0])}${line[1].datePaid ? ' '+esc(fmtDateSlash(line[1].datePaid)) : ''}</button>. `
+      : 'Not in the Bible yet: it goes in when a Bible upload has it, or now if you put in a date paid. '}A date paid here counts as banked; a later Bible upload fills in anything else on the same line.</p>`;
   openNbrForm({title: id ? 'Edit B&C policy' : 'Add a B&C policy', body, saveLabel: id ? 'Save' : 'Add policy',
     onSave: ()=>{
       const data = nbrClean({office:nfv('bcOffice'), month:nfv('bcMonth'), policyNo:nfv('bcPolicy'), client:nfv('bcClient'), insurer:nfv('bcInsurer'), policyType:nfv('bcType'),
@@ -17625,8 +17643,18 @@ function openNbrBc(id, preset={}){
       Object.assign(data, prev ? nbrClean({createdAt:prev.createdAt, createdBy:prev.createdBy, src:prev.src}) : {createdAt:now, createdBy:currentUser.name, src:'manual'}, {updatedAt:now, updatedBy:currentUser.name});
       const up = {['bc/'+key]: data};
       nbrMergePatch(up, nbrBcLinePatches(key, data, {reuse: nbrBcReuser(data.office)}));
+      // Paid by hand: put the payment on its Bible line, making the line now if it hasn't one (it then stays, as it's paid).
+      const pd = nfv('bcPaidDate'), pa = String(nfv('bcPaid')||'').trim() ? nfn('bcPaid') : null, lineNow = nbrBcLine(key), reused = Object.keys(up).find(k=> /^bible\/[^/]+\/bc$/.test(k));
+      const lid = lineNow && up['bible/'+lineNow[0]]!==null ? lineNow[0] : reused ? reused.split('/')[1] : null;
+      if(pd || pa!=null){
+        if(lid){ up['bible/'+lid+'/datePaid'] = pd || null; up['bible/'+lid+'/paid'] = pa; }
+        else up['bible/'+nbrKey()] = nbrClean({office:data.office, month:data.month, client:data.client, provider:data.insurer || '', product:'Gen Ins', source:nbrDefaultSource(),
+          amount:nbrRound(data.commission), appDate:data.onRisk || '', compDate:data.onRisk || '', dept:data.policyNo || '', quotedBy:data.quotedBy || '', adv:nbrQuoterAdv(data.quotedBy),
+          bc:key, kind:'bc', src:'manual', datePaid:pd, paid:pa, createdAt:now});
+      } else if(lid && lineNow && (lineNow[1].datePaid || lineNow[1].paid!=null)){ up['bible/'+lid+'/datePaid'] = null; up['bible/'+lid+'/paid'] = null; }
       nbrUI.bcOffice = data.office; nbrUI.bcMonth = data.month; nbrUI.bcYear = +data.month.slice(0,4);
-      return nbrWrite(up).then(()=> toast(id ? 'Policy saved.' : 'Policy added, and put in the Bible.', 'success'));
+      const inBib = Object.keys(up).some(k=> /^bible\/[^/]+(\/bc)?$/.test(k) && up[k]!==null);
+      return nbrWrite(up).then(()=> toast(id ? 'Policy saved.' : inBib ? 'Policy added, and linked to its line in the Bible.' : "Policy added. It goes in the Bible once a Bible upload has it.", 'success'));
     },
     onDelete: id ? ()=> nbrWrite(nbrBcDeletePatches(id)).then(()=> toast('Policy deleted.', 'success')) : null});
 }
@@ -17892,7 +17920,7 @@ function nbrBcUploadPatches(it, toBible){
     if(toBible) nbrMergePatch(updates, nbrBcLinePatches(id, data, {reuse}));
   });
   const pl = (n, w)=> `${n} ${w}`;
-  return {updates, office, year: +it.year, msg: `added ${pl(toAdd.length, toAdd.length===1 ? 'policy' : 'policies')} to ${esc(nbrBcOfficeName(office))} B&amp;C${toBible && toAdd.length ? ' (and to the Bible)' : ''}${same ? `; ${same} already here, left as they are` : ''}.`};
+  return {updates, office, year: +it.year, msg: `added ${pl(toAdd.length, toAdd.length===1 ? 'policy' : 'policies')} to ${esc(nbrBcOfficeName(office))} B&amp;C${same ? `; ${same} already here, left as they are` : ''}.`};
 }
 function nbrWillsUploadPatches(it){
   const updates = {}, now = Date.now(), by = currentUser.name, rows = it.parsed.rows;

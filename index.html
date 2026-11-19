@@ -2438,7 +2438,7 @@ body:not(.ai-on) #askBtn{display:none;}
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input type="text" id="globalSearch" placeholder="Search name, source…">
+            <input type="search" id="globalSearch" placeholder="Search name, email, phone, source…" aria-label="Search cases by name, email, phone or source">
           </div>
           <button class="btn btn-secondary hidden" id="uploadLeadsShortcut" title="Add protection leads in bulk from a spreadsheet">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
@@ -7246,6 +7246,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19a', date:'2026-11-19', items:[ {text:"🔎 <b>Search</b>: the search box on the dashboard finds cases by the client's <b>email</b> or <b>phone number</b> as well as their name and source. Phone numbers match from the first digit you type, narrowing as you go, however they're written (07700 900123, +44 7700 900123, 07700-900-123), including each client on a joint case.", roles:['mapa','management','admin']} ]},
   {id:'2026-11-18c', date:'2026-11-18', items:[ {text:"✨ <b>Case window</b>: a cleaner layout. The stage shows as pills, the <b>Next step</b> card holds <b>Update case</b> and <b>Refer to protection adviser</b>, contact and case details sit side by side, and the History is underneath. More options are under <b>⋯</b> at the top. In New Cases, Update case can now <b>Move to Appointments / Research</b> with an appointment or a reminder.", roles:['mapa','management','admin']},
     {text:"🔎 <b>History filter</b>: on a case, filter the History by calls, appointments, emails, texts, reminders, notes or pot moves.", roles:['management']} ]},
   {id:'2026-11-18b', date:'2026-11-18', items:[ {text:"✨ <b>A simpler case window</b>. One <b>Update case</b> button replaces the row of buttons on a protection case. It asks two things: <b>What happened?</b> (called, no answer, text or email, appointment held, or just <b>Book appointment / Set reminder</b>) and <b>Where does the case go now?</b>, offering only the pots that make sense from where the case is. Booking still adds to your calendar and invites the client, everything is still recorded in the audit trail, and an appointment or reminder that has passed still has to be recorded first. Refer, feedback, thanks, write an email and edit details are under <b>More</b>.", roles:['mapa','management','admin']} ]},
@@ -8291,13 +8292,21 @@ function visibleLeads(){
   }
   if(searchTerm){
     const q = searchTerm.toLowerCase();
+    // A search that's a number matches phone numbers from the first digit, narrowing as you type
+    // (so "07" shows every case with 07 in a number). "Flat 2" isn't a number, so it doesn't.
+    const raw = q.replace(/\D/g,''), isNum = raw.length >= 1 && raw.length >= q.replace(/[\s()+\-.]/g,'').length - 1;
+    const qd = /^\s*(\+44|0044)/.test(q) ? '0' + raw.replace(/^(0044|44)/,'') : raw;
     all = all.filter(l=>{
+      const cx = leadContacts(l);
+      const emails = [...leadEmails(l), ...cx.map(c=> c.email)].filter(Boolean);
+      const phones = [...leadPhones(l), ...cx.flatMap(c=> String(c.phone||'').split(/[,;]+/))].filter(Boolean);
       const haystack = [
         l.clientName, l.clientSource, l.advisorName, l.createdByName,
-        l.declineReason, l.declineDetail, fmtDate(l.appDate), ...leadEmails(l)
+        l.declineReason, l.declineDetail, fmtDate(l.appDate), ...emails, ...phones
       ].filter(Boolean).join(' ').toLowerCase();
-      const qd = q.replace(/\D/g,'');
-      return haystack.includes(q) || (qd.length >= 4 && leadPhones(l).some(p=> p.replace(/\D/g,'').includes(qd)));
+      // A number: phone numbers (and emails with digits in), not dates or other text.
+      if(isNum) return phones.some(p=> phoneDigits(p).includes(qd)) || emails.some(e=> e.toLowerCase().includes(q.trim()));
+      return haystack.includes(q);
     });
   }
   return all;
@@ -8967,6 +8976,8 @@ function leadPhones(lead){
   return (Array.isArray(lead.clientPhones) ? lead.clientPhones : Object.values(lead.clientPhones)).filter(Boolean);
 }
 function telHref(p){ return 'tel:' + String(p).replace(/[^\d+]/g,''); }
+// A phone number as plain digits, with +44 / 0044 written as a leading 0, so "+44 7700 900123" matches "07700 900123".
+function phoneDigits(p){ let d = String(p||'').replace(/\D/g,''); if(d.startsWith('0044')) d = '0' + d.slice(4); else if(d.startsWith('44') && d.length >= 11) d = '0' + d.slice(2); return d; }
 function isEmail(e){ return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(e||'').trim()); }
 function leadEmails(lead){
   if(!lead || !lead.clientEmails) return [];

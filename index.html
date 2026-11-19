@@ -920,6 +920,10 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-notpt summary{cursor:pointer;}
 .nbr-npwcheck{margin-top:10px; padding:10px 12px; border-radius:8px; background:var(--surface); border:1px solid var(--border); font-size:13px;}
 .nbr-npwcheck ul{margin:4px 0 6px; padding-left:18px;} .nbr-npwcheck p{margin:4px 0 0;} .nbr-npwcheck summary{cursor:pointer;} .nbr-npwcheck .nml-table-wrap{margin-top:8px; max-height:320px; overflow:auto;}
+.nbr-nofee{grid-column:1 / -1; display:flex; align-items:center; gap:8px; margin:2px 0; padding:9px 12px; border-radius:8px; background:var(--red-bg); color:var(--red); font-weight:700;}
+.nbr-nofee input{accent-color:var(--red); width:17px; height:17px;}
+.nbr-off{opacity:.45;}
+.nbr-tag-nofee{background:var(--red-bg); color:var(--red); border-color:transparent;}
 .nbr-junk{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:10px 0; padding:10px 14px; border-radius:10px; background:var(--amber-bg); font-size:13px;}
 .nbr-combined{margin:4px 0 10px; padding:8px 12px; border-radius:8px; background:var(--blue-bg); color:var(--text);} .nbr-notpt .nml-table-wrap{margin-top:10px;}
 @media (max-width:820px){ .nbr-switch-grid{grid-template-columns:1fr;} }
@@ -7275,6 +7279,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-19m', date:'2026-11-19', items:[ {text:"🚫 <b>No fee to be charged for client</b>: a red tick box on the NBR case form (between Sols and Val). Ticked, the case has no mums fee, shows <b>No fee</b> on the advisor's NBR, and its Bible line says \u201cno fee\u201d in When / How, as the Bible does; a case with no fees at all still gets a £0 Bible line saying \u201cno fee\u201d for reporting.", roles:['admin','management']} ]},
   {id:'2026-11-19l', date:'2026-11-19', items:[ {text:"🚫 <b>NPWs follow the Excel Bible</b>: a Bible upload now gives each NPW line the Excel Bible's amount and period (a line made from an NBR case used to keep the NBR's), and a line that's an NPW here but not in the Excel Bible stops being one, so the NPW figures match. NPWs don't count as written, banked or owed. <b>Upload the Bible again</b>.", roles:['admin','management']} ]},
   {id:'2026-11-19k', date:'2026-11-19', items:[ {text:"🚫 <b>NPW check</b>: uploading the Bible now ends with an NPW check for each year (the Excel Bible's NPW rows and total against the dashboard's) and lists any Excel NPW rows that aren't an NPW here. NPWs on fees paid in parts or combined into one line are now kept.", roles:['admin','management']} ]},
   {id:'2026-11-19j', date:'2026-11-19', items:[ {text:"🚫 <b>NPWs in the Bible</b>: every NPW row in your Excel Bible now comes in on upload, even when its case is no longer on the advisor's NBR (it usually comes off the month sheet when it goes NPW), so the Bible page's NPW card matches the Excel Bible. They don't count as written or owed. <b>Upload the Bible again</b> with Fill in the blanks.", roles:['admin','management']} ]},
@@ -15463,17 +15468,19 @@ function nbrLinePatches(entryId, e, opts={}){
     sols: {product:'Sols Fee', provider: e.solsName || '', source: e.solsName || ''},
     val:  {product:'Val Fee', provider: e.valName || '', source: e.valName || ''},
   };
+  const anyFee = NBR_CATS.some(([k])=> nbrRound(e[k])), noFeeOn = e.noFee ? (['proc','prot','sols','val','mums'].find(k=> nbrRound(e[k])) || 'mums') : '';
+  const whenFor = (k, l)=> k===noFeeOn ? (nbrBlank(l && l.when) || (l && l.when)==='no fee' ? {when:'no fee'} : {}) : ((l && l.when)==='no fee' ? {when:null} : {});
   NBR_CATS.forEach(([k])=>{
-    const amt = nbrRound(e[k]), ex = linked[k];
+    const amt = nbrRound(e[k]), ex = linked[k], zeroNoFee = e.noFee && !anyFee && k==='mums';
     const shared = nbrClean({adv:e.adv, office:(adv.office==='C' ? (NBR_ADV[adv.of] || {}).office : adv.office) || '', client:e.client || '', appDate:e.appSub || '', switchDate:e.switchDate || '', month:e.month, address:e.notes || ''});
-    if(amt){
-      if(ex){ const [lid, l] = ex; out['bible/'+lid] = {...l, ...shared, amount:l.covers ? l.amount : amt, updatedAt:Date.now()}; }
+    if(amt || zeroNoFee){
+      if(ex){ const [lid, l] = ex; const o = {...l, ...shared, amount:l.covers ? l.amount : amt, ...whenFor(k, l), updatedAt:Date.now()}; if(o.when===null) delete o.when; out['bible/'+lid] = o; }
       else if(opts.create!==false){
         const reuse = opts.reuse && opts.reuse(k, amt);
-        if(reuse){ out['bible/'+reuse+'/entry'] = entryId; out['bible/'+reuse+'/kind'] = k;
+        if(reuse){ out['bible/'+reuse+'/entry'] = entryId; out['bible/'+reuse+'/kind'] = k; if(k===noFeeOn) out['bible/'+reuse+'/when'] = 'no fee';
           // The Bible calls every product transfer Prod Tfr; the NBR's Type of sale says when it's a BTL PT.
           if(k==='proc' && spec.proc.product==='BTL PT') out['bible/'+reuse+'/product'] = 'BTL PT'; }
-        else out['bible/'+nbrKey()] = nbrClean({...shared, ...spec[k], amount:amt, entry:entryId, kind:k, src:'nbr', createdAt:Date.now()});
+        else out['bible/'+nbrKey()] = nbrClean({...shared, ...spec[k], amount:amt, ...(k===noFeeOn ? {when:'no fee'} : {}), entry:entryId, kind:k, src:'nbr', createdAt:Date.now()});
       }
     } else if(ex){
       const [lid, l] = ex;
@@ -15519,6 +15526,7 @@ function openNbrEntry(id, preset={}){
       ${nfMoney('nfProt','Protection', e.prot)}
       ${nfMoney('nfSols','Sols amount', e.sols)}
       ${nfList('nfSolsName','Sols name', e.solsName, L.sols)}
+      <label class="nbr-check nbr-nofee"><input type="checkbox" id="nfNoFee" ${e.noFee ? 'checked' : ''}> No fee to be charged for client</label>
       ${nfMoney('nfVal','Val amount', e.val)}
       ${nfList('nfValName','Val name', e.valName, L.vals)}
       ${nfDate('nfAppSub','Date app submitted', e.appSub)}
@@ -15539,6 +15547,8 @@ function openNbrEntry(id, preset={}){
       const data = nbrClean({adv:nfv('nfAdv'), month:nfv('nfMonth'), week:nfv('nfWeek'), client:nfv('nfClient'), lender:nfv('nfLender'), saleType:nfv('nfSale'),
         proc:nfn('nfProc'), mums:nfn('nfMums'), prot:nfn('nfProt'), sols:nfn('nfSols'), solsName:nfv('nfSolsName'), val:nfn('nfVal'), valName:nfv('nfValName'),
         appSub:nfv('nfAppSub'), switchDate:nfv('nfSwitch'), leadProvider:nfv('nfLead'), notes:nfv('nfNotes'), linkToSend:nfn('nfLink'), linkSent:nfv('nfLinkSent'), linkPaid:nfv('nfLinkPaid')});
+      // No fee to be charged for the client: no mums fee; the case's Bible line says "no fee", as in the Bible.
+      if(nfv('nfNoFee')){ data.noFee = true; delete data.mums; }
       if(!data.adv){ toast('Choose the advisor.', 'error'); return false; }
       if(!data.month){ toast('Choose the register month.', 'error'); return false; }
       if(!data.client){ toast('Enter the client.', 'error'); return false; }
@@ -15553,6 +15563,9 @@ function openNbrEntry(id, preset={}){
       return nbrWrite(updates).then(()=> toast(id ? 'Case saved.' : 'Case added'+(toBible ? ' (and to the Bible).' : '.'), 'success'));
     },
     onDelete: id ? ()=> nbrWrite(nbrEntryDeletePatches(id)).then(()=> toast('Case deleted. Any Bible lines already paid were kept.', 'success')) : null});
+  // Ticking "No fee" clears the mums fee and greys it out.
+  const nf = document.getElementById('nfNoFee'), mf = document.getElementById('nfMums');
+  if(nf && mf){ const sync = ()=>{ mf.disabled = nf.checked; if(nf.checked) mf.value = ''; mf.closest('.field') && mf.closest('.field').classList.toggle('nbr-off', nf.checked); }; nf.addEventListener('change', sync); sync(); }
 }
 
 /* ---- Add / edit an NPW (negative amendment) ---- */
@@ -16276,7 +16289,7 @@ function renderNbrReg(){
   const thisWeek = ym===nbrThisYm() ? nbrWeekFor(nbrToday(), ym) : '';
   const inBible = new Set(Object.values(NBR_BIB_ALL).filter(l=> l && l.entry).map(l=> l.entry));
   const head = `<tr><th>Client - new business</th><th>Lender / insurer</th>${NBR_CATS.map(([,l])=> `<th class="num">${l.replace(' refs','')}</th>`).join('')}<th class="num">Total</th><th>Sols name</th><th>Val name</th><th>App sub</th><th>Switch date</th><th>Lead provider</th><th>Type of sale</th><th>Notes</th><th class="num">£ link</th><th>Sent</th><th>Paid</th></tr>`;
-  const rowHtml = e=> `<tr class="nbr-click" data-nbr-ent="${esc(e.id)}"><td><b>${esc(e.client||'')}</b>${inBible.has(e.id) ? ' <span class="nbr-tag" title="In the Bible">Bible</span>' : ''}</td><td>${esc(e.lender||'')}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(e[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(nbrEntTotal(e))}</td><td>${esc(e.solsName||'')}</td><td>${esc(e.valName||'')}</td><td>${e.appSub ? fmtDateSlash(e.appSub) : ''}</td><td>${e.switchDate ? fmtDateSlash(e.switchDate) : ''}</td><td>${esc(e.leadProvider||'')}</td><td>${esc(e.saleType||'')}</td><td class="nbr-notes">${esc(e.notes||'')}</td><td class="num">${nbrMoneyCell(e.linkToSend)}</td><td>${e.linkSent ? fmtDateSlash(e.linkSent) : ''}</td><td>${e.linkPaid ? fmtDateSlash(e.linkPaid) : ''}</td></tr>`;
+  const rowHtml = e=> `<tr class="nbr-click" data-nbr-ent="${esc(e.id)}"><td><b>${esc(e.client||'')}</b>${e.noFee ? ' <span class="nbr-tag nbr-tag-nofee" title="No fee to be charged for client">No fee</span>' : ''}${inBible.has(e.id) ? ' <span class="nbr-tag" title="In the Bible">Bible</span>' : ''}</td><td>${esc(e.lender||'')}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(e[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(nbrEntTotal(e))}</td><td>${esc(e.solsName||'')}</td><td>${esc(e.valName||'')}</td><td>${e.appSub ? fmtDateSlash(e.appSub) : ''}</td><td>${e.switchDate ? fmtDateSlash(e.switchDate) : ''}</td><td>${esc(e.leadProvider||'')}</td><td>${esc(e.saleType||'')}</td><td class="nbr-notes">${esc(e.notes||'')}</td><td class="num">${nbrMoneyCell(e.linkToSend)}</td><td>${e.linkSent ? fmtDateSlash(e.linkSent) : ''}</td><td>${e.linkPaid ? fmtDateSlash(e.linkPaid) : ''}</td></tr>`;
   const totRow = (label, rows, cls)=>{ const t = nbrSum(rows.map(e=> ({...e, total: nbrEntTotal(e)}))); return `<tr class="${cls}"><td>${label}</td><td></td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td colspan="11"></td></tr>`; };
   const monthHtml = ents.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-reg-table"><thead>${head}</thead><tbody>
       ${weeks.map((g,i)=> ({g, n:i+1})).reverse().map(({g,n})=> `<tr class="nbr-group nbr-wk ${a && a.office==='C' ? 'nbr-com' : ''} ${g.week===thisWeek ? 'nbr-this-week' : ''}"><td colspan="19">Week ${n}${g.week ? ' · w/e '+esc(fmtDate(g.week)) : ''}${g.week===thisWeek ? ' <span class="nbr-tag">This week</span>' : ''}</td></tr>${g.rows.map(rowHtml).join('')}${totRow(`Week ${n} totals`, g.rows, 'nbr-tot')}`).join('')}

@@ -17447,6 +17447,12 @@ function nbrNpwCheck(p, ids, updates){
   const notHere = [], otherYear = [], notThere = [];
   rows.forEach(r=>{ const m = B.filter(l=> same(r, l)); if(!m.length) notHere.push(r); else if(!m.some(l=> fyOf(l.month)===fyOf(r.month))) otherYear.push([r, m[0]]); });
   B.filter(l=> fys.includes(fyOf(l.month))).forEach(l=>{ if(!rows.some(r=> same(r, l))) notThere.push(l); });
+  // Same NPW in both, same year and kind of fee, different amount (a line from an NBR case keeps the NBR's amount).
+  const kindOf = x=> nbrProdKind(x.product) || String(x.product||'').toLowerCase(), amtDiff = [];
+  B.filter(l=> fys.includes(fyOf(l.month))).forEach(l=>{
+    const R = rows.filter(r=> same(r, l) && fyOf(r.month)===fyOf(l.month) && kindOf(r)===kindOf(l)); if(!R.length) return;
+    const ex = nbrRound(R.reduce((t, r)=> t + n0(r.amount), 0)); if(Math.abs(ex - n0(l.amount)) >= 0.01) amtDiff.push([l, ex]);
+  });
   const sum = list=> list.reduce((t, l)=> t + n0(l.amount), 0), money = v=> esc(nbrMoney(v)), per = l=> esc(l.month ? nbrYmLabel(l.month) : '—');
   const yr = fy=>{ const R = rows.filter(l=> fyOf(l.month)===fy), H = B.filter(l=> fyOf(l.month)===fy);
     return `<li>${esc(fyName(fy))}: Excel Bible <b>${R.length}</b> NPW row${R.length===1?'':'s'}, ${money(sum(R))} · here <b>${H.length}</b> line${H.length===1?'':'s'}, ${money(sum(H))}</li>`; };
@@ -17457,9 +17463,11 @@ function nbrNpwCheck(p, ids, updates){
       notHere.map(r=> `<tr><td>${per(r)}</td><td>${advOf(r)}</td><td>${esc(r.client||'')}</td><td>${esc(r.product||'')}</td><td class="num">${money(r.amount)}</td></tr>`))}${
     table(`${otherYear.length} ${otherYear.length===1?'is an NPW':'are NPWs'} here but in another year (the line keeps the NBR's month)`, '<th>Excel period</th><th>Here</th><th>Client</th><th>Product</th><th class="num">Excel amount</th><th class="num">Here</th>',
       otherYear.map(([r, l])=> `<tr><td>${per(r)}</td><td>${per(l)}</td><td>${esc(r.client||'')}</td><td>${esc(r.product||'')}</td><td class="num">${money(r.amount)}</td><td class="num">${money(l.amount)}</td></tr>`))}${
+    table(`${amtDiff.length} NPW${amtDiff.length===1?' is':'s are'} in both but with a different amount (${money(amtDiff.reduce((t, [l, ex])=> t + n0(l.amount) - ex, 0))} more here)`, '<th>Period</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Excel Bible</th><th class="num">Here</th>',
+      amtDiff.map(([l, ex])=> `<tr><td>${per(l)}</td><td>${advOf(l)}</td><td>${esc(l.client||'')}</td><td>${esc(l.product||'')}</td><td class="num">${money(ex)}</td><td class="num">${money(l.amount)}</td></tr>`))}${
     table(`${notThere.length} NPW line${notThere.length===1?'':'s'} here ${notThere.length===1?'isn\'t an NPW':'aren\'t NPWs'} in the Excel Bible`, '<th>Period</th><th>Adv</th><th>Client</th><th>Product</th><th class="num">Amount</th>',
       notThere.map(l=> `<tr><td>${per(l)}</td><td>${advOf(l)}</td><td>${esc(l.client||'')}</td><td>${esc(l.product||'')}</td><td class="num">${money(l.amount)}</td></tr>`))}${
-    !notHere.length && !otherYear.length && !notThere.length ? '<p>The NPWs here match the Excel Bible.</p>' : ''}</div>`;
+    !notHere.length && !otherYear.length && !notThere.length && !amtDiff.length ? '<p>The NPWs here match the Excel Bible.</p>' : ''}</div>`;
 }
 function nbrBibleFillPatches(it){
   const p = it.parsed, updates = {}, now = Date.now(), by = currentUser.name, ids = {};

@@ -933,7 +933,7 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-paid-n{font-weight:500; text-transform:none; letter-spacing:0; opacity:.85; margin-left:6px;}
 .nbr-pays{margin:6px 0 14px; padding:12px; border:1px dashed var(--border-2); border-radius:10px;}
 .nbr-pays-h{margin-bottom:8px; font-size:13px;} .nbr-pays-h .field-hint{display:block; margin-top:2px;}
-.nbr-pay-row{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)) 34px; gap:8px; align-items:end; margin-bottom:8px;}
+.nbr-pay-row{display:grid; grid-template-columns:repeat(6, minmax(0,1fr)) 34px; gap:8px; align-items:end; margin-bottom:8px;}
 .nbr-pay-row label{display:flex; flex-direction:column; gap:4px; font-size:11.5px; font-weight:600; color:var(--text-muted);}
 .nbr-pay-row input{width:100%; min-width:0;width:100%; padding:11px 13px; border:1.5px solid var(--border-2); border-radius:var(--radius-sm);
   background:var(--surface); color:var(--text); font-size:14px; transition:border-color .15s;}
@@ -12274,7 +12274,7 @@ const AIQ_SETS = {
     about: 'The Bible: one line per piece of income (a fee) with what has been paid. Products include Proc Fee, Prod Tfr, BTL PT, Remo, Mums Fee, Sols Fee, Val Fee, Life Ins, Gen Ins (B&C), Commercial (C …). status is Written, Offered, Completed, Part-Paid, Paid or NPW. The financial year runs March to February (FY26 = Mar 2026 to Feb 2027). For money banked use bible_payments.',
     start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
     fields: [['advisor','t','Advisor (as on the Salesboard)'], ['office','t','Office'], ['client','t','Client'], ['product','t','Product'], ['provider','t','Lender / provider'],
-      ['lead_source','t','Source'], ['amount','n','The fee £'], ['month_written','m','Month written'], ['status','t','Written, Offered, Completed, Part-Paid, Paid or NPW'],
+      ['lead_source','t','Source'], ['amount','n','The whole fee £ (a Mums Fee paid in parts is one line here: see bible_fee_parts)'], ['month_written','m','Month written'], ['status','t','Written, Offered, Completed, Part-Paid, Paid or NPW'],
       ['paid','n','Paid so far £'], ['outstanding','n','Still to come £'], ['date_paid','d','First payment date'], ['last_date_paid','d','Latest payment date'],
       ['app_date','d','Application date'], ['offer_date','d','Offer date'], ['completion_date','d','Completion date'], ['switch_date','d','Product transfer switch date'],
       ['npw','b','Not proceeding'], ['from_nbr','b','Made from an NBR case']],
@@ -12283,6 +12283,20 @@ const AIQ_SETS = {
         lead_source:l.source || '', amount:aiqNum(l.amount), month_written:aiqYm(l.month), status:(BIB_STATUS[nbrBibStatus(l)] || [''])[0], paid:nbrRound(nbrLinePaidTotal(l)),
         outstanding:nbrRound(nbrLineOutstanding(l)), date_paid:pays[0] || '', last_date_paid:pays[pays.length-1] || '', app_date:aiqDate(l.appDate), offer_date:aiqDate(l.offerDate),
         completion_date:aiqDate(l.compDate), switch_date:aiqDate(l.switchDate), npw:aiqYN(l.npw), from_nbr:aiqYN(l.entry)}; }),
+  },
+  bible_fee_parts: {
+    about: "Each part of a Bible fee, paid or not. A fee paid in more than one go is one line in bible_lines but a row per part here. A Mums Fee is usually an Initial part (the £99 / £100 upfront fee: the Excel Bible's Provider column says Initial) and a Comp part (the rest, on offer or completion); sometimes Admin. For outstanding initial fees, use part = Initial and status = Outstanding (not the whole line's status). A line with one payment is one part.",
+    start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
+    fields: [['advisor','t','Advisor (as on the Salesboard)'], ['office','t','Office'], ['client','t','Client'], ['product','t','Product'],
+      ['part','t','Which part of the fee: Initial, Comp or Admin (Mums Fee); blank for other products'], ['amount','n','This part of the fee £'], ['when','t','When it is due (upfront, on offer, on comp…)'],
+      ['status','t','Paid, Outstanding or NPW (this part)'], ['date_paid','d','Date this part was paid'], ['paid','n','Paid on this part £'], ['outstanding','n','Still to come on this part £'],
+      ['month_written','m','Month written'], ['fee','n','The whole fee on the line £'], ['line_status','t','The whole line: Written, Offered, Completed, Part-Paid, Paid or NPW']],
+    rows: ()=>{ const out = [];
+      Object.values(NBR_BIB).forEach(l=>{ if(!l) return; const st = (BIB_STATUS[nbrBibStatus(l)] || [''])[0];
+        nbrLineParts(l).forEach(x=> out.push({advisor:nbrAdvName(nbrLineGroup(l)), office:AIQ_OFFICE[nbrLineOffice(l)] || '', client:l.client || '', product:l.product || '',
+          part:x.part, amount:x.amount, when:x.when, status: l.npw ? 'NPW' : x.outstanding >= 0.01 ? 'Outstanding' : 'Paid', date_paid:aiqDate(x.datePaid), paid:nbrRound(n0(x.paid)),
+          outstanding:nbrRound(x.outstanding), month_written:aiqYm(l.month), fee:aiqNum(l.amount), line_status:st})); });
+      return out; },
   },
   bible_payments: {
     about: "Money banked: one row per payment received on a Bible line, in the month it was paid (a fee paid in parts has a row per part). Banked on the Salesboard = these payments by month paid, plus Wills (wills_cases banked_net).",
@@ -15664,6 +15678,18 @@ function nbrNpwTotal(x){ return x.total!=null && x.total!=='' ? n0(x.total) : n0
 /* Payments on a Bible line. A fee is often paid in two or more goes (e.g. a £595 mums fee: £100 upfront, £495 on offer).
    The line's own Date paid / Paid is the first payment; "pays" holds the others, each with its part of the fee (amount),
    when / how, date paid and paid. Each payment is banked in the month it was paid. */
+/* Which part of a fee a payment is. For a Mums Fee the Excel Bible's Provider column says: Initial (the £99 / £100 upfront),
+   Comp (the rest, on offer or completion) or Admin. Saved on each payment line as "part"; older ones go by When. */
+function nbrPartLabel(v){ const t = String(v||'').trim(); return /^in(i|t)/i.test(t) ? 'Initial' : /^(comp|conp)/i.test(t) ? 'Comp' : /^admin/i.test(t) ? 'Admin' : ''; }
+function nbrPartOf(label, when){ return nbrPartLabel(label) || (/upfront/i.test(when||'') ? 'Initial' : /offer|comp/i.test(when||'') ? 'Comp' : /admin/i.test(when||'') ? 'Admin' : ''); }
+// Each part of a line's fee, with what's still to come of it. The line's own Date paid / Paid is the first part.
+function nbrLineParts(l){
+  const ex = nbrLineExtraPays(l), k = l.kind || nbrProdKind(l.product), client = k==='mums' || k==='sols' || k==='val', mums = k==='mums';
+  const own = {own:true, part: mums ? nbrPartOf(l.provider, l.when) : '', amount: nbrRound(n0(l.amount) - ex.reduce((t,x)=> t + n0(x.amount), 0)), when:l.when || '', how:l.how || '', datePaid:l.datePaid || '', paid:l.paid};
+  const parts = [own, ...ex.map(x=> ({part: mums ? nbrPartOf(x.part, x.when) : '', amount: nbrRound(n0(x.amount)), when:x.when || '', how:x.how || '', datePaid:x.datePaid || '', paid:x.paid}))];
+  return parts.map(x=>{ const got = !!x.datePaid || n0(x.paid) > 0;
+    return {...x, outstanding: l.npw ? 0 : !got ? Math.max(0, x.amount) : client && n0(x.paid) > 0 ? Math.max(0, nbrRound(x.amount - n0(x.paid))) : 0}; });
+}
 function nbrLineExtraPays(l){ return Object.entries(l && l.pays || {}).filter(([,x])=> x).map(([k,x])=> ({k, ...x})); }
 function nbrLinePays(l){ return [{own:true, datePaid:l.datePaid, paid:l.paid}, ...nbrLineExtraPays(l)]; }
 function nbrLinePaidTotal(l){ return nbrLinePays(l).reduce((s,x)=> s + n0(x.paid), 0); }
@@ -15986,6 +16012,7 @@ function openNbrNpw(id){
 function nbrPayRowHtml(x){
   const v = k=> esc(x[k]==null ? '' : String(x[k]));
   return `<div class="nbr-pay-row" data-pay-key="${esc(x.k||'')}">
+    <label>Part<input type="text" data-pay="part" list="blPayPart" value="${v('part')}" placeholder="e.g. Comp"></label>
     <label>Amount (this part)<input type="number" step="0.01" data-pay="amount" value="${v('amount')}"></label>
     <label>When<input type="text" data-pay="when" list="blPayWhen" value="${v('when')}" placeholder="e.g. on offer"></label>
     <label>How<input type="text" data-pay="how" list="blPayHow" value="${v('how')}"></label>
@@ -16024,7 +16051,7 @@ function openNbrLine(id, opts={}){
     <div class="nbr-pays">
       <div class="nbr-pays-h"><b>More payments</b> <span class="field-hint">When the client doesn't pay in one go (e.g. £100 upfront, the rest on offer): the Date paid and Paid above are the first payment, each line here is another. Each is banked in the month it's paid.</span></div>
       <div id="blPays">${nbrLineExtraPays(l).map(x=> nbrPayRowHtml(x)).join('')}</div>
-      <datalist id="blPayWhen">${NBR_WHEN.map(w=> `<option value="${esc(w)}">`).join('')}</datalist><datalist id="blPayHow">${NBR_HOW.map(w=> `<option value="${esc(w)}">`).join('')}</datalist>
+      <datalist id="blPayPart"><option value="Initial"><option value="Comp"><option value="Admin"></datalist><datalist id="blPayWhen">${NBR_WHEN.map(w=> `<option value="${esc(w)}">`).join('')}</datalist><datalist id="blPayHow">${NBR_HOW.map(w=> `<option value="${esc(w)}">`).join('')}</datalist>
       <button type="button" class="btn btn-secondary btn-sm" id="blAddPay">+ Add payment line</button>
     </div>
     <div class="nbr-row-btns">
@@ -16046,7 +16073,7 @@ function openNbrLine(id, opts={}){
       const pays = {}; let payErr = '';
       document.querySelectorAll('#blPays .nbr-pay-row').forEach(row=>{
         const g = f=> row.querySelector('[data-pay="'+f+'"]').value.trim(), num = f=> { const v = g(f); return v==='' ? null : n0(v); };
-        const x = nbrClean({amount:num('amount'), when:g('when'), how:g('how'), datePaid:g('datePaid'), paid:num('paid')});
+        const x = nbrClean({amount:num('amount'), part:g('part'), when:g('when'), how:g('how'), datePaid:g('datePaid'), paid:num('paid')});
         if(!Object.keys(x).length) return;
         if(x.paid && !x.datePaid) payErr = 'Add the date paid on each payment line, so it counts as banked in the right month.';
         pays[row.dataset.payKey || nbrKey()] = x;
@@ -17988,8 +18015,8 @@ function nbrBibleFillPatches(it){
   const newLine = (l, extra, key)=>{ const data = nbrClean({...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now, ...extra}); delete data.code; const id = key || nbrKey(); updates['bible/'+id] = data; return id; };
   M.fill.forEach(f=>{ Object.entries(f.set).forEach(([k,v])=>{ updates['bible/'+f.id+'/'+k] = v; }); updates['bible/'+f.id+'/updatedAt'] = now; updates['bible/'+f.id+'/updatedBy'] = by; });
   // Part payments: the earliest row is the line's own payment, the others are its payment lines.
-  const PAY_FIELDS = ['when','how','datePaid','paid'];
-  const payOf = row=> nbrClean({amount: nbrRound(row.amount), when: row.when, how: row.how, datePaid: row.datePaid, paid: n0(row.paid) ? row.paid : null});
+  const PAY_FIELDS = ['part','when','how','datePaid','paid'];
+  const payOf = row=> nbrClean({amount: nbrRound(row.amount), part: nbrProdKind(row.product)==='mums' ? nbrPartLabel(row.provider) || null : null, when: row.when, how: row.how, datePaid: row.datePaid, paid: n0(row.paid) ? row.paid : null});
   const byDate = (a,b)=> String(a.l.datePaid || '9999').localeCompare(String(b.l.datePaid || '9999')) || a.i - b.i;
   M.split.forEach(({t, rows})=>{
     const rs = rows.slice().sort(byDate), first = rs[0].l, rest = rs.slice(1);

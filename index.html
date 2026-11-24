@@ -1983,6 +1983,39 @@ body:not(.mode-com) .com-only{display:none !important;}
 .theme-card.active .theme-check{display:flex;}
 
 /* ---- Seasonal decorations (Themes page; off unless chosen). Per-theme logo/badge styles are added by decorStyle(). ---- */
+/* Christmas mode: Santa walks across on the snow, turns, gives a thumbs up and a smile, and walks off */
+.santa-walk{position:fixed; left:0; right:0; bottom:0; height:200px; z-index:298; pointer-events:none; overflow:hidden;}
+.santa-snow{position:absolute; left:0; right:0; bottom:0; height:46px; transform:translateY(100%); transition:transform .6s ease;}
+.santa-snow svg{display:block; width:100%; height:100%;}
+.santa-walk.in .santa-snow{transform:none;}
+.santa-step{position:absolute; bottom:14px; width:13px; height:6px; margin-left:-6px; border-radius:50%; background:rgba(120,140,170,.45); animation:santaStep 3.2s ease-in forwards;}
+@keyframes santaStep{0%,55%{opacity:1;} 100%{opacity:0;}}
+.santa{position:absolute; left:0; bottom:12px; width:118px; height:165px; will-change:transform;}
+.santa-inner{width:100%; height:100%; transform-origin:50% 100%;}
+.santa svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible;}
+.santa .s-front{display:none;}
+.santa.facing .s-front{display:block;} .santa.facing .s-side{display:none;}
+.santa g{transform-box:view-box;}
+.santa .sl-f, .santa .sl-b{transform-origin:47px 100px;}
+.santa .sa-f{transform-origin:50px 62px;} .santa .sa-b{transform-origin:46px 62px;}
+.santa.walking .sl-f{animation:santaLeg .52s ease-in-out infinite alternate;}
+.santa.walking .sl-b{animation:santaLeg .52s ease-in-out infinite alternate-reverse;}
+.santa.walking .sa-f{animation:santaArm .52s ease-in-out infinite alternate-reverse;}
+.santa.walking .sa-b{animation:santaArm .52s ease-in-out infinite alternate;}
+.santa.walking .s-bob{animation:santaBob .26s ease-in-out infinite alternate;}
+@keyframes santaLeg{from{transform:rotate(-24deg);} to{transform:rotate(24deg);}}
+@keyframes santaArm{from{transform:rotate(-30deg);} to{transform:rotate(30deg);}}
+@keyframes santaBob{from{transform:translateY(0);} to{transform:translateY(-3px);}}
+.santa .s-thumb{transform-origin:76px 64px; transform:rotate(150deg); transition:transform .45s cubic-bezier(.3,1.6,.5,1);}
+.santa .s-smile, .santa .s-happy, .santa .s-spark{opacity:0; transition:opacity .25s;}
+.santa .s-smile{transform-origin:50px 56px; transform:scale(.4); transition:opacity .25s, transform .35s cubic-bezier(.3,1.6,.5,1);}
+.santa .s-plain, .santa .s-eyes{transition:opacity .2s;}
+.santa.cheer .s-thumb{transform:none;}
+.santa.cheer .s-smile{opacity:1; transform:none;} .santa.cheer .s-happy{opacity:1;}
+.santa.cheer .s-plain, .santa.cheer .s-eyes{opacity:0;}
+.santa.cheer .s-spark{opacity:1; animation:santaSpark .9s ease-in-out .2s infinite alternate;}
+.santa .s-spark{transform-origin:100px 24px;}
+@keyframes santaSpark{from{transform:scale(.7) rotate(0);} to{transform:scale(1.15) rotate(20deg);}}
 .decor-card{background:var(--surface); border:2px solid var(--border); border-radius:16px; padding:16px; margin-bottom:18px;}
 .decor-head{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
 .decor-head .xc-emoji{font-size:26px; line-height:1;}
@@ -5223,6 +5256,95 @@ function decorFx(key){
     DECOR.raf = requestAnimationFrame(tick);
   };
   DECOR.canvas = {cv, fit}; DECOR.raf = requestAnimationFrame(tick);
+}
+/* Christmas mode: when a case is submitted to underwriting or goes on risk, Santa walks in on a bit of snow,
+   turns to face you, gives a thumbs up with a big smile, then turns and walks off. Never takes clicks.
+   With "reduce motion" set on the computer he just appears, cheering, and fades away. */
+const SANTA_SIDE = `<svg class="s-side" viewBox="0 0 100 140" aria-hidden="true"><g class="s-bob">
+  <g class="sa-b"><rect x="41" y="60" width="10" height="25" rx="5" fill="#a8192a"/><circle cx="46" cy="88" r="5" fill="#1d1d1d"/></g>
+  <g class="sl-b"><rect x="40" y="96" width="13" height="27" fill="#a8192a"/><path d="M38 120h15v6h8a4 4 0 0 1 4 4v3H38z" fill="#1d1d1d"/></g>
+  <g class="sl-f"><rect x="41" y="96" width="13" height="27" fill="#c4202f"/><path d="M39 120h15v6h8a4 4 0 0 1 4 4v3H39z" fill="#262626"/></g>
+  <path d="M30 62Q32 52 50 52Q66 52 70 62Q80 80 76 102Q50 110 26 102Q24 80 30 62z" fill="#d62d3a"/>
+  <rect x="24" y="97" width="54" height="10" rx="5" fill="#fff"/>
+  <rect x="26" y="79" width="52" height="7" fill="#1d1d1d"/><rect x="60" y="77.5" width="10" height="10" rx="1.5" fill="none" stroke="#f2c230" stroke-width="2.5"/>
+  <circle cx="54" cy="40" r="15" fill="#f6c9a8"/>
+  <path d="M43 43Q44 65 60 68Q73 64 71 46Q63 53 52 48z" fill="#fff"/>
+  <ellipse cx="64" cy="49" rx="7" ry="3.4" fill="#fff" stroke="#e6e6e6" stroke-width=".8"/>
+  <circle cx="68.5" cy="44" r="3.6" fill="#e99a85"/><circle cx="62.5" cy="39.5" r="2" fill="#1d1d1d"/><circle cx="62" cy="44.5" r="3" fill="#f08a8a" opacity=".5"/>
+  <path d="M39 32Q42 14 60 15Q72 19 70 32z" fill="#d62d3a"/><path d="M45 19Q31 13 24 25" stroke="#d62d3a" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <circle cx="23" cy="28" r="5.5" fill="#fff"/><rect x="37" y="28" width="36" height="9" rx="4.5" fill="#fff"/>
+  <g class="sa-f"><rect x="45" y="60" width="11" height="25" rx="5.5" fill="#c4202f"/><rect x="44.5" y="81" width="12" height="5" rx="2.5" fill="#fff"/><circle cx="50.5" cy="89.5" r="5.5" fill="#262626"/></g>
+</g></svg>`;
+const SANTA_FRONT = `<svg class="s-front" viewBox="0 0 100 140" aria-hidden="true">
+  <rect x="35" y="96" width="13" height="27" fill="#c4202f"/><rect x="52" y="96" width="13" height="27" fill="#c4202f"/>
+  <rect x="30" y="120" width="19" height="13" rx="5" fill="#262626"/><rect x="51" y="120" width="19" height="13" rx="5" fill="#262626"/>
+  <g transform="rotate(14 23 62)"><rect x="17" y="60" width="11" height="25" rx="5.5" fill="#c4202f"/><rect x="16.5" y="81" width="12" height="5" rx="2.5" fill="#fff"/><circle cx="22.5" cy="89.5" r="5.5" fill="#262626"/></g>
+  <ellipse cx="50" cy="81" rx="28" ry="27" fill="#d62d3a"/>
+  <rect x="47" y="55" width="6" height="46" fill="#fff"/>
+  <rect x="21" y="97" width="58" height="10" rx="5" fill="#fff"/>
+  <rect x="22" y="78" width="56" height="7" fill="#1d1d1d"/><rect x="44" y="76.5" width="12" height="10" rx="1.5" fill="none" stroke="#f2c230" stroke-width="2.5"/>
+  <g class="s-thumb"><path d="M76 64L84.5 49.3" stroke="#c4202f" stroke-width="11" stroke-linecap="round"/><path d="M84.1 50L86.1 46.5" stroke="#fff" stroke-width="12.5"/>
+    <rect x="82.5" y="24.5" width="5.4" height="14" rx="2.7" fill="#262626"/><rect x="80.5" y="34.5" width="14" height="12.5" rx="4" fill="#262626"/>
+    <path d="M81.8 38.6h7M81.8 42.6h7" stroke="#6a6a6a" stroke-width="1.1" stroke-linecap="round"/></g>
+  <g class="s-spark" fill="#f2c230"><path d="M99 15l1.6 5 5 1.6-5 1.6-1.6 5-1.6-5-5-1.6 5-1.6z"/><path d="M104 31l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/></g>
+  <circle cx="50" cy="40" r="15" fill="#f6c9a8"/>
+  <path d="M35 43Q36 67 50 71Q64 67 65 43Q58 53 50 50.5Q42 53 35 43z" fill="#fff"/>
+  <path class="s-plain" d="M46 58h8" stroke="#8b1e2b" stroke-width="1.8" stroke-linecap="round"/>
+  <path class="s-smile" d="M42 54.5Q50 65 58 54.5Q50 58 42 54.5z" fill="#8b1e2b"/>
+  <ellipse cx="44.5" cy="51" rx="6.5" ry="3.3" fill="#fff" stroke="#e6e6e6" stroke-width=".8"/><ellipse cx="55.5" cy="51" rx="6.5" ry="3.3" fill="#fff" stroke="#e6e6e6" stroke-width=".8"/>
+  <circle cx="50" cy="47" r="3.6" fill="#e99a85"/>
+  <g class="s-eyes" fill="#1d1d1d"><circle cx="44" cy="40.5" r="2"/><circle cx="56" cy="40.5" r="2"/></g>
+  <g class="s-happy" stroke="#1d1d1d" stroke-width="1.8" fill="none" stroke-linecap="round"><path d="M41.3 41.5Q44 37.6 46.7 41.5"/><path d="M53.3 41.5Q56 37.6 58.7 41.5"/></g>
+  <circle cx="39.5" cy="46" r="3.2" fill="#f08a8a" opacity=".55"/><circle cx="60.5" cy="46" r="3.2" fill="#f08a8a" opacity=".55"/>
+  <path d="M34 32Q37 12 54 11Q66 13 66 32z" fill="#d62d3a"/><path d="M55 12Q71 7 75 20" stroke="#d62d3a" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <circle cx="76" cy="23" r="5.5" fill="#fff"/><rect x="32" y="28" width="36" height="9" rx="4.5" fill="#fff"/>
+</svg>`;
+const SANTA_SNOW = `<svg viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true"><path d="M0 18Q30 6 62 14T128 12T196 16T262 10T330 15T400 12V46H0z" fill="#dfe8f3"/><path d="M0 24Q36 13 70 21T140 19T210 23T280 17T350 22T400 19V46H0z" fill="#fff"/></svg>`;
+let santaBusy = false;
+function santaCheer(){
+  if(DECOR.active!=='christmas' || santaBusy || document.hidden) return;
+  santaBusy = true;
+  const wrap = document.createElement('div'); wrap.className = 'santa-walk'; wrap.setAttribute('aria-hidden', 'true');
+  wrap.innerHTML = `<div class="santa-snow">${SANTA_SNOW}</div><div class="santa"><div class="santa-inner">${SANTA_SIDE}${SANTA_FRONT}</div></div>`;
+  document.body.appendChild(wrap);
+  const santa = wrap.querySelector('.santa'), inner = wrap.querySelector('.santa-inner');
+  const W = window.innerWidth, w = 118, mid = Math.round(W/2 - w/2), wait = ms=> new Promise(r=> setTimeout(r, ms));
+  const done = ()=>{ wrap.remove(); santaBusy = false; };
+  if(!motionOK() || !santa.animate){ // no walking: he appears, cheering, and fades away
+    santa.classList.add('facing', 'cheer'); santa.style.transform = `translateX(${mid}px)`; wrap.classList.add('in');
+    wrap.animate([{opacity:0}, {opacity:1, offset:.12}, {opacity:1, offset:.85}, {opacity:0}], {duration:3200}).finished.then(done, done);
+    return;
+  }
+  const speed = Math.max(170, Math.min(260, W/5)); // pixels a second: a steady stroll on any screen
+  const walk = (from, to)=>{
+    const ms = Math.abs(to - from) / speed * 1000;
+    santa.classList.add('walking');
+    const a = santa.animate([{transform:`translateX(${from}px)`}, {transform:`translateX(${to}px)`}], {duration:ms, easing:'linear', fill:'forwards'});
+    let n = 0;
+    const steps = setInterval(()=>{ // footprints in the snow
+      const t = Math.min(1, (a.currentTime || 0) / ms), x = from + (to - from) * t + w/2 + (n++ % 2 ? 7 : -7);
+      if(x < -20 || x > W + 20) return;
+      const f = document.createElement('span'); f.className = 'santa-step'; f.style.left = x + 'px'; f.style.bottom = (n % 2 ? 13 : 17) + 'px';
+      wrap.appendChild(f); setTimeout(()=> f.remove(), 3300);
+    }, 260);
+    return a.finished.finally(()=>{ clearInterval(steps); santa.classList.remove('walking'); });
+  };
+  const turn = (front, flip)=>{
+    const a = inner.animate([{transform:`scaleX(${flip})`}, {transform:'scaleX(0)'}], {duration:130, easing:'ease-in', fill:'forwards'});
+    return a.finished.then(()=>{ santa.classList.toggle('facing', front); return inner.animate([{transform:'scaleX(0)'}, {transform:'scaleX(1)'}], {duration:150, easing:'ease-out', fill:'forwards'}).finished; });
+  };
+  requestAnimationFrame(()=> wrap.classList.add('in'));
+  (async ()=>{
+    await wait(350);
+    await walk(-w - 10, mid);
+    await turn(true, 1);
+    await wait(120); santa.classList.add('cheer');
+    await wait(1900); santa.classList.remove('cheer');
+    await wait(250);
+    await turn(false, 1);
+    await walk(mid, W + 20);
+    wrap.classList.remove('in'); await wait(650);
+  })().then(done, done);
 }
 function decorResize(){
   clearTimeout(DECOR.resizeT);
@@ -12952,6 +13074,7 @@ document.getElementById('signupSubmit').addEventListener('click', function(){
           .then(()=> toast(`Update sent to ${ld.referredByName || 'the MAPA'}.`,'success')).catch(err=> toast('Feedback not sent: '+err.message,'error'));
       }
       if(m.status==='signedup') celebrate(`${money} on risk! 🎉`);
+      if(m.status==='signedup' || m.status==='underwriting') santaCheer(); // Christmas mode only
       toast(m.status==='underwriting' ? `Submitted to underwriting with ${money} commission pending. Moved to Submitted / In Underwriting.` : `On risk with ${money} commission. Moved to On Risk.`,'success'); closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();
     }).catch(err=> toast('Could not save: '+err.message,'error'))

@@ -6060,11 +6060,17 @@ function ensureSibLoaded(){
   if(sibLoaded) return Promise.resolve();
   return db.ref('sib/cases').once('value').then(snap=>{ if(!sibLoaded){ SIB = snap.val() || {}; sibLoaded = true; } });
 }
-/* Load the other sections' data quietly a few seconds after logging in, so
-   the first switch to Send in Blue or Commercial doesn't wait for a download. */
+/* Load the other sections' data quietly once the protection board is on screen, so the first
+   switch to Send in Blue, Commercial or New Business doesn't wait for a download. (If the board's
+   cases are slow to arrive, they start 3 seconds after logging in anyway.) */
 function prefetchSections(){
   clearTimeout(prefetchSections.t);
-  prefetchSections.t = setTimeout(()=> (window.requestIdleCallback || (f=> f()))(()=>{ if(currentUser){ startSibListener(); startComListener(); if(nbrAccess()) startNbrListener(); } }), 3000);
+  prefetchSections.armed = true;
+  prefetchSections.t = setTimeout(prefetchSectionsNow, leadsLoaded ? 300 : 3000);
+}
+function prefetchSectionsNow(){
+  clearTimeout(prefetchSections.t);
+  if(currentUser){ startSibListener(); startComListener(); if(nbrAccess()) startNbrListener(); }
 }
 function startSibListener(){
   if(sibListening || !currentUser) return;
@@ -8520,7 +8526,7 @@ function startAuthedListeners(){
 
   db.ref('leads').on('value', snap=>{
     LEADS = snap.val() || {};
-    if(SPEED.marks['Protection cases loaded']==null){ speedMark('Protection cases loaded'); requestAnimationFrame(()=> speedMark('Protection board drawn')); speedSizeLater('Protection cases', ()=> LEADS); }
+    if(SPEED.marks['Protection cases loaded']==null){ speedMark('Protection cases loaded'); requestAnimationFrame(()=>{ speedMark('Protection board drawn'); if(prefetchSections.armed) setTimeout(prefetchSectionsNow, 50); }); speedSizeLater('Protection cases', ()=> LEADS); }
     leadsLoaded = true; leadsLive = true;
     saveBootCache();
     setTimeout(()=>{ openPendingLead(); checkCallReminders(); }, 0);

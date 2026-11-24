@@ -12351,6 +12351,23 @@ function aiqRows(name){ const s = AIQ_SETS[name], c = aiqCache[name], ver = name
   // Rows are worked out once per question; the data can change between questions.
   if(c && c.ver===ver && Date.now() - c.at < 60000) return c.rows;
   const rows = s.rows(); aiqCache[name] = {ver, at:Date.now(), rows}; return rows; }
+/* What the team's words mean in the data, so a question gets the right rows first time. */
+const AIQ_GLOSSARY = {
+  'initial fee / upfront fee': 'The first part of a Mums Fee, usually £99 or £100, paid upfront (marked Initial in the Excel Bible). In bible_fee_parts: part = Initial.',
+  'outstanding upfront fees / initial fees owed': 'bible_fee_parts with part = Initial and status = Outstanding. List the amount of that part only (usually £99 / £100), never the whole fee or the balance. The Bible page has the same list under "Upfront fees owed".',
+  'comp fee / balance': 'The rest of a Mums Fee after the Initial, due on offer or completion: bible_fee_parts part = Comp.',
+  'outstanding / owed / still to come': 'Not paid yet. Per part: bible_fee_parts outstanding. Per whole fee: bible_lines outstanding. NPWs are never owed.',
+  'part-paid': 'A Bible line with some but not all of its fee paid (status Part-Paid).',
+  'written': 'Business written: nbr_cases by month (the Salesboard), or bible_lines by month_written.',
+  'banked': 'Money received: bible_payments by date_paid (plus wills_cases banked_net on the Salesboard).',
+  'NPW': 'Not proceeding: left out of written, banked and owed.',
+  'on risk': 'Protection: protection_cases commission_on_risk (a case can be part on risk; commission_pending is the rest).',
+};
+const AIQ_CHECKS = [
+  'Pick the data set and fields from the glossary that match the question exactly, and say in one line which you used.',
+  'Before answering, look at a few of the rows you are about to list and check each one meets every part of the question (e.g. for upfront fees owed: part Initial, not paid, amount is the upfront part only). Fix the query if any does not.',
+  'If the question uses a term not in the glossary or the data, ask one short question instead of guessing.',
+];
 async function aiqDescribe(){
   await aiqEnsure();
   const sets = [], missing = [];
@@ -12364,7 +12381,7 @@ async function aiqDescribe(){
         const vals = Object.keys(n); if(vals.length && vals.length <= 40) o.values = vals.sort((a,b)=> n[b]-n[a]).slice(0,25); }
       return o; })});
   });
-  return {today:aiqDate(Date.now()), you:`${currentUser.name} (${currentUser.role})`, periods:'Add :month, :year, :quarter, :fin_year (March-February), :week or :weekday to a date field to group or filter by period.', datasets:sets, not_available:missing};
+  return {today:aiqDate(Date.now()), you:`${currentUser.name} (${currentUser.role})`, glossary:AIQ_GLOSSARY, answer_checks:AIQ_CHECKS, periods:'Add :month, :year, :quarter, :fin_year (March-February), :week or :weekday to a date field to group or filter by period.', datasets:sets, not_available:missing};
 }
 function aiqPart(v, part){
   v = String(v||''); if(!v) return '';
@@ -15683,12 +15700,32 @@ function nbrNpwTotal(x){ return x.total!=null && x.total!=='' ? n0(x.total) : n0
 function nbrPartLabel(v){ const t = String(v||'').trim(); return /^in(i|t)/i.test(t) ? 'Initial' : /^(comp|conp)/i.test(t) ? 'Comp' : /^admin/i.test(t) ? 'Admin' : ''; }
 function nbrPartOf(label, when){ return nbrPartLabel(label) || (/upfront/i.test(when||'') ? 'Initial' : /offer|comp/i.test(when||'') ? 'Comp' : /admin/i.test(when||'') ? 'Admin' : ''); }
 // Each part of a line's fee, with what's still to come of it. The line's own Date paid / Paid is the first part.
+// bibAmt: the amount on the Excel Bible's row for that first part, when it's less than the fee (e.g. the £100 Initial on a
+// £595 NBR case whose Comp row isn't in the Bible yet); the rest is a part still to come.
 function nbrLineParts(l){
   const ex = nbrLineExtraPays(l), k = l.kind || nbrProdKind(l.product), client = k==='mums' || k==='sols' || k==='val', mums = k==='mums';
-  const own = {own:true, part: mums ? nbrPartOf(l.provider, l.when) : '', amount: nbrRound(n0(l.amount) - ex.reduce((t,x)=> t + n0(x.amount), 0)), when:l.when || '', how:l.how || '', datePaid:l.datePaid || '', paid:l.paid};
-  const parts = [own, ...ex.map(x=> ({part: mums ? nbrPartOf(x.part, x.when) : '', amount: nbrRound(n0(x.amount)), when:x.when || '', how:x.how || '', datePaid:x.datePaid || '', paid:x.paid}))];
-  return parts.map(x=>{ const got = !!x.datePaid || n0(x.paid) > 0;
-    return {...x, outstanding: l.npw ? 0 : !got ? Math.max(0, x.amount) : client && n0(x.paid) > 0 ? Math.max(0, nbrRound(x.amount - n0(x.paid))) : 0}; });
+  const ownAmt = nbrRound(n0(l.amount) - ex.reduce((t,x)=> t + n0(x.amount), 0)), ownPart = mums ? nbrPartOf(l.provider, l.when) : '';
+  const bib = !ex.length && n0(l.bibAmt) > 0 && n0(l.bibAmt) < ownAmt - 0.005 ? nbrRound(n0(l.bibAmt)) : null;
+  const rest = p=> p==='Initial' ? 'Comp' : p;
+  const parts = [{own:true, part:ownPart, amount: bib!=null ? bib : ownAmt, when:l.when || '', how:l.how || '', datePaid:l.datePaid || '', paid:l.paid}];
+  if(bib!=null) parts.push({part:rest(ownPart), amount:nbrRound(ownAmt - bib), when:'', how:'', datePaid:'', paid:null});
+  ex.forEach(x=> parts.push({part: mums ? nbrPartOf(x.part, x.when) : '', amount: nbrRound(n0(x.amount)), when:x.when || '', how:x.how || '', datePaid:x.datePaid || '', paid:x.paid}));
+  const out = [];
+  parts.forEach(x=>{
+    const got = !!x.datePaid || n0(x.paid) > 0, bal = nbrRound(x.amount - n0(x.paid));
+    if(l.npw) out.push({...x, outstanding:0});
+    else if(!got) out.push({...x, outstanding:Math.max(0, x.amount)});
+    // A client fee paid only in part (e.g. £100 upfront of a £495 line): the part paid, and the balance still to come.
+    else if(client && n0(x.paid) > 0 && bal >= 0.01){ out.push({...x, amount:nbrRound(n0(x.paid)), outstanding:0}); out.push({part:rest(x.part), amount:bal, when:'', how:'', datePaid:'', paid:null, outstanding:bal}); }
+    else out.push({...x, outstanding:0});
+  });
+  return out;
+}
+// Upfront (Initial) fees not paid yet: one per part, with its line.
+function nbrUpfrontOwed(){
+  const out = [];
+  Object.entries(NBR_BIB).forEach(([id, l])=>{ if(!l || l.npw) return; nbrLineParts(l).forEach(x=>{ if(x.part==='Initial' && x.outstanding >= 0.01) out.push({id, l, amount:x.outstanding, when:x.when}); }); });
+  return out;
 }
 function nbrLineExtraPays(l){ return Object.entries(l && l.pays || {}).filter(([,x])=> x).map(([k,x])=> ({k, ...x})); }
 function nbrLinePays(l){ return [{own:true, datePaid:l.datePaid, paid:l.paid}, ...nbrLineExtraPays(l)]; }
@@ -16881,7 +16918,7 @@ function nbrPaidMonths(){
   return [...s].filter(ym=> /^\d{4}-\d{2}$/.test(ym)).sort().reverse();
 }
 function nbrBibViewSwitch(){
-  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month'], ['switch','Switch dates']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
+  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month'], ['switch','Switch dates'], ['upfront','Upfront fees owed']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
 }
 function renderNbrBiblePaid(el){
   const months = nbrPaidMonths(), thisYm = nbrThisYm();
@@ -17012,6 +17049,36 @@ function renderNbrBibleSwitch(el){
   const sa = document.getElementById('nbrSwitchAll'); if(sa) sa.addEventListener('click', ()=>{ nbrUI.bibSwitchYm = ''; renderNbrBible(); });
   nbrBindBibViews(el);
 }
+// Initial (upfront) Mums Fee parts not paid yet: the Excel Bible's Initial rows with no date paid.
+function renderNbrBibleUpfront(el){
+  const nameOf = id=> id ? nbrAdvName(id) : '(no advisor)';
+  const all = nbrUpfrontOwed(), rows = all.filter(x=> !nbrUI.bibAdv || (x.l.adv||'')===(nbrUI.bibAdv==='none' ? '' : nbrUI.bibAdv))
+    .sort((a,b)=> String(a.l.month||'').localeCompare(String(b.l.month||'')) || nameOf(a.l.adv).localeCompare(nameOf(b.l.adv)) || String(a.l.client||'').localeCompare(String(b.l.client||'')));
+  const total = rows.reduce((t,x)=> t + x.amount, 0), thisYm = nbrThisYm(), old = rows.filter(x=> (x.l.month||'') < thisYm);
+  const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])];
+  el.innerHTML = `
+    ${nbrBibViewSwitch()}
+    <div class="nbr-toolbar nbr-filters">
+      <label>Advisor <select id="nbrBibAdv">${advOpts.map(([v,t])=> `<option value="${esc(v)}" ${v===nbrUI.bibAdv ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+      ${rows.length ? '<button type="button" class="btn btn-secondary btn-sm" id="nbrUpfrontXl">⬇ Download to Excel</button>' : ''}
+    </div>
+    <div class="stat-grid nbr-paid-cards">
+      <div class="stat-card ${rows.length ? 'warn' : 'good'}"><div class="sv">${nbrMoney(total)}</div><div class="sl">Upfront fees owed · ${rows.length} client${rows.length===1 ? '' : 's'}</div></div>
+      <div class="stat-card ${old.length ? 'warn' : ''}"><div class="sv">${old.length}</div><div class="sl">Written before ${esc(nbrYmLabel(thisYm, true))}</div></div>
+    </div>
+    <p class="field-hint nbr-bib-note">The Initial part of each Mums Fee (the £99 / £100 the client pays upfront, marked Initial in the Excel Bible's Provider column) with no date paid. Only the upfront part is listed, never the rest of the fee. NPWs aren't included. Upload the latest Bible to bring it up to date.</p>
+    ${rows.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table"><thead><tr><th>Period written</th><th>Adv</th><th>Client</th><th>App date</th><th>When</th><th class="num">Upfront fee</th><th class="num">Whole fee</th></tr></thead><tbody>
+      ${rows.map(x=> `<tr class="nbr-click" data-nbr-line="${esc(x.id)}"><td>${esc(x.l.month ? nbrYmLabel(x.l.month) : '—')}</td><td>${esc(nameOf(x.l.adv))}</td><td class="wrap nbr-bib-client"><b>${esc(x.l.client||'')}</b></td><td>${esc(x.l.appDate ? fmtDateSlash(x.l.appDate) : '')}</td><td>${esc(x.when||'')}</td><td class="num b">${nbrMoney(x.amount)}</td><td class="num">${nbrMoney(x.l.amount)}</td></tr>`).join('')}
+      <tr class="nbr-grand"><td colspan="5">Total</td><td class="num b">${nbrMoney(total)}</td><td></td></tr></tbody></table></div>`
+      : '<div class="nml-empty">No upfront fees are waiting to be paid.</div>'}`;
+  document.getElementById('nbrBibAdv').addEventListener('change', e=>{ nbrUI.bibAdv = e.target.value; renderNbrBible(); });
+  const xl = document.getElementById('nbrUpfrontXl');
+  if(xl) xl.addEventListener('click', ()=> loadXlsx().then(()=>{
+    const aoa = [['Period written','Advisor','Client','App date','When','Upfront fee owed','Whole fee'], ...rows.map(x=> [x.l.month ? nbrYmLabel(x.l.month) : '', nameOf(x.l.adv), x.l.client||'', x.l.appDate||'', x.when||'', nbrRound(x.amount), nbrRound(n0(x.l.amount))]), ['Total','','','','', nbrRound(total), '']];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Upfront fees owed'); XLSX.writeFile(wb, `Upfront fees owed ${aiqDate(Date.now())}.xlsx`);
+  }).catch(e=> toast('Could not make the file: '+e.message, 'error')));
+  nbrBindBibViews(el);
+}
 function nbrBindBibViews(el){
   const jg = el.querySelector('#nbrJunkGo'); if(jg) jg.addEventListener('click', nbrBibJunkRemove);
   el.querySelectorAll('[data-bib-view]').forEach(b=> b.addEventListener('click', ()=>{ nbrUI.bibView = b.dataset.bibView; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); }));
@@ -17031,6 +17098,7 @@ function renderNbrBible(){
   if(nbrNotReady(el)) return;
   if(nbrUI.bibView==='paid'){ renderNbrBiblePaid(el); return; }
   if(nbrUI.bibView==='switch'){ renderNbrBibleSwitch(el); return; }
+  if(nbrUI.bibView==='upfront'){ renderNbrBibleUpfront(el); return; }
   const fys = nbrBibFys();
   if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = fys[0];
   const fy = nbrUI.bibFY, fyMonths = fy==='none' ? [] : nbrFyMonths(fy);
@@ -17912,6 +17980,11 @@ function nbrBibleMatch(it){
       const set = {};
       NBR_FILL_FIELDS.forEach(f=>{ if(!nbrBlank(l[f]) && nbrBlank(t.l[f])) set[f] = l[f]; });
       if(nbrBibleProductFix(t.l, l)) set.product = l.product;
+      // A Mums Fee row for less than the line (e.g. its £100 Initial, the rest not in the Bible yet): keep the row's amount for that part.
+      if(!l.npw && (t.l.kind || nbrProdKind(t.l.product))==='mums' && !nbrLineExtraPays(t.l).length){
+        const ra = nbrRound(l.amount), want = ra > 0 && ra < n0(t.l.amount) - 0.005 ? ra : null;
+        if(want!==(t.l.bibAmt!=null ? nbrRound(t.l.bibAmt) : null)) set.bibAmt = want;
+      }
       if(t.l.kind==='bc' && r.kind!=='bc'){ if(l.product && l.product!==t.l.product) set.product = l.product; if(l.provider && l.provider!==t.l.provider) set.provider = l.provider; }
       if(l.npw && !t.l.npw) set.npw = true;
       else if(!l.npw && t.l.npw) set.npw = null; // the Excel Bible has it as proceeding

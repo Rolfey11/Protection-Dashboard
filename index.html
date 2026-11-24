@@ -7359,7 +7359,8 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
-  {id:'2026-11-24a', date:'2026-11-24', items:[ {text:"⏱️ <b>Speed check</b> in Settings: how long loading and each page take on this computer with the real data. Use the dashboard for a few minutes, then copy it and send it on.", roles:['admin','management']},
+  {id:'2026-11-24a', date:'2026-11-24', items:[ {text:"✨ <b>Summarise this case</b> works again on every case you open: it was only answering for the first case opened since the page was loaded."},
+    {text:"⏱️ <b>Speed check</b> in Settings: how long loading and each page take on this computer with the real data. Use the dashboard for a few minutes, then copy it and send it on.", roles:['admin','management']},
     {text:"🧾 <b>+ Add case</b> on an advisor's NBR now works like an NBR upload: it goes in its Friday week, picks up a switch date written in the notes, and links to a line the Bible already has for the case instead of adding it twice.", roles:['admin','management']} ]},
   {id:'2026-11-20a', date:'2026-11-20', items:[ {text:"📱 <b>Salesboard on your phone</b>: held upright, each view is its own screen (<b>Written</b>, <b>Banked</b>, <b>By month</b>, <b>By product</b>, <b>Advisors</b>) from the bar at the bottom, as a list: tap an advisor or month for the rest of its figures. Turn the phone on its side for the full Salesboard table, shrunk to fit the screen. Add it to your home screen (Share → Add to Home Screen, or Install app) to open it like an app.", roles:['admin','management']},
     {text:"📱 <b>Salesboard on your phone</b>: held upright, <b>Written</b>, <b>Banked</b> and <b>My figures</b> are each their own screen from the bar at the bottom: tap an advisor or month for the rest of its figures. Turn the phone on its side for the full table, shrunk to fit the screen. Add it to your home screen (Share → Add to Home Screen, or Install app) to open it like an app.", roles:['mapa']} ]},
@@ -11829,7 +11830,7 @@ function aiSumOpen(kind){
 function aiSumRender(kind){
   const box = document.getElementById('aiSum_'+kind); if(!box) return;
   const cur = aiOn() ? aiSumOpen(kind) : null;
-  if(!cur){ box.classList.add('hidden'); box.innerHTML = ''; return; }
+  if(!cur){ box.classList.add('hidden'); box.innerHTML = ''; delete box.dataset.html; return; }
   box.classList.remove('hidden');
   const key = kind+':'+cur.id, st = aiSumState[key], n = Object.keys(cur.rec.audit||{}).length;
   const askB = `<button type="button" class="ai-btn" data-ai-ask>✨ Ask Claude</button>`;
@@ -11842,14 +11843,21 @@ function aiSumRender(kind){
         <div class="ai-foot">Written by AI from the case history. Check before relying on it. <button type="button" class="linkish" data-ai-ask>✨ Ask Claude about this case</button></div></div>`;
   if(box.dataset.html === html) return; // nothing changed (the history list redraws often)
   box.dataset.html = html; box.innerHTML = html;
-  const a = box.querySelector('[data-ai-ask]');
-  if(a) a.addEventListener('click', ()=>{ document.getElementById('askCtx').checked = true; askOpen(); });
-  const b = box.querySelector('[data-ai-sum]');
-  if(b) b.addEventListener('click', ()=>{
+}
+// The buttons work on whichever case is open when they're pressed. (The box isn't redrawn when the next case
+// looks the same, so a button must never hold on to the case it was first drawn for.)
+['lead','com','sib'].forEach(kind=>{
+  const box = document.getElementById('aiSum_'+kind); if(!box) return;
+  box.addEventListener('click', e=>{
+    if(e.target.closest('[data-ai-ask]')){ document.getElementById('askCtx').checked = true; askOpen(); return; }
+    if(!e.target.closest('[data-ai-sum]')) return;
+    const cur = aiSumOpen(kind); if(!cur) return;
+    const key = kind+':'+cur.id, n = Object.keys(cur.rec.audit||{}).length;
+    if(aiSumState[key] && aiSumState[key].loading) return;
     aiSumState[key] = {loading:true}; aiSumRender(kind);
     aiAsk('summary', cur.ctx(cur.rec)).then(data=>{ aiSumState[key] = {data, n}; }, e=>{ aiSumState[key] = {err:e.message}; }).finally(()=> aiSumRender(kind));
   });
-}
+});
 ['auditList','comAudit','sibAudit'].forEach((id, i)=>{
   const el = document.getElementById(id); if(!el) return;
   new MutationObserver(()=> aiSumRender(['lead','com','sib'][i])).observe(el, {childList:true});

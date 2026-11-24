@@ -28,7 +28,7 @@
 /* ==========================================================================
    TOKENS
    ========================================================================== */
-:root{
+:root{--uw:#6d28d9; --uw-bg:#ede9fe; 
   --brand:#A6297A;
   --brand-dark:#711D56;
   --brand-darker:#4E1339;
@@ -69,7 +69,7 @@
    here is enough to reskin the whole app — every rule below already reads
    colors through var(...), so nothing else needs to change per theme.
    ========================================================================== */
-:root[data-theme="dark"]{
+:root[data-theme="dark"]{--uw:#b69cff; --uw-bg:#2a1f4d; 
   --brand:#E0499D; --brand-dark:#B23A7D; --brand-darker:#2E1327; --brand-light:#F072B8; --brand-tint:#3A2233;
   --ink:#0B090D; --ink-2:#C9C1D0;
   --bg:#17151B; --surface:#211E26;
@@ -1834,6 +1834,34 @@ body:not(.mode-com) .com-only{display:none !important;}
 .sp-summary b{color:var(--text);}
 .sp-summary.bad{color:var(--red); font-weight:700;}
 .pol-pills{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;}
+/* Policies each on risk or in underwriting, with their own commission */
+.lc-part{display:inline-flex; align-items:center; gap:4px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px;}
+.lc-part.on{background:var(--green-bg); color:var(--green);} .lc-part.uw{background:var(--uw-bg); color:var(--uw);}
+.lead-card.part{border:1.5px dashed var(--green);}
+.pp-list{display:flex; flex-direction:column; gap:8px;}
+.pp-row{display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface);}
+.pp-row .nm{font-weight:700; font-size:13.5px;} .pp-row .who{font-size:12.5px; color:var(--text-muted);}
+.pp-row .amt{margin-left:auto; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right;}
+.pp-tag{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap; flex:none;}
+.pp-tag.on{background:var(--green-bg); color:var(--green);} .pp-tag.uw{background:var(--uw-bg); color:var(--uw);}
+.pp-on{color:var(--green);} .pp-uw{color:var(--uw);}
+.pp-tot{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:12px; font-size:13px;} .pp-tot b{font-size:15px;}
+.sp-st{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.sp-seg{display:inline-flex; border:1.5px solid var(--border-2); border-radius:999px; overflow:hidden; flex:none;}
+.sp-seg button{border:0; background:var(--surface); padding:6px 12px; font:inherit; font-size:12.5px; font-weight:700; color:var(--text-muted); cursor:pointer;}
+.sp-seg button[aria-pressed="true"].risk{background:var(--green); color:#fff;} .sp-seg button[aria-pressed="true"].uw{background:var(--uw); color:#fff;}
+.sp-seg button:focus-visible{outline:2px solid var(--brand); outline-offset:-2px;}
+.sp-comm{display:flex; align-items:center; gap:8px; margin-left:auto;}
+.sp-comm .lbl{font-size:12px; color:var(--text-muted); font-weight:600;}
+.sp-comm .money-wrap{position:relative; width:130px;}
+.sp-comm .money-wrap span{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-weight:600;}
+.sp-comm input{width:100%; padding:8px 10px 8px 24px; border-radius:9px; border:1px solid var(--border-2); font:inherit; font-size:13.5px; background:var(--surface); color:var(--text);}
+.sp-row.bad-comm .sp-comm input{border-color:var(--red); background:var(--red-bg);}
+.sp-row.locked{background:var(--bg); grid-template-columns:1fr;}
+.sp-row.locked .sp-lk{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px;}
+.sp-lk .since{font-size:12px; color:var(--text-muted);} .sp-lk .amt{margin-left:auto; font-weight:700; color:var(--green);}
+.ld-pills .ld-steps li.part{background:repeating-linear-gradient(135deg, var(--green-bg) 0 8px, transparent 8px 16px); color:var(--green);}
+.ld-steps li.part{color:var(--green);} .ld-steps li.part::before{background:linear-gradient(90deg, var(--green) 50%, var(--border-2) 50%);}
 .pol-pill{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--green-bg); color:var(--green);}
 .audit-icon.t-quotes{color:var(--green); background:var(--green-bg); border-color:transparent;}
 .quotes-done{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:13px; font-weight:700; color:var(--green);}
@@ -3749,11 +3777,7 @@ body:not(.ai-on) #askBtn{display:none;}
   <div class="modal">
     <div class="modal-head"><h2 id="signupTitle">Sign Up</h2><button class="modal-close" data-close="signupOverlay">✕</button></div>
     <div class="modal-body">
-      <div class="field">
-        <label for="commissionInput">Total commission</label>
-        <div class="money-wrap"><span>£</span><input type="number" id="commissionInput" placeholder="0.00" min="0" step="0.01"></div>
-      </div>
-      <div class="field" style="margin-bottom:6px;"><label id="spLabel">Policies sold</label></div>
+      <div class="field" style="margin-bottom:6px;"><label id="spLabel">Policies</label></div>
       <div id="spList" role="group" aria-labelledby="spLabel"></div>
       <button type="button" class="sp-add" id="spAdd">+ Add another policy</button>
       <p class="sp-summary" id="spSummary"></p>
@@ -7481,6 +7505,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-24b', date:'2026-11-24', items:[ {text:"🧩 <b>Part on risk</b>: each policy on a case is now <b>on risk</b> or <b>in underwriting</b> with its own commission. When some go on risk and others are still being underwritten, the case stays in Submitted / In Underwriting (showing what's on risk) and also shows in <b>On Risk</b> with a dashed border. Use <b>Update case → On risk</b> to tick the rest as they go on risk. On-risk figures count only what's actually on risk."} ]},
   {id:'2026-11-24a', date:'2026-11-24', items:[ {text:"✨ <b>Summarise this case</b> works again on every case you open: it was only answering for the first case opened since the page was loaded."},
     {text:"⏱️ <b>Speed check</b> in Settings: how long loading and each page take on this computer with the real data. Use the dashboard for a few minutes, then copy it and send it on.", roles:['admin','management']},
     {text:"🧾 <b>+ Add case</b> on an advisor's NBR now works like an NBR upload: it goes in its Friday week, picks up a switch date written in the notes, and links to a line the Bible already has for the case instead of adding it twice.", roles:['admin','management']} ]},
@@ -8814,7 +8839,8 @@ function renderDashboard(){
   renderFunBits();
   const leads = visibleLeads();
   const buckets = {new:[], existing:[], underwriting:[], terms:[], decline:[], signedup:[], completed:[]};
-  leads.forEach(l=>{ const la = leadLastActivity(l); l._lastAt = la?.at || l.createdAt || 0; l._last = la; buckets[potOf(l)].push(l); });
+  leads.forEach(l=>{ const la = leadLastActivity(l); l._lastAt = la?.at || l.createdAt || 0; l._last = la; const pot = potOf(l); buckets[pot].push(l);
+    if((pot==='underwriting' || pot==='terms') && leadPolSplit(l).part) buckets.signedup.push(l); }); // part on risk: in both
   const byRecent = (a,b)=> b._lastAt - a._lastAt;
   Object.keys(buckets).forEach(k=>{
     if(k==='existing'){
@@ -9083,11 +9109,11 @@ function renderDashKpis(){
 
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
   const lastMonthStart = new Date(today.getFullYear(), today.getMonth()-1, 1).getTime();
-  const signupAt = l => { const a = Object.values(l.audit||{}).filter(a=>a.type==='signup').sort((x,y)=>y.at-x.at)[0]; return a ? a.at : null; };
-  const signed = leads.filter(l=> potOf(l)==='signedup');
-  const signedThisMonth = signed.filter(l=>{ const at = signupAt(l); return at && at >= monthStart; });
-  const signedLastMonth = signed.filter(l=>{ const at = signupAt(l); return at && at >= lastMonthStart && at < monthStart; }).length;
-  const commission = signedThisMonth.reduce((sum,l)=> sum + (Number(l.commission)||0), 0);
+  // By when each policy went on risk (a case part on risk counts from its first policy on risk).
+  const riskIn = (l, a, b)=> leadRiskEvents(l).filter(e=> e.at && e.at >= a && e.at < b);
+  const signedThisMonth = leads.filter(l=> riskIn(l, monthStart, Infinity).length);
+  const signedLastMonth = leads.filter(l=> riskIn(l, lastMonthStart, monthStart).length).length;
+  const commission = leads.reduce((sum,l)=> sum + riskIn(l, monthStart, Infinity).reduce((t,e)=> t + e.comm, 0), 0);
 
   const delta = (now, before, unit) => {
     const d = now - before;
@@ -9917,22 +9943,27 @@ function leadCardHtml(lead, potKey){
     : '';
   let sub = [lead.clientSource ? esc(lead.clientSource) : '', fmtDate(lead.appDate)].filter(Boolean).join('<span class="lc-sep">·</span>');
   const refTag = lead.referredByName ? `<span class="lc-ref" title="Referred by ${esc(lead.referredByName)}">↪ ${esc(lead.referredByName.split(' ')[0])}</span>` : '';
+  const ps = ['underwriting','terms','signedup'].includes(potKey) ? leadPolSplit(lead) : null, slim = potKey==='signedup' && !!ps && ps.part;
   // Keep every card the same three-row shape: extra details for Contacted
   // and Sign Ups replace the second line rather than adding new rows.
   if((potKey==='existing' || potKey==='new') && lead.followUpDate){
     sub = followUpInline(lead.followUpDate, lead.followUpTime, lead) + (lead.clientSource ? `<span class="lc-sep">·</span>${esc(lead.clientSource)}` : '');
   } else if((potKey==='underwriting' || potKey==='terms') && lead.commission!=null){
-    sub = `<span class="lc-money">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})} pending</span>` + cardTail(lead);
+    sub = `<span class="lc-money">${polMoney(ps.per ? ps.pend : lead.commission)} pending</span>` + (ps.part ? `<span class="lc-sep">·</span>${esc(polTypes(ps.pols.filter(p=> p.st!=='risk')))}` : cardTail(lead));
   } else if(potKey==='signedup' && lead.commission!=null){
-    sub = `<span class="lc-money">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</span>` + cardTail(lead);
+    sub = `<span class="lc-money">${polMoney(ps.per ? ps.risk : lead.commission)}</span>` + (slim ? `<span class="lc-sep">·</span>${esc(polTypes(ps.pols.filter(p=> p.st==='risk')))}` : cardTail(lead));
   }
+  // Part on risk: the case's card in Submitted / Terms says what's on risk; its card in On Risk says what's still to come.
+  const partLine = !ps || !ps.part ? '' : slim
+    ? `<div class="lc-activity"><span class="lc-part uw" title="The rest of this case is still ${lead.status==='terms' ? 'at terms issued' : 'in underwriting'}">Part · ${esc(polTypes(ps.pols.filter(p=> p.st!=='risk')))} ${lead.status==='terms' ? 'terms issued' : 'in underwriting'}</span></div>`
+    : `<div class="lc-activity"><span class="lc-part on" title="Part of this case is on risk">✓ ${ps.nRisk} of ${ps.n} on risk · ${esc(polTypes(ps.pols.filter(p=> p.st==='risk')))} ${esc(polMoneyShort(ps.risk))}</span></div>`;
 
   // Contacted Clients who've had their quotes show pale green, with a label so it isn't colour alone.
   const quoted = potKey==='existing' && !!lead.quotesSentAt;
   // Marked "In research" by the advisor (and no quotes yet): pale yellow. Overdue red still wins.
   const research = potKey==='existing' && !quoted && !!lead.researchAt && !isOverdue;
   return `
-    <div class="lead-card ${isOverdue?'overdue':''} ${quoted?'quoted':''} ${research?'research':''}" data-id="${esc(lead.id)}">
+    <div class="lead-card ${isOverdue?'overdue':''} ${quoted?'quoted':''} ${research?'research':''} ${slim?'part':''}" data-id="${esc(lead.id)}">
       <div class="lc-top">
         <div class="lc-name">${esc(lead.clientName)}</div>${refTag}
         ${quoted ? `<span class="lc-quoted" title="Quotes sent ${esc(fmtDate(lead.quotesSentAt))}" aria-label="Quotes sent">${ico('check')}</span>` : ''}
@@ -9941,7 +9972,7 @@ function leadCardHtml(lead, potKey){
         ${advisor}
       </div>
       <div class="lc-sub">${sub}</div>
-      ${last ? `<div class="lc-activity"><span class="txt">${esc(last.text)}</span><span class="when">${timeAgo(last.at)}</span></div>` : ''}
+      ${partLine || (last ? `<div class="lc-activity"><span class="txt">${esc(last.text)}</span><span class="when">${timeAgo(last.at)}</span></div>` : '')}
     </div>`;
 }
 
@@ -10435,12 +10466,13 @@ function renderLeadModal(){
   // Stage tracker: where the case is, plus the button for the next stage of the workflow.
   // Signing up and declining are only done through the action buttons below.
   const STEPS = [['new','New'],['existing','In progress'],['quotes','Quotes sent'],['underwriting','Submitted'],['terms','Terms issued'],['signedup','On risk']];
+  const psCase = leadPolSplit(lead);
   const declined = potKey==='decline' || potKey==='completed';
   const at = potKey==='new' ? 0 : potKey==='existing' ? (lead.quotesSentAt ? 2 : 1) : potKey==='underwriting' ? 3 : potKey==='terms' ? 4 : potKey==='signedup' ? 6 : (lead.quotesSentAt ? 2 : 1);
   // A declined case shows how far it got, then the decline.
   const stepsHtml = declined
     ? STEPS.slice(0, at + 1).map(([, lbl])=> `<li class="done">✓ ${lbl}</li>`).join('') + `<li class="bad">${potKey==='completed' ? 'Fully declined' : 'Decline pending'}</li>`
-    : STEPS.map(([, lbl], i)=> `<li class="${i < at ? 'done' : i===at ? 'now' : ''}">${i < at ? '✓ ' : ''}${lbl}</li>`).join('');
+    : STEPS.map(([, lbl], i)=> i===5 && psCase.part ? `<li class="part" title="Part of this case is on risk">Part on risk</li>` : `<li class="${i < at ? 'done' : i===at ? 'now' : ''}">${i < at ? '✓ ' : ''}${lbl}</li>`).join('');
   let nextHtml = '';
   if(canAction(lead) || lead.status==='decline'){
 
@@ -10507,10 +10539,18 @@ function renderLeadModal(){
   // Outcome details (terms, policies, commission, decline reason) in one box.
   const pols = ['underwriting','terms','signedup'].includes(potKey) ? leadPolicies(lead) : [];
   const comm = ['underwriting','terms','signedup'].includes(potKey) && lead.commission!=null;
+  // Policies with their own status and commission: one line each, then what's on risk and what's pending.
+  const psBox = pols.length ? leadPolSplit(lead) : null, perPol = !!psBox && psBox.per;
+  const perHtml = !perPol ? '' : `<div class="pp-list">${psBox.pols.map(p=>{ const on = p.st==='risk', tg = on ? 'On risk' : potKey==='terms' ? 'Terms issued' : 'In underwriting';
+      return `<div class="pp-row"><span class="pp-tag ${on ? 'on' : 'uw'}">${tg}</span><div><div class="nm">${esc(p.type)}${polName(p.type) ? ' · '+esc(polName(p.type)) : ''}</div>
+        <div class="who">${p.who.length>1 ? 'Joint: ' : ''}${esc(policyWho(p))}${p.at ? ` · ${on ? 'on risk' : 'submitted'} ${esc(fmtDateSlash(p.at))}` : ''}</div></div>
+        <span class="amt ${on ? 'pp-on' : 'pp-uw'}">${esc(polMoney(p.comm))}${on ? '' : ' pending'}</span></div>`; }).join('')}</div>
+      <div class="pp-tot">${psBox.nRisk ? `<span>On risk: <b class="pp-on">${esc(polMoney(psBox.risk))}</b></span>` : ''}${psBox.nRisk < psBox.n ? `<span>${potKey==='terms' ? 'Terms issued' : 'In underwriting'}: <b class="pp-uw">${esc(polMoney(psBox.pend))}</b></span>` : ''}</div>`;
   const outcomeHtml = (pols.length || comm || lead.declineReason) ? `<div class="sib-box">
-      <div class="sib-box-hd">${lead.declineReason ? 'Decline' : 'Case outcome'}${(pols.length || comm) && canEditDetails(lead) ? '<button type="button" class="linkish" id="editCommBtn">✎ Edit commission &amp; policies</button>' : ''}</div>
-      ${pols.length ? `<div style="font-size:12.5px; color:var(--text-muted); margin-bottom:4px;">${potKey==='signedup' ? 'Policies on risk' : potKey==='terms' ? 'Policies (terms issued)' : 'Policies submitted'}</div><div class="pol-pills">${pols.map(p=> `<span class="pol-pill">${esc(p.type)} · ${esc(policyWho(p))}${p.who.length>1 ? ' (joint)' : ''}</span>`).join('')}</div>` : ''}
-      ${comm ? `<div style="margin-top:${pols.length ? 10 : 0}px; font-size:13px;">Commission${potKey==='signedup' ? '' : ` (pending${potKey==='terms' ? ', terms issued' : ' underwriting'})`}: <b style="color:var(--green); font-size:15px;">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</b></div>` : ''}
+      <div class="sib-box-hd">${lead.declineReason ? 'Decline' : perPol ? 'Policies' : 'Case outcome'}${(pols.length || comm) && canEditDetails(lead) ? '<button type="button" class="linkish" id="editCommBtn">✎ Edit commission &amp; policies</button>' : ''}</div>
+      ${perPol ? perHtml : ''}
+      ${pols.length && !perPol ? `<div style="font-size:12.5px; color:var(--text-muted); margin-bottom:4px;">${potKey==='signedup' ? 'Policies on risk' : potKey==='terms' ? 'Policies (terms issued)' : 'Policies submitted'}</div><div class="pol-pills">${pols.map(p=> `<span class="pol-pill">${esc(p.type)} · ${esc(policyWho(p))}${p.who.length>1 ? ' (joint)' : ''}</span>`).join('')}</div>` : ''}
+      ${comm && !perPol ? `<div style="margin-top:${pols.length ? 10 : 0}px; font-size:13px;">Commission${potKey==='signedup' ? '' : ` (pending${potKey==='terms' ? ', terms issued' : ' underwriting'})`}: <b style="color:var(--green); font-size:15px;">£${Number(lead.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</b></div>` : ''}
       ${lead.declineReason ? `<div class="info-cell decline-box full" style="margin-top:${pols.length || comm ? 10 : 0}px;">
         <div class="lbl">Decline reason: ${esc(lead.declineReason)}</div>
         <div class="val" style="font-weight:500;font-size:13px;margin-top:4px;">${esc(lead.declineDetail||'')}</div>
@@ -10959,7 +10999,7 @@ function wizWhereOpts(l, w){
   if(pot==='existing' && !l.quotesSentAt) opts.push({k:'quotes', h:'Quotes sent', d:'The client has their quotes · then book when to chase'});
   if(pot==='underwriting') opts.push({k:'terms', h:'Terms issued', d:'Add the terms if you like'});
   if(booking) opts.push({k:'uw', h:'Submitted to underwriting', d:'Asks for the policies and commission'});
-  opts.push({k:'onrisk', h:'Signed up · on risk', d:'Policies and commission', tone:'good'});
+  opts.push({k:'onrisk', h: (pot==='underwriting' || pot==='terms') && leadPolicies(l).length > 1 ? 'On risk · all or some of the policies' : 'Signed up · on risk', d:'Policies and commission', tone:'good'});
   opts.push({k:'decline', h:'Decline', d:'Asks for the reason, then the decline steps as now', tone:'bad'});
   return opts;
 }
@@ -11511,7 +11551,7 @@ function renderReferredList(){
     <tbody>${list.map(l=>{ const fb = leadFeedback(l)[0], pot = potOf(l);
       const next = inBookingPot(l) && l.followUpDate ? `${esc(fuKindLabel(l))}<div class="nml-notes">${esc(bookingWhen(l))}</div>` : inBookingPot(l) ? '<span style="color:var(--amber);">Nothing booked yet</span>' : '—';
       return `<tr data-rc="${esc(l.id)}" class="${refUnread(l) ? 'rc-unread' : ''}"><td><div class="nml-ins">${esc(l.clientName)}</div></td><td>${esc(l.advisorName||'')}</td><td>${esc(fmtDate(l.referredAt))}</td>
-        <td><span class="rc-status rc-${esc(pot)}">${esc(STATUS_LABELS[pot]||pot)}</span>${pot==='signedup' && l.commission!=null ? `<div class="nml-notes">£${Number(l.commission).toLocaleString(undefined,{minimumFractionDigits:2})}</div>` : ''}</td>
+        <td><span class="rc-status rc-${esc(pot)}">${esc(STATUS_LABELS[pot]||pot)}</span>${(()=>{ const ps = leadPolSplit(l); return ps.part ? `<div class="nml-notes">Part on risk: ${esc(polMoney(ps.risk))}</div>` : pot==='signedup' && l.commission!=null ? `<div class="nml-notes">${esc(polMoney(ps.per ? ps.risk : l.commission))}</div>` : ''; })()}</td>
         <td>${next}</td>
         <td>${fb ? `${refUnread(l) ? '<span class="fb-new">New</span> ' : ''}<b>${fb.type==='thanks' && thanksCard(fb.card) ? esc(thanksCard(fb.card).emoji+' '+thanksCard(fb.card).title) : esc(fb.kind||'Update')}</b><div class="nml-notes">${esc(String(fb.note||fb.text||'').slice(0,110))}${String(fb.note||fb.text||'').length>110 ? '…' : ''} · ${esc(fmtDate(fb.at))}</div>` : '<span class="nml-notes">None yet</span>'}</td></tr>`; }).join('')}</tbody></table></div>`
     : '<div class="nml-empty">You haven\'t referred any clients to a protection adviser yet. Use <b>Refer to protection adviser</b> on a case in New Cases or Appointments / Research.</div>';
@@ -11924,7 +11964,8 @@ function aiLeadContext(l){
     l.clientSource ? `Lead source: ${l.clientSource}` : '', l.appDate ? `Task created: ${fmtDate(l.appDate)}` : '',
     l.followUpDate ? `Next booked: ${l.followUpKind ? fuKindLabel(l) : 'Call'} ${bookingWhen(l)}${l.followUpNote ? ' ('+l.followUpNote+')' : ''}` : 'Nothing booked',
     l.referralNote ? `Referred by ${l.referredByName || 'a MAPA'}: ${l.referralNote}` : '',
-    pols.length ? `Policies: ${policiesText(pols)}` : '', l.commission!=null ? `Commission: £${l.commission}` : '',
+    pols.length ? `Policies: ${(()=>{ const ps = leadPolSplit(l); return ps.per ? ps.pols.map(p=> `${p.type} (${p.who.length>1 ? 'joint: ' : ''}${policyWho(p)}) ${p.st==='risk' ? 'on risk' : 'pending'}, ${polMoney(p.comm)}`).join('; ') : policiesText(pols); })()}` : '',
+    l.commission!=null ? (()=>{ const ps = leadPolSplit(l); return ps.per ? `Commission: ${polMoney(ps.risk)} on risk, ${polMoney(ps.pend)} pending` : `Commission: £${l.commission}`; })() : '',
     l.quotesSentAt ? `Quotes sent: ${fmtDate(l.quotesSentAt)}` : '', l.termsNote ? `Terms: ${l.termsNote}` : '',
     l.declineReason ? `Declined: ${l.declineReason}${l.declineDetail ? ' - '+l.declineDetail : ''}` : '',
     `Today: ${fmtDate(Date.now())}`, '', 'History (oldest first):', aiHistory(l.audit)].filter(x=> x!=='').join('\n');
@@ -12148,7 +12189,7 @@ const AIQ_SETS = {
       ['lead_source','t','Where the lead came from'], ['referred_by','t','Who referred it (e.g. a MAPA)'], ['referred_date','d','When it was referred'],
       ['created_date','d','When the case was created'], ['research_date','d','When it went into research'], ['quotes_sent_date','d','When quotes were sent'],
       ['submitted_date','d','First submitted to underwriting'], ['terms_date','d','Terms issued'], ['on_risk_date','d','Signed up / put on risk'], ['declined_date','d','Declined'],
-      ['decline_reason','t','Why it was declined'], ['commission','n','Commission £ (cases on risk)'], ['policies','t','Policy types on the case'], ['policy_count','n','Number of policies'],
+      ['decline_reason','t','Why it was declined'], ['commission','n','Commission £ for the whole case (on risk and pending)'], ['commission_on_risk','n','Commission £ on risk (a case can be part on risk: some policies on risk, others still in underwriting)'], ['commission_pending','n','Commission £ still pending (in underwriting or terms issued)'], ['part_on_risk','t','yes when some policies are on risk and others still in underwriting'], ['policies','t','Policy types on the case'], ['policy_count','n','Number of policies'],
       ['next_booked_date','d','Next call, appointment or reminder booked'], ['next_booked_kind','t','What is booked next'], ['last_activity_date','d','Latest entry in the case history'],
       ['calls','n','Calls logged'], ['appointments','n','Appointments logged'], ['emails','n','Emails logged'], ['texts','n','Texts logged']],
     rows: ()=> Object.values(LEADS).filter(l=> l && !l.deleted).map(l=>{
@@ -12160,7 +12201,8 @@ const AIQ_SETS = {
         lead_source:l.clientSource || '', referred_by:l.referredByName || '', referred_date:aiqDate(l.referredAt), created_date:aiqDate(l.createdAt || l.appDate),
         research_date:aiqDate(l.researchAt) || first('research'), quotes_sent_date:aiqDate(l.quotesSentAt) || first('quotes'), submitted_date:first('underwriting'),
         terms_date:first('terms'), on_risk_date:first('signup'), declined_date:first('decline'), decline_reason:l.declineReason || '',
-        commission:aiqNum(l.commission), policies:[...new Set(pols.map(p=> p.type))].join(', '), policy_count:pols.length,
+        commission:aiqNum(l.commission), ...(()=>{ const ps = leadPolSplit(l); return {commission_on_risk: ps.has ? ps.risk : '', commission_pending: ps.has ? ps.pend : '', part_on_risk: ps.part ? 'yes' : 'no'}; })(),
+        policies:[...new Set(pols.map(p=> p.type))].join(', '), policy_count:pols.length,
         next_booked_date:aiqDate(l.followUpDate), next_booked_kind:l.followUpDate ? (l.followUpKind ? fuKindLabel(l) : 'Call') : '',
         last_activity_date:audit.length ? aiqDate(audit[audit.length-1].at) : '', calls:count('call'), appointments:count('appt'), emails:count('email'), texts:count('text')};
     }),
@@ -12966,35 +13008,87 @@ function policyWho(p){
   return names.length>1 ? names.slice(0,-1).join(', ') + ' & ' + names[names.length-1] : (names[0] || '');
 }
 function policiesText(list){ return list.map(p=> `${p.type} (${p.who.length>1 ? 'joint: ' : ''}${policyWho(p)})`).join(', '); }
+/* Each policy on a case can be on risk or still in underwriting, with its own commission:
+   e.g. a joint life policy on risk while one client's critical illness is still being underwritten.
+   Saved on each policy as st ('risk' | 'uw'), comm (£) and at (when it got that status).
+   The case stays in Submitted / Terms until every policy is on risk, and shows in On Risk as well
+   ("part on risk"). Older cases have one commission for the whole case: their policies follow the case. */
+function leadPolSplit(l){
+  const pot = potOf(l), won = pot==='signedup', live = pot==='underwriting' || pot==='terms';
+  const raw = Object.values((l && l.policies) || {}).filter(p=> p && p.type);
+  const per = raw.some(p=> p.st || p.comm!=null);
+  const total = l && l.commission!=null ? Number(l.commission) || 0 : null;
+  const base = p=> ({type:p.type, clients:Object.values(p.clients||{}), who:Object.values(p.who||{}), at:p.at || null});
+  if(!per) return {per:false, n:raw.length, nRisk: won ? raw.length : 0, part:false, has: total!=null,
+    risk: won ? (total || 0) : 0, pend: live ? (total || 0) : 0, pols: raw.map(p=> ({...base(p), st: won ? 'risk' : 'uw', comm:null}))};
+  const pols = raw.map(p=> ({...base(p), st: won || p.st==='risk' ? 'risk' : 'uw', comm: p.comm!=null ? Number(p.comm) || 0 : null}));
+  const on = pols.filter(p=> p.st==='risk'), off = pols.filter(p=> p.st!=='risk'), sum = a=> a.reduce((t,p)=> t + (p.comm || 0), 0);
+  return {per:true, n:pols.length, nRisk:on.length, part: live && on.length>0 && off.length>0, has:true, risk:sum(on), pend: live ? sum(off) : 0, pols};
+}
+// On risk, wholly or in part.
+function leadOnRisk(l){ return leadPolSplit(l).nRisk > 0 || potOf(l)==='signedup'; }
+// When commission went on risk: [{at, comm}] (a case whose policies went on risk at different times has more than one).
+function leadRiskEvents(l){
+  const ps = leadPolSplit(l);
+  if(!ps.nRisk && potOf(l)!=='signedup') return [];
+  const su = Object.values(l.audit||{}).filter(a=> a && a.type==='signup' && a.at).sort((a,b)=> b.at-a.at)[0], sAt = su ? su.at : null;
+  if(!ps.per) return [{at:sAt, comm:ps.risk}];
+  return ps.pols.filter(p=> p.st==='risk').map(p=> ({at: p.at || sAt, comm: p.comm || 0}));
+}
+const polMoney = n=> '£' + Number(n||0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+const polMoneyShort = n=> '£' + Number(n||0).toLocaleString(undefined, {minimumFractionDigits: Number(n)%1 ? 2 : 0, maximumFractionDigits:2});
+const polTypes = list=> [...new Set(list.map(p=> p.type))].join(' · ');
+const polName = t=> { const f = POLICY_TYPES.find(([k])=> k===t); return f ? f[1] : ''; };
 
 let spRows = [], spClients = [];
+let spMode = 'onrisk', spPot = '';
 function renderSpRows(){
-  const list = document.getElementById('spList');
+  const list = document.getElementById('spList'), nowMode = spMode==='nowonrisk';
+  const editable = spRows.filter(r=> !r.lock);
   list.innerHTML = spRows.map((r, i)=>{
+    if(r.lock) return `<div class="sp-row locked" data-sp-row="${i}"><div class="sp-lk"><span class="pp-tag on">On risk</span><b>${esc(r.type)}</b>
+      <span>${r.clients.length>1 ? 'joint, ' : ''}${esc(policyWho({who:r.clients.map(ci=> spClients[ci])}))}</span>${r.wasAt ? `<span class="since">since ${esc(fmtDateSlash(r.wasAt))}</span>` : ''}<span class="amt">${esc(polMoney(r.comm))}</span></div></div>`;
     const joint = r.clients.length > 1;
-    return `<div class="sp-row ${r.bad ? 'missing' : ''}" data-sp-row="${i}">
+    // From Submitted / Terms: tick the ones now on risk; otherwise each policy is on risk or going to underwriting.
+    const stHtml = nowMode && r.wasSt==='uw'
+      ? `<label class="sp-chip ${r.st==='risk' ? 'on' : ''}"><input type="checkbox" data-sp-now="${i}" ${r.st==='risk' ? 'checked' : ''}>On risk now</label>`
+      : `<span class="sp-seg" role="group" aria-label="Policy ${i+1}: on risk or underwriting"><button type="button" class="risk" data-sp-st="${i}:risk" aria-pressed="${r.st==='risk'}">On risk</button><button type="button" class="uw" data-sp-st="${i}:uw" aria-pressed="${r.st==='uw'}">Underwriting</button></span>`;
+    return `<div class="sp-row ${r.bad ? 'missing' : ''} ${r.badComm ? 'bad-comm' : ''}" data-sp-row="${i}">
       <div class="sp-top">
         <select data-sp-type="${i}" aria-label="Policy ${i+1} type"><option value="">Choose a policy…</option>${POLICY_TYPES.map(([k,l])=> `<option value="${k}" ${r.type===k ? 'selected' : ''}>${k} – ${l}</option>`).join('')}</select>
-        <button type="button" class="sp-x" data-sp-del="${i}" title="Remove this policy" aria-label="Remove policy ${i+1}" ${spRows.length===1 ? 'disabled' : ''}>✕</button>
+        <button type="button" class="sp-x" data-sp-del="${i}" title="${r.wasSt ? 'Remove this policy (not going ahead)' : 'Remove this policy'}" aria-label="Remove policy ${i+1}" ${editable.length===1 ? 'disabled' : ''}>✕</button>
       </div>
       <div class="sp-who"><span class="lbl">Covers:</span>${spClients.map((n, ci)=>{ const on = r.clients.includes(ci); return `<label class="sp-chip ${on ? 'on' : ''}"><input type="checkbox" data-sp-client="${i}:${ci}" ${on ? 'checked' : ''}>Client ${ci+1} · ${esc(n)}</label>`; }).join('')}${joint ? '<span class="sp-joint">Joint</span>' : ''}</div>
+      <div class="sp-st">${stHtml}${nowMode && r.wasSt==='uw' && r.wasAt ? `<span class="since" style="font-size:12px; color:var(--text-muted);">in underwriting since ${esc(fmtDateSlash(r.wasAt))}</span>` : ''}
+        <span class="sp-comm"><span class="lbl">Commission</span><span class="money-wrap"><span>£</span><input type="number" min="0" step="0.01" placeholder="0.00" data-sp-comm="${i}" value="${esc(r.comm)}" aria-label="Policy ${i+1} commission"></span></span></div>
     </div>`;
   }).join('');
   list.querySelectorAll('[data-sp-type]').forEach(sel=> sel.addEventListener('change', ()=>{ const r = spRows[+sel.dataset.spType]; r.type = sel.value; r.bad = false; renderSpRows(); }));
   list.querySelectorAll('[data-sp-del]').forEach(b=> b.addEventListener('click', ()=>{ spRows.splice(+b.dataset.spDel, 1); renderSpRows(); }));
+  list.querySelectorAll('[data-sp-st]').forEach(b=> b.addEventListener('click', ()=>{ const [i, st] = b.dataset.spSt.split(':'); spRows[+i].st = st; renderSpRows(); const again = document.querySelector(`[data-sp-st="${i}:${st}"]`); if(again) again.focus(); }));
+  list.querySelectorAll('[data-sp-now]').forEach(cb=> cb.addEventListener('change', ()=>{ spRows[+cb.dataset.spNow].st = cb.checked ? 'risk' : 'uw'; renderSpRows(); const again = document.querySelector(`[data-sp-now="${cb.dataset.spNow}"]`); if(again) again.focus(); }));
+  list.querySelectorAll('[data-sp-comm]').forEach(inp=> inp.addEventListener('input', ()=>{ const r = spRows[+inp.dataset.spComm]; r.comm = inp.value; if(r.badComm){ r.badComm = false; inp.closest('.sp-row').classList.remove('bad-comm'); } spSummary(); }));
   list.querySelectorAll('[data-sp-client]').forEach(cb=> cb.addEventListener('change', ()=>{
     const [i, ci] = cb.dataset.spClient.split(':').map(Number); const r = spRows[i];
     r.clients = cb.checked ? [...new Set([...r.clients, ci])].sort((a,b)=> a-b) : r.clients.filter(x=> x!==ci);
     r.bad = false; renderSpRows();
     const again = document.querySelector(`[data-sp-client="${i}:${ci}"]`); if(again) again.focus();
   }));
-  const done = spRows.filter(r=> r.type && r.clients.length);
+  spSummary();
+}
+// What saving will do: what goes on risk, what's in underwriting, and where the case ends up.
+function spSummary(){
   const sum = document.getElementById('spSummary');
   sum.classList.remove('bad');
-  sum.innerHTML = done.length ? `${done.length} polic${done.length===1 ? 'y' : 'ies'}: ` + done.map(r=> `<b>${esc(r.type)}</b> (${r.clients.length>1 ? 'joint, ' : ''}${esc(policyWho({who:r.clients.map(ci=> spClients[ci])}))})`).join(' · ')
-    : 'Choose at least one policy and tick who it covers.';
+  const done = spRows.filter(r=> r.type && r.clients.length);
+  if(!done.length){ sum.innerHTML = 'Choose at least one policy and tick who it covers.'; return; }
+  const n = v=> Number(v) || 0, part = (list, cls, lbl, tail)=> list.length ? `<div class="${cls}">${lbl}: ${list.map(r=> `<b>${esc(r.type)}</b> (${r.clients.length>1 ? 'joint, ' : ''}${esc(policyWho({who:r.clients.map(ci=> spClients[ci])}))})`).join(' · ')} · <b>${esc(polMoney(list.reduce((t,r)=> t + n(r.comm), 0)))}</b>${tail}</div>` : '';
+  const on = done.filter(r=> r.st==='risk'), uw = done.filter(r=> r.st!=='risk');
+  const where = spMode==='edit' ? '' : !uw.length ? `<div class="pp-on">${on.length>1 || spRows.some(r=> r.lock) ? 'The whole case is on risk' : 'On risk'}: <b>${esc(polMoney(on.reduce((t,r)=> t + n(r.comm), 0)))}</b>. It moves to On Risk 🎉</div>`
+    : on.length ? `<div>Part on risk: it stays in ${esc(STATUS_LABELS[spPot==='terms' ? 'terms' : 'underwriting'])} and shows in On Risk too.</div>` : '';
+  sum.innerHTML = part(on, 'pp-on', 'On risk', '') + part(uw, 'pp-uw', spPot==='terms' ? 'Terms issued' : spMode==='nowonrisk' ? 'Still in underwriting' : 'To underwriting', ' pending') + where;
 }
-function spNewRow(){ return {type:'', clients: spClients.length===1 ? [0] : []}; }
+function spNewRow(){ return {type:'', clients: spClients.length===1 ? [0] : [], st: spMode==='underwriting' ? 'uw' : 'risk', comm:''}; }
 document.getElementById('spAdd').addEventListener('click', ()=>{
   spRows.push(spNewRow()); renderSpRows();
   const sels = document.querySelectorAll('#spList [data-sp-type]'); if(sels.length) sels[sels.length-1].focus();
@@ -13004,12 +13098,21 @@ function openSignup(leadId, actionKind, mode='onrisk', commission=null){
   const lead = LEADS[leadId] || {};
   spClients = leadClientList(lead);
   if(!spClients.length) spClients = ['Client'];
-  // Policies chosen at submission come through to On Risk, ready to check.
-  spRows = leadPolicies(lead).map(p=> ({type:p.type, clients: p.who.length ? p.who.map(n=> spClients.indexOf(n)).filter(i=> i>=0) : p.clients.filter(i=> i < spClients.length)}));
-  if(!spRows.length) spRows = [spNewRow()];
+  spMode = mode; spPot = potOf(lead);
+  // Policies chosen at submission come through, ready to check: each keeps its status and commission.
+  // A case from before policies had their own commission: the first policy carries the case's commission.
+  const ps = leadPolSplit(lead), placed = ['underwriting','terms','signedup'].includes(spPot), total = commission!=null ? commission : lead.commission;
+  spRows = ps.pols.map((p, i)=>{
+    const was = placed ? p.st : null;
+    const comm = p.comm!=null ? String(p.comm) : (!ps.per && total!=null ? (i===0 ? String(total) : '0') : '');
+    const st = mode==='edit' ? (was || 'uw') : mode==='nowonrisk' ? 'risk' : mode==='underwriting' ? (was==='risk' ? 'risk' : 'uw') : 'risk';
+    return {type:p.type, clients: p.who.length ? p.who.map(n=> spClients.indexOf(n)).filter(i=> i>=0) : p.clients.filter(i=> i < spClients.length),
+      st, comm, wasSt:was, wasAt:p.at, wasComm:p.comm, src:i, lock: mode==='nowonrisk' && was==='risk'};
+  });
+  if(!spRows.some(r=> !r.lock)) spRows.push(spNewRow());
   renderSpRows();
-  document.getElementById('commissionInput').value = commission!=null ? commission : '';
-  document.getElementById('signupTitle').textContent = SIGNUP_MODES[mode].title;
+  document.getElementById('signupTitle').textContent = mode==='nowonrisk' && ps.n > 1 ? 'Policy on risk' : SIGNUP_MODES[mode].title;
+  document.getElementById('spLabel').textContent = mode==='nowonrisk' && ps.n > 1 ? 'Tick the policies that are now on risk' : 'Policies';
   document.getElementById('signupSubmit').dataset.mode = mode;
   document.getElementById('signupSubmit').dataset.leadId = leadId;
   document.getElementById('signupSubmit').dataset.actionKind = actionKind || '';
@@ -13033,49 +13136,71 @@ function openSignup(leadId, actionKind, mode='onrisk', commission=null){
 }
 let spThanksCard = '';
 document.getElementById('signupSubmit').addEventListener('click', function(){
-  const leadId = this.dataset.leadId;
+  const leadId = this.dataset.leadId, mode = this.dataset.mode;
   const label = ACTION_LABELS[this.dataset.actionKind] || 'Contact';
-  const val = document.getElementById('commissionInput').value;
-  if(val==='' || isNaN(val) || Number(val)<0){ toast('Please enter a valid commission amount.','error'); return; }
-  // Every policy row needs a type and at least one client; at least one policy overall.
-  let bad = false;
-  spRows.forEach(r=>{ r.bad = !(r.type && r.clients.length); if(r.bad) bad = true; });
-  if(bad || !spRows.length){
+  // Every policy needs a type, at least one client and its commission; at least one policy overall.
+  let bad = false, badComm = false;
+  spRows.forEach(r=>{ if(r.lock) return; r.bad = !(r.type && r.clients.length); r.badComm = r.comm==='' || r.comm==null || isNaN(r.comm) || Number(r.comm) < 0; if(r.bad) bad = true; if(r.badComm) badComm = true; });
+  if(bad || badComm || !spRows.length){
     renderSpRows();
-    const msg = !spRows.length ? 'Please add at least one policy.' : 'Please choose a policy type and tick who it covers for each policy (or remove the empty one).';
+    const msg = !spRows.length ? 'Please add at least one policy.' : bad ? 'Please choose a policy type and tick who it covers for each policy (or remove the empty one).' : 'Please enter the commission for each policy (0 if there is none).';
     const sum = document.getElementById('spSummary'); sum.textContent = msg; sum.classList.add('bad');
-    const first = document.querySelector('#spList .sp-row.missing select'); if(first) first.focus();
+    const first = document.querySelector('#spList .sp-row.missing select, #spList .sp-row.bad-comm input[data-sp-comm]'); if(first) first.focus();
     toast(msg,'error');
     return;
   }
-  const policies = spRows.map(r=>{ const clients = r.clients.slice().sort((a,b)=> a-b); return {type:r.type, clients, who:clients.map(ci=> spClients[ci])}; });
+  const lead = LEADS[leadId] || {}, pot = potOf(lead), now = Date.now(), n = v=> Math.round((Number(v) || 0)*100)/100;
+  const before = leadPolSplit(lead), m = SIGNUP_MODES[mode] || SIGNUP_MODES.onrisk;
+  const policies = spRows.map(r=>{ const clients = r.clients.slice().sort((a,b)=> a-b); const st = r.st==='risk' ? 'risk' : 'uw';
+    return {type:r.type, clients, who:clients.map(ci=> spClients[ci]), st, comm:n(r.comm), at: r.wasSt===st && r.wasAt ? r.wasAt : (r.wasSt===st && st==='risk' && !before.per ? (leadRiskEvents(lead)[0]||{}).at || now : now)}; });
+  const newRisk = policies.filter((p, i)=> p.st==='risk' && spRows[i].wasSt!=='risk');
+  const newUw = policies.filter((p, i)=> p.st==='uw' && spRows[i].wasSt!=='uw');
+  const kept = new Set(spRows.map(r=> r.src).filter(x=> x!=null)), gone = before.pols.filter((p, i)=> !kept.has(i));
+  const total = n(policies.reduce((t,p)=> t + p.comm, 0)), allRisk = policies.every(p=> p.st==='risk');
+  const status = allRisk ? 'signedup' : pot==='terms' ? 'terms' : 'underwriting';
+  const sumOf = list=> polMoney(list.reduce((t,p)=> t + p.comm, 0));
+  const by = {byId:currentUser.id, byName:currentUser.name};
   const btn = this;
-  btn.disabled = true;
-  const m = SIGNUP_MODES[this.dataset.mode] || SIGNUP_MODES.onrisk;
-  const money = `£${Number(val).toLocaleString(undefined,{minimumFractionDigits:2})}`;
-  // Edit: a correction to commission / policies only; the case stays where it is.
-  if(this.dataset.mode==='edit'){
-    const was = (LEADS[leadId]||{}).commission, wasPol = policiesText(leadPolicies(LEADS[leadId]||{}));
-    const changes = [Number(was)!==Number(val) ? `Commission ${money}${was!=null ? ` (was £${Number(was).toLocaleString(undefined,{minimumFractionDigits:2})})` : ''}` : '', policiesText(policies)!==wasPol ? `Policies: ${policiesText(policies)} (was ${wasPol || 'none'})` : ''].filter(Boolean);
-    if(!changes.length){ toast('Nothing changed.','info'); closeModal('signupOverlay'); btn.disabled = false; return; }
-    logAudit(leadId, {type:'edit', text:`${m.what} - ${changes.join(' - ')}`, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {commission:Number(val), policies})
+  // Edit: a correction to policies and commission. The case moves only if that changes whether it's all on risk.
+  if(mode==='edit'){
+    const wasTxt = before.pols.map(p=> `${p.type} (${p.who.length>1 ? 'joint: ' : ''}${policyWho(p)})${before.per || p.st==='risk' ? ' '+(p.st==='risk' ? 'on risk' : 'pending') : ''}${p.comm!=null ? ' '+polMoney(p.comm) : ''}`).join(', ');
+    const nowTxt = policies.map(p=> `${p.type} (${p.who.length>1 ? 'joint: ' : ''}${policyWho(p)}) ${p.st==='risk' ? 'on risk' : 'pending'} ${polMoney(p.comm)}`).join(', ');
+    const sameComm = Number(lead.commission)===total;
+    if(sameComm && before.per && wasTxt===nowTxt){ toast('Nothing changed.','info'); closeModal('signupOverlay'); return; }
+    const moveTo = allRisk ? 'signedup' : pot==='signedup' ? 'underwriting' : null;
+    btn.disabled = true;
+    logAudit(leadId, {type:'edit', text:`${m.what} - Commission ${polMoney(total)}${!sameComm && lead.commission!=null ? ` (was ${polMoney(lead.commission)})` : ''} - Policies: ${nowTxt}${wasTxt && wasTxt!==nowTxt ? ` (was ${wasTxt})` : ''}`, ...by, at:now},
+      {commission:total, policies, ...(moveTo && moveTo!==lead.status ? {status:moveTo} : {})})
       .then(()=>{ toast('Commission and policies updated.','success'); closeModal('signupOverlay'); refreshLeadModal(true); })
       .catch(err=> toast('Could not save: '+err.message,'error'))
       .finally(()=>{ btn.disabled = false; });
     return;
   }
-  const text = (this.dataset.mode==='nowonrisk' ? '' : `${label} - `) + `${m.what} - ${fmtDateSlash(Date.now())} - Commission ${money} - Policies: ${policiesText(policies)}`;
-  logAudit(leadId, {type:m.type, via:this.dataset.actionKind||null, text, byId:currentUser.id, byName:currentUser.name, at:Date.now()}, {status:m.status, commission:Number(val), policies, ...CLEAR_CALLBACK})
+  if(!newRisk.length && !newUw.length && !gone.length){
+    const msg = mode==='nowonrisk' ? 'Tick the policies that are now on risk.' : 'Nothing to save.';
+    const sum = document.getElementById('spSummary'); sum.textContent = msg; sum.classList.add('bad'); toast(msg,'error'); return;
+  }
+  btn.disabled = true;
+  // The history: one entry for what went on risk, one for what went to underwriting (and anything not going ahead).
+  const pre = mode==='nowonrisk' ? '' : `${label} - `, date = fmtDateSlash(now), updates = {}, add = (entry, k)=>{ updates[`leads/${leadId}/audit/${uidShort()+(now+k).toString(36)}`] = {...entry, ...by, at:now+k}; };
+  const goneTxt = gone.length ? ` - Not going ahead: ${policiesText(gone)}` : '';
+  if(newUw.length) add({type:'underwriting', via:this.dataset.actionKind||null, text:`${pre}Submitted to Underwriting - ${date} - Commission ${sumOf(newUw)} pending - Policies: ${policiesText(newUw)}`}, 0);
+  if(newRisk.length) add({type:'signup', via:this.dataset.actionKind||null, text:`${newUw.length ? '' : pre}${mode==='nowonrisk' && pot==='terms' ? 'Terms accepted - On Risk' : 'Sign Up (On Risk)'} - ${date} - Commission ${sumOf(newRisk)} - Policies: ${policiesText(newRisk)}${allRisk ? '' : ' (part of the case)'}${goneTxt}`}, 1);
+  else if(gone.length) add({type:'edit', text:`Not going ahead - ${policiesText(gone)}`}, 1);
+  Object.entries({status, commission:total, policies, ...CLEAR_CALLBACK}).forEach(([k,v])=> updates[`leads/${leadId}/${k}`] = v);
+  db.ref().update(updates)
     .then(()=>{
       // Feedback / thank-you card to the referring MAPA, if the adviser added one.
       const ld = LEADS[leadId], fbNote = document.getElementById('spFbNote').value.trim();
       if(ld && !document.getElementById('spFbWrap').classList.contains('hidden') && (fbNote || spThanksCard)){
-        sendReferralUpdate({id:leadId, ...ld}, {kind: fbNote ? (m.status==='underwriting' ? 'Submitted to underwriting' : 'On risk') : '', note:fbNote, card:spThanksCard})
+        sendReferralUpdate({id:leadId, ...ld}, {kind: fbNote ? (newRisk.length ? 'On risk' : 'Submitted to underwriting') : '', note:fbNote, card:spThanksCard})
           .then(()=> toast(`Update sent to ${ld.referredByName || 'the MAPA'}.`,'success')).catch(err=> toast('Feedback not sent: '+err.message,'error'));
       }
-      if(m.status==='signedup') celebrate(`${money} on risk! 🎉`);
-      if(m.status==='signedup' || m.status==='underwriting') santaCheer(); // Christmas mode only
-      toast(m.status==='underwriting' ? `Submitted to underwriting with ${money} commission pending. Moved to Submitted / In Underwriting.` : `On risk with ${money} commission. Moved to On Risk.`,'success'); closeModal('signupOverlay');
+      if(newRisk.length) celebrate(`${sumOf(newRisk)} on risk! 🎉`);
+      if(newRisk.length || newUw.length) santaCheer(); // Christmas mode only
+      const bits = [newRisk.length ? `${polTypes(newRisk)} on risk with ${sumOf(newRisk)} commission` : '', newUw.length ? `${polTypes(newUw)} submitted to underwriting with ${sumOf(newUw)} pending` : ''].filter(Boolean);
+      toast(`${bits.join('; ') || 'Saved'}. ${status==='signedup' ? 'Moved to On Risk.' : newRisk.length || before.nRisk ? `Part on risk: still in ${STATUS_LABELS[status]}, and showing in On Risk.` : `Moved to ${STATUS_LABELS[status]}.`}`,'success');
+      closeModal('signupOverlay');
       actionUIState=null; refreshLeadModal();
     }).catch(err=> toast('Could not save: '+err.message,'error'))
     .finally(()=>{ btn.disabled = false; });
@@ -13278,13 +13403,13 @@ function referralFacts(l){
   const subm = after.find(a=> a.type==='underwriting' || a.type==='signup');
   const pot = potOf(l);
   const submitted = !!subm || ['underwriting','terms','signedup'].includes(pot);
-  const comm = Number(l.commission) || 0;
+  const ps = leadPolSplit(l);
   const refEntry = es.find(a=> a.referral);
   return {
-    refAt, pot, submitted, onRisk: pot==='signedup', declined: pot==='decline' || pot==='completed', open: pot==='new' || pot==='existing',
+    refAt, pot, submitted, onRisk: leadOnRisk(l), declined: pot==='decline' || pot==='completed', open: pot==='new' || pot==='existing',
     contactMs: contact ? contact.at - refAt : null, met: after.some(a=> a.meeting==='spoke'),
     submitMs: subm ? subm.at - refAt : null,
-    commOnRisk: pot==='signedup' ? comm : 0, commPending: (pot==='underwriting' || pot==='terms') ? comm : 0,
+    commOnRisk: ps.risk, commPending: ps.pend,
     booked: l.referralBooked===true || (!!refEntry && / - appointment booked \(/.test(refEntry.text||'')),
     detailed: String(l.referralNote||'').length >= 100,
     feedback: after.some(a=> a.type==='feedback' || a.type==='thanks'),
@@ -13363,7 +13488,7 @@ function renderReferralInsights(){
     let kept = Object.entries(LEADS).map(([id, l])=> ({id, ...l})).filter(l=> !l.deleted && !l.referredById && l.advisorId && !isProtAdviser(l.advisorId) && USERS[l.advisorId] && USERS[l.advisorId].role==='mapa' && (l.createdAt||0) >= from && (l.createdAt||0) <= to);
     if(isMapa) kept = kept.filter(l=> l.advisorId===me);
     else if(selectedAdvisorFilter) kept = kept.filter(l=> l.advisorId===selectedAdvisorFilter);
-    const kRows = kept.map(l=>{ const pot = potOf(l), c = Number(l.commission)||0; return {f:{submitted:['underwriting','terms','signedup'].includes(pot) || Object.values(l.audit||{}).some(a=> a && (a.type==='underwriting' || a.type==='signup')), onRisk: pot==='signedup', commOnRisk: pot==='signedup' ? c : 0, commPending: (pot==='underwriting'||pot==='terms') ? c : 0, declined: pot==='decline'||pot==='completed'}}; });
+    const kRows = kept.map(l=>{ const pot = potOf(l), ps = leadPolSplit(l); return {f:{submitted:['underwriting','terms','signedup'].includes(pot) || Object.values(l.audit||{}).some(a=> a && (a.type==='underwriting' || a.type==='signup')), onRisk: leadOnRisk(l), commOnRisk: ps.risk, commPending: ps.pend, declined: pot==='decline'||pot==='completed'}}; });
     const vRow = (label, list)=> `<tr><td style="font-weight:600;">${esc(label)}</td><td>${list.length}</td><td><b>${pc(list.filter(r=> r.f.submitted).length, list.length)}</b></td><td>${pc(list.filter(r=> r.f.onRisk).length, list.length)}</td><td>${pc(list.filter(r=> r.f.declined).length, list.length)}</td><td>${list.length ? money(sum(r=> r.f.commOnRisk + r.f.commPending, list)/list.length) : '—'}</td></tr>`;
     document.getElementById('refVsKept').innerHTML = `<thead><tr><th></th><th>Cases</th><th>Converted</th><th>On risk</th><th>Declined</th><th>Per case</th></tr></thead><tbody>${vRow('Referred to an adviser', rows)}${vRow(isMapa ? 'Kept and done yourself' : 'Kept and done by the MAPA', kRows)}</tbody>`;
     document.getElementById('refVsKeptNote').textContent = 'Kept cases are dated by when the case was created; referred ones by when they were referred.';
@@ -13416,7 +13541,7 @@ function renderInsights(){
   /* ---- This week ---- */
   const weekAgo = Date.now() - 7*24*60*60*1000;
   const newThisWeek = leads.filter(l=> (l.createdAt||0) >= weekAgo).length;
-  const signedThisWeek = leads.filter(l=> potOf(l)==='signedup' && Object.values(l.audit||{}).some(a=>a.type==='signup' && a.at>=weekAgo)).length;
+  const signedThisWeek = leads.filter(l=> leadRiskEvents(l).some(e=> e.at && e.at>=weekAgo)).length;
   const declinedThisWeek = leads.filter(l=> l.declineReason && Object.values(l.audit||{}).some(a=>a.type==='decline' && a.at>=weekAgo)).length;
   const overdueNow = leads.filter(l=>{
     return hasBookedCall(l) && isCallOverdue(l.followUpDate, l.followUpTime);
@@ -13453,8 +13578,8 @@ function renderInsights(){
        </div>`;
 
   /* ---- Commission ---- */
-  const signedLeads = leads.filter(l=> potOf(l)==='signedup' && l.commission!=null);
-  const totalCommission = signedLeads.reduce((s,l)=> s+Number(l.commission||0), 0);
+  const signedLeads = leads.filter(l=> leadOnRisk(l) && l.commission!=null);
+  const totalCommission = signedLeads.reduce((s,l)=> s + leadPolSplit(l).risk, 0);
   const avgCommission = signedLeads.length ? totalCommission/signedLeads.length : 0;
   document.getElementById('commissionStats').innerHTML =
     statCard('£'+totalCommission.toLocaleString(undefined,{maximumFractionDigits:0}), 'Total commission', 'accent') +
@@ -13484,7 +13609,7 @@ function renderInsights(){
       avgDays: done.length ? done.reduce((s,i)=> s + (i.onRiskAt-i.sentAt), 0)/done.length/86400000 : null,
       nowCount: now.filter(l=> potOf(l)==='underwriting').length, termsCount: now.filter(l=> potOf(l)==='terms').length,
       avgTermsDays: withTerms.length ? withTerms.reduce((s,i)=> s + (i.termsAt-i.sentAt), 0)/withTerms.length/86400000 : null,
-      pending: now.reduce((s,l)=> s + Number(l.commission||0), 0)
+      pending: now.reduce((s,l)=> s + leadPolSplit(l).pend, 0)
     };
   };
   const uw = uwSummary(leads);
@@ -13510,8 +13635,8 @@ function renderInsights(){
   /* ---- By advisor ---- */
   const advisorRows = mapas.map(([id,u])=>{
     const own = leads.filter(l=> l.advisorId===id);
-    const signed = own.filter(l=> potOf(l)==='signedup');
-    const commission = signed.reduce((s,l)=> s+Number(l.commission||0), 0);
+    const signed = own.filter(leadOnRisk);
+    const commission = signed.reduce((s,l)=> s + leadPolSplit(l).risk, 0);
     const convRate = own.length ? Math.round(signed.length/own.length*100) : 0;
     return {name:u.name, total:own.length, signed:signed.length, convRate, commission};
   }).sort((a,b)=> b.commission - a.commission);
@@ -13527,8 +13652,8 @@ function renderInsights(){
   const sources = Array.from(new Set([...Object.values(CLIENTSOURCES), ...leads.map(l=>l.clientSource).filter(Boolean)])).sort();
   const sourceRows = sources.map(src=>{
     const own = leads.filter(l=> l.clientSource===src);
-    const signed = own.filter(l=> potOf(l)==='signedup');
-    const commission = signed.reduce((s,l)=> s+Number(l.commission||0), 0);
+    const signed = own.filter(leadOnRisk);
+    const commission = signed.reduce((s,l)=> s + leadPolSplit(l).risk, 0);
     const convRate = own.length ? Math.round(signed.length/own.length*100) : 0;
     const avgComm = signed.length ? commission/signed.length : 0;
     return {src, total:own.length, convRate, avgComm};

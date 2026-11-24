@@ -942,6 +942,70 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-board-tabs{display:inline-flex; flex-wrap:wrap; margin:18px 0 2px;}
 .nbr-board-tabs button{padding:8px 16px; font-size:13px;}
 .nbr-com-sum{font-size:11px; font-weight:500; color:var(--text-muted); margin-top:2px;}
+/* Salesboard on a phone: each view is its own screen, picked from a bar fixed to the bottom, and each
+   table is drawn as a list instead (a row per advisor or month; tap one for the rest of its figures). */
+.nbr-mob{display:none !important;}
+.nbr-m-group{background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:14px; box-shadow:var(--shadow-sm);}
+.nbr-m-group .m-head{background:#A6297A; color:#fff; font-size:12px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; padding:9px 14px;}
+.nbr-m-group.nbr-com .m-head{background:#0E6E5C;}
+.nbr-m-row + .nbr-m-row,.m-head + .nbr-m-row{border-top:1px solid var(--border);}
+.nbr-m-row summary,.nbr-m-row .m-sum{display:flex; align-items:center; gap:10px; padding:10px 14px; min-height:50px; list-style:none;}
+.nbr-m-row summary{cursor:pointer; -webkit-tap-highlight-color:transparent;}
+.nbr-m-row summary::-webkit-details-marker{display:none;}
+.nbr-m-row summary::after,.nbr-m-row .m-sum::after{content:''; flex:none; width:7px; height:7px; margin:0 3px 3px 2px; border-right:2px solid var(--text-faint); border-bottom:2px solid var(--text-faint); transform:rotate(45deg); transition:transform .15s;}
+.nbr-m-row .m-sum::after{visibility:hidden;}
+.nbr-m-row[open] summary::after{transform:rotate(-135deg); margin-bottom:-3px;}
+.nbr-m-row summary:focus-visible{outline:2px solid var(--brand-light); outline-offset:-2px;}
+.nbr-m-row .m-nm{flex:1; min-width:0; font-size:14px; font-weight:600; color:var(--text); overflow-wrap:anywhere;}
+.nbr-m-row .m-v{text-align:right; font-size:15px; font-weight:800; color:var(--text); white-space:nowrap; font-variant-numeric:tabular-nums;}
+.nbr-m-row .m-nm small,.nbr-m-row .m-v small{display:block; margin-top:2px; font-size:11.5px; font-weight:500; color:var(--text-muted);}
+.nbr-m-row .m-det{padding:0 14px 12px;}
+.nbr-m-row .m-det > div{display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-top:1px dashed var(--border); font-size:13px; color:var(--text-muted);}
+.nbr-m-row .m-det > div b{font-weight:600; color:var(--text); white-space:nowrap; font-variant-numeric:tabular-nums;}
+.nbr-m-row .m-det .linkish{display:inline-block; margin-top:10px; padding:4px 0; font-size:13px;}
+.nbr-m-row.m-special .m-nm{font-style:italic;}
+.nbr-m-row.m-me{background:color-mix(in srgb, var(--brand) 9%, var(--surface));}
+.nbr-m-row.m-sel{background:color-mix(in srgb, #8A5A00 9%, var(--surface));}
+.nbr-m-row.m-tot{background:color-mix(in srgb, #A6297A 14%, var(--surface));}
+.nbr-m-group.nbr-com .nbr-m-row.m-tot{background:color-mix(in srgb, #0E6E5C 16%, var(--surface));}
+.nbr-m-tbl{width:100%; border-collapse:collapse; font-size:12px; font-variant-numeric:tabular-nums;}
+.nbr-m-tbl th,.nbr-m-tbl td{padding:6px 0 6px 6px; text-align:right; border-top:1px dashed var(--border); white-space:nowrap;}
+.nbr-m-tbl th{border-top:0; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:var(--text-muted);}
+.nbr-m-tbl th:first-child,.nbr-m-tbl td:first-child{text-align:left; padding-left:0;}
+.nbr-m-tbl tr.m-t td{font-weight:800; border-top:2px solid var(--border-2);}
+.nbr-board-tabs button.desk-on{background:var(--brand); color:#fff;}
+@media (max-width:700px) and (orientation:portrait){
+  .nbr-desk{display:none !important;}
+  .nbr-mob{display:block !important;}
+  .nbr-board-tabs button.desk-on{background:transparent; color:var(--text-muted);}
+  #nbrBoardBody{padding-bottom:calc(72px + env(safe-area-inset-bottom));}
+  #nbrBoardBody .stat-grid{grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px;}
+  #nbrBoardBody .stat-card{padding:12px 13px; min-width:0;}
+  #nbrBoardBody .stat-card .sv{font-size:18px; overflow-wrap:anywhere;}
+  #nbrBoardBody .nbr-h2{margin-top:18px;}
+  .nbr-board-tabs{position:fixed; left:0; right:0; bottom:0; z-index:38; display:flex; flex-wrap:nowrap; gap:2px; margin:0; border:0; border-top:1px solid var(--border); border-radius:0; padding:6px 6px calc(6px + env(safe-area-inset-bottom)); box-shadow:0 -8px 20px -14px rgba(0,0,0,.4);}
+  .nbr-board-tabs button{flex:1 1 0; min-width:0; min-height:44px; padding:8px 2px; font-size:12px; white-space:nowrap; border-radius:9px;}
+  /* Messages that pop up at the bottom sit above the bar. */
+  body:has(#page-nbrBoard:not(.hidden) .nbr-board-tabs) #toastHost{bottom:calc(76px + env(safe-area-inset-bottom)); right:12px;}
+  body:has(#page-nbrBoard:not(.hidden) .nbr-board-tabs) .update-bar{bottom:calc(72px + env(safe-area-inset-bottom));}
+}
+/* A phone turned on its side: the full Salesboard tables, tightened up and then shrunk to fit the width
+   (nbrFitBoard), so nothing scrolls sideways. */
+@media (orientation:landscape) and (max-height:520px){
+  #page-nbrBoard .page-head{margin-bottom:10px;} #page-nbrBoard .page-head .sub{display:none;}
+  #nbrBoardBody .stat-grid{grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-bottom:10px;}
+  #nbrBoardBody .stat-card{padding:9px 11px;} #nbrBoardBody .stat-card .sv{font-size:16px;} #nbrBoardBody .stat-card .sl{font-size:10px; margin-top:2px;}
+  #nbrBoardBody .nbr-toolbar{margin-bottom:10px;}
+  #nbrBoardBody .nbr-board-tabs{margin-top:6px;} #nbrBoardBody .nbr-h2{margin:14px 0 8px;}
+  #nbrBoardBody .nbr-table,.sticky-head .nbr-board-table{font-size:11px;}
+  #nbrBoardBody .nbr-table th,#nbrBoardBody .nbr-table td,.sticky-head .nbr-board-table th{padding:5px 6px;}
+  #nbrBoardBody .nbr-table th,.sticky-head .nbr-board-table th{font-size:9.5px; letter-spacing:0; white-space:normal; vertical-align:bottom;}
+  #nbrBoardBody .nbr-table td.nbr-note{white-space:normal; font-size:10px;}
+  /* There's little height, so the top bar scrolls away with the page instead of staying put. */
+  body:has(#page-nbrBoard:not(.hidden)) .topbar{position:static;}
+  #nbrBoardBody .nbr-board-tabs{flex-wrap:nowrap;} #nbrBoardBody .nbr-board-tabs button{padding:7px 11px; font-size:12px; white-space:nowrap;}
+  #nbrBoardBody .nml-table-wrap{overflow-x:hidden;}
+}
 /* Advisor register: each week's heading is a bold pink band, like the Salesboard's. */
 .nbr-table tr.nbr-group.nbr-wk td{background:#A6297A; color:#fff; font-size:12px; letter-spacing:.6px; padding-top:9px; padding-bottom:9px; border-color:#A6297A;}
 .nbr-table tr.nbr-group.nbr-wk .nbr-tag{background:#fff; color:#A6297A; border-color:#fff;}
@@ -7295,8 +7359,10 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
-  {id:'2026-11-19n', date:'2026-11-19', items:[ {text:"⏱️ <b>Speed check</b> in Settings: how long loading and each page take on this computer with the real data. Use the dashboard for a few minutes, then copy it and send it on.", roles:['admin','management']},
+  {id:'2026-11-24a', date:'2026-11-24', items:[ {text:"⏱️ <b>Speed check</b> in Settings: how long loading and each page take on this computer with the real data. Use the dashboard for a few minutes, then copy it and send it on.", roles:['admin','management']},
     {text:"🧾 <b>+ Add case</b> on an advisor's NBR now works like an NBR upload: it goes in its Friday week, picks up a switch date written in the notes, and links to a line the Bible already has for the case instead of adding it twice.", roles:['admin','management']} ]},
+  {id:'2026-11-20a', date:'2026-11-20', items:[ {text:"📱 <b>Salesboard on your phone</b>: held upright, each view is its own screen (<b>Written</b>, <b>Banked</b>, <b>By month</b>, <b>By product</b>, <b>Advisors</b>) from the bar at the bottom, as a list: tap an advisor or month for the rest of its figures. Turn the phone on its side for the full Salesboard table, shrunk to fit the screen. Add it to your home screen (Share → Add to Home Screen, or Install app) to open it like an app.", roles:['admin','management']},
+    {text:"📱 <b>Salesboard on your phone</b>: held upright, <b>Written</b>, <b>Banked</b> and <b>My figures</b> are each their own screen from the bar at the bottom: tap an advisor or month for the rest of its figures. Turn the phone on its side for the full table, shrunk to fit the screen. Add it to your home screen (Share → Add to Home Screen, or Install app) to open it like an app.", roles:['mapa']} ]},
   {id:'2026-11-19m', date:'2026-11-19', items:[ {text:"🚫 <b>No fee to be charged for client</b>: a red tick box on the NBR case form (between Sols and Val). Ticked, the case has no mums fee, shows <b>No fee</b> on the advisor's NBR, and its Bible line says \u201cno fee\u201d in When / How, as the Bible does; a case with no fees at all still gets a £0 Bible line saying \u201cno fee\u201d for reporting.", roles:['admin','management']} ]},
   {id:'2026-11-19l', date:'2026-11-19', items:[ {text:"🚫 <b>NPWs follow the Excel Bible</b>: a Bible upload now gives each NPW line the Excel Bible's amount and period (a line made from an NBR case used to keep the NBR's), and a line that's an NPW here but not in the Excel Bible stops being one, so the NPW figures match. NPWs don't count as written, banked or owed. <b>Upload the Bible again</b>.", roles:['admin','management']} ]},
   {id:'2026-11-19k', date:'2026-11-19', items:[ {text:"🚫 <b>NPW check</b>: uploading the Bible now ends with an NPW check for each year (the Excel Bible's NPW rows and total against the dashboard's) and lists any Excel NPW rows that aren't an NPW here. NPWs on fees paid in parts or combined into one line are now kept.", roles:['admin','management']} ]},
@@ -15825,6 +15891,15 @@ function nbrNotReady(el, summaryOk){
   }
   return false;
 }
+/* Phones: a row of a Salesboard list. name and main figure, a smaller line under each, and (if there's a
+   breakdown) a tap opens it. k keeps it open when the figures update. */
+function nbrMobRow(o){
+  const det = (o.det || []).filter(Boolean);
+  const head = `<span class="m-nm">${o.name}${o.sub ? `<small>${o.sub}</small>` : ''}</span><span class="m-v">${o.main}${o.side ? `<small>${o.side}</small>` : ''}</span>`;
+  const body = det.length || o.foot ? `<div class="m-det">${det.map(([l, v])=> `<div><span>${l}</span><b>${v}</b></div>`).join('')}${o.foot || ''}</div>` : '';
+  return body ? `<details class="nbr-m-row ${o.cls || ''}" data-mk="${esc(o.k || '')}"><summary>${head}</summary>${body}</details>` : `<div class="nbr-m-row ${o.cls || ''}"><div class="m-sum">${head}</div></div>`;
+}
+function nbrMobGroup(head, rows, cls){ return `<div class="nbr-m-group ${cls || ''}">${head ? `<div class="m-head">${head}</div>` : ''}${rows}</div>`; }
 function renderNbrBoard(){
   const el = document.getElementById('nbrBoardBody');
   if(nbrNotReady(el, true)) return;
@@ -15864,7 +15939,22 @@ function renderNbrBoard(){
   };
   // A small gap between the offices, and before All offices.
   const gapRow = `<tr class="nbr-gap" aria-hidden="true"><td colspan="${BOARD_COLS}"></td></tr>`;
-  const boardTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-board-table">
+  // The same as lists, for phones.
+  const meId = view ? nbrAdvForUser(currentUser.id) : '';
+  const mobName = a=> esc(a.name) + (meId && a.id===meId ? ' <span class="nbr-tag">You</span>' : '');
+  const mobCls = a=> (a.special ? 'm-special ' : '') + (meId && a.id===meId ? 'm-me' : '');
+  const mobBanked = v=> nbrRound(v) ? `Banked ${nbrMoney(v)}` : '';
+  const mobCats = (r, cats)=> cats.filter(([k])=> nbrRound(r[k])).map(([k, l])=> [esc(l), nbrMoney(r[k])]);
+  const mobOpen = a=> view ? '' : a.special ? `<button type="button" class="linkish" data-nbr-special="${esc(a.id)}">Open ${esc(a.name)}</button>` : `<button type="button" class="linkish" data-nbr-reg="${esc(a.id)}">Open ${esc(a.name)}'s NBR</button>`;
+  const mobOffices = block=> [...NBR_OFFICES.map(([c,l])=> block(c, l)), block('', 'No office set')].join('');
+  const boardMob = `<div class="nbr-mob">${mobOffices((code, label)=>{
+    const list = advs.filter(a=> (a.office||'')===code); if(!list.length) return '';
+    const rows = list.map(a=> ({a, r: nbrRow(a.id, selYm)})), tot = nbrSum(rows.map(x=> x.r));
+    return nbrMobGroup(esc(label), rows.map(({a,r})=> nbrMobRow({k:'w:'+a.id, cls:mobCls(a), name:mobName(a), sub:mobBanked(r.banked), main:nbrMoneyCell(r.total), side: r.total ? `${nbrPct(r.total, tot.total)} of office` : '',
+        det:[...mobCats(r, BOARD_CATS), ['% of all offices', nbrPct(r.total, grand.total)], a.office==='C' && (AM[a.id]||{}).of ? ['With their own NBR', nbrMoney(nbrRow(AM[a.id].of, selYm).total + r.total)] : null], foot:mobOpen(a)})).join('')
+      + nbrMobRow({k:'w:tot:'+code, cls:'m-tot', name:`${esc(label)} total`, sub:mobBanked(tot.banked), main:nbrMoneyCell(tot.total), side: tot.total ? `${nbrPct(tot.total, grand.total)} of all` : '', det:mobCats(tot, BOARD_CATS)}), code==='C' ? 'nbr-com' : '');
+  })}${nbrMobGroup('', nbrMobRow({k:'w:all', cls:'m-tot', name:'All offices', sub:mobBanked(sel.banked), main:nbrMoneyCell(grand.total), det:mobCats(grand, BOARD_CATS)}))}</div>`;
+  const boardTable = `<div class="nml-table-wrap nbr-desk"><table class="nml-table nbr-table nbr-board-table">
     <thead><tr><th>Advisor</th>${BOARD_CATS.map(([,l])=> `<th class="num">${esc(l)}</th>`).join('')}<th class="num">Total written</th><th class="num">% of office</th><th class="num">% of all</th><th class="num">Banked</th></tr></thead>
     <tbody>${[...NBR_OFFICES.map(([c,l])=> officeBlock(c, l)), officeBlock('', 'No office set')].filter(Boolean).join(gapRow)}
       ${gapRow}
@@ -15886,7 +15976,14 @@ function renderNbrBoard(){
       <tr class="nbr-tot nbr-office-tot${com}"><td>${esc(label)} total</td>${bpCells(tot)}<td class="num b">${nbrMoneyCell(tot.total)}</td></tr>`;
   };
   const bpGrand = bpSum(ids);
-  const bankTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-board-table">
+  const mobProds = o=> bpCols.filter(x=> nbrRound(o[x])).map(x=> [esc(x), nbrMoney(o[x])]);
+  const bankMob = `<div class="nbr-mob">${mobOffices((code, label)=>{
+    const list = advs.filter(a=> (a.office||'')===code); if(!list.length) return '';
+    const tot = bpSum(list.map(a=> a.id));
+    return nbrMobGroup(esc(label), list.map(a=>{ const o = bpSum([a.id]); return nbrMobRow({k:'b:'+a.id, cls:mobCls(a), name:mobName(a), main:nbrMoneyCell(o.total), side: o.total && tot.total ? `${nbrPct(o.total, tot.total)} of office` : '', det:mobProds(o), foot: a.special ? '' : mobOpen(a)}); }).join('')
+      + nbrMobRow({k:'b:tot:'+code, cls:'m-tot', name:`${esc(label)} total`, main:nbrMoneyCell(tot.total), side: tot.total && bpGrand.total ? `${nbrPct(tot.total, bpGrand.total)} of all` : '', det:mobProds(tot)}), code==='C' ? 'nbr-com' : '');
+  })}${nbrMobGroup('', nbrMobRow({k:'b:all', cls:'m-tot', name:'All offices', main:nbrMoneyCell(bpGrand.total), det:mobProds(bpGrand)}))}</div>`;
+  const bankTable = `<div class="nml-table-wrap nbr-desk"><table class="nml-table nbr-table nbr-board-table">
     <thead><tr><th>Advisor</th>${bpCols.map(x=> `<th class="num">${esc(x)}</th>`).join('')}<th class="num">Total banked</th></tr></thead>
     <tbody>${[...NBR_OFFICES.map(([c,l])=> bankBlock(c, l)), bankBlock('', 'No office set')].filter(Boolean).join(bpGap)}
       ${bpGap}
@@ -15895,7 +15992,12 @@ function renderNbrBoard(){
 
   // 2) The year by month: written v last year, banked, NPW.
   const yoy = (a,b)=> b ? `<span class="${a>=b ? 'nbr-up' : 'nbr-down'}">${a>=b ? '+' : ''}${(Math.round((a/b-1)*1000)/10).toFixed(1)}%</span>` : '–';
-  const yearTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+  const yearDet = (r, l, c)=> [[`Written ${Y-1}`, nbrMoneyCell(l.total)], ['of which B&amp;C', nbrMoneyCell(r.bc)], ['of which Wills', nbrMoneyCell(r.wills)], ['of which Commercial', nbrMoneyCell(c.total)], ['NPW', nbrMoneyCell(r.npw)], ['Written exc NPW', nbrMoneyCell(r.excl)], [`Banked ${Y}`, nbrMoneyCell(r.banked)], ['Banked v written', r.total && r.banked ? yoy(r.banked, r.total) : '–']];
+  const lyT = nbrSum(lastYear);
+  const yearMob = `<div class="nbr-mob">${nbrMobGroup('', yms.map((ym,i)=>{ const r = year[i], l = lastYear[i]; return nbrMobRow({k:'y:'+i, cls: ym===selYm ? 'm-sel' : '', name:NBR_MONTHS_LONG[i], sub:mobBanked(r.banked), main:nbrMoneyCell(r.total), side: r.total && l.total ? `${yoy(r.total, l.total)} on ${Y-1}` : '', det:yearDet(r, l, com[i])}); }).join('')
+    + nbrMobRow({k:'y:tot', cls:'m-tot', name:`${Y} total`, sub:mobBanked(yt.banked), main:nbrMoneyCell(yt.total), side: yt.total && lyT.total ? `${yoy(yt.total, lyT.total)} on ${Y-1}` : '', det:yearDet(yt, lyT, comT)}))}
+    ${nbrMobGroup('Against target', nbrMobRow({name:'Written', sub:`Target ${nbrMoney(T.written)}`, main:nbrMoney(yt.total - T.written), side:`${nbrPct(yt.total, T.written)} of target`}) + nbrMobRow({name:'Banked', sub:`Target ${nbrMoney(T.banked)}`, main:nbrMoney(yt.banked - T.banked), side:`${nbrPct(yt.banked, T.banked)} of target`}))}</div>`;
+  const yearTable = `<div class="nml-table-wrap nbr-desk"><table class="nml-table nbr-table">
     <thead><tr><th>Month</th><th class="num">Written ${Y-1}</th><th class="num">Written ${Y}</th><th class="num">Year on year</th><th class="num">of which B&amp;C</th><th class="num">of which Wills</th><th class="num">of which Commercial</th><th class="num">NPW</th><th class="num">Written exc NPW</th><th class="num">Banked ${Y}</th><th class="num">Banked v written</th></tr></thead>
     <tbody>${yms.map((ym,i)=>{ const r = year[i], l = lastYear[i]; return `<tr class="${ym===selYm ? 'nbr-sel' : ''}"><td>${NBR_MONTHS[i]}</td><td class="num">${nbrMoneyCell(l.total)}</td><td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${yoy(r.total, l.total)}</td><td class="num">${nbrMoneyCell(r.bc)}</td><td class="num">${nbrMoneyCell(r.wills)}</td><td class="num">${nbrMoneyCell(com[i].total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num b">${nbrMoneyCell(r.banked)}</td><td class="num">${r.total && r.banked ? yoy(r.banked, r.total) : '–'}</td></tr>`; }).join('')}
       <tr class="nbr-grand"><td>Total</td><td class="num">${nbrMoneyCell(nbrSum(lastYear).total)}</td><td class="num b">${nbrMoneyCell(yt.total)}</td><td class="num">${yoy(yt.total, nbrSum(lastYear).total)}</td><td class="num">${nbrMoneyCell(yt.bc)}</td><td class="num">${nbrMoneyCell(yt.wills)}</td><td class="num">${nbrMoneyCell(comT.total)}</td><td class="num">${nbrMoneyCell(yt.npw)}</td><td class="num">${nbrMoneyCell(yt.excl)}</td><td class="num b">${nbrMoneyCell(yt.banked)}</td><td class="num">${yt.total && yt.banked ? yoy(yt.banked, yt.total) : '–'}</td></tr>
@@ -15903,7 +16005,11 @@ function renderNbrBoard(){
     </tbody></table></div>`;
 
   // 3) Written by product by month.
-  const prodTable = `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+  const prodDet = (r, c)=> [...BOARD_CATS.filter(([k])=> nbrRound(r[k] - c[k])).map(([k, l])=> [esc(l), nbrMoney(r[k] - c[k])]), nbrRound(c.total) ? ['Commercial', nbrMoney(c.total)] : null];
+  const prodMob = `<div class="nbr-mob">${nbrMobGroup('The year', [...BOARD_CATS.map(([k, l])=> [l, yt[k] - comT[k]]), ['Commercial', comT.total]].map(([l, v])=> nbrMobRow({name:esc(l), main:nbrMoneyCell(v), side: nbrRound(v) ? `${nbrPct(v, yt.total)} of the year` : ''})).join('')
+    + nbrMobRow({cls:'m-tot', name:`${Y} total`, main:nbrMoneyCell(yt.total)}))}
+    ${nbrMobGroup('Month by month', yms.map((ym,i)=>{ const r = year[i]; return nbrMobRow({k:'p:'+i, cls: ym===selYm ? 'm-sel' : '', name:NBR_MONTHS_LONG[i], main:nbrMoneyCell(r.total), side: r.total ? `${nbrPct(r.total, yt.total)} of the year` : '', det:prodDet(r, com[i])}); }).join(''))}</div>`;
+  const prodTable = `<div class="nml-table-wrap nbr-desk"><table class="nml-table nbr-table">
     <thead><tr><th>Month</th>${BOARD_CATS.map(([,l])=> `<th class="num">${esc(l)}</th>`).join('')}<th class="num">Commercial</th><th class="num">Total</th><th class="num">% of year</th></tr></thead>
     <tbody>${yms.map((ym,i)=>{ const r = year[i], c = com[i]; return `<tr class="${ym===selYm ? 'nbr-sel' : ''}"><td>${NBR_MONTHS[i]}</td>${BOARD_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k] - c[k])}</td>`).join('')}<td class="num">${nbrMoneyCell(c.total)}</td><td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, yt.total)}</td></tr>`; }).join('')}
       <tr class="nbr-grand"><td>Total</td>${BOARD_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(yt[k] - comT[k])}</td>`).join('')}<td class="num">${nbrMoneyCell(comT.total)}</td><td class="num b">${nbrMoneyCell(yt.total)}</td><td class="num">${yt.total ? '100%' : '–'}</td></tr>
@@ -15918,6 +16024,14 @@ function renderNbrBoard(){
       <tbody>${rows.map((r,i)=> `<tr><td>${NBR_MONTHS[i]}</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td></tr>`).join('')}
       <tr class="nbr-grand"><td>Totals</td>${NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(t[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(t.total)}</td><td class="num">${nbrMoneyCell(t.npw)}</td><td class="num">${nbrMoneyCell(t.excl)}</td><td class="num">${nbrMoneyCell(t.banked)}</td></tr></tbody></table></div></details>`;
   }).join('');
+  const advMob = `<div class="nbr-mob">${mobOffices((code, label)=>{
+    const list = advs.filter(a=> !a.special && (a.office||'')===code); if(!list.length) return '';
+    return nbrMobGroup(esc(label), list.map(a=>{
+      const rows = yms.map(ym=> nbrRow(a.id, ym)), t = nbrSum(rows);
+      return nbrMobRow({k:'a:'+a.id, name:esc(a.name), sub:mobBanked(t.banked), main:nbrMoneyCell(t.total), side:`written in ${Y}`,
+        foot:`<table class="nbr-m-tbl"><thead><tr><th>${Y}</th><th>Written</th><th>NPW</th><th>Banked</th></tr></thead><tbody>${rows.map((r,i)=> `<tr><td>${NBR_MONTHS[i]}</td><td>${nbrMoneyCell(r.total)}</td><td>${nbrMoneyCell(r.npw)}</td><td>${nbrMoneyCell(r.banked)}</td></tr>`).join('')}<tr class="m-t"><td>Total</td><td>${nbrMoneyCell(t.total)}</td><td>${nbrMoneyCell(t.npw)}</td><td>${nbrMoneyCell(t.banked)}</td></tr></tbody></table>${mobOpen(a)}`});
+    }).join(''), code==='C' ? 'nbr-com' : '');
+  })}</div>`;
   const unassigned = nbrSum(yms.map(ym=> nbrRow('', ym)));
   const fromBibleNames = advs.filter(a=> nbrAgg().fromBible.has(a.id+'|'+Y)).map(a=> a.name);
 
@@ -15935,6 +16049,7 @@ function renderNbrBoard(){
       const yr = y=> nbrSum(nbrYearMonths(y).map(ym=> nbrRow(me, ym)));
       const catHead = NBR_CATS.map(([,l])=> `<th class="num">${l}</th>`).join('');
       const catCells = r=> NBR_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k])}</td>`).join('');
+      const myDet = (r, l, ly)=> [...mobCats(r, NBR_CATS), ['NPW', nbrMoneyCell(r.npw)], ['Written exc NPW', nbrMoneyCell(r.excl)], ['Banked', nbrMoneyCell(r.banked)], [`Written ${ly || Y-1}`, nbrMoneyCell(l.total)]];
       myHtml = `
     <h2 class="nbr-h2 nbr-my-h">My figures · ${esc(nbrAdvName(me))}</h2>
     <div class="stat-grid">
@@ -15945,24 +16060,32 @@ function renderNbrBoard(){
       <div class="stat-card good"><div class="sv">${nbrMoney(mYtd.banked)}</div><div class="sl">Banked ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y}</div></div>
     </div>
     <h3 class="nbr-h3">${Y} by month</h3>
-    <div class="nml-table-wrap"><table class="nml-table nbr-table">
+    <div class="nbr-mob">${nbrMobGroup('', mine.map((r,i)=> nbrMobRow({k:'m:'+i, cls: yms[i]===selYm ? 'm-sel' : '', name:NBR_MONTHS_LONG[i], sub:mobBanked(r.banked), main:nbrMoneyCell(r.total), side: r.total && mineLast[i].total ? `${yoy(r.total, mineLast[i].total)} on ${Y-1}` : '', det:myDet(r, mineLast[i])})).join('')
+      + nbrMobRow({k:'m:tot', cls:'m-tot', name:`${Y} total`, sub:mobBanked(mt.banked), main:nbrMoneyCell(mt.total), side: mt.total && nbrSum(mineLast).total ? `${yoy(mt.total, nbrSum(mineLast).total)} on ${Y-1}` : '', det:myDet(mt, nbrSum(mineLast))}))}</div>
+    <div class="nml-table-wrap nbr-desk"><table class="nml-table nbr-table">
       <thead><tr><th>Month</th>${catHead}<th class="num">Total written</th><th class="num">NPW</th><th class="num">Exc NPW</th><th class="num">Banked</th><th class="num">Written ${Y-1}</th><th class="num">Year on year</th></tr></thead>
       <tbody>${mine.map((r,i)=> `<tr class="${yms[i]===selYm ? 'nbr-sel' : ''}"><td>${NBR_MONTHS[i]}</td>${catCells(r)}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td><td class="num">${nbrMoneyCell(mineLast[i].total)}</td><td class="num">${yoy(r.total, mineLast[i].total)}</td></tr>`).join('')}
         <tr class="nbr-grand"><td>Total</td>${catCells(mt)}<td class="num b">${nbrMoneyCell(mt.total)}</td><td class="num">${nbrMoneyCell(mt.npw)}</td><td class="num">${nbrMoneyCell(mt.excl)}</td><td class="num">${nbrMoneyCell(mt.banked)}</td><td class="num">${nbrMoneyCell(nbrSum(mineLast).total)}</td><td class="num">${yoy(mt.total, nbrSum(mineLast).total)}</td></tr></tbody></table></div>
     <h3 class="nbr-h3">${Y} by quarter</h3>
-    <div class="nml-table-wrap"><table class="nml-table nbr-table">
+    <div class="nbr-mob">${nbrMobGroup('', qs.map(({q,r,l})=> nbrMobRow({k:'m:q'+q, cls: q===selQ ? 'm-sel' : '', name:`Q${q+1} <span class="nbr-note">${NBR_MONTHS[q*3]}–${NBR_MONTHS[q*3+2]}</span>`, sub:mobBanked(r.banked), main:nbrMoneyCell(r.total), side: r.total && l.total ? `${yoy(r.total, l.total)} on ${Y-1}` : '', det:myDet(r, l)})).join(''))}</div>
+    <div class="nml-table-wrap nbr-desk"><table class="nml-table nbr-table">
       <thead><tr><th>Quarter</th>${catHead}<th class="num">Total written</th><th class="num">NPW</th><th class="num">Exc NPW</th><th class="num">Banked</th><th class="num">Written ${Y-1}</th><th class="num">Year on year</th></tr></thead>
       <tbody>${qs.map(({q,r,l})=> `<tr class="${q===selQ ? 'nbr-sel' : ''}"><td>Q${q+1} <span class="nbr-note">${NBR_MONTHS[q*3]}–${NBR_MONTHS[q*3+2]}</span></td>${catCells(r)}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td><td class="num">${nbrMoneyCell(l.total)}</td><td class="num">${yoy(r.total, l.total)}</td></tr>`).join('')}</tbody></table></div>
     <h3 class="nbr-h3">By year</h3>
-    ${yearsMine.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table">
+    ${yearsMine.length ? `<div class="nbr-mob">${nbrMobGroup('', yearsMine.map(y=>{ const r = yr(y), l = yr(y-1); return nbrMobRow({k:'m:y'+y, cls: y===Y ? 'm-sel' : '', name:String(y), sub:mobBanked(r.banked), main:nbrMoneyCell(r.total), side: r.total && l.total ? `${yoy(r.total, l.total)} on ${y-1}` : '', det:myDet(r, l, y-1)}); }).join(''))}</div>
+    <div class="nml-table-wrap nbr-desk"><table class="nml-table nbr-table">
       <thead><tr><th>Year</th>${catHead}<th class="num">Total written</th><th class="num">NPW</th><th class="num">Exc NPW</th><th class="num">Banked</th><th class="num">Year on year</th></tr></thead>
       <tbody>${yearsMine.map(y=>{ const r = yr(y), l = yr(y-1); return `<tr class="${y===Y ? 'nbr-sel' : ''}"><td>${y}</td>${catCells(r)}<td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrMoneyCell(r.npw)}</td><td class="num">${nbrMoneyCell(r.excl)}</td><td class="num">${nbrMoneyCell(r.banked)}</td><td class="num">${yoy(r.total, l.total)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="nml-empty">Nothing yet.</div>'}`;
     }
   }
   // Which part of the Salesboard is showing (remembered on this device). MAPAs see Written and Banked.
   if(!nbrUI.boardTab){ try{ nbrUI.boardTab = localStorage.getItem('plt_boardTab') || ''; }catch(e){ nbrUI.boardTab = ''; } }
-  const boardTabs = [['written','Written'], ['banked','Banked'], ...(view ? [] : [['year', `${Y} by month`], ['prod', `${Y} written by product`], ['advs', 'Advisor month by month']])];
+  // On a phone each is its own screen, with shorter names; MAPAs get their own figures as a third screen there
+  // (on a bigger screen they're underneath, and "mine" shows Written).
+  const boardTabs = [['written','Written','Written'], ['banked','Banked','Banked'], ...(view ? [['mine','My figures','My figures']] : [['year', `${Y} by month`, 'By month'], ['prod', `${Y} written by product`, 'By product'], ['advs', 'Advisor month by month', 'Advisors']])];
   const tab = boardTabs.some(([k])=> k===nbrUI.boardTab) ? nbrUI.boardTab : 'written';
+  const mineTab = tab==='mine', offMine = mineTab ? 'nbr-desk' : '';
+  const openRows = new Set([...el.querySelectorAll('details[data-mk][open]')].map(d=> d.dataset.mk));
   const empty = view || quick ? !Object.keys((NBR_SUMMARY && NBR_SUMMARY.w) || {}).length && !Object.keys((NBR_SUMMARY && NBR_SUMMARY.bank) || {}).length : !Object.keys(NBR_ENT).length && !Object.keys(NBR_BIB).length;
   el.innerHTML = `
     ${view && !(NBR_SUMMARY && NBR_SUMMARY.updatedAt) ? `<div class="nbr-callout">The Salesboard hasn't been filled in yet. It fills in automatically the next time someone in Admin or Management logs in, so check back shortly.</div>` : empty && view ? `<div class="nbr-callout">Nothing on the Salesboard yet.</div>` : ''}
@@ -15976,31 +16099,54 @@ function renderNbrBoard(){
       ${quick ? `<span class="field-hint">Loading the latest details…</span>` : ''}
       ${!view && !quick && nbrShare && nbrShare.at ? `<span class="field-hint">Shared with MAPAs and protection advisers · ${esc(new Date(nbrShare.at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}))}</span>` : ''}
     </div>
-    ${view ? `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} · everyone</h2>` : ''}
-    <div class="stat-grid ${view ? 'nbr-stat-2' : ''}">
+    ${view ? `<h2 class="nbr-h2 ${offMine}">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} · everyone</h2>` : ''}
+    <div class="stat-grid ${view ? 'nbr-stat-2' : ''} ${offMine}">
       <div class="stat-card accent"><div class="sv">${nbrMoney(sel.total)}</div><div class="sl">${view ? 'Everyone wrote' : 'Written'} in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
       <div class="stat-card good"><div class="sv">${nbrMoney(sel.banked)}</div><div class="sl">${view ? 'Everyone banked' : 'Banked'} in ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}</div></div>
       ${view ? '' : `<div class="stat-card"><div class="sv">${nbrMoney(ytd.total)}</div><div class="sl">Written ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y} · ${nbrPct(yt.total, T.written)} of target${lytd.total ? ` · ${yoy(ytd.total, lytd.total)} on ${Y-1}` : ''}</div></div>
       <div class="stat-card"><div class="sv">${nbrMoney(ytd.banked)}</div><div class="sl">Banked ${Y===now.getFullYear() ? 'so far this year' : 'in '+Y} · ${nbrPct(yt.banked, T.banked)} of target</div></div>
       <div class="stat-card warn"><div class="sv">${nbrMoney(yt.npw)}</div><div class="sl">NPW in ${Y}</div></div>`}
     </div>
-    <div class="cond-seg nbr-board-tabs" role="group" aria-label="Salesboard view">${boardTabs.map(([k, l])=> `<button type="button" data-board-tab="${k}" aria-pressed="${k===tab}">${esc(l)}</button>`).join('')}</div>
+    <div class="cond-seg nbr-board-tabs" role="group" aria-label="Salesboard view">${boardTabs.map(([k, l, short])=> `<button type="button" data-board-tab="${k}" aria-pressed="${k===tab}" class="${k==='mine' ? 'nbr-mob' : ''} ${mineTab && k==='written' ? 'desk-on' : ''}"><span class="nbr-desk">${esc(l)}</span><span class="nbr-mob">${esc(short)}</span></button>`).join('')}</div>
     ${tab==='banked' ? `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} banked by advisor</h2>
     <p class="field-hint nbr-bib-note">What came in during ${NBR_MONTHS_LONG[nbrUI.boardMonth-1]}, by product: the amount paid on each Bible line (and each part payment), in the month of its date paid. Wills at the net value (÷1.2).</p>
-    ${bankTable}` : ''}
-    ${tab!=='written' ? '' : `${view ? '' : `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} by advisor</h2>`}
+    ${bankTable}${bankMob}` : ''}
+    ${tab!=='written' && !mineTab ? '' : `<div class="${offMine}">${view ? '' : `<h2 class="nbr-h2">${NBR_MONTHS_LONG[nbrUI.boardMonth-1]} ${Y} by advisor</h2>`}
     ${fromBibleNames.length ? `<p class="field-hint nbr-bib-note">Written figures for ${esc(fromBibleNames.length > 4 ? fromBibleNames.length+' advisors' : fromBibleNames.join(', '))} in ${Y} come from the Bible, as there's no NBR for them that year.</p>` : ''}
-    ${boardTable}`}
-    ${view ? myHtml : tab==='year' ? `${unassigned.banked ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
+    ${boardTable}${mineTab ? '' : boardMob}</div>`}
+    ${view ? `<div class="${mineTab ? '' : 'nbr-desk'}">${myHtml}</div>` : tab==='year' ? `${unassigned.banked ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
     <h2 class="nbr-h2">${Y} by month</h2>
-    ${yearTable}` : tab==='prod' ? `<h2 class="nbr-h2">${Y} written by product</h2>
-    ${prodTable}` : tab==='advs' ? `<h2 class="nbr-h2">Each advisor by month</h2>
-    <div class="nbr-adv-cards">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>` : ''}`;
-  el.querySelectorAll('[data-board-tab]').forEach(b=> b.addEventListener('click', ()=>{ nbrUI.boardTab = b.dataset.boardTab; try{ localStorage.setItem('plt_boardTab', nbrUI.boardTab); }catch(e){} renderNbrBoard(); }));
+    ${yearTable}${yearMob}` : tab==='prod' ? `<h2 class="nbr-h2">${Y} written by product</h2>
+    ${prodTable}${prodMob}` : tab==='advs' ? `<h2 class="nbr-h2">Each advisor by month</h2>
+    <div class="nbr-adv-cards nbr-desk">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>${advCards ? advMob : '<div class="nml-empty nbr-mob">No advisors yet.</div>'}` : ''}`;
+  if(openRows.size) el.querySelectorAll('details[data-mk]').forEach(d=>{ if(d.dataset.mk && openRows.has(d.dataset.mk)) d.open = true; });
+  el.querySelectorAll('[data-board-tab]').forEach(b=> b.addEventListener('click', ()=>{
+    nbrUI.boardTab = b.dataset.boardTab; try{ localStorage.setItem('plt_boardTab', nbrUI.boardTab); }catch(e){}
+    renderNbrBoard();
+    // On a phone it's a new screen, so start it from the top.
+    if(window.matchMedia(NBR_PHONE_UP).matches) window.scrollTo(0, 0);
+  }));
   document.getElementById('nbrBoardYear').addEventListener('change', e=>{ nbrUI.boardYear = +e.target.value; nbrUI.boardMonth = +e.target.value===now.getFullYear() ? now.getMonth()+1 : 12; renderNbrBoard(); });
   document.getElementById('nbrBoardMonth').addEventListener('change', e=>{ nbrUI.boardMonth = +e.target.value; renderNbrBoard(); });
   const bt = el.querySelector('.nbr-board-table'); if(bt) stickyHead(bt.parentElement);
+  if(!el.dataset.fit){ el.dataset.fit = '1'; el.addEventListener('toggle', ()=> nbrFitBoard(), true); }
+  nbrFitBoard();
 }
+/* A phone on its side: shrink each Salesboard table until all of it fits across the screen. */
+const NBR_PHONE_UP = '(max-width:700px) and (orientation:portrait)', NBR_PHONE_SIDE = '(orientation:landscape) and (max-height:520px)';
+function nbrFitBoard(){
+  const el = document.getElementById('nbrBoardBody'); if(!el || !el.firstChild) return;
+  const side = window.matchMedia(NBR_PHONE_SIDE).matches;
+  el.querySelectorAll('.nml-table-wrap > table').forEach(t=>{
+    t.style.zoom = '';
+    const w = t.parentElement.clientWidth; if(!side || !w) return;
+    const full = t.offsetWidth;
+    if(full > w + 1) t.style.zoom = String(Math.max(.4, Math.floor(w / full * 1000) / 1000));
+  });
+  STICKY_HEADS.forEach(s=>{ s.sized = false; stickyHeadPlace(s); });
+}
+let nbrFitRaf = 0;
+['resize', 'orientationchange'].forEach(ev=> window.addEventListener(ev, ()=>{ if(!nbrFitRaf) nbrFitRaf = requestAnimationFrame(()=>{ nbrFitRaf = 0; nbrFitBoard(); }); }));
 
 /* The top bar: when a section's tabs don't fit beside the logo and buttons, put them on their own row. */
 function fitTopbar(){
@@ -16034,14 +16180,17 @@ function stickyHeadPlace(s){
   const r = s.table.getBoundingClientRect(), h = s.table.tHead.getBoundingClientRect().height;
   const show = !!s.wrap.offsetParent && r.top < top && r.bottom > top + 2;
   s.box.classList.toggle('on', show); if(!show){ s.sized = false; return; }
+  // A table shrunk to fit a phone on its side (nbrFitBoard): the copy is shrunk the same.
+  const z = parseFloat(s.table.style.zoom) || 1;
   if(!s.sized){
     const src = s.table.tHead.querySelectorAll('th'), dst = s.t.querySelectorAll('th');
-    src.forEach((th,i)=>{ const w = th.getBoundingClientRect().width + 'px'; if(dst[i]) Object.assign(dst[i].style, {width:w, minWidth:w, maxWidth:w}); });
-    s.t.style.width = r.width + 'px'; s.sized = true;
+    s.t.style.zoom = z===1 ? '' : String(z);
+    src.forEach((th,i)=>{ const w = th.getBoundingClientRect().width / z + 'px'; if(dst[i]) Object.assign(dst[i].style, {width:w, minWidth:w, maxWidth:w}); });
+    s.t.style.width = r.width / z + 'px'; s.sized = true;
   }
   const w = s.wrap.getBoundingClientRect();
   Object.assign(s.box.style, {top: Math.min(top, r.bottom - h) + 'px', left: (w.left + s.wrap.clientLeft) + 'px', width: s.wrap.clientWidth + 'px'});
-  s.t.style.transform = `translateX(${-s.wrap.scrollLeft}px)`;
+  s.t.style.transform = `translateX(${-s.wrap.scrollLeft / z}px)`;
 }
 function stickyHeadsAll(resized){ STICKY_HEADS.slice().forEach(s=>{ if(resized) s.sized = false; stickyHeadPlace(s); }); }
 let stickyRaf = 0;

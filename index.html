@@ -776,6 +776,12 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-bib-wrap{max-height:calc(100vh - 150px); overflow:auto;}
 .nbr-bib-wrap thead th{position:sticky; top:0; z-index:1; background:var(--surface); box-shadow:inset 0 -1px 0 var(--border);}
 .nbr-bib-table th,.nbr-bib-table td{padding:7px 7px;}
+.nbr-bib-table tr.nbr-colf th{padding:0 4px 7px; text-transform:none; letter-spacing:0;}
+.nbr-colf select{width:100%; min-width:64px; max-width:180px; padding:4px 6px; border:1px solid var(--border-2); border-radius:7px; background:var(--surface); color:var(--text-muted); font:inherit; font-size:11.5px; font-weight:500;}
+.nbr-colf select.on{border-color:var(--brand); background:var(--brand-tint); color:var(--brand); font-weight:700;}
+.nbr-colf-note{margin:-6px 0 10px;}
+.nbr-bib-table tr.bl-more td{border-top:1px dashed var(--border-2);}
+.nbr-bib-table td.nbr-bib-addr{min-width:140px; max-width:220px; font-size:12px; color:var(--text-muted);}
 .nbr-bib-table td.wrap{white-space:normal; line-height:1.3;}
 .nbr-bib-table td.nbr-bib-client{min-width:140px;}
 .nbr-bib-st{white-space:nowrap;}
@@ -12271,7 +12277,7 @@ const AIQ_SETS = {
       lender:x.lender || '', proc_fee:aiqNum(x.proc), mums_fee:aiqNum(x.mums), protection:aiqNum(x.prot), sols_ref:aiqNum(x.sols), total:nbrRound(nbrNpwTotal(x))})),
   },
   bible_lines: {
-    about: 'The Bible: one line per piece of income (a fee) with what has been paid. Products include Proc Fee, Prod Tfr, BTL PT, Remo, Mums Fee, Sols Fee, Val Fee, Life Ins, Gen Ins (B&C), Commercial (C …). status is Written, Offered, Completed, Part-Paid, Paid or NPW. The financial year runs March to February (FY26 = Mar 2026 to Feb 2027). For money banked use bible_payments.',
+    about: 'The Bible: one line per piece of income (a fee) with what has been paid. A fee that is more than one row in the Excel Bible (a Mums Fee Initial and Comp, or Sols PUR and SALE) is one line here; bible_fee_parts has a row for each. Products include Proc Fee, Prod Tfr, BTL PT, Remo, Mums Fee, Sols Fee, Val Fee, Life Ins, Gen Ins (B&C), Commercial (C …). status is Written, Offered, Completed, Part-Paid, Paid or NPW. The financial year runs March to February (FY26 = Mar 2026 to Feb 2027). For money banked use bible_payments.',
     start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
     fields: [['advisor','t','Advisor (as on the Salesboard)'], ['office','t','Office'], ['client','t','Client'], ['product','t','Product'], ['provider','t','Lender / provider'],
       ['lead_source','t','Source'], ['amount','n','The whole fee £ (a Mums Fee paid in parts is one line here: see bible_fee_parts)'], ['month_written','m','Month written'], ['status','t','Written, Offered, Completed, Part-Paid, Paid or NPW'],
@@ -15536,7 +15542,7 @@ function nbrBibVisible(v){ const o = {}; Object.entries(v || {}).forEach(([k, l]
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
 const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
-  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
+  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibCol:{}, bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
@@ -16893,7 +16899,70 @@ function nbrBibFys(){
   Object.values(NBR_BIB).forEach(l=>{ if(l && l.month) s.add(nbrFyOf(l.month)); });
   return [...s].sort().reverse();
 }
-function nbrBibFiltered(){
+/* A dropdown under each column of All lines, like Excel's filters: pick a value and only the lines with it show.
+   Each column gives a line's value(s) as text; dates go by month. The choices in each list are the values in the
+   lines the other filters leave, with how many. */
+const NBR_BLANK = '(blank)';
+function nbrBibRows(l){
+  const ex = nbrLineExtraPays(l), k = l.kind || nbrProdKind(l.product), client = k==='mums' || k==='sols' || k==='val', mums = k==='mums';
+  const ownAmt = nbrRound(n0(l.amount) - ex.reduce((t,x)=> t + n0(x.amount), 0));
+  // The Excel Bible's row for the line can be less than the fee (e.g. its £100 Initial on a £295 NBR case): that row, then the rest.
+  const bib = !ex.length && n0(l.bibAmt) > 0 && n0(l.bibAmt) < ownAmt - 0.005 ? nbrRound(n0(l.bibAmt)) : null;
+  const ownProv = l.provider || '', restProv = mums && nbrPartOf(l.provider, l.when)==='Initial' ? 'Comp' : ownProv;
+  const parts = [{key:'own', provider:ownProv, amount: bib!=null ? bib : ownAmt, when:l.when, how:l.how, datePaid:l.datePaid, paid:l.paid}];
+  if(bib!=null) parts.push({key:'rest', provider:restProv, amount:nbrRound(ownAmt - bib), when:'', how:'', datePaid:'', paid:null, notInBible:true});
+  ex.forEach(x=> parts.push({key:x.k, provider: mums ? (nbrPartLabel(x.part) || nbrPartOf('', x.when) || restProv) : ownProv, amount:nbrRound(n0(x.amount)), when:x.when, how:x.how, datePaid:x.datePaid, paid:x.paid}));
+  if(parts.length===1) return [{id:l.id, l, ...parts[0], amount:l.amount, st:nbrBibStatus(l), owed: l.npw ? 0 : nbrLineOutstanding(l), n:1, i:0}];
+  return parts.map((x, i)=>{
+    const got = !!x.datePaid || n0(x.paid) > 0;
+    const owed = l.npw ? 0 : !got ? Math.max(0, x.amount) : client && n0(x.paid) > 0 ? Math.max(0, nbrRound(x.amount - n0(x.paid))) : 0;
+    const st = l.npw ? 'npw' : got ? (owed >= 0.01 ? 'part' : 'paid') : l.compDate ? 'comp' : l.offerDate ? 'offer' : 'pipe';
+    return {id:l.id, l, ...x, st, owed, n:parts.length, i};
+  });
+}
+// The lines' rows the top filters leave (Status is a row's own status).
+function nbrBibBaseRows(){ const st = nbrUI.bibStatus; return nbrBibBase().flatMap(nbrBibRows).filter(r=> !st || r.st===st); }
+const nbrColMonth = d=> /^\d{4}-\d{2}/.test(d||'') ? nbrYmLabel(String(d).slice(0,7)) : NBR_BLANK;
+const nbrColMoney = v=> v==null || v==='' ? NBR_BLANK : nbrMoney(v);
+const nbrTxt = v=> String(v==null ? '' : v).trim();
+const nbrColTxt = v=> nbrTxt(v) || NBR_BLANK;
+// [key, heading, value(s) for the filter, how its list sorts, the cell, header class]
+const NBR_BIB_COLS = [
+  ['client', 'Client', r=> [nbrColTxt(r.l.client)], '', r=> `<td class="wrap nbr-bib-client"><b>${esc(r.l.client||'')}</b>${r.n > 1 ? ` <span class="nbr-tag" title="One of ${r.n} rows for this fee (£${nbrRound(r.l.amount).toFixed(2)} in all)">${r.i+1} of ${r.n}</span>` : ''}${r.notInBible ? ' <span class="nbr-tag nbr-tag-warn" title="The rest of the fee on the NBR; the Excel Bible doesn\'t have a row for it yet">not in the Excel Bible yet</span>' : ''}</td>`],
+  ['office', 'X', r=> [nbrColTxt(r.l.office)], '', r=> `<td>${esc(r.l.office||'')}</td>`],
+  ['adv', 'Adv', r=> [r.l.adv ? nbrAdvName(r.l.adv) : NBR_BLANK], '', r=> `<td>${esc(r.l.adv ? nbrAdvName(r.l.adv) : '—')}</td>`],
+  ['dept', 'Dept / ref', r=> [nbrColTxt(r.l.dept)], '', r=> `<td class="wrap">${esc(r.l.dept||'')}</td>`],
+  ['app', 'App date', r=> [nbrColMonth(r.l.appDate)], 'ym', r=> `<td>${nbrShortDate(r.l.appDate)}</td>`],
+  ['offer', 'Offer / terms', r=> [nbrColMonth(r.l.offerDate)], 'ym', r=> `<td>${nbrShortDate(r.l.offerDate)}</td>`],
+  ['comp', 'Comp date', r=> [nbrColMonth(r.l.compDate)], 'ym', r=> `<td>${nbrShortDate(r.l.compDate)}</td>`],
+  ['switch', 'Switch date', r=> [nbrColMonth(r.l.switchDate)], 'ym', r=> `<td>${nbrShortDate(r.l.switchDate)}</td>`],
+  ['provider', 'Provider', r=> [nbrColTxt(r.provider)], '', r=> `<td class="wrap">${esc(r.provider||'')}</td>`],
+  ['product', 'Product', r=> [nbrColTxt(r.l.product)], '', r=> `<td>${esc(r.l.product||'')}</td>`],
+  ['source', 'Income source', r=> [nbrColTxt(r.l.source)], '', r=> `<td class="wrap">${esc(r.l.source||'')}</td>`],
+  ['amount', 'Amount', r=> [nbrColMoney(r.amount)], 'money', r=> `<td class="num b">${nbrMoneyCell(r.amount)}</td>`, 'num'],
+  ['when', 'When', r=> [nbrColTxt(r.when)], '', r=> `<td class="wrap">${esc(r.when||'')}</td>`],
+  ['mumsType', 'Mums fee type', r=> [nbrColTxt(r.l.mumsType)], '', r=> `<td>${esc(r.l.mumsType||'')}</td>`],
+  ['how', 'How', r=> [nbrColTxt(r.how)], '', r=> `<td class="wrap">${esc(r.how||'')}</td>`],
+  ['datePaid', 'Date paid', r=> [r.datePaid ? nbrColMonth(r.datePaid) : 'Not paid'], 'ym', r=> `<td>${nbrShortDate(r.datePaid)}</td>`],
+  ['month', 'Period', r=> [r.l.month ? nbrYmLabel(r.l.month) : NBR_BLANK], 'ym', r=> `<td>${esc(r.l.month ? nbrYmLabel(r.l.month) : '—')}</td>`],
+  ['fy', 'Fin year', r=> [r.l.month ? nbrFyOf(r.l.month) : NBR_BLANK], '', r=> `<td>${esc(r.l.month ? nbrFyOf(r.l.month) : '')}</td>`],
+  ['npw', 'NPW?', r=> [r.l.npw ? 'NPW' : NBR_BLANK], '', r=> `<td>${r.l.npw ? 'NPW' : ''}</td>`],
+  ['paid', 'Paid', r=> [n0(r.paid) > 0 ? nbrMoney(r.paid) : NBR_BLANK], 'money', r=> `<td class="num">${nbrMoneyCell(r.paid)}</td>`, 'num'],
+  ['life', 'Life', r=> [nbrColTxt(r.l.life)], '', r=> `<td>${esc(r.l.life||'')}</td>`],
+  ['address', 'Address', r=> [nbrColTxt(r.l.address)], '', r=> `<td class="wrap nbr-bib-addr">${esc(r.l.address||'')}</td>`],
+  ['status', 'Status', r=> [BIB_STATUS[r.st][0]], '', r=> `<td class="nbr-bib-st"><span class="bl-chip bl-chip-${r.st}">${BIB_STATUS[r.st][0]}</span>${r.st!=='paid' && r.st!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(r.l.id)}" title="${r.st==='part' ? 'Add the next payment' : 'Mark as paid'}">${r.st==='part' ? '+ Payment' : 'Paid'}</button>` : ''}</td>`],
+  ['owed', 'Outstanding', r=> [r.owed < 0.01 ? 'None' : nbrMoney(r.owed)], 'money', r=> `<td class="num ${r.st==='part' ? 'nbr-owed' : ''}">${r.st==='npw' ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(r.owed)}</td>`, 'num'],
+];
+function nbrBibColSort(kind){
+  const key = v=> v===NBR_BLANK || v==='Not paid' || v==='None' ? -Infinity : kind==='money' ? n0(String(v).replace(/[£,]/g, '')) : kind==='ym' ? (()=>{ const m = String(v).match(/^(\w{3})\w* (\d{4})$/); return m ? +m[2]*12 + NBR_MONTHS.indexOf(m[1]) : 0; })() : 0;
+  return (a, b)=> (key(a) - key(b)) || String(a).localeCompare(String(b));
+}
+function nbrBibColPass(r, except){
+  const cf = nbrUI.bibCol || {};
+  return NBR_BIB_COLS.every(([k,, val])=> k===except || !cf[k] || val(r).includes(cf[k]));
+}
+function nbrBibFiltered(){ return nbrBibBaseRows().filter(r=> nbrBibColPass(r)); }
+function nbrBibBase(){
   const f = nbrUI, q = f.bibSearch.toLowerCase();
   return Object.entries(NBR_BIB).filter(([,l])=>{
     if(!l) return false;
@@ -16901,7 +16970,6 @@ function nbrBibFiltered(){
     if(!q && f.bibFY && (l.month ? nbrFyOf(l.month) : '')!==f.bibFY && !(f.bibFY==='none' && !l.month)) return false;
     if(!q && f.bibMonth && l.month!==f.bibMonth) return false;
     if(f.bibAdv && (l.adv||'')!==(f.bibAdv==='none' ? '' : f.bibAdv)) return false;
-    if(f.bibStatus && nbrBibStatus(l)!==f.bibStatus) return false;
     if(f.bibProduct && (l.product||'')!==f.bibProduct) return false;
     if(q && ![l.client, l.provider, l.source, l.address, l.dept, l.product].some(v=> String(v||'').toLowerCase().includes(q))) return false;
     return true;
@@ -17102,14 +17170,23 @@ function renderNbrBible(){
   const fys = nbrBibFys();
   if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = fys[0];
   const fy = nbrUI.bibFY, fyMonths = fy==='none' ? [] : nbrFyMonths(fy);
-  const lines = nbrBibFiltered().sort((a,b)=> (a.month||'').localeCompare(b.month||'') || nbrAdvName(a.adv).localeCompare(nbrAdvName(b.adv)) || (a.client||'').localeCompare(b.client||''));
-  const by = {}; lines.forEach(l=>{ const s = nbrBibStatus(l); (by[s] || (by[s] = {n:0, amt:0, paid:0, owed:0})); by[s].n++; by[s].amt += n0(l.amount); by[s].paid += nbrLinePaidTotal(l); by[s].owed += nbrLineOutstanding(l); });
+  // One row per Excel Bible row: a line with payment lines is a row per part.
+  const lines = nbrBibFiltered().sort((a,b)=> (a.l.month||'').localeCompare(b.l.month||'') || nbrAdvName(a.l.adv).localeCompare(nbrAdvName(b.l.adv)) || (a.l.client||'').localeCompare(b.l.client||'') || String(a.id).localeCompare(String(b.id)) || a.i - b.i);
+  // Column filters: each list has the values in the lines the other filters leave, with how many.
+  const cf = nbrUI.bibCol || (nbrUI.bibCol = {}), base = nbrBibBaseRows(), colOn = Object.values(cf).some(Boolean);
+  const colFilterRow = `<tr class="nbr-colf">${NBR_BIB_COLS.map(([k, label, val, kind])=>{
+    const n = {}; base.forEach(r=>{ if(!nbrBibColPass(r, k)) return; val(r).forEach(v=>{ n[v] = (n[v]||0) + 1; }); });
+    if(cf[k] && !n[cf[k]]) n[cf[k]] = 0;
+    const opts = Object.keys(n).sort(nbrBibColSort(kind));
+    return `<th><select data-bib-col="${k}" aria-label="Filter ${esc(label)}" class="${cf[k] ? 'on' : ''}" title="${cf[k] ? esc(label+': '+cf[k]) : 'Filter '+esc(label)}"><option value="">All</option>${opts.map(v=> `<option value="${esc(v)}" ${v===cf[k] ? 'selected' : ''}>${esc(v)} (${n[v]})</option>`).join('')}</select></th>`; }).join('')}</tr>`;
+  const by = {}; lines.forEach(r=>{ const s = r.st; (by[s] || (by[s] = {n:0, amt:0, paid:0, owed:0})); by[s].n++; by[s].amt += n0(r.amount); by[s].paid += n0(r.paid); by[s].owed += r.owed; });
   const products = [...new Set(Object.values(NBR_BIB).map(l=> l && l.product).filter(Boolean))].sort();
   const noMonth = Object.values(NBR_BIB).some(l=> l && !l.month), noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
   const shown = lines.slice(0, nbrUI.bibShown);
   const tableHtml = lines.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table">
-    <thead><tr><th>Period</th><th>Adv</th><th>Client</th><th>App</th><th>Offer / terms</th><th>Comp</th><th>Switch</th><th>Provider</th><th>Product</th><th>Income source</th><th class="num">Amount</th><th>When / how</th><th>Date paid</th><th class="num">Paid</th><th>Status</th><th class="num">Outstanding</th></tr></thead>
-    <tbody>${shown.map(l=>{ const s = nbrBibStatus(l); return `<tr class="nbr-click bl-${s}" data-nbr-line="${esc(l.id)}"><td>${esc(l.month ? nbrYmLabel(l.month) : '—')}</td><td>${esc(l.adv ? nbrAdvName(l.adv) : '—')}${l.office ? ` <span class="nbr-office">${esc(l.office)}</span>` : ''}</td><td class="wrap nbr-bib-client"><b>${esc(l.client||'')}</b>${l.life ? ` <span class="nbr-tag">Life ${esc(l.life)}</span>` : ''}</td><td>${nbrShortDate(l.appDate)}</td><td>${nbrShortDate(l.offerDate)}</td><td>${nbrShortDate(l.compDate)}</td><td>${nbrShortDate(l.switchDate)}</td><td class="wrap">${esc(l.provider||'')}</td><td>${esc(l.product||'')}</td><td class="wrap">${esc(l.source||'')}</td><td class="num b">${nbrMoneyCell(l.amount)}</td><td class="wrap">${esc([l.when, l.how].filter(Boolean).join(' · '))}</td><td>${nbrLineExtraPays(l).length ? nbrLinePays(l).map(x=> x.datePaid ? nbrShortDate(x.datePaid) : '<span class="nbr-zero">to come</span>').join('<br>') : nbrShortDate(l.datePaid)}</td><td class="num">${nbrLineExtraPays(l).length ? nbrLinePays(l).map(x=> nbrMoneyCell(x.paid)).join('<br>') : nbrMoneyCell(l.paid)}</td><td class="nbr-bib-st"><span class="bl-chip bl-chip-${s}">${BIB_STATUS[s][0]}</span>${s!=='paid' && s!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(l.id)}" title="${s==='part' ? 'Add the next payment' : 'Mark as paid'}">${s==='part' ? '+ Payment' : 'Paid'}</button>` : ''}</td><td class="num ${s==='part' ? 'nbr-owed' : ''}">${s==='npw' ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(nbrLineOutstanding(l))}</td></tr>`; }).join('')}</tbody></table></div>
+    <thead><tr>${NBR_BIB_COLS.map(c=> `<th class="${c[5]||''}">${esc(c[1])}</th>`).join('')}</tr>
+    ${colFilterRow}</thead>
+    <tbody>${shown.map(r=> `<tr class="nbr-click bl-${r.st} ${r.n > 1 && r.i ? 'bl-more' : ''}" data-nbr-line="${esc(r.l.id)}">${NBR_BIB_COLS.map(c=> c[4](r)).join('')}</tr>`).join('')}</tbody></table></div>
     ${lines.length > shown.length ? `<div class="nbr-more"><button type="button" class="btn btn-secondary btn-sm" id="nbrBibMore">Show ${Math.min(NBR_PAGE, lines.length - shown.length)} more (${lines.length - shown.length} not shown)</button></div>` : ''}`
     : '<div class="nml-empty">No Bible lines match.</div>';
 
@@ -17125,11 +17202,11 @@ function renderNbrBible(){
       : `<div class="nml-empty">Nothing paid in ${esc(fy)} yet.</div>`;
   }
   // By advisor and product, for the lines matching the filters (the Bible's pipe / offered / completed pivots).
-  const pv = {}, pvProd = new Set(); lines.forEach(l=>{ const p = l.product || '(none)'; pvProd.add(p); const a = pv[l.adv||''] || (pv[l.adv||''] = {}); a[p] = (a[p]||0) + n0(l.amount); });
+  const pv = {}, pvProd = new Set(); lines.forEach(r=>{ const l = r.l, p = l.product || '(none)'; pvProd.add(p); const a = pv[l.adv||''] || (pv[l.adv||''] = {}); a[p] = (a[p]||0) + n0(r.amount); });
   const pvCols = [...pvProd].sort(), pvRows = Object.keys(pv).sort((a,b)=> nbrAdvName(a).localeCompare(nbrAdvName(b)));
   const pivotHtml = pvRows.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Adv</th>${pvCols.map(p=> `<th class="num">${esc(p)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
       ${pvRows.map(id=>{ const r = pvCols.map(p=> pv[id][p]||0); return `<tr><td>${esc(id ? nbrAdvName(id) : '(no advisor)')}</td>${r.map(v=> `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.reduce((s,v)=> s+v, 0))}</td></tr>`; }).join('')}
-      <tr class="nbr-grand"><td>Total</td>${pvCols.map(p=> `<td class="num">${nbrMoneyCell(pvRows.reduce((s,id)=> s + (pv[id][p]||0), 0))}</td>`).join('')}<td class="num b">${nbrMoneyCell(lines.reduce((s,l)=> s + n0(l.amount), 0))}</td></tr></tbody></table></div>` : '';
+      <tr class="nbr-grand"><td>Total</td>${pvCols.map(p=> `<td class="num">${nbrMoneyCell(pvRows.reduce((s,id)=> s + (pv[id][p]||0), 0))}</td>`).join('')}<td class="num b">${nbrMoneyCell(lines.reduce((s,r)=> s + n0(r.amount), 0))}</td></tr></tbody></table></div>` : '';
 
   const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])].concat(noAdv ? [['none','(no advisor)']] : []);
   const junk = nbrBibJunk();
@@ -17147,7 +17224,8 @@ function renderNbrBible(){
     </div>
     <div class="stat-grid nbr-status-cards">${Object.entries(BIB_STATUS).map(([k,v])=>{ const s = by[k] || {n:0, amt:0, paid:0, owed:0}; return `<button type="button" class="stat-card nbr-sc bl-card-${k} ${nbrUI.bibStatus===k ? 'on' : ''}" data-nbr-status="${k}"><div class="sv">${nbrMoney(k==='paid' ? s.paid : k==='part' ? s.owed : s.amt)}</div><div class="sl">${esc(k==='part' ? 'Part paid: still to come' : v[1])} · ${s.n} line${s.n===1?'':'s'}</div></button>`; }).join('')}</div>
     ${nbrUI.bibSearch ? `<p class="field-hint" style="margin:-8px 0 10px;">Searching every financial year for "${esc(nbrUI.bibSearch)}".</p>` : ''}
-    ${tableHtml}
+    ${colOn ? `<p class="field-hint nbr-colf-note">Column filters: ${NBR_BIB_COLS.filter(([k])=> cf[k]).map(([k, label])=> `<b>${esc(label)}</b> = ${esc(cf[k])}`).join(' · ')} · ${lines.length} line${lines.length===1 ? '' : 's'} <button type="button" class="linkish" id="nbrColClear">Clear column filters</button></p>` : ''}
+    ${lines.length || !colOn ? tableHtml : `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table"><thead>${colFilterRow}</thead></table></div><div class="nml-empty">No Bible lines match.</div>`}
     ${fy!=='none' ? `<h2 class="nbr-h2">Banked in ${esc(nbrFyLabel(fy))} – by the month paid</h2>${bankedHtml}` : ''}
     ${pivotHtml ? `<h2 class="nbr-h2">These lines by advisor and product</h2>${pivotHtml}` : ''}`;
   const set = (id, key, num)=> document.getElementById(id).addEventListener('change', e=>{ nbrUI[key] = e.target.value; if(key==='bibFY') nbrUI.bibMonth = ''; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); });
@@ -17155,6 +17233,9 @@ function renderNbrBible(){
   let t = null;
   document.getElementById('nbrBibSearch').addEventListener('input', e=>{ clearTimeout(t); t = setTimeout(()=>{ nbrUI.bibSearch = e.target.value.trim(); nbrUI.bibShown = NBR_PAGE; renderNbrBible(); const s = document.getElementById('nbrBibSearch'); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }, 250); });
   document.getElementById('nbrAddLine').addEventListener('click', ()=> openNbrLine(null));
+  el.querySelectorAll('[data-bib-col]').forEach(sel=> sel.addEventListener('change', ()=>{ nbrUI.bibCol[sel.dataset.bibCol] = sel.value; nbrUI.bibShown = NBR_PAGE; renderNbrBible();
+    const again = document.querySelector(`[data-bib-col="${sel.dataset.bibCol}"]`); if(again) again.focus(); }));
+  const cc = document.getElementById('nbrColClear'); if(cc) cc.addEventListener('click', ()=>{ nbrUI.bibCol = {}; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); });
   const more = document.getElementById('nbrBibMore'); if(more) more.addEventListener('click', ()=>{ nbrUI.bibShown += NBR_PAGE; renderNbrBible(); });
   nbrBindBibViews(el);
 }

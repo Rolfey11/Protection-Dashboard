@@ -781,6 +781,26 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-colf select.on{border-color:var(--brand); background:var(--brand-tint); color:var(--brand); font-weight:700;}
 .nbr-colf-note{margin:-6px 0 10px;}
 .nbr-bib-table tr.bl-more td{border-top:1px dashed var(--border-2);}
+/* All lines on one screen (laptop and wider): fixed column widths, smaller text, long text wraps. Phones scroll across. */
+@media (min-width:1100px){
+  .nbr-bib-fit{table-layout:fixed; width:100%;}
+  .nbr-bib-fit td{font-size:11.5px;}
+  .nbr-bib-fit th,.nbr-bib-fit td{padding:5px 3px !important; white-space:normal; overflow-wrap:anywhere; line-height:1.25;}
+  .nbr-bib-fit thead tr:first-child th{font-size:9px; letter-spacing:.1px; vertical-align:bottom;}
+  .nbr-bib-fit td.num,.nbr-bib-fit td.nw{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; overflow-wrap:normal;}
+  .nbr-bib-fit td.nbr-bib-client,.nbr-bib-fit td.wrap,.nbr-bib-fit td.nbr-bib-addr{min-width:0; max-width:none;}
+  .nbr-bib-fit td.nbr-bib-addr{font-size:10.5px;}
+  .nbr-bib-fit .nbr-colf select{min-width:0; max-width:none; font-size:10px; padding:2px 0 2px 2px; border-radius:5px;}
+  .nbr-bib-fit .nbr-bib-st .bl-chip{font-size:9.5px; padding:1px 5px;}
+  .nbr-bib-fit .nbr-bib-st .btn{padding:1px 6px; font-size:10px; margin-top:3px; min-height:0;}
+  .nbr-bib-fit .nbr-tag{font-size:9px; padding:0 4px;}
+  .nbr-bib-fit .nbr-office{display:none;}
+}
+@media (min-width:1100px) and (max-width:1500px){
+  .nbr-bib-fit td{font-size:10.5px;}
+  .nbr-bib-fit th,.nbr-bib-fit td{padding:5px 2px !important;}
+  .nbr-bib-fit td.nbr-bib-addr{font-size:10px;}
+}
 .nbr-bib-table td.nbr-bib-addr{min-width:140px; max-width:220px; font-size:12px; color:var(--text-muted);}
 .nbr-bib-table td.wrap{white-space:normal; line-height:1.3;}
 .nbr-bib-table td.nbr-bib-client{min-width:140px;}
@@ -16938,6 +16958,9 @@ function nbrBibBaseRows(){
 }
 const nbrColMonth = d=> /^\d{4}-\d{2}/.test(d||'') ? nbrYmLabel(String(d).slice(0,7)) : NBR_BLANK;
 const nbrColMoney = v=> v==null || v==='' ? NBR_BLANK : nbrMoney(v);
+// How much of the screen width each column gets (All lines fits one screen on a laptop or desktop).
+const NBR_BIB_W = {client:9, office:1.8, adv:5.8, dept:3.2, app:4.2, offer:4.2, comp:4.2, switch:4.2, provider:5.5, product:4, source:3.4, amount:5,
+  when:3.6, mumsType:3, how:3, datePaid:4.2, month:4.2, fy:2.6, npw:2.4, paid:4.8, life:1.8, address:6.1, status:5, owed:4.8};
 const nbrTxt = v=> String(v==null ? '' : v).trim();
 const nbrColTxt = v=> nbrTxt(v) || NBR_BLANK;
 // [key, heading, value(s) for the filter, how its list sorts, the cell, header class]
@@ -16946,10 +16969,10 @@ const NBR_BIB_COLS = [
   ['office', 'X', r=> [nbrColTxt(r.l.office)], '', r=> `<td>${esc(r.l.office||'')}</td>`],
   ['adv', 'Adv', r=> [r.l.adv ? nbrAdvName(r.l.adv) : NBR_BLANK], '', r=> `<td>${esc(r.l.adv ? nbrAdvName(r.l.adv) : '—')}</td>`],
   ['dept', 'Dept / ref', r=> [nbrColTxt(r.l.dept)], '', r=> `<td class="wrap">${esc(r.l.dept||'')}</td>`],
-  ['app', 'App date', r=> [nbrColMonth(r.l.appDate)], 'ym', r=> `<td>${nbrShortDate(r.l.appDate)}</td>`],
-  ['offer', 'Offer / terms', r=> [nbrColMonth(r.l.offerDate)], 'ym', r=> `<td>${nbrShortDate(r.l.offerDate)}</td>`],
-  ['comp', 'Comp date', r=> [nbrColMonth(r.l.compDate)], 'ym', r=> `<td>${nbrShortDate(r.l.compDate)}</td>`],
-  ['switch', 'Switch date', r=> [nbrColMonth(r.l.switchDate)], 'ym', r=> `<td>${nbrShortDate(r.l.switchDate)}</td>`],
+  ['app', 'App date', r=> [nbrColMonth(r.l.appDate)], 'ym', r=> `<td class="nw">${nbrShortDate(r.l.appDate)}</td>`],
+  ['offer', 'Offer / terms', r=> [nbrColMonth(r.l.offerDate)], 'ym', r=> `<td class="nw">${nbrShortDate(r.l.offerDate)}</td>`],
+  ['comp', 'Comp date', r=> [nbrColMonth(r.l.compDate)], 'ym', r=> `<td class="nw">${nbrShortDate(r.l.compDate)}</td>`],
+  ['switch', 'Switch date', r=> [nbrColMonth(r.l.switchDate)], 'ym', r=> `<td class="nw">${nbrShortDate(r.l.switchDate)}</td>`],
   ['provider', 'Provider', r=> [nbrColTxt(r.provider)], '', r=> `<td class="wrap">${esc(r.provider||'')}</td>`],
   ['product', 'Product', r=> [nbrColTxt(r.l.product)], '', r=> `<td>${esc(r.l.product||'')}</td>`],
   ['source', 'Income source', r=> [nbrColTxt(r.l.source)], '', r=> `<td class="wrap">${esc(r.l.source||'')}</td>`],
@@ -16957,9 +16980,9 @@ const NBR_BIB_COLS = [
   ['when', 'When', r=> [nbrColTxt(r.when)], '', r=> `<td class="wrap">${esc(r.when||'')}</td>`],
   ['mumsType', 'Mums fee type', r=> [nbrColTxt(r.l.mumsType)], '', r=> `<td>${esc(r.l.mumsType||'')}</td>`],
   ['how', 'How', r=> [nbrColTxt(r.how)], '', r=> `<td class="wrap">${esc(r.how||'')}</td>`],
-  ['datePaid', 'Date paid', r=> [r.datePaid ? nbrColMonth(r.datePaid) : 'Not paid'], 'ym', r=> `<td>${nbrShortDate(r.datePaid)}</td>`],
-  ['month', 'Period', r=> [r.month ? nbrYmLabel(r.month) : NBR_BLANK], 'ym', r=> `<td>${esc(r.month ? nbrYmLabel(r.month) : '—')}</td>`],
-  ['fy', 'Fin year', r=> [r.month ? nbrFyOf(r.month) : NBR_BLANK], '', r=> `<td>${esc(r.month ? nbrFyOf(r.month) : '')}</td>`],
+  ['datePaid', 'Date paid', r=> [r.datePaid ? nbrColMonth(r.datePaid) : 'Not paid'], 'ym', r=> `<td class="nw">${nbrShortDate(r.datePaid)}</td>`],
+  ['month', 'Period', r=> [r.month ? nbrYmLabel(r.month) : NBR_BLANK], 'ym', r=> `<td class="nw">${esc(r.month ? nbrYmLabel(r.month) : '—')}</td>`],
+  ['fy', 'Fin year', r=> [r.month ? nbrFyOf(r.month) : NBR_BLANK], '', r=> `<td class="nw">${esc(r.month ? nbrFyOf(r.month) : '')}</td>`],
   ['npw', 'NPW?', r=> [r.l.npw ? 'NPW' : NBR_BLANK], '', r=> `<td>${r.l.npw ? 'NPW' : ''}</td>`],
   ['paid', 'Paid', r=> [n0(r.paid) > 0 ? nbrMoney(r.paid) : NBR_BLANK], 'money', r=> `<td class="num">${nbrMoneyCell(r.paid)}</td>`, 'num'],
   ['life', 'Life', r=> [nbrColTxt(r.l.life)], '', r=> `<td>${esc(r.l.life||'')}</td>`],
@@ -17198,7 +17221,8 @@ function renderNbrBible(){
   const products = [...new Set(Object.values(NBR_BIB).map(l=> l && l.product).filter(Boolean))].sort();
   const noMonth = Object.values(NBR_BIB).some(l=> l && !l.month), noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
   const shown = lines.slice(0, nbrUI.bibShown);
-  const tableHtml = lines.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table">
+  const tableHtml = lines.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table nbr-bib-fit">
+    <colgroup>${NBR_BIB_COLS.map(c=> `<col style="width:${NBR_BIB_W[c[0]] || 4}%">`).join('')}</colgroup>
     <thead><tr>${NBR_BIB_COLS.map(c=> `<th class="${c[5]||''}">${esc(c[1])}</th>`).join('')}</tr>
     ${colFilterRow}</thead>
     <tbody>${shown.map(r=> `<tr class="nbr-click bl-${r.st} ${r.n > 1 && r.i ? 'bl-more' : ''}" data-nbr-line="${esc(r.l.id)}">${NBR_BIB_COLS.map(c=> c[4](r)).join('')}</tr>`).join('')}</tbody></table></div>

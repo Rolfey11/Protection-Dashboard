@@ -776,6 +776,12 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-bib-wrap{max-height:calc(100vh - 150px); overflow:auto;}
 .nbr-bib-wrap thead th{position:sticky; top:0; z-index:1; background:var(--surface); box-shadow:inset 0 -1px 0 var(--border);}
 .nbr-bib-table th,.nbr-bib-table td{padding:7px 7px;}
+.nbr-bib-table tr.nbr-colf th{padding:0 4px 7px; text-transform:none; letter-spacing:0;}
+.nbr-colf select{width:100%; min-width:64px; max-width:180px; padding:4px 6px; border:1px solid var(--border-2); border-radius:7px; background:var(--surface); color:var(--text-muted); font:inherit; font-size:11.5px; font-weight:500;}
+.nbr-colf select.on{border-color:var(--brand); background:var(--brand-tint); color:var(--brand); font-weight:700;}
+.nbr-colf-note{margin:-6px 0 10px;}
+.nbr-bib-table tr.bl-more td{border-top:1px dashed var(--border-2);}
+.nbr-bib-table td.nbr-bib-addr{min-width:140px; max-width:220px; font-size:12px; color:var(--text-muted);}
 .nbr-bib-table td.wrap{white-space:normal; line-height:1.3;}
 .nbr-bib-table td.nbr-bib-client{min-width:140px;}
 .nbr-bib-st{white-space:nowrap;}
@@ -7511,6 +7517,8 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-24c', date:'2026-11-24', items:[ {text:"📒 <b>The Bible here now reads as your Excel Bible</b>: one row per Excel row (a Mums Fee's Initial and Comp, or Sols PUR and SALE, are separate rows), with every Excel column in the same order, and a dropdown filter under each column. Uploading the Bible now <b>matches to the Excel Bible</b>: lines take the Excel's client, amount, dates and payments (advisors' written figures still come from their NBRs). <b>Upload the latest Bible again</b> to bring everything in line.", roles:['admin','management']},
+    {text:"💷 <b>Upfront fees owed</b>: a new view on the Bible page listing the Initial (£99 / £100) Mums Fee parts not paid yet, with a total and Download to Excel. Ask Claude now knows what \u201cupfront\u201d and \u201coutstanding\u201d mean too.", roles:['admin','management']} ]},
   {id:'2026-11-24b', date:'2026-11-24', items:[ {text:"🧩 <b>Part on risk</b>: each policy on a case is now <b>on risk</b> or <b>in underwriting</b> with its own commission. When some go on risk and others are still being underwritten, the case stays in Submitted / In Underwriting (showing what's on risk) and also shows in <b>On Risk</b> with a dashed border. Use <b>Update case → On risk</b> to tick the rest as they go on risk. On-risk figures count only what's actually on risk."} ]},
   {id:'2026-11-24a', date:'2026-11-24', items:[ {text:"✨ <b>Summarise this case</b> works again on every case you open: it was only answering for the first case opened since the page was loaded."},
     {text:"⏱️ <b>Speed check</b> in Settings: how long loading and each page take on this computer with the real data. Use the dashboard for a few minutes, then copy it and send it on.", roles:['admin','management']},
@@ -12271,7 +12279,7 @@ const AIQ_SETS = {
       lender:x.lender || '', proc_fee:aiqNum(x.proc), mums_fee:aiqNum(x.mums), protection:aiqNum(x.prot), sols_ref:aiqNum(x.sols), total:nbrRound(nbrNpwTotal(x))})),
   },
   bible_lines: {
-    about: 'The Bible: one line per piece of income (a fee) with what has been paid. Products include Proc Fee, Prod Tfr, BTL PT, Remo, Mums Fee, Sols Fee, Val Fee, Life Ins, Gen Ins (B&C), Commercial (C …). status is Written, Offered, Completed, Part-Paid, Paid or NPW. The financial year runs March to February (FY26 = Mar 2026 to Feb 2027). For money banked use bible_payments.',
+    about: 'The Bible: one line per piece of income (a fee) with what has been paid. A fee that is more than one row in the Excel Bible (a Mums Fee Initial and Comp, or Sols PUR and SALE) is one line here; bible_fee_parts has a row for each. Products include Proc Fee, Prod Tfr, BTL PT, Remo, Mums Fee, Sols Fee, Val Fee, Life Ins, Gen Ins (B&C), Commercial (C …). status is Written, Offered, Completed, Part-Paid, Paid or NPW. The financial year runs March to February (FY26 = Mar 2026 to Feb 2027). For money banked use bible_payments.',
     start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
     fields: [['advisor','t','Advisor (as on the Salesboard)'], ['office','t','Office'], ['client','t','Client'], ['product','t','Product'], ['provider','t','Lender / provider'],
       ['lead_source','t','Source'], ['amount','n','The whole fee £ (a Mums Fee paid in parts is one line here: see bible_fee_parts)'], ['month_written','m','Month written'], ['status','t','Written, Offered, Completed, Part-Paid, Paid or NPW'],
@@ -12351,6 +12359,23 @@ function aiqRows(name){ const s = AIQ_SETS[name], c = aiqCache[name], ver = name
   // Rows are worked out once per question; the data can change between questions.
   if(c && c.ver===ver && Date.now() - c.at < 60000) return c.rows;
   const rows = s.rows(); aiqCache[name] = {ver, at:Date.now(), rows}; return rows; }
+/* What the team's words mean in the data, so a question gets the right rows first time. */
+const AIQ_GLOSSARY = {
+  'initial fee / upfront fee': 'The first part of a Mums Fee, usually £99 or £100, paid upfront (marked Initial in the Excel Bible). In bible_fee_parts: part = Initial.',
+  'outstanding upfront fees / initial fees owed': 'bible_fee_parts with part = Initial and status = Outstanding. List the amount of that part only (usually £99 / £100), never the whole fee or the balance. The Bible page has the same list under "Upfront fees owed".',
+  'comp fee / balance': 'The rest of a Mums Fee after the Initial, due on offer or completion: bible_fee_parts part = Comp.',
+  'outstanding / owed / still to come': 'Not paid yet. Per part: bible_fee_parts outstanding. Per whole fee: bible_lines outstanding. NPWs are never owed.',
+  'part-paid': 'A Bible line with some but not all of its fee paid (status Part-Paid).',
+  'written': 'Business written: nbr_cases by month (the Salesboard), or bible_lines by month_written.',
+  'banked': 'Money received: bible_payments by date_paid (plus wills_cases banked_net on the Salesboard).',
+  'NPW': 'Not proceeding: left out of written, banked and owed.',
+  'on risk': 'Protection: protection_cases commission_on_risk (a case can be part on risk; commission_pending is the rest).',
+};
+const AIQ_CHECKS = [
+  'Pick the data set and fields from the glossary that match the question exactly, and say in one line which you used.',
+  'Before answering, look at a few of the rows you are about to list and check each one meets every part of the question (e.g. for upfront fees owed: part Initial, not paid, amount is the upfront part only). Fix the query if any does not.',
+  'If the question uses a term not in the glossary or the data, ask one short question instead of guessing.',
+];
 async function aiqDescribe(){
   await aiqEnsure();
   const sets = [], missing = [];
@@ -12364,7 +12389,7 @@ async function aiqDescribe(){
         const vals = Object.keys(n); if(vals.length && vals.length <= 40) o.values = vals.sort((a,b)=> n[b]-n[a]).slice(0,25); }
       return o; })});
   });
-  return {today:aiqDate(Date.now()), you:`${currentUser.name} (${currentUser.role})`, periods:'Add :month, :year, :quarter, :fin_year (March-February), :week or :weekday to a date field to group or filter by period.', datasets:sets, not_available:missing};
+  return {today:aiqDate(Date.now()), you:`${currentUser.name} (${currentUser.role})`, glossary:AIQ_GLOSSARY, answer_checks:AIQ_CHECKS, periods:'Add :month, :year, :quarter, :fin_year (March-February), :week or :weekday to a date field to group or filter by period.', datasets:sets, not_available:missing};
 }
 function aiqPart(v, part){
   v = String(v||''); if(!v) return '';
@@ -15519,7 +15544,7 @@ function nbrBibVisible(v){ const o = {}; Object.entries(v || {}).forEach(([k, l]
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
 const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
-  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
+  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibCol:{}, bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
@@ -15683,12 +15708,32 @@ function nbrNpwTotal(x){ return x.total!=null && x.total!=='' ? n0(x.total) : n0
 function nbrPartLabel(v){ const t = String(v||'').trim(); return /^in(i|t)/i.test(t) ? 'Initial' : /^(comp|conp)/i.test(t) ? 'Comp' : /^admin/i.test(t) ? 'Admin' : ''; }
 function nbrPartOf(label, when){ return nbrPartLabel(label) || (/upfront/i.test(when||'') ? 'Initial' : /offer|comp/i.test(when||'') ? 'Comp' : /admin/i.test(when||'') ? 'Admin' : ''); }
 // Each part of a line's fee, with what's still to come of it. The line's own Date paid / Paid is the first part.
+// bibAmt: the amount on the Excel Bible's row for that first part, when it's less than the fee (e.g. the £100 Initial on a
+// £595 NBR case whose Comp row isn't in the Bible yet); the rest is a part still to come.
 function nbrLineParts(l){
   const ex = nbrLineExtraPays(l), k = l.kind || nbrProdKind(l.product), client = k==='mums' || k==='sols' || k==='val', mums = k==='mums';
-  const own = {own:true, part: mums ? nbrPartOf(l.provider, l.when) : '', amount: nbrRound(n0(l.amount) - ex.reduce((t,x)=> t + n0(x.amount), 0)), when:l.when || '', how:l.how || '', datePaid:l.datePaid || '', paid:l.paid};
-  const parts = [own, ...ex.map(x=> ({part: mums ? nbrPartOf(x.part, x.when) : '', amount: nbrRound(n0(x.amount)), when:x.when || '', how:x.how || '', datePaid:x.datePaid || '', paid:x.paid}))];
-  return parts.map(x=>{ const got = !!x.datePaid || n0(x.paid) > 0;
-    return {...x, outstanding: l.npw ? 0 : !got ? Math.max(0, x.amount) : client && n0(x.paid) > 0 ? Math.max(0, nbrRound(x.amount - n0(x.paid))) : 0}; });
+  const ownAmt = nbrRound(n0(l.amount) - ex.reduce((t,x)=> t + n0(x.amount), 0)), ownPart = mums ? nbrPartOf(l.provider, l.when) : '';
+  const bib = !ex.length && n0(l.bibAmt) > 0 && n0(l.bibAmt) < ownAmt - 0.005 ? nbrRound(n0(l.bibAmt)) : null;
+  const rest = p=> p==='Initial' ? 'Comp' : p;
+  const parts = [{own:true, part:ownPart, amount: bib!=null ? bib : ownAmt, when:l.when || '', how:l.how || '', datePaid:l.datePaid || '', paid:l.paid}];
+  if(bib!=null) parts.push({part:rest(ownPart), amount:nbrRound(ownAmt - bib), when:'', how:'', datePaid:'', paid:null});
+  ex.forEach(x=> parts.push({part: mums ? nbrPartOf(x.part, x.when) : '', amount: nbrRound(n0(x.amount)), when:x.when || '', how:x.how || '', datePaid:x.datePaid || '', paid:x.paid}));
+  const out = [];
+  parts.forEach(x=>{
+    const got = !!x.datePaid || n0(x.paid) > 0, bal = nbrRound(x.amount - n0(x.paid));
+    if(l.npw) out.push({...x, outstanding:0});
+    else if(!got) out.push({...x, outstanding:Math.max(0, x.amount)});
+    // A client fee paid only in part (e.g. £100 upfront of a £495 line): the part paid, and the balance still to come.
+    else if(client && n0(x.paid) > 0 && bal >= 0.01){ out.push({...x, amount:nbrRound(n0(x.paid)), outstanding:0}); out.push({part:rest(x.part), amount:bal, when:'', how:'', datePaid:'', paid:null, outstanding:bal}); }
+    else out.push({...x, outstanding:0});
+  });
+  return out;
+}
+// Upfront (Initial) fees not paid yet: one per part, with its line.
+function nbrUpfrontOwed(){
+  const out = [];
+  Object.entries(NBR_BIB).forEach(([id, l])=>{ if(!l || l.npw) return; nbrLineParts(l).forEach(x=>{ if(x.part==='Initial' && x.outstanding >= 0.01) out.push({id, l, amount:x.outstanding, when:x.when}); }); });
+  return out;
 }
 function nbrLineExtraPays(l){ return Object.entries(l && l.pays || {}).filter(([,x])=> x).map(([k,x])=> ({k, ...x})); }
 function nbrLinePays(l){ return [{own:true, datePaid:l.datePaid, paid:l.paid}, ...nbrLineExtraPays(l)]; }
@@ -15879,7 +15924,15 @@ function nbrLinePatches(entryId, e, opts={}){
     const amt = nbrRound(e[k]), ex = linked[k], zeroNoFee = e.noFee && !anyFee && k==='mums';
     const shared = nbrClean({adv:e.adv, office:(adv.office==='C' ? (NBR_ADV[adv.of] || {}).office : adv.office) || '', client:e.client || '', appDate:e.appSub || '', switchDate:e.switchDate || '', month:e.month, address:e.notes || ''});
     if(amt || zeroNoFee){
-      if(ex){ const [lid, l] = ex; const o = {...l, ...shared, amount:l.covers ? l.amount : amt, ...whenFor(k, l), updatedAt:Date.now()}; if(o.when===null) delete o.when; out['bible/'+lid] = o; }
+      if(ex){
+        const [lid, l] = ex;
+        // A line matched to the Excel Bible keeps the Excel's details; only what the advisor has since changed on the NBR comes across.
+        const old = NBR_ENT[entryId], xl = !!(l.inBible && old), changed = (a, b)=> String(a==null ? '' : a)!==String(b==null ? '' : b);
+        const sh = !xl ? shared : nbrClean({adv:shared.adv, ...(changed(e.client, old.client) ? {client:shared.client} : {}), ...(changed(e.appSub, old.appSub) ? {appDate:shared.appDate} : {}),
+          ...(changed(e.switchDate, old.switchDate) ? {switchDate:shared.switchDate} : {}), ...(changed(e.month, old.month) ? {month:shared.month} : {}), ...(changed(e.notes, old.notes) ? {address:shared.address} : {})});
+        const amount = l.covers ? l.amount : xl && nbrRound(old[k])===amt ? l.amount : amt;
+        const o = {...l, ...sh, amount, ...whenFor(k, l), updatedAt:Date.now()}; if(o.when===null) delete o.when; out['bible/'+lid] = o;
+      }
       else if(opts.create!==false){
         const reuse = opts.reuse && opts.reuse(k, amt);
         if(reuse){ out['bible/'+reuse+'/entry'] = entryId; out['bible/'+reuse+'/kind'] = k; if(k===noFeeOn) out['bible/'+reuse+'/when'] = 'no fee';
@@ -16856,15 +16909,82 @@ function nbrBibFys(){
   Object.values(NBR_BIB).forEach(l=>{ if(l && l.month) s.add(nbrFyOf(l.month)); });
   return [...s].sort().reverse();
 }
-function nbrBibFiltered(){
+/* A dropdown under each column of All lines, like Excel's filters: pick a value and only the lines with it show.
+   Each column gives a line's value(s) as text; dates go by month. The choices in each list are the values in the
+   lines the other filters leave, with how many. */
+const NBR_BLANK = '(blank)';
+function nbrBibRows(l){
+  const ex = nbrLineExtraPays(l), k = l.kind || nbrProdKind(l.product), client = k==='mums' || k==='sols' || k==='val', mums = k==='mums';
+  const ownAmt = nbrRound(n0(l.amount) - ex.reduce((t,x)=> t + n0(x.amount), 0));
+  // The Excel Bible's row for the line can be less than the fee (e.g. its £100 Initial on a £295 NBR case): that row, then the rest.
+  const bib = !ex.length && n0(l.bibAmt) > 0 && n0(l.bibAmt) < ownAmt - 0.005 ? nbrRound(n0(l.bibAmt)) : null;
+  const ownProv = l.provider || '', restProv = mums && nbrPartOf(l.provider, l.when)==='Initial' ? 'Comp' : ownProv;
+  const parts = [{key:'own', provider:ownProv, amount: bib!=null ? bib : ownAmt, when:l.when, how:l.how, datePaid:l.datePaid, paid:l.paid, month:l.month}];
+  if(bib!=null) parts.push({key:'rest', provider:restProv, amount:nbrRound(ownAmt - bib), when:'', how:'', datePaid:'', paid:null, month:l.month, notInBible:true});
+  ex.forEach(x=> parts.push({key:x.k, provider: mums ? (nbrPartLabel(x.part) || nbrPartOf('', x.when) || restProv) : ownProv, amount:nbrRound(n0(x.amount)), when:x.when, how:x.how, datePaid:x.datePaid, paid:x.paid, month:x.month || l.month}));
+  if(parts.length===1) return [{id:l.id, l, ...parts[0], amount:l.amount, st:nbrBibStatus(l), owed: l.npw ? 0 : nbrLineOutstanding(l), n:1, i:0}];
+  return parts.map((x, i)=>{
+    const got = !!x.datePaid || n0(x.paid) > 0;
+    const owed = l.npw ? 0 : !got ? Math.max(0, x.amount) : client && n0(x.paid) > 0 ? Math.max(0, nbrRound(x.amount - n0(x.paid))) : 0;
+    const st = l.npw ? 'npw' : got ? (owed >= 0.01 ? 'part' : 'paid') : l.compDate ? 'comp' : l.offerDate ? 'offer' : 'pipe';
+    return {id:l.id, l, ...x, st, owed, n:parts.length, i};
+  });
+}
+// The lines' rows the top filters leave (Status is a row's own status).
+function nbrBibBaseRows(){
+  const f = nbrUI, st = f.bibStatus, q = f.bibSearch;
+  return nbrBibBase().flatMap(nbrBibRows).filter(r=> (!st || r.st===st)
+    && (q || !f.bibFY || f.bibFY==='none' || (r.month ? nbrFyOf(r.month) : '')===f.bibFY) && (q || !f.bibMonth || r.month===f.bibMonth));
+}
+const nbrColMonth = d=> /^\d{4}-\d{2}/.test(d||'') ? nbrYmLabel(String(d).slice(0,7)) : NBR_BLANK;
+const nbrColMoney = v=> v==null || v==='' ? NBR_BLANK : nbrMoney(v);
+const nbrTxt = v=> String(v==null ? '' : v).trim();
+const nbrColTxt = v=> nbrTxt(v) || NBR_BLANK;
+// [key, heading, value(s) for the filter, how its list sorts, the cell, header class]
+const NBR_BIB_COLS = [
+  ['client', 'Client', r=> [nbrColTxt(r.l.client)], '', r=> `<td class="wrap nbr-bib-client"><b>${esc(r.l.client||'')}</b>${r.n > 1 ? ` <span class="nbr-tag" title="One of ${r.n} rows for this fee (£${nbrRound(r.l.amount).toFixed(2)} in all)">${r.i+1} of ${r.n}</span>` : ''}${r.notInBible ? ' <span class="nbr-tag nbr-tag-warn" title="The rest of the fee on the NBR; the Excel Bible doesn\'t have a row for it yet">not in the Excel Bible yet</span>' : ''}</td>`],
+  ['office', 'X', r=> [nbrColTxt(r.l.office)], '', r=> `<td>${esc(r.l.office||'')}</td>`],
+  ['adv', 'Adv', r=> [r.l.adv ? nbrAdvName(r.l.adv) : NBR_BLANK], '', r=> `<td>${esc(r.l.adv ? nbrAdvName(r.l.adv) : '—')}</td>`],
+  ['dept', 'Dept / ref', r=> [nbrColTxt(r.l.dept)], '', r=> `<td class="wrap">${esc(r.l.dept||'')}</td>`],
+  ['app', 'App date', r=> [nbrColMonth(r.l.appDate)], 'ym', r=> `<td>${nbrShortDate(r.l.appDate)}</td>`],
+  ['offer', 'Offer / terms', r=> [nbrColMonth(r.l.offerDate)], 'ym', r=> `<td>${nbrShortDate(r.l.offerDate)}</td>`],
+  ['comp', 'Comp date', r=> [nbrColMonth(r.l.compDate)], 'ym', r=> `<td>${nbrShortDate(r.l.compDate)}</td>`],
+  ['switch', 'Switch date', r=> [nbrColMonth(r.l.switchDate)], 'ym', r=> `<td>${nbrShortDate(r.l.switchDate)}</td>`],
+  ['provider', 'Provider', r=> [nbrColTxt(r.provider)], '', r=> `<td class="wrap">${esc(r.provider||'')}</td>`],
+  ['product', 'Product', r=> [nbrColTxt(r.l.product)], '', r=> `<td>${esc(r.l.product||'')}</td>`],
+  ['source', 'Income source', r=> [nbrColTxt(r.l.source)], '', r=> `<td class="wrap">${esc(r.l.source||'')}</td>`],
+  ['amount', 'Amount', r=> [nbrColMoney(r.amount)], 'money', r=> `<td class="num b">${nbrMoneyCell(r.amount)}</td>`, 'num'],
+  ['when', 'When', r=> [nbrColTxt(r.when)], '', r=> `<td class="wrap">${esc(r.when||'')}</td>`],
+  ['mumsType', 'Mums fee type', r=> [nbrColTxt(r.l.mumsType)], '', r=> `<td>${esc(r.l.mumsType||'')}</td>`],
+  ['how', 'How', r=> [nbrColTxt(r.how)], '', r=> `<td class="wrap">${esc(r.how||'')}</td>`],
+  ['datePaid', 'Date paid', r=> [r.datePaid ? nbrColMonth(r.datePaid) : 'Not paid'], 'ym', r=> `<td>${nbrShortDate(r.datePaid)}</td>`],
+  ['month', 'Period', r=> [r.month ? nbrYmLabel(r.month) : NBR_BLANK], 'ym', r=> `<td>${esc(r.month ? nbrYmLabel(r.month) : '—')}</td>`],
+  ['fy', 'Fin year', r=> [r.month ? nbrFyOf(r.month) : NBR_BLANK], '', r=> `<td>${esc(r.month ? nbrFyOf(r.month) : '')}</td>`],
+  ['npw', 'NPW?', r=> [r.l.npw ? 'NPW' : NBR_BLANK], '', r=> `<td>${r.l.npw ? 'NPW' : ''}</td>`],
+  ['paid', 'Paid', r=> [n0(r.paid) > 0 ? nbrMoney(r.paid) : NBR_BLANK], 'money', r=> `<td class="num">${nbrMoneyCell(r.paid)}</td>`, 'num'],
+  ['life', 'Life', r=> [nbrColTxt(r.l.life)], '', r=> `<td>${esc(r.l.life||'')}</td>`],
+  ['address', 'Address', r=> [nbrColTxt(r.l.address)], '', r=> `<td class="wrap nbr-bib-addr">${esc(r.l.address||'')}</td>`],
+  ['status', 'Status', r=> [BIB_STATUS[r.st][0]], '', r=> `<td class="nbr-bib-st"><span class="bl-chip bl-chip-${r.st}">${BIB_STATUS[r.st][0]}</span>${r.st!=='paid' && r.st!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(r.l.id)}" title="${r.st==='part' ? 'Add the next payment' : 'Mark as paid'}">${r.st==='part' ? '+ Payment' : 'Paid'}</button>` : ''}</td>`],
+  ['owed', 'Outstanding', r=> [r.owed < 0.01 ? 'None' : nbrMoney(r.owed)], 'money', r=> `<td class="num ${r.st==='part' ? 'nbr-owed' : ''}">${r.st==='npw' ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(r.owed)}</td>`, 'num'],
+];
+function nbrBibColSort(kind){
+  const key = v=> v===NBR_BLANK || v==='Not paid' || v==='None' ? -Infinity : kind==='money' ? n0(String(v).replace(/[£,]/g, '')) : kind==='ym' ? (()=>{ const m = String(v).match(/^(\w{3})\w* (\d{4})$/); return m ? +m[2]*12 + NBR_MONTHS.indexOf(m[1]) : 0; })() : 0;
+  return (a, b)=> (key(a) - key(b)) || String(a).localeCompare(String(b));
+}
+function nbrBibColPass(r, except){
+  const cf = nbrUI.bibCol || {};
+  return NBR_BIB_COLS.every(([k,, val])=> k===except || !cf[k] || val(r).includes(cf[k]));
+}
+function nbrBibFiltered(){ return nbrBibBaseRows().filter(r=> nbrBibColPass(r)); }
+function nbrBibBase(){
   const f = nbrUI, q = f.bibSearch.toLowerCase();
   return Object.entries(NBR_BIB).filter(([,l])=>{
     if(!l) return false;
     // Searching looks across every year, so a client can be found without knowing when it was written.
-    if(!q && f.bibFY && (l.month ? nbrFyOf(l.month) : '')!==f.bibFY && !(f.bibFY==='none' && !l.month)) return false;
-    if(!q && f.bibMonth && l.month!==f.bibMonth) return false;
+    const ms = [l.month, ...nbrLineExtraPays(l).map(x=> x.month)].filter(Boolean);
+    if(!q && f.bibFY && !(f.bibFY==='none' ? !l.month : ms.some(m=> nbrFyOf(m)===f.bibFY))) return false;
+    if(!q && f.bibMonth && !ms.includes(f.bibMonth)) return false;
     if(f.bibAdv && (l.adv||'')!==(f.bibAdv==='none' ? '' : f.bibAdv)) return false;
-    if(f.bibStatus && nbrBibStatus(l)!==f.bibStatus) return false;
     if(f.bibProduct && (l.product||'')!==f.bibProduct) return false;
     if(q && ![l.client, l.provider, l.source, l.address, l.dept, l.product].some(v=> String(v||'').toLowerCase().includes(q))) return false;
     return true;
@@ -16881,7 +17001,7 @@ function nbrPaidMonths(){
   return [...s].filter(ym=> /^\d{4}-\d{2}$/.test(ym)).sort().reverse();
 }
 function nbrBibViewSwitch(){
-  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month'], ['switch','Switch dates']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
+  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month'], ['switch','Switch dates'], ['upfront','Upfront fees owed']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
 }
 function renderNbrBiblePaid(el){
   const months = nbrPaidMonths(), thisYm = nbrThisYm();
@@ -17012,6 +17132,36 @@ function renderNbrBibleSwitch(el){
   const sa = document.getElementById('nbrSwitchAll'); if(sa) sa.addEventListener('click', ()=>{ nbrUI.bibSwitchYm = ''; renderNbrBible(); });
   nbrBindBibViews(el);
 }
+// Initial (upfront) Mums Fee parts not paid yet: the Excel Bible's Initial rows with no date paid.
+function renderNbrBibleUpfront(el){
+  const nameOf = id=> id ? nbrAdvName(id) : '(no advisor)';
+  const all = nbrUpfrontOwed(), rows = all.filter(x=> !nbrUI.bibAdv || (x.l.adv||'')===(nbrUI.bibAdv==='none' ? '' : nbrUI.bibAdv))
+    .sort((a,b)=> String(a.l.month||'').localeCompare(String(b.l.month||'')) || nameOf(a.l.adv).localeCompare(nameOf(b.l.adv)) || String(a.l.client||'').localeCompare(String(b.l.client||'')));
+  const total = rows.reduce((t,x)=> t + x.amount, 0), thisYm = nbrThisYm(), old = rows.filter(x=> (x.l.month||'') < thisYm);
+  const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])];
+  el.innerHTML = `
+    ${nbrBibViewSwitch()}
+    <div class="nbr-toolbar nbr-filters">
+      <label>Advisor <select id="nbrBibAdv">${advOpts.map(([v,t])=> `<option value="${esc(v)}" ${v===nbrUI.bibAdv ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+      ${rows.length ? '<button type="button" class="btn btn-secondary btn-sm" id="nbrUpfrontXl">⬇ Download to Excel</button>' : ''}
+    </div>
+    <div class="stat-grid nbr-paid-cards">
+      <div class="stat-card ${rows.length ? 'warn' : 'good'}"><div class="sv">${nbrMoney(total)}</div><div class="sl">Upfront fees owed · ${rows.length} client${rows.length===1 ? '' : 's'}</div></div>
+      <div class="stat-card ${old.length ? 'warn' : ''}"><div class="sv">${old.length}</div><div class="sl">Written before ${esc(nbrYmLabel(thisYm, true))}</div></div>
+    </div>
+    <p class="field-hint nbr-bib-note">The Initial part of each Mums Fee (the £99 / £100 the client pays upfront, marked Initial in the Excel Bible's Provider column) with no date paid. Only the upfront part is listed, never the rest of the fee. NPWs aren't included. Upload the latest Bible to bring it up to date.</p>
+    ${rows.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table"><thead><tr><th>Period written</th><th>Adv</th><th>Client</th><th>App date</th><th>When</th><th class="num">Upfront fee</th><th class="num">Whole fee</th></tr></thead><tbody>
+      ${rows.map(x=> `<tr class="nbr-click" data-nbr-line="${esc(x.id)}"><td>${esc(x.l.month ? nbrYmLabel(x.l.month) : '—')}</td><td>${esc(nameOf(x.l.adv))}</td><td class="wrap nbr-bib-client"><b>${esc(x.l.client||'')}</b></td><td>${esc(x.l.appDate ? fmtDateSlash(x.l.appDate) : '')}</td><td>${esc(x.when||'')}</td><td class="num b">${nbrMoney(x.amount)}</td><td class="num">${nbrMoney(x.l.amount)}</td></tr>`).join('')}
+      <tr class="nbr-grand"><td colspan="5">Total</td><td class="num b">${nbrMoney(total)}</td><td></td></tr></tbody></table></div>`
+      : '<div class="nml-empty">No upfront fees are waiting to be paid.</div>'}`;
+  document.getElementById('nbrBibAdv').addEventListener('change', e=>{ nbrUI.bibAdv = e.target.value; renderNbrBible(); });
+  const xl = document.getElementById('nbrUpfrontXl');
+  if(xl) xl.addEventListener('click', ()=> loadXlsx().then(()=>{
+    const aoa = [['Period written','Advisor','Client','App date','When','Upfront fee owed','Whole fee'], ...rows.map(x=> [x.l.month ? nbrYmLabel(x.l.month) : '', nameOf(x.l.adv), x.l.client||'', x.l.appDate||'', x.when||'', nbrRound(x.amount), nbrRound(n0(x.l.amount))]), ['Total','','','','', nbrRound(total), '']];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Upfront fees owed'); XLSX.writeFile(wb, `Upfront fees owed ${aiqDate(Date.now())}.xlsx`);
+  }).catch(e=> toast('Could not make the file: '+e.message, 'error')));
+  nbrBindBibViews(el);
+}
 function nbrBindBibViews(el){
   const jg = el.querySelector('#nbrJunkGo'); if(jg) jg.addEventListener('click', nbrBibJunkRemove);
   el.querySelectorAll('[data-bib-view]').forEach(b=> b.addEventListener('click', ()=>{ nbrUI.bibView = b.dataset.bibView; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); }));
@@ -17031,17 +17181,27 @@ function renderNbrBible(){
   if(nbrNotReady(el)) return;
   if(nbrUI.bibView==='paid'){ renderNbrBiblePaid(el); return; }
   if(nbrUI.bibView==='switch'){ renderNbrBibleSwitch(el); return; }
+  if(nbrUI.bibView==='upfront'){ renderNbrBibleUpfront(el); return; }
   const fys = nbrBibFys();
   if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = fys[0];
   const fy = nbrUI.bibFY, fyMonths = fy==='none' ? [] : nbrFyMonths(fy);
-  const lines = nbrBibFiltered().sort((a,b)=> (a.month||'').localeCompare(b.month||'') || nbrAdvName(a.adv).localeCompare(nbrAdvName(b.adv)) || (a.client||'').localeCompare(b.client||''));
-  const by = {}; lines.forEach(l=>{ const s = nbrBibStatus(l); (by[s] || (by[s] = {n:0, amt:0, paid:0, owed:0})); by[s].n++; by[s].amt += n0(l.amount); by[s].paid += nbrLinePaidTotal(l); by[s].owed += nbrLineOutstanding(l); });
+  // One row per Excel Bible row: a line with payment lines is a row per part.
+  const lines = nbrBibFiltered().sort((a,b)=> (a.l.month||'').localeCompare(b.l.month||'') || nbrAdvName(a.l.adv).localeCompare(nbrAdvName(b.l.adv)) || (a.l.client||'').localeCompare(b.l.client||'') || String(a.id).localeCompare(String(b.id)) || a.i - b.i);
+  // Column filters: each list has the values in the lines the other filters leave, with how many.
+  const cf = nbrUI.bibCol || (nbrUI.bibCol = {}), base = nbrBibBaseRows(), colOn = Object.values(cf).some(Boolean);
+  const colFilterRow = `<tr class="nbr-colf">${NBR_BIB_COLS.map(([k, label, val, kind])=>{
+    const n = {}; base.forEach(r=>{ if(!nbrBibColPass(r, k)) return; val(r).forEach(v=>{ n[v] = (n[v]||0) + 1; }); });
+    if(cf[k] && !n[cf[k]]) n[cf[k]] = 0;
+    const opts = Object.keys(n).sort(nbrBibColSort(kind));
+    return `<th><select data-bib-col="${k}" aria-label="Filter ${esc(label)}" class="${cf[k] ? 'on' : ''}" title="${cf[k] ? esc(label+': '+cf[k]) : 'Filter '+esc(label)}"><option value="">All</option>${opts.map(v=> `<option value="${esc(v)}" ${v===cf[k] ? 'selected' : ''}>${esc(v)} (${n[v]})</option>`).join('')}</select></th>`; }).join('')}</tr>`;
+  const by = {}; lines.forEach(r=>{ const s = r.st; (by[s] || (by[s] = {n:0, amt:0, paid:0, owed:0})); by[s].n++; by[s].amt += n0(r.amount); by[s].paid += n0(r.paid); by[s].owed += r.owed; });
   const products = [...new Set(Object.values(NBR_BIB).map(l=> l && l.product).filter(Boolean))].sort();
   const noMonth = Object.values(NBR_BIB).some(l=> l && !l.month), noAdv = Object.values(NBR_BIB).some(l=> l && !l.adv);
   const shown = lines.slice(0, nbrUI.bibShown);
   const tableHtml = lines.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table">
-    <thead><tr><th>Period</th><th>Adv</th><th>Client</th><th>App</th><th>Offer / terms</th><th>Comp</th><th>Switch</th><th>Provider</th><th>Product</th><th>Income source</th><th class="num">Amount</th><th>When / how</th><th>Date paid</th><th class="num">Paid</th><th>Status</th><th class="num">Outstanding</th></tr></thead>
-    <tbody>${shown.map(l=>{ const s = nbrBibStatus(l); return `<tr class="nbr-click bl-${s}" data-nbr-line="${esc(l.id)}"><td>${esc(l.month ? nbrYmLabel(l.month) : '—')}</td><td>${esc(l.adv ? nbrAdvName(l.adv) : '—')}${l.office ? ` <span class="nbr-office">${esc(l.office)}</span>` : ''}</td><td class="wrap nbr-bib-client"><b>${esc(l.client||'')}</b>${l.life ? ` <span class="nbr-tag">Life ${esc(l.life)}</span>` : ''}</td><td>${nbrShortDate(l.appDate)}</td><td>${nbrShortDate(l.offerDate)}</td><td>${nbrShortDate(l.compDate)}</td><td>${nbrShortDate(l.switchDate)}</td><td class="wrap">${esc(l.provider||'')}</td><td>${esc(l.product||'')}</td><td class="wrap">${esc(l.source||'')}</td><td class="num b">${nbrMoneyCell(l.amount)}</td><td class="wrap">${esc([l.when, l.how].filter(Boolean).join(' · '))}</td><td>${nbrLineExtraPays(l).length ? nbrLinePays(l).map(x=> x.datePaid ? nbrShortDate(x.datePaid) : '<span class="nbr-zero">to come</span>').join('<br>') : nbrShortDate(l.datePaid)}</td><td class="num">${nbrLineExtraPays(l).length ? nbrLinePays(l).map(x=> nbrMoneyCell(x.paid)).join('<br>') : nbrMoneyCell(l.paid)}</td><td class="nbr-bib-st"><span class="bl-chip bl-chip-${s}">${BIB_STATUS[s][0]}</span>${s!=='paid' && s!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(l.id)}" title="${s==='part' ? 'Add the next payment' : 'Mark as paid'}">${s==='part' ? '+ Payment' : 'Paid'}</button>` : ''}</td><td class="num ${s==='part' ? 'nbr-owed' : ''}">${s==='npw' ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(nbrLineOutstanding(l))}</td></tr>`; }).join('')}</tbody></table></div>
+    <thead><tr>${NBR_BIB_COLS.map(c=> `<th class="${c[5]||''}">${esc(c[1])}</th>`).join('')}</tr>
+    ${colFilterRow}</thead>
+    <tbody>${shown.map(r=> `<tr class="nbr-click bl-${r.st} ${r.n > 1 && r.i ? 'bl-more' : ''}" data-nbr-line="${esc(r.l.id)}">${NBR_BIB_COLS.map(c=> c[4](r)).join('')}</tr>`).join('')}</tbody></table></div>
     ${lines.length > shown.length ? `<div class="nbr-more"><button type="button" class="btn btn-secondary btn-sm" id="nbrBibMore">Show ${Math.min(NBR_PAGE, lines.length - shown.length)} more (${lines.length - shown.length} not shown)</button></div>` : ''}`
     : '<div class="nml-empty">No Bible lines match.</div>';
 
@@ -17057,11 +17217,11 @@ function renderNbrBible(){
       : `<div class="nml-empty">Nothing paid in ${esc(fy)} yet.</div>`;
   }
   // By advisor and product, for the lines matching the filters (the Bible's pipe / offered / completed pivots).
-  const pv = {}, pvProd = new Set(); lines.forEach(l=>{ const p = l.product || '(none)'; pvProd.add(p); const a = pv[l.adv||''] || (pv[l.adv||''] = {}); a[p] = (a[p]||0) + n0(l.amount); });
+  const pv = {}, pvProd = new Set(); lines.forEach(r=>{ const l = r.l, p = l.product || '(none)'; pvProd.add(p); const a = pv[l.adv||''] || (pv[l.adv||''] = {}); a[p] = (a[p]||0) + n0(r.amount); });
   const pvCols = [...pvProd].sort(), pvRows = Object.keys(pv).sort((a,b)=> nbrAdvName(a).localeCompare(nbrAdvName(b)));
   const pivotHtml = pvRows.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table"><thead><tr><th>Adv</th>${pvCols.map(p=> `<th class="num">${esc(p)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
       ${pvRows.map(id=>{ const r = pvCols.map(p=> pv[id][p]||0); return `<tr><td>${esc(id ? nbrAdvName(id) : '(no advisor)')}</td>${r.map(v=> `<td class="num">${nbrMoneyCell(v)}</td>`).join('')}<td class="num b">${nbrMoneyCell(r.reduce((s,v)=> s+v, 0))}</td></tr>`; }).join('')}
-      <tr class="nbr-grand"><td>Total</td>${pvCols.map(p=> `<td class="num">${nbrMoneyCell(pvRows.reduce((s,id)=> s + (pv[id][p]||0), 0))}</td>`).join('')}<td class="num b">${nbrMoneyCell(lines.reduce((s,l)=> s + n0(l.amount), 0))}</td></tr></tbody></table></div>` : '';
+      <tr class="nbr-grand"><td>Total</td>${pvCols.map(p=> `<td class="num">${nbrMoneyCell(pvRows.reduce((s,id)=> s + (pv[id][p]||0), 0))}</td>`).join('')}<td class="num b">${nbrMoneyCell(lines.reduce((s,r)=> s + n0(r.amount), 0))}</td></tr></tbody></table></div>` : '';
 
   const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])].concat(noAdv ? [['none','(no advisor)']] : []);
   const junk = nbrBibJunk();
@@ -17079,7 +17239,8 @@ function renderNbrBible(){
     </div>
     <div class="stat-grid nbr-status-cards">${Object.entries(BIB_STATUS).map(([k,v])=>{ const s = by[k] || {n:0, amt:0, paid:0, owed:0}; return `<button type="button" class="stat-card nbr-sc bl-card-${k} ${nbrUI.bibStatus===k ? 'on' : ''}" data-nbr-status="${k}"><div class="sv">${nbrMoney(k==='paid' ? s.paid : k==='part' ? s.owed : s.amt)}</div><div class="sl">${esc(k==='part' ? 'Part paid: still to come' : v[1])} · ${s.n} line${s.n===1?'':'s'}</div></button>`; }).join('')}</div>
     ${nbrUI.bibSearch ? `<p class="field-hint" style="margin:-8px 0 10px;">Searching every financial year for "${esc(nbrUI.bibSearch)}".</p>` : ''}
-    ${tableHtml}
+    ${colOn ? `<p class="field-hint nbr-colf-note">Column filters: ${NBR_BIB_COLS.filter(([k])=> cf[k]).map(([k, label])=> `<b>${esc(label)}</b> = ${esc(cf[k])}`).join(' · ')} · ${lines.length} line${lines.length===1 ? '' : 's'} <button type="button" class="linkish" id="nbrColClear">Clear column filters</button></p>` : ''}
+    ${lines.length || !colOn ? tableHtml : `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table"><thead>${colFilterRow}</thead></table></div><div class="nml-empty">No Bible lines match.</div>`}
     ${fy!=='none' ? `<h2 class="nbr-h2">Banked in ${esc(nbrFyLabel(fy))} – by the month paid</h2>${bankedHtml}` : ''}
     ${pivotHtml ? `<h2 class="nbr-h2">These lines by advisor and product</h2>${pivotHtml}` : ''}`;
   const set = (id, key, num)=> document.getElementById(id).addEventListener('change', e=>{ nbrUI[key] = e.target.value; if(key==='bibFY') nbrUI.bibMonth = ''; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); });
@@ -17087,6 +17248,9 @@ function renderNbrBible(){
   let t = null;
   document.getElementById('nbrBibSearch').addEventListener('input', e=>{ clearTimeout(t); t = setTimeout(()=>{ nbrUI.bibSearch = e.target.value.trim(); nbrUI.bibShown = NBR_PAGE; renderNbrBible(); const s = document.getElementById('nbrBibSearch'); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }, 250); });
   document.getElementById('nbrAddLine').addEventListener('click', ()=> openNbrLine(null));
+  el.querySelectorAll('[data-bib-col]').forEach(sel=> sel.addEventListener('change', ()=>{ nbrUI.bibCol[sel.dataset.bibCol] = sel.value; nbrUI.bibShown = NBR_PAGE; renderNbrBible();
+    const again = document.querySelector(`[data-bib-col="${sel.dataset.bibCol}"]`); if(again) again.focus(); }));
+  const cc = document.getElementById('nbrColClear'); if(cc) cc.addEventListener('click', ()=>{ nbrUI.bibCol = {}; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); });
   const more = document.getElementById('nbrBibMore'); if(more) more.addEventListener('click', ()=>{ nbrUI.bibShown += NBR_PAGE; renderNbrBible(); });
   nbrBindBibViews(el);
 }
@@ -17476,7 +17640,7 @@ function nbrFillPreview(it){
     </tbody></table>${list.length>200 ? `<p class="nbr-p">…and ${list.length-200} more.</p>` : ''}</div>`;
   const matched = M.fill.length + M.same;
   return `<ul class="nbr-fill-sum">
-      ${matched ? `<li><b>${matched}</b> row${n(matched)} match a Bible line already here: <b>${M.fill.length}</b> will have blanks filled in${M.same ? `, ${M.same} already up to date` : ''}.</li>` : ''}
+      ${matched ? `<li><b>${matched}</b> row${n(matched)} match a Bible line already here: <b>${M.fill.length}</b> will be updated to match the Excel Bible${M.same ? `, ${M.same} already the same` : ''}.</li>` : ''}
       ${M.link.length ? `<li><b>${M.link.length}</b> row${n(M.link.length)} match an NBR case or B&amp;C policy that has no Bible line yet: they'll be added and linked to it.</li>` : ''}
       ${M.paidAdded ? `<li><b>${M.paidAdded}</b> date${n(M.paidAdded)} paid will be added to these, so they show as Banked on the Salesboard.</li>` : ''}
       ${!matched && !M.link.length ? `<li>No rows match the cases or Bible lines already here. Check each code above is matched to the right advisor.</li>` : ''}
@@ -17574,11 +17738,11 @@ function renderNbrUpload(){
       <select data-nbr-code="${esc(code)}"><option value="new" ${it.map[code]==='new' ? 'selected' : ''}>New advisor "${esc(code)}"</option>${advOpts.map(a=> `<option value="${esc(a.id)}" ${a.id===it.map[code] ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}<option value="none" ${it.map[code]==='none' ? 'selected' : ''}>No advisor (e.g. B&amp;C quoted by staff)</option><option value="skip" ${it.map[code]==='skip' ? 'selected' : ''}>Leave these lines out</option></select>
       ${c.guessed && it.map[code]!=='new' && it.map[code]!=='none' && it.map[code]!=='skip' ? '<span class="field-hint">matched by name: check it</span>' : it.map[code]==='new' ? '<span class="nbr-warn">will be added as a new advisor</span>' : ''}</label>`).join('')}</div>
     <div class="nbr-up-mode">
-      <label class="nbr-check"><input type="radio" name="nbrBibMode" data-nbr-uf="mode" value="fill" ${it.mode==='fill' ? 'checked' : ''}> <span><b>Fill in the blanks</b>: match each row to the NBR cases and Bible lines already here, and only add what's missing (date paid, amount paid, offer and completion dates…). Nothing already entered is changed.</span></label>
+      <label class="nbr-check"><input type="radio" name="nbrBibMode" data-nbr-uf="mode" value="fill" ${it.mode==='fill' ? 'checked' : ''}> <span><b>Match to the Excel Bible</b>: match each row to the NBR cases and Bible lines already here, and bring them in line with the Excel Bible: client, amount, dates, provider, when / how, date paid… as the Excel has them, so the Bible here reads row for row as the Excel. A payment entered here that the Excel hasn't got yet is kept. Advisors' NBR figures (written) aren't changed.</span></label>
       <label class="nbr-check"><input type="radio" name="nbrBibMode" data-nbr-uf="mode" value="add" ${it.mode==='add' ? 'checked' : ''}> <span><b>Add every row</b> as a new Bible line</span></label>
     </div>
     ${it.mode==='fill' ? nbrFillPreview(it) : existing ? `<label class="nbr-check"><input type="checkbox" data-nbr-uf="replace" ${it.replace ? 'checked' : ''}> Replace the ${existing} Bible line${existing===1?'':'s'} already here for ${esc(fys.join(', '))}</label>` : ''}
-    ${foot(cancelBtn + `<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go">${it.mode==='fill' ? 'Fill in the blanks' : `Import ${p.lines.length} lines`}</button>`)}
+    ${foot(cancelBtn + `<button type="button" class="btn btn-primary btn-sm" data-nbr-up="go">${it.mode==='fill' ? 'Match to the Excel Bible' : `Import ${p.lines.length} lines`}</button>`)}
   </div>`;
 }
 document.addEventListener('change', e=>{
@@ -17770,6 +17934,8 @@ function nbrBibleUploadPatches(it){
    doesn't have a Bible line yet. A matched line only gets the fields it's missing (date paid, amount paid,
    offer / completion dates…); nothing already entered is changed. Rows that match nothing are listed so
    they can be added or left out. Uploading the same Bible again changes nothing. */
+// The Excel Bible's columns a matched line takes from it (the product stays as here: e.g. BTL PT, which the Excel calls Prod Tfr).
+const NBR_EXCEL_FIELDS = ['client','office','dept','appDate','offerDate','compDate','switchDate','provider','source','when','mumsType','how','datePaid','paid','life','address','npwNote'];
 const NBR_FILL_FIELDS = ['office','dept','appDate','offerDate','compDate','switchDate','provider','source','when','mumsType','how','datePaid','paid','life','address','npwNote','amount'];
 function nbrProdKind(p){
   p = String(p||'');
@@ -17910,8 +18076,21 @@ function nbrBibleMatch(it){
     const t = rowDone.get(r.i);
     if(t && t.type==='line'){
       const set = {};
-      NBR_FILL_FIELDS.forEach(f=>{ if(!nbrBlank(l[f]) && nbrBlank(t.l[f])) set[f] = l[f]; });
+      // The Excel Bible's details win wherever it has them, so the line reads as the Excel's row (client as the Excel writes it,
+      // dates, provider, when / how, date paid…). What's only here (e.g. a payment the Excel hasn't got yet) is kept.
+      NBR_EXCEL_FIELDS.forEach(f=>{ if(nbrBlank(l[f])) return; const num = f==='paid'; if(num ? Math.abs(n0(l[f]) - n0(t.l[f])) >= 0.01 || nbrBlank(t.l[f]) : String(l[f])!==String(t.l[f]==null ? '' : t.l[f])) set[f] = num ? nbrRound(l[f]) : l[f]; });
+      if(!l.npw && l.month && l.month!==t.l.month) set.month = l.month;
+      if(!t.l.inBible) set.inBible = true;
       if(nbrBibleProductFix(t.l, l)) set.product = l.product;
+      // The amount: a Mums Fee row for less than the line (e.g. its £100 Initial, the rest not in the Bible yet) keeps the row's
+      // amount for that part; otherwise the line takes the Excel's amount (not for a fee in parts or one line for several).
+      const ra = nbrRound(l.amount), simple = !nbrLineExtraPays(t.l).length && !t.l.covers;
+      if(!l.npw && simple && ra > 0){
+        const initial = (t.l.kind || nbrProdKind(t.l.product))==='mums' && ra < n0(t.l.amount) - 0.005;
+        const want = initial ? ra : null;
+        if(want!==(t.l.bibAmt!=null ? nbrRound(t.l.bibAmt) : null)) set.bibAmt = want;
+        if(!initial && Math.abs(ra - n0(t.l.amount)) >= 0.01) set.amount = ra;
+      }
       if(t.l.kind==='bc' && r.kind!=='bc'){ if(l.product && l.product!==t.l.product) set.product = l.product; if(l.provider && l.provider!==t.l.provider) set.provider = l.provider; }
       if(l.npw && !t.l.npw) set.npw = true;
       else if(!l.npw && t.l.npw) set.npw = null; // the Excel Bible has it as proceeding
@@ -18012,34 +18191,37 @@ function nbrBibleFillPatches(it){
     else { ids[code] = v; const a = NBR_ADV[v]; if(a && !nbrAdvCodes(a).some(k=> k.toLowerCase()===code.toLowerCase())) updates['advisors/'+v+'/codes'] = [...nbrAdvCodes(a), code].join(', '); }
   });
   const M = nbrBibleMatch(it);
-  const newLine = (l, extra, key)=>{ const data = nbrClean({...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now, ...extra}); delete data.code; const id = key || nbrKey(); updates['bible/'+id] = data; return id; };
+  const newLine = (l, extra, key)=>{ const data = nbrClean({...l, adv: l.code ? ids[l.code] : '', src:'upload', createdAt:now, inBible:true, ...extra}); delete data.code; const id = key || nbrKey(); updates['bible/'+id] = data; return id; };
   M.fill.forEach(f=>{ Object.entries(f.set).forEach(([k,v])=>{ updates['bible/'+f.id+'/'+k] = v; }); updates['bible/'+f.id+'/updatedAt'] = now; updates['bible/'+f.id+'/updatedBy'] = by; });
   // Part payments: the earliest row is the line's own payment, the others are its payment lines.
-  const PAY_FIELDS = ['part','when','how','datePaid','paid'];
-  const payOf = row=> nbrClean({amount: nbrRound(row.amount), part: nbrProdKind(row.product)==='mums' ? nbrPartLabel(row.provider) || null : null, when: row.when, how: row.how, datePaid: row.datePaid, paid: n0(row.paid) ? row.paid : null});
+  const PAY_FIELDS = ['part','month','when','how','datePaid','paid'];
+  const payOf = row=> nbrClean({amount: nbrRound(row.amount), part: nbrProdKind(row.product)==='mums' ? nbrPartLabel(row.provider) || null : null, month: row.month || null, when: row.when, how: row.how, datePaid: row.datePaid, paid: n0(row.paid) ? row.paid : null});
   const byDate = (a,b)=> String(a.l.datePaid || '9999').localeCompare(String(b.l.datePaid || '9999')) || a.i - b.i;
   M.split.forEach(({t, rows})=>{
     const rs = rows.slice().sort(byDate), first = rs[0].l, rest = rs.slice(1);
     if(t.type==='entry'){
       const e = NBR_ENT[t.id] || {}, a = NBR_ADV[e.adv] || {}, pays = {};
       rest.forEach(r=>{ pays[nbrKey()] = payOf(r.l); if(r.l.datePaid) M.paysAdded++; });
-      newLine(first, {entry:t.id, kind:t.k, amount: nbrRound(t.amt), pays, ...(rows.some(r=> r.l.npw) ? {npw:true} : {}), ...(first.office ? {} : a.office ? {office:a.office} : {})});
+      newLine(first, {entry:t.id, kind:t.k, amount: nbrRound(t.amt), pays, inBible:true, ...(rows.some(r=> r.l.npw) ? {npw:true} : {}), ...(first.office ? {} : a.office ? {office:a.office} : {})});
       if(first.datePaid) M.paidAdded++;
       return;
     }
     const L = t.l, base = 'bible/'+t.id+'/';
     // The line's own payment: fill in only what's blank.
     let touched = false;
+    if(!L.inBible){ updates[base+'inBible'] = true; touched = true; }
     if(rows.some(r=> r.l.npw) && !L.npw){ updates[base+'npw'] = true; touched = true; }
     if(rows.some(r=> r.l.npw) && first.month && first.month!==L.month){ updates[base+'month'] = first.month; touched = true; }
     if(nbrBibleProductFix(L, first)){ updates[base+'product'] = first.product; touched = true; }
-    NBR_FILL_FIELDS.filter(f=> f!=='amount').forEach(f=>{ if(!nbrBlank(first[f]) && nbrBlank(L[f])){ updates[base+f] = first[f]; touched = true; if(f==='datePaid') M.paidAdded++; } });
+    // As the Excel Bible has it, wherever it has a value (a payment entered here that the Excel hasn't got is kept).
+    NBR_EXCEL_FIELDS.forEach(f=>{ if(nbrBlank(first[f])) return; const num = f==='paid', v = num ? nbrRound(first[f]) : first[f];
+      if(num ? (nbrBlank(L[f]) || Math.abs(n0(L[f]) - n0(v)) >= 0.01) : String(v)!==String(L[f]==null ? '' : L[f])){ updates[base+f] = v; touched = true; if(f==='datePaid' && !L.datePaid) M.paidAdded++; } });
     // The others: matched to a payment line already here (same date paid, else same amount), otherwise added.
     const have = nbrLineExtraPays(L), used = new Set();
     rest.forEach(r=>{
       const x = payOf(r.l);
       const ex = have.find(h=> !used.has(h.k) && x.datePaid && h.datePaid===x.datePaid) || have.find(h=> !used.has(h.k) && Math.abs(n0(h.amount) - n0(x.amount)) < 0.01);
-      if(ex){ used.add(ex.k); ['amount', ...PAY_FIELDS].forEach(f=>{ if(!nbrBlank(x[f]) && nbrBlank(ex[f])){ updates[base+'pays/'+ex.k+'/'+f] = x[f]; touched = true; if(f==='datePaid') M.paysAdded++; } }); }
+      if(ex){ used.add(ex.k); ['amount', ...PAY_FIELDS].forEach(f=>{ if(!nbrBlank(x[f]) && String(x[f])!==String(ex[f]==null ? '' : ex[f])){ updates[base+'pays/'+ex.k+'/'+f] = x[f]; touched = true; if(f==='datePaid') M.paysAdded++; } }); }
       else { updates[base+'pays/'+nbrKey()] = x; touched = true; if(x.datePaid) M.paysAdded++; }
     });
     if(touched){ updates[base+'updatedAt'] = now; updates[base+'updatedBy'] = by; } else M.same++;
@@ -18051,17 +18233,20 @@ function nbrBibleFillPatches(it){
     let mainId;
     if(main.type==='line'){
       mainId = main.id; const L = main.l, base = 'bible/'+mainId+'/';
-      NBR_FILL_FIELDS.forEach(f=>{ if(f!=='amount' && !nbrBlank(l[f]) && nbrBlank(L[f])){ updates[base+f] = l[f]; if(f==='datePaid') M.paidAdded++; } });
+      NBR_EXCEL_FIELDS.forEach(f=>{ if(nbrBlank(l[f])) return; const num = f==='paid', v = num ? nbrRound(l[f]) : l[f];
+        if(num ? (nbrBlank(L[f]) || Math.abs(n0(L[f]) - n0(v)) >= 0.01) : String(v)!==String(L[f]==null ? '' : L[f])){ updates[base+f] = v; if(f==='datePaid' && !L.datePaid) M.paidAdded++; } });
+      if(!l.npw && l.month && l.month!==L.month) updates[base+'month'] = l.month;
       if(nbrBibleProductFix(L, l)) updates[base+'product'] = l.product;
       if(l.npw && !L.npw) updates[base+'npw'] = true;
       if(l.npw && l.month && l.month!==L.month) updates[base+'month'] = l.month;
       updates[base+'amount'] = nbrRound(l.amount);
+      if(!L.inBible) updates[base+'inBible'] = true;
       if(!nbrBlank(l.provider)) updates[base+'provider'] = l.provider;
       otherIds.forEach(k=>{ updates[base+'covers/'+k] = true; });
       updates[base+'updatedAt'] = now; updates[base+'updatedBy'] = by;
     } else {
       const e = NBR_ENT[main.id] || {}, a = NBR_ADV[e.adv] || {};
-      mainId = newLine(l, {entry:main.id, kind:main.k, covers, ...(l.office ? {} : a.office ? {office:a.office} : {})});
+      mainId = newLine(l, {entry:main.id, kind:main.k, covers, inBible:true, ...(l.office ? {} : a.office ? {office:a.office} : {})});
       if(l.datePaid) M.paidAdded++;
     }
     others.forEach((x, j)=>{
@@ -18073,7 +18258,7 @@ function nbrBibleFillPatches(it){
   });
   M.link.forEach(x=>{
     if(x.bc){ const b = NBR_BC[x.bc] || {}; newLine(x.row, {bc:x.bc, kind:'bc', ...(x.row.office ? {} : b.office ? {office:b.office} : {})}); return; }
-    const e = NBR_ENT[x.entry] || {}, a = NBR_ADV[e.adv] || {}; newLine(x.row, {entry:x.entry, kind:x.kind, ...(x.row.office ? {} : a.office ? {office:a.office} : {})});
+    const e = NBR_ENT[x.entry] || {}, a = NBR_ADV[e.adv] || {}; newLine(x.row, {entry:x.entry, kind:x.kind, inBible:true, ...(x.row.office ? {} : a.office ? {office:a.office} : {})});
   });
   let added = 0;
   if(it.addExtra) M.extra.forEach(l=>{ newLine(l); added++; });
@@ -18084,7 +18269,7 @@ function nbrBibleFillPatches(it){
   npwIn.forEach(l=>{ newLine(l); });
   const left = (it.addExtra ? 0 : M.extra.length) + (it.addUnmatched ? 0 : M.unmatched.length) + M.skipped - npwIn.length;
   const bits = [];
-  if(M.fill.length) bits.push(`filled in the blanks on ${M.fill.length} Bible line${M.fill.length===1?'':'s'}`);
+  if(M.fill.length) bits.push(`brought ${M.fill.length} Bible line${M.fill.length===1?'':'s'} in line with the Excel Bible`);
   if(M.link.length) bits.push(`added ${M.link.length} line${M.link.length===1?'':'s'} to NBR cases that didn't have one yet`);
   if(M.paidAdded) bits.push(`${M.paidAdded} date${M.paidAdded===1?'':'s'} paid added`);
   if(M.combine.length) bits.push(`${M.combine.length} fee${M.combine.length===1?'':'s'} the NBR has as two or more lines (e.g. a change of lender) made into one line, as in the Bible`);

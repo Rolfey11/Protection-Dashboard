@@ -1657,9 +1657,10 @@ body:not(.mode-com) .com-only{display:none !important;}
 .modal-overlay{
   position:fixed; inset:0; background:rgba(46,15,35,.44); backdrop-filter:blur(2px);
   z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;
-  opacity:0; pointer-events:none; transition:opacity .18s;
+  opacity:0; pointer-events:none; transition:opacity .18s, visibility 0s .18s; visibility:hidden;
 }
-.modal-overlay.open{opacity:1; pointer-events:auto;}
+/* Closed windows are hidden (not just see-through), so the keyboard can't reach their buttons either. */
+.modal-overlay.open{opacity:1; pointer-events:auto; visibility:visible; transition:opacity .18s;}
 /* Sign-up modal can open on top of the lead detail modal, so it needs a higher stacking context */
 #signupOverlay{z-index:110;}
 #overdueOverlay{z-index:99;}
@@ -4457,7 +4458,11 @@ function toast(msg, type=''){
   setTimeout(close, life);
 }
 
-function openModal(id){ document.getElementById(id).classList.add('open'); document.body.classList.add('scroll-lock'); }
+function openModal(id){
+  document.getElementById(id).classList.add('open'); document.body.classList.add('scroll-lock');
+  // The overdue pop-up: the page behind can't be reached at all (not even with the keyboard) until it's dealt with.
+  if(id==='overdueOverlay'){ const shell = document.getElementById('appShell'); if(shell) shell.inert = true; setTimeout(()=>{ const b = document.querySelector('#overdueOverlay.open button'); if(b && !document.querySelector('.modal-overlay.open:not(#overdueOverlay)')) b.focus(); }, 50); }
+}
 function closeModal(id, force){
   if(id==='forcePinOverlay' && forcePinActive) return; // must choose a new PIN or sign out
   if(!force && id==='overdueOverlay' && overdueGateActive && overdueGateList().length) return; // deal with every overdue item first
@@ -4465,6 +4470,7 @@ function closeModal(id, force){
   if(!force && id==='comOverlay' && comOpenId){ const why = comCloseBlock(COM[comOpenId]); if(why){ toast(why,'error'); return; } }
   if(id==='sibChaseOverlay' && sibChaseActive && sibMyChasePending().length) return; // answer every client first
   document.getElementById(id).classList.remove('open');
+  if(id==='overdueOverlay'){ const shell = document.getElementById('appShell'); if(shell) shell.inert = false; }
   if(id!=='overdueOverlay' && id!=='leadOverlay' && id!=='comOverlay' && currentUser) setTimeout(checkOverdueGate, 0);
   if(id==='leadOverlay'){ activeLeadId = null; actionUIState = null; lastRenderedLead = null; ldMoreOpen = false; ldFeedbackOpen = false; ldThanksOpen = false; ldEditClient = false; ldEditNames = null; if(overdueGateActive || currentUser) setTimeout(checkOverdueGate, 0); }
   if(id==='sibOverlay'){ sibOpenKey = null; sibAction = null; sibMoreOpen = false; }
@@ -10365,6 +10371,13 @@ function openLead(id){
   // Showing the refresh copy: open the case once the live version has arrived (a second or two).
   if(!leadsLive){ pendingLeadId = id; toast('Loading the latest version of this case…', 'info'); return; }
   if(!LEADS[id] || LEADS[id].deleted){ toast('That case has been deleted. Management can restore it from the Recycle Bin.','error'); return; }
+  // A MAPA with overdue items (the overdue pop-up) can only open those cases until they're dealt with:
+  // a link, a reminder notification or anything else can't open another case first.
+  const overdue = myOverdueBookings();
+  if(overdue.length && !overdue.some(l=> l.id===id)){
+    toast(`Deal with your overdue ${overdue.length===1 ? 'item' : 'items'} first. You can open other cases once ${overdue.length===1 ? "it's" : "they're"} done.`,'error');
+    setTimeout(checkOverdueGate, 0); return;
+  }
   activeLeadId = id;
   ldNoteClose(); ldMa = {open:false, sel:'', note:''}; ctEditing = -1;
   setTimeout(()=> gmailReplySync(), 300);

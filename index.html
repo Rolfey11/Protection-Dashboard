@@ -781,6 +781,7 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-colf select.on{border-color:var(--brand); background:var(--brand-tint); color:var(--brand); font-weight:700;}
 .nbr-colf-note{margin:-6px 0 10px;}
 .nbr-bib-table tr.bl-more td{border-top:1px dashed var(--border-2);}
+.nbr-pivot td .linkish{font-weight:inherit;}
 /* Tables across the dashboard: text sits in the middle of each column, across and top to bottom (headings too). */
 table.nml-table th, table.nml-table td, table.mini-table th, table.mini-table td, table.users-table th, table.users-table td,
 table.nbr-m-tbl th, table.nbr-m-tbl td, .ask-tbl th, .ask-tbl td{text-align:center !important; vertical-align:middle;}
@@ -15571,7 +15572,7 @@ function nbrBibVisible(v){ const o = {}; Object.entries(v || {}).forEach(([k, l]
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
 const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
-  bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibCol:{}, bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
+  pvFY:{}, pvMonth:'', pvAdv:'', pvSel:null, bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibCol:{}, bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
@@ -17031,7 +17032,7 @@ function nbrPaidMonths(){
   return [...s].filter(ym=> /^\d{4}-\d{2}$/.test(ym)).sort().reverse();
 }
 function nbrBibViewSwitch(){
-  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month'], ['switch','Switch dates'], ['upfront','Upfront fees owed']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
+  return `<div class="cond-seg nbr-bib-views" role="group" aria-label="Bible view">${[['lines','All lines'], ['paid','Paid by month'], ['upfront','Upfront fees owed'], ['pipe','PIPE'], ['offered','Offered / Pipe'], ['completed','Completed'], ['banked','Banked'], ['switch','PT Switch Dates']].map(([k, l])=> `<button type="button" data-bib-view="${k}" aria-pressed="${nbrUI.bibView===k}">${l}</button>`).join('')}</div>`;
 }
 function renderNbrBiblePaid(el){
   const months = nbrPaidMonths(), thisYm = nbrThisYm();
@@ -17192,6 +17193,83 @@ function renderNbrBibleUpfront(el){
   }).catch(e=> toast('Could not make the file: '+e.message, 'error')));
   nbrBindBibViews(el);
 }
+/* The Excel Bible's pivot sheets, from the same rows as All lines: advisors down, products across.
+   PIPE: not offered, completed or paid (the white lines). Offered / Pipe: offered or terms issued, not completed or paid.
+   Completed: completed or on risk, not paid (the pink lines). NPWs are left out, as in the Excel's filters.
+   Banked: what's been paid, by the year and month it was received (the LIVE SALESBOARD figures). */
+const NBR_PIVOTS = {
+  pipe:      {title:'PIPE', note:'Not yet offered, completed or paid (the white lines in the Excel Bible), and not NPW.', st:'pipe'},
+  offered:   {title:'Offered / Pipe', note:'Offered or terms issued, but not yet completed or paid, and not NPW.', st:'offer'},
+  completed: {title:'Completed', note:'Completed or on risk, but not yet paid (the pink lines in the Excel Bible), and not NPW.', st:'comp'},
+  banked:    {title:'Banked', note:'What has been paid, by the date it was received (each payment in the month it came in), as the LIVE SALESBOARD. NPWs are left out.', banked:true},
+};
+const nbrIsBC = l=> (l.kind || nbrProdKind(l.product))==='bc' || /^gen ins/i.test(l.product||'');
+// Each item: {adv, product, value, ym, row (for the list), date}
+function nbrPivotItems(key){
+  const P = NBR_PIVOTS[key], out = [];
+  Object.entries(NBR_BIB).forEach(([id, l])=>{
+    if(!l || l.npw) return;
+    if(P.banked){ nbrLinePays(l).forEach(x=>{ if(!x.datePaid) return; const v = n0(x.paid); if(!v) return;
+      out.push({adv:l.adv||'', product:l.product||'(none)', value:v, ym:String(x.datePaid).slice(0,7), date:x.datePaid, id, l}); }); return; }
+    nbrBibRows({id, ...l}).forEach(r=>{ if(r.st!==P.st) return; out.push({adv:l.adv||'', product:l.product||'(none)', value:n0(r.amount), ym:r.month||'', date:'', id, l, r}); });
+  });
+  return out;
+}
+function renderNbrBiblePivot(el, key){
+  const P = NBR_PIVOTS[key], all = nbrPivotItems(key), nameOf = id=> id ? nbrAdvName(id) : '(no advisor)';
+  // Banked opens on the financial year we're in; the pipeline views on every year (as the Excel's pivots).
+  const fyKey = nbrUI.pvFY[key]!=null ? nbrUI.pvFY[key] : (P.banked ? nbrFyOf(nbrThisYm()) : '');
+  const fys = [...new Set(all.map(x=> x.ym ? nbrFyOf(x.ym) : '').filter(Boolean))].sort().reverse();
+  if(P.banked && fyKey && !fys.includes(fyKey)) fys.unshift(fyKey);
+  const months = fyKey ? nbrFyMonths(fyKey) : [];
+  if(nbrUI.pvMonth && !months.includes(nbrUI.pvMonth)) nbrUI.pvMonth = '';
+  const items = all.filter(x=> (!fyKey || (x.ym && nbrFyOf(x.ym)===fyKey)) && (!nbrUI.pvMonth || x.ym===nbrUI.pvMonth) && (!nbrUI.pvAdv || x.adv===(nbrUI.pvAdv==='none' ? '' : nbrUI.pvAdv)));
+  const advIds = [...new Set(items.map(x=> x.adv))].sort((a,b)=> nameOf(a).localeCompare(nameOf(b)));
+  const prods = [...new Set(items.map(x=> x.product))].sort((a,b)=> a.localeCompare(b));
+  const sum = f=> items.reduce((t,x)=> t + (f(x) ? x.value : 0), 0);
+  const total = sum(()=> true);
+  const sel = nbrUI.pvSel && nbrUI.pvSel.key===key ? nbrUI.pvSel : null;
+  const cell = (v, a, pr, cls='')=> v ? `<td class="num ${cls}"><button type="button" class="linkish" data-pv-adv="${a==null ? '' : esc(a || 'none')}" data-pv-prod="${pr==null ? '' : esc(pr)}" title="See these lines">${nbrMoney(v)}</button></td>` : `<td class="num ${cls}">${nbrMoneyCell(0)}</td>`;
+  const table = items.length ? `<div class="nml-table-wrap"><table class="nml-table nbr-table nbr-pivot"><thead><tr><th>Adv</th>${prods.map(p=> `<th class="num">${esc(p)}</th>`).join('')}<th class="num">Grand total</th></tr></thead><tbody>
+      ${advIds.map(a=> `<tr><td><b>${esc(nameOf(a))}</b></td>${prods.map(pr=> cell(sum(x=> x.adv===a && x.product===pr), a, pr)).join('')}${cell(sum(x=> x.adv===a), a, null, 'b')}</tr>`).join('')}
+      <tr class="nbr-grand"><td>Grand total</td>${prods.map(pr=> cell(sum(x=> x.product===pr), null, pr)).join('')}${cell(total, null, null, 'b')}</tr></tbody></table></div>`
+    : `<div class="nml-empty">Nothing here for these filters.</div>`;
+  const cards = P.banked ? `<div class="stat-grid nbr-paid-cards">
+      <div class="stat-card good"><div class="sv">${nbrMoney(total)}</div><div class="sl">Banked${nbrUI.pvMonth ? ' in '+esc(nbrYmLabel(nbrUI.pvMonth, true)) : fyKey ? ' in '+esc(fyKey) : ''}</div></div>
+      <div class="stat-card"><div class="sv">${nbrMoney(sum(x=> !nbrIsBC(x.l)))}</div><div class="sl">Banked without B&amp;C</div></div>
+      <div class="stat-card"><div class="sv">${nbrMoney(sum(x=> x.product==='Life Ins'))}</div><div class="sl">Life</div></div>
+      <div class="stat-card"><div class="sv">${nbrMoney(sum(x=> nbrIsBC(x.l)))}</div><div class="sl">B&amp;C</div></div></div>`
+    : `<div class="stat-grid nbr-paid-cards"><div class="stat-card"><div class="sv">${nbrMoney(total)}</div><div class="sl">${esc(P.title)} · ${items.length} line${items.length===1 ? '' : 's'}</div></div></div>`;
+  // The lines behind a figure that's been clicked (or all of them)
+  const list = items.filter(x=> !sel || ((sel.adv==null || x.adv===sel.adv) && (sel.prod==null || x.product===sel.prod)))
+    .sort((a,b)=> (P.banked ? String(a.date).localeCompare(String(b.date)) : String(a.ym).localeCompare(String(b.ym))) || nameOf(a.adv).localeCompare(nameOf(b.adv)) || String(a.l.client||'').localeCompare(String(b.l.client||'')));
+  const shown = list.slice(0, 300);
+  const listHtml = list.length ? `<div class="nml-table-wrap nbr-bib-wrap"><table class="nml-table nbr-table nbr-bib-table"><thead><tr><th>${P.banked ? 'Date paid' : 'Period'}</th><th>Adv</th><th>Client</th><th>Provider</th><th>Product</th><th>App date</th><th>Offer / terms</th><th>Comp date</th><th class="num">${P.banked ? 'Paid' : 'Amount'}</th></tr></thead><tbody>
+      ${shown.map(x=> `<tr class="nbr-click" data-nbr-line="${esc(x.id)}"><td>${esc(P.banked ? fmtDateSlash(x.date) : x.ym ? nbrYmLabel(x.ym) : '—')}</td><td>${esc(nameOf(x.adv))}</td><td><b>${esc(x.l.client||'')}</b></td><td>${esc((x.r && x.r.provider) || x.l.provider || '')}</td><td>${esc(x.product)}</td><td>${nbrShortDate(x.l.appDate)}</td><td>${nbrShortDate(x.l.offerDate)}</td><td>${nbrShortDate(x.l.compDate)}</td><td class="num b">${nbrMoney(x.value)}</td></tr>`).join('')}
+      <tr class="nbr-grand"><td colspan="8">Total</td><td class="num b">${nbrMoney(list.reduce((t,x)=> t + x.value, 0))}</td></tr></tbody></table></div>
+      ${list.length > shown.length ? `<p class="field-hint">Showing the first ${shown.length} of ${list.length}; pick an advisor or a figure to narrow it down.</p>` : ''}` : '';
+  const advOpts = [['','All advisors'], ...nbrAdvs(true).map(a=> [a.id, a.name])];
+  el.innerHTML = `
+    ${nbrBibViewSwitch()}
+    <div class="nbr-toolbar nbr-filters">
+      <label>Financial year${P.banked ? ' received' : ''} <select id="nbrPvFY"><option value="">All years</option>${fys.map(f=> `<option value="${f}" ${f===fyKey ? 'selected' : ''}>${esc(nbrFyLabel(f))}</option>`).join('')}</select></label>
+      ${fyKey ? `<label>Month${P.banked ? ' received' : ''} <select id="nbrPvMonth"><option value="">Whole year</option>${months.map(ym=> `<option value="${ym}" ${ym===nbrUI.pvMonth ? 'selected' : ''}>${esc(nbrYmLabel(ym))}</option>`).join('')}</select></label>` : ''}
+      <label>Advisor <select id="nbrPvAdv">${advOpts.map(([v,t])=> `<option value="${esc(v)}" ${v===nbrUI.pvAdv ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+    </div>
+    ${cards}
+    <p class="field-hint nbr-bib-note">${esc(P.note)} Click a figure to see its lines.</p>
+    <h2 class="nbr-h2">${esc(P.title)} by advisor and product</h2>${table}
+    ${list.length ? `<h2 class="nbr-h2">The lines${sel ? ` · ${esc([sel.adv!=null ? nameOf(sel.adv) : '', sel.prod || ''].filter(Boolean).join(', '))} <button type="button" class="linkish" id="nbrPvAll">Show them all</button>` : ''}</h2>${listHtml}` : ''}`;
+  document.getElementById('nbrPvFY').addEventListener('change', e=>{ nbrUI.pvFY[key] = e.target.value; nbrUI.pvMonth = ''; nbrUI.pvSel = null; renderNbrBible(); });
+  const mo = document.getElementById('nbrPvMonth'); if(mo) mo.addEventListener('change', e=>{ nbrUI.pvMonth = e.target.value; nbrUI.pvSel = null; renderNbrBible(); });
+  document.getElementById('nbrPvAdv').addEventListener('change', e=>{ nbrUI.pvAdv = e.target.value; nbrUI.pvSel = null; renderNbrBible(); });
+  el.querySelectorAll('[data-pv-adv]').forEach(b=> b.addEventListener('click', e=>{ e.stopPropagation();
+    const a = b.dataset.pvAdv, pr = b.dataset.pvProd;
+    nbrUI.pvSel = {key, adv: a==='' ? null : a==='none' ? '' : a, prod: pr==='' ? null : pr}; renderNbrBible();
+    const h = [...el.querySelectorAll('.nbr-h2')].pop(); if(h) h.scrollIntoView({behavior:'smooth', block:'start'}); }));
+  const sa = document.getElementById('nbrPvAll'); if(sa) sa.addEventListener('click', ()=>{ nbrUI.pvSel = null; renderNbrBible(); });
+  nbrBindBibViews(el);
+}
 function nbrBindBibViews(el){
   const jg = el.querySelector('#nbrJunkGo'); if(jg) jg.addEventListener('click', nbrBibJunkRemove);
   el.querySelectorAll('[data-bib-view]').forEach(b=> b.addEventListener('click', ()=>{ nbrUI.bibView = b.dataset.bibView; nbrUI.bibShown = NBR_PAGE; renderNbrBible(); }));
@@ -17212,6 +17290,7 @@ function renderNbrBible(){
   if(nbrUI.bibView==='paid'){ renderNbrBiblePaid(el); return; }
   if(nbrUI.bibView==='switch'){ renderNbrBibleSwitch(el); return; }
   if(nbrUI.bibView==='upfront'){ renderNbrBibleUpfront(el); return; }
+  if(NBR_PIVOTS[nbrUI.bibView]){ renderNbrBiblePivot(el, nbrUI.bibView); return; }
   const fys = nbrBibFys();
   if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = nbrFyOf(nbrThisYm());
   const fy = nbrUI.bibFY, fyMonths = fy==='none' ? [] : nbrFyMonths(fy);
@@ -17967,7 +18046,6 @@ function nbrBibleUploadPatches(it){
    they can be added or left out. Uploading the same Bible again changes nothing. */
 // The Excel Bible's columns a matched line takes from it (the product stays as here: e.g. BTL PT, which the Excel calls Prod Tfr).
 const NBR_EXCEL_FIELDS = ['client','office','dept','appDate','offerDate','compDate','switchDate','provider','source','when','mumsType','how','datePaid','paid','life','address','npwNote'];
-const NBR_FILL_FIELDS = ['office','dept','appDate','offerDate','compDate','switchDate','provider','source','when','mumsType','how','datePaid','paid','life','address','npwNote','amount'];
 function nbrProdKind(p){
   p = String(p||'');
   if(p==='Mums Fee') return 'mums';

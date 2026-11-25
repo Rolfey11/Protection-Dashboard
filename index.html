@@ -11044,6 +11044,8 @@ function wizWhatOpts(l, due){
     ['spoke', 'Called · spoke to client', 'Phone call that got through'],
     ['noanswer', 'Called · no answer', 'Counts as a contact attempt'],
     ['msg', 'Text or email sent', 'Choose which below'],
+    // A reminder that came round without a call or message: say why (not a contact attempt).
+    ...(due ? [['notattempted', 'Not attempted', 'No call or message: say why · not a contact attempt']] : []),
     ...(due ? [] : [['appt', 'Appointment held', 'Phone, video or face to face']]),
     ...(due || pot==='decline' ? [] : [['book', booking ? 'Book appointment / Set reminder' : 'Book a follow-up', 'Nothing to log: just book the next step']]),
     // Submitted / Terms: the insurer's news (terms, on risk, declined) without speaking to the client.
@@ -11060,8 +11062,8 @@ function wizEntry(lead, w, due){
     const res = w.what;
     return {type: res==='notattempted' ? 'status' : 'call', via:'appointment', meeting:res, dueAt:due.dueAt, apptType:due.type, text:`Outcome of meeting (${APPT_TYPES[due.type] || 'Appointment'} ${due.when}): ${{spoke:'Spoke to client', noanswer:'No answer', notattempted:'Not attempted'}[res]}${tail}`};
   }
-  const what = w.what==='spoke' ? 'Called, spoke to client' : w.what==='noanswer' ? 'Called, no answer' : w.what==='msg' ? (w.ch==='email' ? 'Email sent' : 'Text sent') : '';
-  if(due) return {type: w.what==='msg' ? (w.ch==='email' ? 'email' : 'text') : 'call', via:'reminder', dueAt:due.dueAt, text:`Reminder chase (${due.when}): ${what}${tail}`};
+  const what = w.what==='spoke' ? 'Called, spoke to client' : w.what==='noanswer' ? 'Called, no answer' : w.what==='notattempted' ? 'Not attempted' : w.what==='msg' ? (w.ch==='email' ? 'Email sent' : 'Text sent') : '';
+  if(due) return {type: w.what==='notattempted' ? 'status' : w.what==='msg' ? (w.ch==='email' ? 'email' : 'text') : 'call', via:'reminder', dueAt:due.dueAt, text:`Reminder chase (${due.when}): ${what}${tail}`};
   if(w.what==='spoke') return {type:'call', text:`Call - spoke to client${tail}`};
   if(w.what==='noanswer') return {type:'call', text:`Call - no answer${tail}`};
   if(w.what==='msg') return {type: w.ch==='email' ? 'email' : 'text', text:`${w.ch==='email' ? 'Email' : 'Text'} sent${tail}`};
@@ -11113,7 +11115,7 @@ function renderUpdateCase(lead, area){
       <div class="wiz-opts">${opts.map(([k, h, d])=> `<button type="button" class="wiz-opt ${w.what===k ? 'on' : ''} ${k==='book' ? 'wide' : ''}" data-wiz-what="${k}" aria-pressed="${w.what===k}"><b>${esc(h)}</b><span>${esc(d)}</span></button>`).join('')}</div>
       ${w.what==='msg' ? `<div class="wiz-sub-row"><span>Which?</span>${chip('data-wiz-ch','text', w.ch!=='email', 'Text')}${chip('data-wiz-ch','email', w.ch==='email', 'Email')}</div>` : ''}
       ${w.what==='appt' ? `<div class="wiz-sub-row"><span>How did it go?</span>${Object.entries(WIZ_APPT_RES).map(([k, v])=> chip('data-wiz-res', k, (w.res||'spoke')===k, v)).join('')}</div>` : ''}
-      ${w.what && w.what!=='book' ? `<div class="field wiz-note"><label for="wizNote">${due && due.kind==='appointment' && w.what==='notattempted' ? 'Why wasn\'t it attempted?' : 'Note'} <span class="wiz-req">${need ? `(at least ${MEETING_NOTE_MIN} characters)` : '(optional)'}</span></label><textarea id="wizNote" placeholder="${w.what==='appt' || due ? 'e.g. Both on the call. Wants life and CI quotes.' : 'e.g. Left a voicemail'}">${esc(w.note||'')}</textarea></div>` : ''}
+      ${w.what && w.what!=='book' ? `<div class="field wiz-note"><label for="wizNote">${due && w.what==='notattempted' ? 'Why wasn\'t it attempted?' : 'Note'} <span class="wiz-req">${need ? `(at least ${MEETING_NOTE_MIN} characters)` : '(optional)'}</span></label><textarea id="wizNote" placeholder="${w.what==='appt' || due ? 'e.g. Both on the call. Wants life and CI quotes.' : 'e.g. Left a voicemail'}">${esc(w.note||'')}</textarea></div>` : ''}
       <div class="wiz-foot">${due ? '' : '<button type="button" class="btn btn-secondary btn-sm" data-wiz="cancel">Cancel</button>'}<span class="wiz-spacer"></span><button type="button" class="btn btn-primary" data-wiz="next">Next: where does it go? →</button></div>
     </div>`;
     const keep = ()=>{ const n = document.getElementById('wizNote'); if(n) w.note = n.value; };

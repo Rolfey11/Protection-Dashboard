@@ -15634,7 +15634,7 @@ function nbrBibVisible(v){ const o = {}; Object.entries(v || {}).forEach(([k, l]
 let nbrListening = false, nbrVer = 0, nbrAggCache = null, nbrRenderTimer = null, nbrError = '';
 const nbrLoaded = {advisors:false, entries:false, npw:false, bible:false, config:false, bc:false, wills:false, targets:false};
 const nbrUI = {boardYear:null, boardMonth:null, regAdv:'', regYear:null, regMonth:null,
-  pvFY:{}, pvMonth:'', pvAdv:'', pvSel:null, bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibCol:{}, bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
+  pvFY:{}, pvMonth:{}, pvAdv:'', pvSel:null, bibFY:'', bibMonth:'', bibAdv:'', bibStatus:'', bibProduct:'', bibSearch:'', bibCol:{}, bibShown:NBR_PAGE, bibView:'lines', bibPaidYm:'', bibSwitchYm:'', bibPT:'', upload:null, tgtYear:null, tgtUp:null};
 
 function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || currentUser.role==='management'); }
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
@@ -17284,8 +17284,10 @@ function renderNbrBiblePivot(el, key){
   const fys = [...new Set(all.map(x=> x.ym ? nbrFyOf(x.ym) : '').filter(Boolean))].sort().reverse();
   if(P.banked && fyKey && !fys.includes(fyKey)) fys.unshift(fyKey);
   const months = fyKey ? nbrFyMonths(fyKey) : [];
-  if(nbrUI.pvMonth && !months.includes(nbrUI.pvMonth)) nbrUI.pvMonth = '';
-  const items = all.filter(x=> (!fyKey || (x.ym && nbrFyOf(x.ym)===fyKey)) && (!nbrUI.pvMonth || x.ym===nbrUI.pvMonth) && (!nbrUI.pvAdv || x.adv===(nbrUI.pvAdv==='none' ? '' : nbrUI.pvAdv)));
+  // Each tab keeps its own month. Banked opens on the month we're in (within this financial year); the others on the whole year.
+  let month = nbrUI.pvMonth[key]!=null ? nbrUI.pvMonth[key] : (P.banked && fyKey===nbrFyOf(nbrThisYm()) ? nbrThisYm() : '');
+  if(month && !months.includes(month)) month = '';
+  const items = all.filter(x=> (!fyKey || (x.ym && nbrFyOf(x.ym)===fyKey)) && (!month || x.ym===month) && (!nbrUI.pvAdv || x.adv===(nbrUI.pvAdv==='none' ? '' : nbrUI.pvAdv)));
   const advIds = [...new Set(items.map(x=> x.adv))].sort((a,b)=> nameOf(a).localeCompare(nameOf(b)));
   const prods = [...new Set(items.map(x=> x.product))].sort((a,b)=> a.localeCompare(b));
   const sum = f=> items.reduce((t,x)=> t + (f(x) ? x.value : 0), 0);
@@ -17297,7 +17299,7 @@ function renderNbrBiblePivot(el, key){
       <tr class="nbr-grand"><td>Grand total</td>${prods.map(pr=> cell(sum(x=> x.product===pr), null, pr)).join('')}${cell(total, null, null, 'b')}</tr></tbody></table></div>`
     : `<div class="nml-empty">Nothing here for these filters.</div>`;
   const cards = P.banked ? `<div class="stat-grid nbr-paid-cards">
-      <div class="stat-card good"><div class="sv">${nbrMoney(total)}</div><div class="sl">Banked${nbrUI.pvMonth ? ' in '+esc(nbrYmLabel(nbrUI.pvMonth, true)) : fyKey ? ' in '+esc(fyKey) : ''}</div></div>
+      <div class="stat-card good"><div class="sv">${nbrMoney(total)}</div><div class="sl">Banked${month ? ' in '+esc(nbrYmLabel(month, true)) : fyKey ? ' in '+esc(fyKey) : ''}</div></div>
       <div class="stat-card"><div class="sv">${nbrMoney(sum(x=> !nbrIsBC(x.l)))}</div><div class="sl">Banked without B&amp;C</div></div>
       <div class="stat-card"><div class="sv">${nbrMoney(sum(x=> x.product==='Life Ins'))}</div><div class="sl">Life</div></div>
       <div class="stat-card"><div class="sv">${nbrMoney(sum(x=> nbrIsBC(x.l)))}</div><div class="sl">B&amp;C</div></div></div>`
@@ -17315,15 +17317,15 @@ function renderNbrBiblePivot(el, key){
     ${nbrBibViewSwitch()}
     <div class="nbr-toolbar nbr-filters">
       <label>Financial year${P.banked ? ' received' : ''} <select id="nbrPvFY"><option value="">All years</option>${fys.map(f=> `<option value="${f}" ${f===fyKey ? 'selected' : ''}>${esc(nbrFyLabel(f))}</option>`).join('')}</select></label>
-      ${fyKey ? `<label>Month${P.banked ? ' received' : ''} <select id="nbrPvMonth"><option value="">Whole year</option>${months.map(ym=> `<option value="${ym}" ${ym===nbrUI.pvMonth ? 'selected' : ''}>${esc(nbrYmLabel(ym))}</option>`).join('')}</select></label>` : ''}
+      ${fyKey ? `<label>Month${P.banked ? ' received' : ''} <select id="nbrPvMonth"><option value="">Whole year</option>${months.map(ym=> `<option value="${ym}" ${ym===month ? 'selected' : ''}>${esc(nbrYmLabel(ym))}</option>`).join('')}</select></label>` : ''}
       <label>Advisor <select id="nbrPvAdv">${advOpts.map(([v,t])=> `<option value="${esc(v)}" ${v===nbrUI.pvAdv ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
     </div>
     ${cards}
     <p class="field-hint nbr-bib-note">${esc(P.note)} Click a figure to see its lines.</p>
     <h2 class="nbr-h2">${esc(P.title)} by advisor and product</h2>${table}
     ${list.length ? `<h2 class="nbr-h2">The lines${sel ? ` · ${esc([sel.adv!=null ? nameOf(sel.adv) : '', sel.prod || ''].filter(Boolean).join(', '))} <button type="button" class="linkish" id="nbrPvAll">Show them all</button>` : ''}</h2>${listHtml}` : ''}`;
-  document.getElementById('nbrPvFY').addEventListener('change', e=>{ nbrUI.pvFY[key] = e.target.value; nbrUI.pvMonth = ''; nbrUI.pvSel = null; renderNbrBible(); });
-  const mo = document.getElementById('nbrPvMonth'); if(mo) mo.addEventListener('change', e=>{ nbrUI.pvMonth = e.target.value; nbrUI.pvSel = null; renderNbrBible(); });
+  document.getElementById('nbrPvFY').addEventListener('change', e=>{ nbrUI.pvFY[key] = e.target.value; delete nbrUI.pvMonth[key]; nbrUI.pvSel = null; renderNbrBible(); });
+  const mo = document.getElementById('nbrPvMonth'); if(mo) mo.addEventListener('change', e=>{ nbrUI.pvMonth[key] = e.target.value; nbrUI.pvSel = null; renderNbrBible(); });
   document.getElementById('nbrPvAdv').addEventListener('change', e=>{ nbrUI.pvAdv = e.target.value; nbrUI.pvSel = null; renderNbrBible(); });
   el.querySelectorAll('[data-pv-adv]').forEach(b=> b.addEventListener('click', e=>{ e.stopPropagation();
     const a = b.dataset.pvAdv, pr = b.dataset.pvProd;

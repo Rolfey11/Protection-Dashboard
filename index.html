@@ -7589,7 +7589,8 @@ function openSibFromLead(key){
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
   {id:'2026-11-25a', date:'2026-11-25', items:[ {text:"📊 <b>My scorecard</b>: a new <b>Scorecard</b> tab on Insights with your financial year at a glance, each figure next to the team: <b>banked by product</b> from the Bible (and against last year and your target), <b>protection conversion by client</b> (a client with several lines counts once), <b>how long cases take</b> (application → offer → completion → paid), NPWs, clawbacks and fees to come, and how quickly your protection leads are contacted. ▲ ahead of the team, ▼ behind.", roles:['mapa']},
-    {text:"📊 <b>Scorecard</b>: a new tab on Insights with each MAPA's financial year next to the team: banked by product, protection conversion by client, how long cases take, NPWs, clawbacks, fees to come and how quickly protection leads are contacted. Pick <b>Everyone side by side</b> or one MAPA. MAPAs see their own figures once you've opened New Business after this update.", roles:['management']} ]},
+    {text:"📊 <b>Scorecard</b>: a new tab on Insights with each MAPA's financial year next to the team: banked by product, protection conversion by client, how long cases take, NPWs, clawbacks, fees to come and how quickly protection leads are contacted. Pick <b>Everyone side by side</b> or one MAPA. MAPAs see their own figures once you've opened New Business after this update.", roles:['management']},
+    {text:"📌 <b>Advisor NBR</b>: the column headings (Client, Lender, Proc fee… Paid) now stay at the top while you scroll down a month's cases.", roles:['admin','management']} ]},
   {id:'2026-11-24c', date:'2026-11-24', items:[ {text:"📒 <b>The Bible here now reads as your Excel Bible</b>: one row per Excel row (a Mums Fee's Initial and Comp, or Sols PUR and SALE, are separate rows), with every Excel column in the same order, and a dropdown filter under each column. Uploading the Bible now <b>matches to the Excel Bible</b>: lines take the Excel's client, amount, dates and payments (advisors' written figures still come from their NBRs). <b>Upload the latest Bible again</b> to bring everything in line.", roles:['admin','management']},
     {text:"💷 <b>Upfront fees owed</b>: a new view on the Bible page listing the Initial (£99 / £100) Mums Fee parts not paid yet, with a total and Download to Excel. Ask Claude now knows what \u201cupfront\u201d and \u201coutstanding\u201d mean too.", roles:['admin','management']} ]},
   {id:'2026-11-24b', date:'2026-11-24', items:[ {text:"🧩 <b>Part on risk</b>: each policy on a case is now <b>on risk</b> or <b>in underwriting</b> with its own commission. When some go on risk and others are still being underwritten, the case stays in Submitted / In Underwriting (showing what's on risk) and also shows in <b>On Risk</b> with a dashed border. Use <b>Update case → On risk</b> to tick the rest as they go on risk. On-risk figures count only what's actually on risk."} ]},
@@ -17297,6 +17298,8 @@ function renderNbrReg(){
   document.getElementById('nbrAddEnt').addEventListener('click', ()=> openNbrEntry(null));
   document.getElementById('nbrAddWill').addEventListener('click', ()=> openNbrWill(null, {date: ym===nbrThisYm() ? nbrToday() : ym+'-01', fromReg:true}));
   document.getElementById('nbrAddNpw').addEventListener('click', ()=> openNbrNpw(null));
+  // The month's column headings stay in view while scrolling down the cases.
+  el.querySelectorAll('.nbr-reg-table').forEach(t=> stickyHead(t.parentElement));
 }
 
 /* ============================== BIBLE ============================== */

@@ -1244,7 +1244,6 @@ body:not(.mode-com) .com-only{display:none !important;}
 .sc-table td.good, .sib-score .sc-table td.good{color:var(--green);} .sc-table td.warn{color:var(--amber);}
 .sc-table td .mark{font-size:10px; margin-left:2px;}
 .sc-table .num{text-align:right; white-space:nowrap;}
-.sc-table th:first-child, .sc-table td:first-child{text-align:left;}
 .sc-n{color:var(--text-faint); font-weight:400; font-size:11.5px;}
 .sc-foot{margin:8px 0 0; font-size:11.5px; color:var(--text-faint); line-height:1.45;}
 .sc-chart{display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:6px; align-items:end; height:150px; padding-top:8px;}
@@ -13764,36 +13763,38 @@ function scRow(lbl, valTxt, v, teamTxt, tv, higher, enough){
   return `<div class="sib-score-row"><span class="lbl">${esc(lbl)}</span><span class="val ${t}">${esc(valTxt)}${t ? `<span class="mark" aria-label="${t==='good' ? 'better than the team' : 'behind the team'}">${t==='good' ? '▲' : '▼'}</span>` : ''}</span>${teamTxt ? `<span class="team">${esc(teamTxt)}</span>` : ''}</div>`;
 }
 function scCardsHTML(F){
+  // The whole team's card ("Everyone"): the same figures with no comparison, and averages per advisor where it helps.
+  const T = !!F.isTeam, row = (lbl, val, v, teamTxt, tv, higher, enough, teamCardTxt)=> scRow(lbl, val, v, T ? (teamCardTxt || '') : teamTxt, tv, higher, !T && enough);
   const me = F.me || {}, team = F.team || {}, nT = Math.max(1, team.n || 1), fyLbl = nbrFyLabel(F.fy);
   const total = scSum(F.bank), lastTotal = scSum(F.last), teamAvg = F.nTeam ? scSum(F.teamBank) / F.nTeam : null;
   const prods = NBR_BANK_PRODS.filter(p=> Math.abs(F.bank[p]||0) >= 0.5 || Math.abs(F.teamBank[p]||0) >= 0.5);
-  const noAdv = !F.adv ? `<p class="nml-note" style="margin:0 0 12px;">${F.uid===currentUser.id ? 'Your login' : 'This login'} isn't linked to an advisor's NBR yet, so there are no Bible figures. Management can link it in <b>New Business → Advisors &amp; upload</b>.</p>` : '';
+  const noAdv = !F.adv && !T ? `<p class="nml-note" style="margin:0 0 12px;">${F.uid===currentUser.id ? 'Your login' : 'This login'} isn't linked to an advisor's NBR yet, so there are no Bible figures. Management can link it in <b>New Business → Advisors &amp; upload</b>.</p>` : '';
   const loading = !F.loaded ? `<p class="nml-note" style="margin:0 0 12px;">The Bible figures appear once Management have opened New Business since this update.</p>` : '';
   const big = (v, lbl)=> `<div class="sib-score-big"><span class="v">${v}</span><span class="l">${lbl}</span></div>`;
   // Banked by product
   const bankCard = `<div class="sib-score sc-wide"><div class="sib-score-hd"><b>Banked ${F.months.length < 12 ? 'so far' : ''} in ${esc(fyLbl)}</b><span>from the Bible</span></div>
-    ${big(scMoney(total), `team average ${teamAvg==null ? '—' : scMoney(teamAvg)} per advisor${total && teamAvg ? ` · <b class="${total >= teamAvg ? 'good' : 'warn'}">${total >= teamAvg ? '▲' : '▼'} ${Math.abs(Math.round((total/teamAvg - 1)*100))}%</b>` : ''}`)}
-    ${prods.length ? `<div class="sib-ins-wrap"><table class="mini-table sc-table"><thead><tr><th>Product</th><th class="num">Banked</th><th class="num">Share</th><th class="num">Team avg</th></tr></thead><tbody>
-      ${prods.map(p=>{ const v = F.bank[p]||0, t = F.nTeam ? (F.teamBank[p]||0) / F.nTeam : 0, c = scTone(v, t, true, Math.abs(v) >= 0.5 || t >= 0.5);
+    ${big(scMoney(total), T ? `${F.nTeam} advisor${F.nTeam===1 ? '' : 's'} · average ${teamAvg==null ? '—' : scMoney(teamAvg)} each` : `team average ${teamAvg==null ? '—' : scMoney(teamAvg)} per advisor${total && teamAvg ? ` · <b class="${total >= teamAvg ? 'good' : 'warn'}">${total >= teamAvg ? '▲' : '▼'} ${Math.abs(Math.round((total/teamAvg - 1)*100))}%</b>` : ''}`)}
+    ${prods.length ? `<div class="sib-ins-wrap"><table class="mini-table sc-table"><thead><tr><th>Product</th><th class="num">Banked</th><th class="num">Share</th><th class="num">${T ? 'Avg per advisor' : 'Team avg'}</th></tr></thead><tbody>
+      ${prods.map(p=>{ const v = F.bank[p]||0, t = F.nTeam ? (F.teamBank[p]||0) / F.nTeam : 0, c = T ? '' : scTone(v, t, true, Math.abs(v) >= 0.5 || t >= 0.5);
         return `<tr><td>${esc(p)}</td><td class="num ${c}">${scMoney(v)}${c ? ` <span class="mark">${c==='good' ? '▲' : '▼'}</span>` : ''}</td><td class="num">${total ? Math.round(v/total*100)+'%' : '—'}</td><td class="num">${scMoney(t)}</td></tr>`; }).join('')}
     </tbody></table></div>` : '<div class="insights-empty">Nothing banked yet this year.</div>'}
-    ${scRow('Same point last year', scMoney(lastTotal), null, lastTotal ? `this year is ${total >= lastTotal ? 'up' : 'down'} ${Math.abs(Math.round((total/lastTotal - 1)*100))}%` : '', null, true, false)}
-    ${me.unb!=null ? scRow('Written, not banked yet', scMoney(me.unb), null, `team average ${scMoney((team.unb||0)/nT)}`, null, true, false) : ''}
-    ${F.target ? scRow(`${F.target.y} banked target`, `${scMoney(F.target.b)} of ${scMoney(F.target.t)} (${Math.round(F.target.b/F.target.t*100)}%)`, F.target.pace, `on pace for ${scMoney(F.target.pace)} by the end of ${F.target.y}`, F.target.t, true, true) : ''}
+    ${row('Same point last year', scMoney(lastTotal), null, lastTotal ? `this year is ${total >= lastTotal ? 'up' : 'down'} ${Math.abs(Math.round((total/lastTotal - 1)*100))}%` : '', null, true, false, lastTotal ? `this year is ${total >= lastTotal ? 'up' : 'down'} ${Math.abs(Math.round((total/lastTotal - 1)*100))}%` : '')}
+    ${me.unb!=null ? row('Written, not banked yet', scMoney(me.unb), null, `team average ${scMoney((team.unb||0)/nT)}`, null, true, false, `average ${scMoney((me.unb||0)/nT)} per advisor`) : ''}
+    ${F.target ? row(`${F.target.y} banked target`, `${scMoney(F.target.b)} of ${scMoney(F.target.t)} (${Math.round(F.target.b/F.target.t*100)}%)`, F.target.pace, `on pace for ${scMoney(F.target.pace)} by the end of ${F.target.y}`, F.target.t, true, true) : ''}
   </div>`;
   // Protection conversion
   const cv = pct(me.pr||0, me.mc||0), tcv = pct(team.pr||0, team.mc||0), enoughC = (me.mc||0) >= SC_MIN;
   const ptC = (me.mc||0) - (me.ppC||0), ptP = (me.pr||0) - (me.ppP||0), tptC = (team.mc||0) - (team.ppC||0), tptP = (team.pr||0) - (team.ppP||0);
   const convCard = `<div class="sib-score"><div class="sib-score-hd"><b>Protection conversion</b><span>by client</span></div>
-    ${big(`<span class="${scTone(cv, tcv, true, enoughC)}">${cv==null ? '—' : cv+'%'}</span>`, `${me.pr||0} of ${me.mc||0} mortgage clients took protection<br>team ${tcv==null ? '—' : tcv+'%'}${enoughC || !me.mc ? '' : ' · too few to compare yet'}`)}
-    ${scRow('Purchases & remortgages', me.ppC ? `${pctTxt(me.ppP, me.ppC)} (${me.ppP} of ${me.ppC})` : '—', pct(me.ppP||0, me.ppC||0), `team ${pctTxt(team.ppP||0, team.ppC||0)}`, pct(team.ppP||0, team.ppC||0), true, (me.ppC||0) >= SC_MIN)}
-    ${scRow('Product transfers', ptC ? `${pctTxt(ptP, ptC)} (${ptP} of ${ptC})` : '—', pct(ptP, ptC), `team ${pctTxt(tptP, tptC)}`, pct(tptP, tptC), true, ptC >= SC_MIN)}
-    ${scRow('Average protection written per client', me.protN ? scMoney(me.protAmt/me.protN) : '—', me.protN ? me.protAmt/me.protN : null, team.protN ? `team ${scMoney(team.protAmt/team.protN)}` : '', team.protN ? team.protAmt/team.protN : null, true, (me.protN||0) >= SC_MIN)}
-    ${scRow('Standalone protection clients (no mortgage)', String(me.sa||0), me.sa||0, `team average ${Math.round((team.sa||0)/nT*10)/10} per advisor`, (team.sa||0)/nT, true, false)}
+    ${big(`<span class="${T ? '' : scTone(cv, tcv, true, enoughC)}">${cv==null ? '—' : cv+'%'}</span>`, `${me.pr||0} of ${me.mc||0} mortgage clients took protection${T ? '' : `<br>team ${tcv==null ? '—' : tcv+'%'}${enoughC || !me.mc ? '' : ' · too few to compare yet'}`}`)}
+    ${row('Purchases & remortgages', me.ppC ? `${pctTxt(me.ppP, me.ppC)} (${me.ppP} of ${me.ppC})` : '—', pct(me.ppP||0, me.ppC||0), `team ${pctTxt(team.ppP||0, team.ppC||0)}`, pct(team.ppP||0, team.ppC||0), true, (me.ppC||0) >= SC_MIN)}
+    ${row('Product transfers', ptC ? `${pctTxt(ptP, ptC)} (${ptP} of ${ptC})` : '—', pct(ptP, ptC), `team ${pctTxt(tptP, tptC)}`, pct(tptP, tptC), true, ptC >= SC_MIN)}
+    ${row('Average protection written per client', me.protN ? scMoney(me.protAmt/me.protN) : '—', me.protN ? me.protAmt/me.protN : null, team.protN ? `team ${scMoney(team.protAmt/team.protN)}` : '', team.protN ? team.protAmt/team.protN : null, true, (me.protN||0) >= SC_MIN)}
+    ${row('Standalone protection clients (no mortgage)', String(me.sa||0), me.sa||0, `team average ${Math.round((team.sa||0)/nT*10)/10} per advisor`, (team.sa||0)/nT, true, false, `average ${Math.round((me.sa||0)/nT*10)/10} per advisor`)}
     <p class="sc-foot">A client counts once, however many lines they have. They took protection when the Bible's Life column says Y, or they have a Life Ins line. NPWs left out.</p>
   </div>`;
   // Timings
-  const tm = (lbl, k)=>{ const a = me[k], b = team[k]; return scRow(lbl, a ? scDayTxt(a[0]) : '—', a ? a[0] : null, b ? `team ${scDayTxt(b[0])}${a ? ` · from ${a[1]} case${a[1]===1 ? '' : 's'}` : ''}` : '', b ? b[0] : null, false, !!a && a[1] >= SC_MIN); };
+  const tm = (lbl, k)=>{ const a = me[k], b = team[k]; return row(lbl, a ? scDayTxt(a[0]) : '—', a ? a[0] : null, b ? `team ${scDayTxt(b[0])}${a ? ` · from ${a[1]} case${a[1]===1 ? '' : 's'}` : ''}` : '', b ? b[0] : null, false, !!a && a[1] >= SC_MIN, a ? `from ${a[1]} case${a[1]===1 ? '' : 's'}` : ''); };
   const timeCard = `<div class="sib-score"><div class="sib-score-hd"><b>How long cases take</b><span>typical</span></div>
     ${tm('Application → offer', 'ao')}${tm('Offer → completion', 'oc')}${tm('Application → completion', 'ac')}
     ${tm('Completion → paid (proc fees)', 'cpP')}${tm('Completion → paid (protection)', 'cpL')}${tm('Protection application → on risk', 'al')}
@@ -13802,29 +13803,38 @@ function scCardsHTML(F){
   // Lost and owed
   const npwP = pct(me.npw||0, me.cs||0), tNpwP = pct(team.npw||0, team.cs||0), now = F.now || {}, tNow = F.teamNow || {};
   const lostCard = `<div class="sib-score"><div class="sib-score-hd"><b>NPWs, clawbacks &amp; money to come</b></div>
-    ${scRow('NPW cases', me.cs ? `${me.npw||0} of ${me.cs} (${npwP}%)` : '—', npwP, `team ${tNpwP==null ? '—' : tNpwP+'%'}`, tNpwP, false, (me.cs||0) >= SC_MIN)}
-    ${scRow('Clawbacks', `${me.clawN||0} · ${scMoney(me.claw||0)}`, me.claw||0, `team average ${scMoney((team.claw||0)/nT)} per advisor`, (team.claw||0)/nT, false, true)}
-    ${scRow(`Offers over ${SC_STUCK_DAYS} days old, not completed`, String(now.stuck||0), now.stuck||0, `offered in the last year, no completion date yet · team average ${Math.round((tNow.stuck||0)/nT*10)/10}`, (tNow.stuck||0)/nT, false, true)}
-    ${scRow('Upfront fees owed', `${now.owedN||0} · ${scMoney(now.owed||0)}`, now.owed||0, 'right now', null, false, false)}
+    ${row('NPW cases', me.cs ? `${me.npw||0} of ${me.cs} (${npwP}%)` : '—', npwP, `team ${tNpwP==null ? '—' : tNpwP+'%'}`, tNpwP, false, (me.cs||0) >= SC_MIN)}
+    ${row('Clawbacks', `${me.clawN||0} · ${scMoney(me.claw||0)}`, me.claw||0, `team average ${scMoney((team.claw||0)/nT)} per advisor`, (team.claw||0)/nT, false, true, `average ${scMoney((me.claw||0)/nT)} per advisor`)}
+    ${row(`Offers over ${SC_STUCK_DAYS} days old, not completed`, String(now.stuck||0), now.stuck||0, `offered in the last year, no completion date yet · team average ${Math.round((tNow.stuck||0)/nT*10)/10}`, (tNow.stuck||0)/nT, false, true, `offered in the last year, no completion date yet · average ${Math.round((now.stuck||0)/nT*10)/10} per advisor`)}
+    ${row('Upfront fees owed', `${now.owedN||0} · ${scMoney(now.owed||0)}`, now.owed||0, 'right now', null, false, false, 'right now')}
   </div>`;
   // Protection leads
   const m = F.mine, a = F.all, nL = F.nLeadMapas, enoughL = m.n >= SC_MIN;
   const leadCard = `<div class="sib-score"><div class="sib-score-hd"><b>Protection leads</b><span>${m.n} received</span></div>
-    ${scRow('Lead → first attempt', fmtDur(m.first), m.first, `team ${fmtDur(a.first)}`, a.first, false, m.firstN >= SC_MIN)}
-    ${scRow('Tried within 24 hours', m.within[1] ? `${pctTxt(m.within[0], m.within[1])} (${m.within[0]} of ${m.within[1]})` : '—', pct(m.within[0], m.within[1]), `team ${pctTxt(a.within[0], a.within[1])}`, pct(a.within[0], a.within[1]), true, m.within[1] >= SC_MIN)}
-    ${scRow('Lead → first conversation', fmtDur(m.spoke), m.spoke, `team ${fmtDur(a.spoke)}`, a.spoke, false, m.spokeN >= SC_MIN)}
-    ${scRow('Leads now on risk', m.n ? `${pctTxt(m.risk, m.n)} (${m.risk} of ${m.n})` : '—', pct(m.risk, m.n), `team ${pctTxt(a.risk, a.n)}`, pct(a.risk, a.n), true, enoughL)}
-    ${scRow('Meetings & reminders dealt with on time', m.onTime[1] ? `${pctTxt(m.onTime[0], m.onTime[1])} (${m.onTime[0]} of ${m.onTime[1]})` : '—', pct(m.onTime[0], m.onTime[1]), `team ${pctTxt(a.onTime[0], a.onTime[1])} · on time = before 8am the day after`, pct(a.onTime[0], a.onTime[1]), true, m.onTime[1] >= SC_MIN)}
-    ${scRow('Open cases with no next step booked', String(m.noNext), m.noNext, `right now · team average ${Math.round(a.noNext/nL*10)/10}`, a.noNext/nL, false, true)}
+    ${row('Lead → first attempt', fmtDur(m.first), m.first, `team ${fmtDur(a.first)}`, a.first, false, m.firstN >= SC_MIN)}
+    ${row('Tried within 24 hours', m.within[1] ? `${pctTxt(m.within[0], m.within[1])} (${m.within[0]} of ${m.within[1]})` : '—', pct(m.within[0], m.within[1]), `team ${pctTxt(a.within[0], a.within[1])}`, pct(a.within[0], a.within[1]), true, m.within[1] >= SC_MIN)}
+    ${row('Lead → first conversation', fmtDur(m.spoke), m.spoke, `team ${fmtDur(a.spoke)}`, a.spoke, false, m.spokeN >= SC_MIN)}
+    ${row('Leads now on risk', m.n ? `${pctTxt(m.risk, m.n)} (${m.risk} of ${m.n})` : '—', pct(m.risk, m.n), `team ${pctTxt(a.risk, a.n)}`, pct(a.risk, a.n), true, enoughL)}
+    ${row('Meetings & reminders dealt with on time', m.onTime[1] ? `${pctTxt(m.onTime[0], m.onTime[1])} (${m.onTime[0]} of ${m.onTime[1]})` : '—', pct(m.onTime[0], m.onTime[1]), `team ${pctTxt(a.onTime[0], a.onTime[1])} · on time = before 8am the day after`, pct(a.onTime[0], a.onTime[1]), true, m.onTime[1] >= SC_MIN)}
+    ${row('Open cases with no next step booked', String(m.noNext), m.noNext, `right now · team average ${Math.round(a.noNext/nL*10)/10}`, a.noNext/nL, false, true, `right now · average ${Math.round(m.noNext/nL*10)/10} per MAPA`)}
   </div>`;
   // Month by month
-  const ms = nbrFyMonths(F.fy), prevMs = nbrFyMonths('FY'+nbrPad((+F.fy.slice(2)+99) % 100)), A = nbrAgg(), ids = scAdvIds(F.adv);
+  const ms = nbrFyMonths(F.fy), prevMs = nbrFyMonths('FY'+nbrPad((+F.fy.slice(2)+99) % 100)), A = nbrAgg(), ids = F.chartIds || scAdvIds(F.adv);
   const mb = list=> list.map(ym=> ids.reduce((s, g)=> s + n0(A.bank[g] && A.bank[g][ym]), 0));
   const cur = mb(ms), prev = mb(prevMs), max = Math.max(1, ...cur, ...prev), cutoff = nbrThisYm();
   const chart = `<div class="sib-score sc-wide"><div class="sib-score-hd"><b>Banked month by month</b><span><i class="sc-key cur"></i>${esc(F.fy)} <i class="sc-key prev"></i>year before</span></div>
     <div class="sc-chart" role="img" aria-label="Banked each month this year and the year before">${ms.map((ym, i)=> `<div class="sc-col" title="${esc(nbrYmLabel(ym, true))}: ${ym > cutoff ? 'to come' : scMoney(cur[i])} · year before ${scMoney(prev[i])}"><div class="sc-bars"><i class="prev" style="height:${prev[i] > 0 ? Math.max(2, prev[i]/max*100) : 0}%"></i><i class="cur" style="height:${cur[i] > 0 ? Math.max(2, cur[i]/max*100) : 0}%"></i></div><span>${esc(NBR_MONTHS[+ym.slice(5,7)-1])}</span></div>`).join('')}</div>
   </div>`;
   return `${noAdv}${loading}<div class="sib-score-grid sc-grid">${bankCard}${convCard}${timeCard}${lostCard}${leadCard}${chart}</div>`;
+}
+// The whole team's figures for the "Everyone" card.
+function scTeamFigures(fy){
+  const S = scData(), by = (S && S.by) || {}, months = scMonths(fy), prevFy = 'FY'+nbrPad((+fy.slice(2)+99) % 100);
+  const advs = scTeamAdvs(), ids = advs.flatMap(scAdvIds), per = advs.map(a=> scBankedBy(scAdvIds(a), months)).filter(o=> scSum(o) > 0);
+  const bank = {}; per.forEach(o=> Object.entries(o).forEach(([p, v])=> bank[p] = (bank[p]||0) + v));
+  const [from, to] = scFyRange(fy), leads = scLeads(), all = scTeamLeadStats(leads, fy, from, to), team = (by._all && by._all[fy]) || null, now = (by._all && by._all.now) || null;
+  return {isTeam:true, uid:'', adv:'', fy, me:team, team, bank, last: scBankedBy(ids, nbrFyMonths(prevFy).slice(0, months.length)), teamBank:bank, nTeam:per.length, months,
+    mine:all, all, nLeadMapas: new Set(leads.map(l=> l.advisorId)).size || 1, target:null, now, teamNow:now, loaded: !!S, chartIds:ids};
 }
 // Management with no MAPA picked: everyone side by side.
 function scTeamTableHTML(fy){
@@ -13846,9 +13856,9 @@ function renderScorecard(){
   if(scUI.uid && !(USERS[scUI.uid] && USERS[scUI.uid].role==='mapa')) scUI.uid = '';
   const uid = isMapa ? currentUser.id : scUI.uid;
   const waiting = nbrAccess() ? !nbrFullReady() && !(nbrSumLoaded && NBR_SUMMARY && NBR_SUMMARY.sc) : !nbrSumLoaded;
-  const head = `<div class="sc-head"><p class="nml-note" style="margin:0;">${uid ? `<b>${esc(USERS[uid].name)}</b>: ` : ''}the financial year from the Bible and the protection cases here, next to the team. ▲ ahead of the team, ▼ behind (only shown with ${SC_MIN} or more cases). The date range above doesn't apply.</p>
-    <div class="sc-pick">${isMapa ? '' : `<select id="scUser" aria-label="MAPA"><option value="">Everyone side by side</option>${scMapas().map(([id, u])=> `<option value="${esc(id)}" ${id===uid ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>`}<select id="scFy" aria-label="Financial year">${fys.map(f=> `<option value="${esc(f)}" ${f===scUI.fy ? 'selected' : ''}>${esc(nbrFyLabel(f))}</option>`).join('')}</select></div></div>`;
-  body.innerHTML = head + (waiting ? '<div class="nml-empty">Loading the Bible figures…</div>' : uid ? scCardsHTML(scFigures(uid, scUI.fy)) : scTeamTableHTML(scUI.fy));
+  const head = `<div class="sc-head"><p class="nml-note" style="margin:0;">${uid ? `<b>${esc(USERS[uid].name)}</b>: the financial year from the Bible and the protection cases here, next to the team. ▲ ahead of the team, ▼ behind (only shown with ${SC_MIN} or more cases).` : '<b>The whole team</b>: the financial year from the Bible and the protection cases here, for every advisor together, then each MAPA side by side.'} The date range above doesn't apply.</p>
+    <div class="sc-pick">${isMapa ? '' : `<select id="scUser" aria-label="MAPA"><option value="">Everyone</option>${scMapas().map(([id, u])=> `<option value="${esc(id)}" ${id===uid ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>`}<select id="scFy" aria-label="Financial year">${fys.map(f=> `<option value="${esc(f)}" ${f===scUI.fy ? 'selected' : ''}>${esc(nbrFyLabel(f))}</option>`).join('')}</select></div></div>`;
+  body.innerHTML = head + (waiting ? '<div class="nml-empty">Loading the Bible figures…</div>' : uid ? scCardsHTML(scFigures(uid, scUI.fy)) : scCardsHTML(scTeamFigures(scUI.fy)) + scTeamTableHTML(scUI.fy));
   document.getElementById('scFy').addEventListener('change', e=>{ scUI.fy = e.target.value; renderScorecard(); });
   const pick = document.getElementById('scUser'); if(pick) pick.addEventListener('change', e=>{ scUI.uid = e.target.value; renderScorecard(); });
   body.querySelectorAll('[data-sc-user]').forEach(tr=>{

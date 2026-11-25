@@ -1235,6 +1235,25 @@ body:not(.mode-com) .com-only{display:none !important;}
 .sib-score-row .team{grid-column:1 / -1; font-size:11.5px; color:var(--text-faint);}
 .sib-score .good{color:var(--green);} .sib-score .warn{color:var(--amber);}
 .sib-score .mark{font-size:11px; font-weight:700; margin-left:4px;}
+/* My scorecard (Insights) */
+.sc-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
+.sc-head .nml-note{flex:1 1 320px;}
+.sc-pick{display:flex; gap:8px; flex-wrap:wrap;}
+.sc-head select{padding:7px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; font-size:13px;}
+.sc-grid .sc-wide{grid-column:1 / -1;}
+.sc-table td.good, .sib-score .sc-table td.good{color:var(--green);} .sc-table td.warn{color:var(--amber);}
+.sc-table td .mark{font-size:10px; margin-left:2px;}
+.sc-table .num{text-align:right; white-space:nowrap;}
+.sc-table th:first-child, .sc-table td:first-child{text-align:left;}
+.sc-n{color:var(--text-faint); font-weight:400; font-size:11.5px;}
+.sc-foot{margin:8px 0 0; font-size:11.5px; color:var(--text-faint); line-height:1.45;}
+.sc-chart{display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:6px; align-items:end; height:150px; padding-top:8px;}
+.sc-col{display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; min-width:0;}
+.sc-bars{flex:1; width:100%; display:flex; align-items:flex-end; justify-content:center; gap:2px;}
+.sc-bars i{display:block; width:42%; max-width:16px; border-radius:3px 3px 0 0;}
+.sc-bars i.cur, .sc-key.cur{background:var(--brand);} .sc-bars i.prev, .sc-key.prev{background:var(--border-2);}
+.sc-col span{font-size:10.5px; color:var(--text-muted);}
+.sc-key{display:inline-block; width:9px; height:9px; border-radius:2px; margin:0 4px 0 10px; vertical-align:-1px;}
 .sib-ins-tabs{display:flex; gap:2px; margin:20px 0 16px; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none;}
 .sib-ins-tabs::-webkit-scrollbar{display:none;}
 .sib-ins-tabs button{flex:none; border:none; background:none; padding:9px 14px; margin-bottom:-1px; border-bottom:2.5px solid transparent; border-radius:8px 8px 0 0; font:inherit; font-size:13.5px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap;}
@@ -2735,7 +2754,8 @@ body:not(.ai-on) #askBtn{display:none;}
       <div class="section-lbl" style="margin-top:0;">This week</div>
       <div class="stat-grid" id="weekDigest"></div>
 
-      <div class="sib-ins-tabs" role="tablist" aria-label="Insights sections" id="pinsTabs"><button type="button" role="tab" data-pins-tab="pipeline" aria-selected="true" class="on">Pipeline &amp; commission</button><button type="button" role="tab" data-pins-tab="appts" aria-selected="false" class="">Appointments &amp; reminders</button><button type="button" role="tab" data-pins-tab="uw" aria-selected="false" class="">Underwriting</button><button type="button" role="tab" data-pins-tab="advisers" aria-selected="false" class="">Advisers &amp; sources</button><button type="button" role="tab" data-pins-tab="declines" aria-selected="false" class="">Declines &amp; workload</button><button type="button" role="tab" data-pins-tab="speed" aria-selected="false" class="">Speed &amp; stale cases</button><button type="button" role="tab" data-pins-tab="referrals" aria-selected="false" class="hidden" id="pinsRefTab">Referrals</button></div>
+      <div class="sib-ins-tabs" role="tablist" aria-label="Insights sections" id="pinsTabs"><button type="button" role="tab" data-pins-tab="score" aria-selected="false" class="">Scorecard</button><button type="button" role="tab" data-pins-tab="pipeline" aria-selected="true" class="on">Pipeline &amp; commission</button><button type="button" role="tab" data-pins-tab="appts" aria-selected="false" class="">Appointments &amp; reminders</button><button type="button" role="tab" data-pins-tab="uw" aria-selected="false" class="">Underwriting</button><button type="button" role="tab" data-pins-tab="advisers" aria-selected="false" class="">Advisers &amp; sources</button><button type="button" role="tab" data-pins-tab="declines" aria-selected="false" class="">Declines &amp; workload</button><button type="button" role="tab" data-pins-tab="speed" aria-selected="false" class="">Speed &amp; stale cases</button><button type="button" role="tab" data-pins-tab="referrals" aria-selected="false" class="hidden" id="pinsRefTab">Referrals</button></div>
+      <div class="sib-ins-sec hidden" data-pins-sec="score" role="tabpanel"><div id="scoreBody"></div></div>
       <div class="sib-ins-sec" data-pins-sec="pipeline" role="tabpanel">
       <div class="section-lbl" style="margin-top:0;">Conversion funnel</div>
       <div class="insights-card" style="margin-bottom:26px;">
@@ -7568,6 +7588,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-25a', date:'2026-11-25', items:[ {text:"📊 <b>My scorecard</b>: a new <b>Scorecard</b> tab on Insights with your financial year at a glance, each figure next to the team: <b>banked by product</b> from the Bible (and against last year and your target), <b>protection conversion by client</b> (a client with several lines counts once), <b>how long cases take</b> (application → offer → completion → paid), NPWs, clawbacks and fees to come, and how quickly your protection leads are contacted. ▲ ahead of the team, ▼ behind.", roles:['mapa']},
+    {text:"📊 <b>Scorecard</b>: a new tab on Insights with each MAPA's financial year next to the team: banked by product, protection conversion by client, how long cases take, NPWs, clawbacks, fees to come and how quickly protection leads are contacted. Pick <b>Everyone side by side</b> or one MAPA. MAPAs see their own figures once you've opened New Business after this update.", roles:['management']},
+    {text:"📌 <b>Advisor NBR</b>: the column headings (Client, Lender, Proc fee… Paid) now stay at the top while you scroll down a month's cases.", roles:['admin','management']} ]},
   {id:'2026-11-24c', date:'2026-11-24', items:[ {text:"📒 <b>The Bible here now reads as your Excel Bible</b>: one row per Excel row (a Mums Fee's Initial and Comp, or Sols PUR and SALE, are separate rows), with every Excel column in the same order, and a dropdown filter under each column. Uploading the Bible now <b>matches to the Excel Bible</b>: lines take the Excel's client, amount, dates and payments (advisors' written figures still come from their NBRs). <b>Upload the latest Bible again</b> to bring everything in line.", roles:['admin','management']},
     {text:"💷 <b>Upfront fees owed</b>: a new view on the Bible page listing the Initial (£99 / £100) Mums Fee parts not paid yet, with a total and Download to Excel. Ask Claude now knows what \u201cupfront\u201d and \u201coutstanding\u201d mean too.", roles:['admin','management']} ]},
   {id:'2026-11-24b', date:'2026-11-24', items:[ {text:"🧩 <b>Part on risk</b>: each policy on a case is now <b>on risk</b> or <b>in underwriting</b> with its own commission. When some go on risk and others are still being underwritten, the case stays in Submitted / In Underwriting (showing what's on risk) and also shows in <b>On Risk</b> with a dashed border. Use <b>Update case → On risk</b> to tick the rest as they go on risk. On-risk figures count only what's actually on risk."} ]},
@@ -13660,7 +13683,180 @@ function setPinsTab(k){
   try{ localStorage.setItem('plt_insTab', k); }catch(e){}
 }
 document.querySelectorAll('[data-pins-tab]').forEach(b=> b.addEventListener('click', ()=> setPinsTab(b.dataset.pinsTab)));
-try{ setPinsTab(localStorage.getItem('plt_insTab') || 'pipeline'); }catch(e){}
+try{ setPinsTab(localStorage.getItem('plt_insTab') || 'score'); }catch(e){}
+/* ---- My scorecard (Insights) ----
+   A MAPA's figures for the financial year (March to February) next to the team's: banked by product from the Bible,
+   protection conversion by client, how long cases take, NPWs and fees still to come (see scBibleStats), and how
+   their protection leads are handled (from the cases here). MAPAs see their own; Management see everyone side by
+   side, or one MAPA's card when they pick that MAPA in the advisor filter. */
+const SC_MIN = 5; // fewer than this and the comparison with the team isn't meaningful
+let scUI = {fy:'', uid:''};
+function scMoney(v){ return (v < 0 ? '-£' : '£') + Math.round(Math.abs(n0(v))).toLocaleString('en-GB'); }
+function scDayTxt(d){ return d==null ? '—' : `${d} day${d===1 ? '' : 's'}`; }
+function scFyRange(fy){ const y = nbrFyStart(fy); return [new Date(y, 2, 1).getTime(), new Date(y+1, 2, 1).getTime() - 1]; }
+function scMapas(){ return Object.entries(USERS).filter(([,u])=> u && u.role==='mapa').sort((a,b)=> String(a[1].name).localeCompare(String(b[1].name))); }
+// The NBR advisors whose banked counts as one person's: their own and their Commercial NBR.
+function scAdvIds(adv){ return adv ? [adv, nbrComTwinOf(adv)].filter(Boolean) : []; }
+function scTeamAdvs(){ return Object.entries(nbrAdvMap()).filter(([id,a])=> a && a.name && !a.special && a.office!=='C' && a.office!=='W' && id!=='wills').map(([id])=> id); }
+function scMonths(fy){ const cur = nbrThisYm(), ms = nbrFyMonths(fy); return fy===nbrFyOf(cur) ? ms.filter(ym=> ym <= cur) : ms; }
+function scBankedBy(ids, months){
+  const A = nbrAgg(), o = {};
+  ids.forEach(g=> months.forEach(ym=>{ const m = A.bankP[g] && A.bankP[g][ym]; if(m) Object.entries(m).forEach(([p, v])=> o[p] = (o[p]||0) + n0(v)); }));
+  return o;
+}
+const scSum = o=> Object.values(o).reduce((s, v)=> s + v, 0);
+// How the protection leads were handled: leads received in the year, and reminders / meetings dealt with in it.
+function scLeadStats(leads, from, to){
+  const now = Date.now(), first = [], spoke = [], within = [0, 0], onTime = [0, 0];
+  let n = 0, risk = 0, noNext = 0;
+  leads.forEach(l=>{
+    const es = Object.values(l.audit||{}).filter(a=> a && a.at).sort((a,b)=> a.at - b.at);
+    if(l.createdAt && l.createdAt >= from && l.createdAt <= to){
+      n++;
+      const fa = es.find(a=> a.at >= l.createdAt && isContactAttempt(a));
+      if(fa) first.push(fa.at - l.createdAt);
+      if(now - l.createdAt >= 864e5){ within[1]++; if(fa && fa.at - l.createdAt <= 864e5) within[0]++; }
+      const sp = es.find(a=> a.at >= l.createdAt && (a.meeting==='spoke' || /spoke to client/i.test(a.text||'')));
+      if(sp) spoke.push(sp.at - l.createdAt);
+      if(leadRiskEvents(l).length) risk++;
+    }
+    // Dealt with on time: the outcome or chase was recorded before 8am the day after it was due (when it becomes overdue and mandatory).
+    es.forEach(a=>{
+      if(a.at < from || a.at > to || !(a.meeting || (a.via==='reminder' && /^Reminder chase/.test(a.text||'')))) return;
+      const due = entryDueAt(a); if(!due) return;
+      const lock = new Date(due); lock.setDate(lock.getDate() + 1); lock.setHours(8, 0, 0, 0);
+      onTime[1]++; if(a.at <= lock.getTime()) onTime[0]++;
+    });
+    if(inBookingPot(l) && !l.followUpDate) noNext++;
+  });
+  return {n, first:median(first), firstN:first.length, spoke:median(spoke), spokeN:spoke.length, within, risk, onTime, noNext};
+}
+let scTeamMemo = null;
+function scTeamLeadStats(leads, fy, from, to){
+  const key = fy+'|'+Math.floor(Date.now()/60000);
+  if(!scTeamMemo || scTeamMemo.leads!==LEADS || scTeamMemo.key!==key) scTeamMemo = {leads:LEADS, key, v:scLeadStats(leads, from, to)};
+  return scTeamMemo.v;
+}
+function scLeads(){ return Object.values(LEADS).filter(l=> l && !l.deleted && l.advisorId && USERS[l.advisorId] && USERS[l.advisorId].role==='mapa'); }
+// One person's figures, next to the team's.
+function scFigures(uid, fy){
+  const S = scData(), adv = nbrAdvForUser(uid), ids = scAdvIds(adv), months = scMonths(fy);
+  const fys = S && S.fys ? (Array.isArray(S.fys) ? S.fys : Object.values(S.fys)) : scFys(), prevFy = 'FY'+nbrPad((+fy.slice(2)+99) % 100);
+  const by = (S && S.by) || {}, me = (by[adv] && by[adv][fy]) || null, team = (by._all && by._all[fy]) || null;
+  const bank = scBankedBy(ids, months), last = scBankedBy(ids, nbrFyMonths(prevFy).slice(0, months.length));
+  const teamTotals = scTeamAdvs().map(a=> scBankedBy(scAdvIds(a), months)).filter(o=> scSum(o) > 0);
+  const teamBank = {}; teamTotals.forEach(o=> Object.entries(o).forEach(([p, v])=> teamBank[p] = (teamBank[p]||0) + v));
+  const [from, to] = scFyRange(fy), leads = scLeads();
+  const mine = scLeadStats(leads.filter(l=> l.advisorId===uid), from, to), all = scTeamLeadStats(leads, fy, from, to);
+  const nLeadMapas = new Set(leads.map(l=> l.advisorId)).size || 1;
+  const tg = S && S.tgt && S.tgt.by && S.tgt.by[adv];
+  let target = null;
+  if(tg && fy===fys[0]){
+    const y = S.tgt.y, ms = nbrYearMonths(y).filter(ym=> ym <= nbrThisYm());
+    const b = ms.reduce((s, ym)=> s + ids.reduce((t, g)=> t + n0(nbrRow(g, ym).banked), 0), 0);
+    target = {y, b, t:n0(tg.b), pace: ms.length ? b / ms.length * 12 : 0};
+  }
+  return {uid, adv, fy, fys, me, team, bank, last, teamBank, nTeam:teamTotals.length, months, mine, all, nLeadMapas, target, now:(by[adv] && by[adv].now) || null, teamNow:(by._all && by._all.now) || null, loaded: !!S};
+}
+function scTone(v, tv, higher, enough){ return !enough || v==null || tv==null || Math.abs(v - tv) < 1e-9 ? '' : (higher ? v > tv : v < tv) ? 'good' : 'warn'; }
+function scRow(lbl, valTxt, v, teamTxt, tv, higher, enough){
+  const t = scTone(v, tv, higher, enough);
+  return `<div class="sib-score-row"><span class="lbl">${esc(lbl)}</span><span class="val ${t}">${esc(valTxt)}${t ? `<span class="mark" aria-label="${t==='good' ? 'better than the team' : 'behind the team'}">${t==='good' ? '▲' : '▼'}</span>` : ''}</span>${teamTxt ? `<span class="team">${esc(teamTxt)}</span>` : ''}</div>`;
+}
+function scCardsHTML(F){
+  const me = F.me || {}, team = F.team || {}, nT = Math.max(1, team.n || 1), fyLbl = nbrFyLabel(F.fy);
+  const total = scSum(F.bank), lastTotal = scSum(F.last), teamAvg = F.nTeam ? scSum(F.teamBank) / F.nTeam : null;
+  const prods = NBR_BANK_PRODS.filter(p=> Math.abs(F.bank[p]||0) >= 0.5 || Math.abs(F.teamBank[p]||0) >= 0.5);
+  const noAdv = !F.adv ? `<p class="nml-note" style="margin:0 0 12px;">${F.uid===currentUser.id ? 'Your login' : 'This login'} isn't linked to an advisor's NBR yet, so there are no Bible figures. Management can link it in <b>New Business → Advisors &amp; upload</b>.</p>` : '';
+  const loading = !F.loaded ? `<p class="nml-note" style="margin:0 0 12px;">The Bible figures appear once Management have opened New Business since this update.</p>` : '';
+  const big = (v, lbl)=> `<div class="sib-score-big"><span class="v">${v}</span><span class="l">${lbl}</span></div>`;
+  // Banked by product
+  const bankCard = `<div class="sib-score sc-wide"><div class="sib-score-hd"><b>Banked ${F.months.length < 12 ? 'so far' : ''} in ${esc(fyLbl)}</b><span>from the Bible</span></div>
+    ${big(scMoney(total), `team average ${teamAvg==null ? '—' : scMoney(teamAvg)} per advisor${total && teamAvg ? ` · <b class="${total >= teamAvg ? 'good' : 'warn'}">${total >= teamAvg ? '▲' : '▼'} ${Math.abs(Math.round((total/teamAvg - 1)*100))}%</b>` : ''}`)}
+    ${prods.length ? `<div class="sib-ins-wrap"><table class="mini-table sc-table"><thead><tr><th>Product</th><th class="num">Banked</th><th class="num">Share</th><th class="num">Team avg</th></tr></thead><tbody>
+      ${prods.map(p=>{ const v = F.bank[p]||0, t = F.nTeam ? (F.teamBank[p]||0) / F.nTeam : 0, c = scTone(v, t, true, Math.abs(v) >= 0.5 || t >= 0.5);
+        return `<tr><td>${esc(p)}</td><td class="num ${c}">${scMoney(v)}${c ? ` <span class="mark">${c==='good' ? '▲' : '▼'}</span>` : ''}</td><td class="num">${total ? Math.round(v/total*100)+'%' : '—'}</td><td class="num">${scMoney(t)}</td></tr>`; }).join('')}
+    </tbody></table></div>` : '<div class="insights-empty">Nothing banked yet this year.</div>'}
+    ${scRow('Same point last year', scMoney(lastTotal), null, lastTotal ? `this year is ${total >= lastTotal ? 'up' : 'down'} ${Math.abs(Math.round((total/lastTotal - 1)*100))}%` : '', null, true, false)}
+    ${me.unb!=null ? scRow('Written, not banked yet', scMoney(me.unb), null, `team average ${scMoney((team.unb||0)/nT)}`, null, true, false) : ''}
+    ${F.target ? scRow(`${F.target.y} banked target`, `${scMoney(F.target.b)} of ${scMoney(F.target.t)} (${Math.round(F.target.b/F.target.t*100)}%)`, F.target.pace, `on pace for ${scMoney(F.target.pace)} by the end of ${F.target.y}`, F.target.t, true, true) : ''}
+  </div>`;
+  // Protection conversion
+  const cv = pct(me.pr||0, me.mc||0), tcv = pct(team.pr||0, team.mc||0), enoughC = (me.mc||0) >= SC_MIN;
+  const ptC = (me.mc||0) - (me.ppC||0), ptP = (me.pr||0) - (me.ppP||0), tptC = (team.mc||0) - (team.ppC||0), tptP = (team.pr||0) - (team.ppP||0);
+  const convCard = `<div class="sib-score"><div class="sib-score-hd"><b>Protection conversion</b><span>by client</span></div>
+    ${big(`<span class="${scTone(cv, tcv, true, enoughC)}">${cv==null ? '—' : cv+'%'}</span>`, `${me.pr||0} of ${me.mc||0} mortgage clients took protection<br>team ${tcv==null ? '—' : tcv+'%'}${enoughC || !me.mc ? '' : ' · too few to compare yet'}`)}
+    ${scRow('Purchases & remortgages', me.ppC ? `${pctTxt(me.ppP, me.ppC)} (${me.ppP} of ${me.ppC})` : '—', pct(me.ppP||0, me.ppC||0), `team ${pctTxt(team.ppP||0, team.ppC||0)}`, pct(team.ppP||0, team.ppC||0), true, (me.ppC||0) >= SC_MIN)}
+    ${scRow('Product transfers', ptC ? `${pctTxt(ptP, ptC)} (${ptP} of ${ptC})` : '—', pct(ptP, ptC), `team ${pctTxt(tptP, tptC)}`, pct(tptP, tptC), true, ptC >= SC_MIN)}
+    ${scRow('Average protection written per client', me.protN ? scMoney(me.protAmt/me.protN) : '—', me.protN ? me.protAmt/me.protN : null, team.protN ? `team ${scMoney(team.protAmt/team.protN)}` : '', team.protN ? team.protAmt/team.protN : null, true, (me.protN||0) >= SC_MIN)}
+    ${scRow('Standalone protection clients (no mortgage)', String(me.sa||0), me.sa||0, `team average ${Math.round((team.sa||0)/nT*10)/10} per advisor`, (team.sa||0)/nT, true, false)}
+    <p class="sc-foot">A client counts once, however many lines they have. They took protection when the Bible's Life column says Y, or they have a Life Ins line. NPWs left out.</p>
+  </div>`;
+  // Timings
+  const tm = (lbl, k)=>{ const a = me[k], b = team[k]; return scRow(lbl, a ? scDayTxt(a[0]) : '—', a ? a[0] : null, b ? `team ${scDayTxt(b[0])}${a ? ` · from ${a[1]} case${a[1]===1 ? '' : 's'}` : ''}` : '', b ? b[0] : null, false, !!a && a[1] >= SC_MIN); };
+  const timeCard = `<div class="sib-score"><div class="sib-score-hd"><b>How long cases take</b><span>typical</span></div>
+    ${tm('Application → offer', 'ao')}${tm('Offer → completion', 'oc')}${tm('Application → completion', 'ac')}
+    ${tm('Completion → paid (proc fees)', 'cpP')}${tm('Completion → paid (protection)', 'cpL')}${tm('Protection application → on risk', 'al')}
+    <p class="sc-foot">Typical = the middle case (median), from the Bible's dates. Mortgage cases are the Proc Fee, Remo and Mums Fee lines.</p>
+  </div>`;
+  // Lost and owed
+  const npwP = pct(me.npw||0, me.cs||0), tNpwP = pct(team.npw||0, team.cs||0), now = F.now || {}, tNow = F.teamNow || {};
+  const lostCard = `<div class="sib-score"><div class="sib-score-hd"><b>NPWs, clawbacks &amp; money to come</b></div>
+    ${scRow('NPW cases', me.cs ? `${me.npw||0} of ${me.cs} (${npwP}%)` : '—', npwP, `team ${tNpwP==null ? '—' : tNpwP+'%'}`, tNpwP, false, (me.cs||0) >= SC_MIN)}
+    ${scRow('Clawbacks', `${me.clawN||0} · ${scMoney(me.claw||0)}`, me.claw||0, `team average ${scMoney((team.claw||0)/nT)} per advisor`, (team.claw||0)/nT, false, true)}
+    ${scRow(`Offers over ${SC_STUCK_DAYS} days old, not completed`, String(now.stuck||0), now.stuck||0, `offered in the last year, no completion date yet · team average ${Math.round((tNow.stuck||0)/nT*10)/10}`, (tNow.stuck||0)/nT, false, true)}
+    ${scRow('Upfront fees owed', `${now.owedN||0} · ${scMoney(now.owed||0)}`, now.owed||0, 'right now', null, false, false)}
+  </div>`;
+  // Protection leads
+  const m = F.mine, a = F.all, nL = F.nLeadMapas, enoughL = m.n >= SC_MIN;
+  const leadCard = `<div class="sib-score"><div class="sib-score-hd"><b>Protection leads</b><span>${m.n} received</span></div>
+    ${scRow('Lead → first attempt', fmtDur(m.first), m.first, `team ${fmtDur(a.first)}`, a.first, false, m.firstN >= SC_MIN)}
+    ${scRow('Tried within 24 hours', m.within[1] ? `${pctTxt(m.within[0], m.within[1])} (${m.within[0]} of ${m.within[1]})` : '—', pct(m.within[0], m.within[1]), `team ${pctTxt(a.within[0], a.within[1])}`, pct(a.within[0], a.within[1]), true, m.within[1] >= SC_MIN)}
+    ${scRow('Lead → first conversation', fmtDur(m.spoke), m.spoke, `team ${fmtDur(a.spoke)}`, a.spoke, false, m.spokeN >= SC_MIN)}
+    ${scRow('Leads now on risk', m.n ? `${pctTxt(m.risk, m.n)} (${m.risk} of ${m.n})` : '—', pct(m.risk, m.n), `team ${pctTxt(a.risk, a.n)}`, pct(a.risk, a.n), true, enoughL)}
+    ${scRow('Meetings & reminders dealt with on time', m.onTime[1] ? `${pctTxt(m.onTime[0], m.onTime[1])} (${m.onTime[0]} of ${m.onTime[1]})` : '—', pct(m.onTime[0], m.onTime[1]), `team ${pctTxt(a.onTime[0], a.onTime[1])} · on time = before 8am the day after`, pct(a.onTime[0], a.onTime[1]), true, m.onTime[1] >= SC_MIN)}
+    ${scRow('Open cases with no next step booked', String(m.noNext), m.noNext, `right now · team average ${Math.round(a.noNext/nL*10)/10}`, a.noNext/nL, false, true)}
+  </div>`;
+  // Month by month
+  const ms = nbrFyMonths(F.fy), prevMs = nbrFyMonths('FY'+nbrPad((+F.fy.slice(2)+99) % 100)), A = nbrAgg(), ids = scAdvIds(F.adv);
+  const mb = list=> list.map(ym=> ids.reduce((s, g)=> s + n0(A.bank[g] && A.bank[g][ym]), 0));
+  const cur = mb(ms), prev = mb(prevMs), max = Math.max(1, ...cur, ...prev), cutoff = nbrThisYm();
+  const chart = `<div class="sib-score sc-wide"><div class="sib-score-hd"><b>Banked month by month</b><span><i class="sc-key cur"></i>${esc(F.fy)} <i class="sc-key prev"></i>year before</span></div>
+    <div class="sc-chart" role="img" aria-label="Banked each month this year and the year before">${ms.map((ym, i)=> `<div class="sc-col" title="${esc(nbrYmLabel(ym, true))}: ${ym > cutoff ? 'to come' : scMoney(cur[i])} · year before ${scMoney(prev[i])}"><div class="sc-bars"><i class="prev" style="height:${prev[i] > 0 ? Math.max(2, prev[i]/max*100) : 0}%"></i><i class="cur" style="height:${cur[i] > 0 ? Math.max(2, cur[i]/max*100) : 0}%"></i></div><span>${esc(NBR_MONTHS[+ym.slice(5,7)-1])}</span></div>`).join('')}</div>
+  </div>`;
+  return `${noAdv}${loading}<div class="sib-score-grid sc-grid">${bankCard}${convCard}${timeCard}${lostCard}${leadCard}${chart}</div>`;
+}
+// Management with no MAPA picked: everyone side by side.
+function scTeamTableHTML(fy){
+  const rows = scMapas().map(([uid, u])=> ({u, F: scFigures(uid, fy)})).filter(r=> r.F.adv || r.F.mine.n);
+  if(!rows.length) return '<div class="insights-empty">No MAPAs with figures yet.</div>';
+  const cell = (v, txt)=> v==null ? '<td class="num">—</td>' : `<td class="num">${txt}</td>`;
+  return `<div class="insights-card"><h4>Everyone side by side</h4><div class="sib-ins-wrap"><table class="mini-table sc-table"><thead><tr><th>MAPA</th><th class="num">Banked</th><th class="num">Protection conversion</th><th class="num">Application → completion</th><th class="num">NPW</th><th class="num">Lead → first attempt</th><th class="num">Tried within 24h</th><th class="num">No next step</th></tr></thead><tbody>
+    ${rows.map(({u, F})=>{ const me = F.me || {}, m = F.mine;
+      return `<tr class="nbr-click" data-sc-user="${esc(F.uid)}" tabindex="0"><td><b>${esc(u.name)}</b></td>${cell(F.adv ? 1 : null, scMoney(scSum(F.bank)))}${cell(me.mc ? 1 : null, `${pctTxt(me.pr, me.mc)} <span class="sc-n">(${me.pr} of ${me.mc})</span>`)}${cell(me.ac ? 1 : null, me.ac ? scDayTxt(me.ac[0]) : '')}${cell(me.cs ? 1 : null, `${pctTxt(me.npw||0, me.cs)}`)}${cell(m.first, fmtDur(m.first))}${cell(m.within[1] || null, pctTxt(m.within[0], m.within[1]))}<td class="num">${m.noNext}</td></tr>`; }).join('')}
+  </tbody></table></div><p class="nml-note" style="margin-bottom:0;">Click a MAPA for their full scorecard. Banked is ${esc(nbrFyLabel(fy))}${fy===nbrFyOf(nbrThisYm()) ? ' so far' : ''}.</p></div>`;
+}
+function renderScorecard(){
+  const body = document.getElementById('scoreBody');
+  if(!body || !currentUser) return;
+  if(nbrViewer()) startNbrSummary();
+  const fys = scFys();
+  if(!fys.includes(scUI.fy)) scUI.fy = fys[0];
+  const isMapa = currentUser.role==='mapa';
+  if(scUI.uid && !(USERS[scUI.uid] && USERS[scUI.uid].role==='mapa')) scUI.uid = '';
+  const uid = isMapa ? currentUser.id : scUI.uid;
+  const waiting = nbrAccess() ? !nbrFullReady() && !(nbrSumLoaded && NBR_SUMMARY && NBR_SUMMARY.sc) : !nbrSumLoaded;
+  const head = `<div class="sc-head"><p class="nml-note" style="margin:0;">${uid ? `<b>${esc(USERS[uid].name)}</b>: ` : ''}the financial year from the Bible and the protection cases here, next to the team. ▲ ahead of the team, ▼ behind (only shown with ${SC_MIN} or more cases). The date range above doesn't apply.</p>
+    <div class="sc-pick">${isMapa ? '' : `<select id="scUser" aria-label="MAPA"><option value="">Everyone side by side</option>${scMapas().map(([id, u])=> `<option value="${esc(id)}" ${id===uid ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>`}<select id="scFy" aria-label="Financial year">${fys.map(f=> `<option value="${esc(f)}" ${f===scUI.fy ? 'selected' : ''}>${esc(nbrFyLabel(f))}</option>`).join('')}</select></div></div>`;
+  body.innerHTML = head + (waiting ? '<div class="nml-empty">Loading the Bible figures…</div>' : uid ? scCardsHTML(scFigures(uid, scUI.fy)) : scTeamTableHTML(scUI.fy));
+  document.getElementById('scFy').addEventListener('change', e=>{ scUI.fy = e.target.value; renderScorecard(); });
+  const pick = document.getElementById('scUser'); if(pick) pick.addEventListener('change', e=>{ scUI.uid = e.target.value; renderScorecard(); });
+  body.querySelectorAll('[data-sc-user]').forEach(tr=>{
+    const go = ()=>{ scUI.uid = tr.dataset.scUser; renderScorecard(); };
+    tr.addEventListener('click', go); tr.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
+  });
+}
+
 function renderInsights(){
   const isMapa = currentUser.role==='mapa';
   document.getElementById('insightsSub').textContent = isMapa
@@ -13671,6 +13867,7 @@ function renderInsights(){
   document.getElementById('workloadCard').classList.toggle('hidden', isMapa);
   document.getElementById('declineWorkloadRow').classList.toggle('single-col', isMapa);
 
+  renderScorecard();
   const leads = insightsLeads();
   const total = leads.length;
   const mapas = Object.entries(USERS).filter(([id,u])=>u.role==='mapa');
@@ -15643,7 +15840,7 @@ function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || cur
 function nbrViewer(){ return !!currentUser && currentUser.role==='mapa'; }
 function nbrSeeAccess(){ return nbrAccess() || nbrViewer(); }
 let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null, nbrShare = null;
-const NBR_SUM_VERSION = 3;
+const NBR_SUM_VERSION = 4;
 function nbrFullReady(){ return Object.values(nbrLoaded).every(Boolean); }
 function nbrReady(){ return nbrViewer() ? nbrSumLoaded : nbrFullReady(); }
 // Figures come from the summary: always for MAPAs; for Admin / Management only until the full data has arrived.
@@ -15680,6 +15877,13 @@ function startNbrSummary(){
 function stopNbrSummary(){ db.ref('nbrBoard').off(); nbrSumListening = false; nbrSumLoaded = false; NBR_SUMMARY = null; nbrVer++; }
 // Admin / Management: keep the Salesboard summary up to date whenever New Business changes.
 function nbrPublishSoon(){ clearTimeout(nbrPublishTimer); nbrPublishTimer = setTimeout(nbrPublishSummary, 1500); }
+// The scorecard figures for the summary: only keys the database accepts.
+function scSummary(){
+  const S = scBibleStats(), okKey = k=> /^[^.#$\/\[\]]+$/.test(k), by = {}, tg = {};
+  Object.entries(S.by).forEach(([g, v])=>{ if(okKey(g)) by[g] = v; });
+  Object.entries(S.tgt.by).forEach(([g, v])=>{ if(okKey(g)) tg[g] = v; });
+  return {fys:S.fys, by, tgt:{y:S.tgt.y, by:tg}};
+}
 function nbrPublishSummary(){
   if(!nbrAccess() || !nbrListening || !Object.values(nbrLoaded).every(Boolean)) return;
   const A = nbrAgg(), r2 = v=> Math.round(n0(v)*100)/100, key = k=> k || '_';
@@ -15692,7 +15896,7 @@ function nbrPublishSummary(){
     npw: pack(A.npw, v=> r2(v) || null), bank: pack(A.bank, v=> r2(v) || null),
     bp: pack(A.bankP || {}, v=>{ const x = {}; Object.entries(v||{}).forEach(([k, a])=>{ if(r2(a)) x[nbrBankSlug(k)] = r2(a); }); return Object.keys(x).length ? x : null; }),
     fromBible: [...A.fromBible].map(k=> k.startsWith('|') ? '_'+k : k), years: A.years,
-    targets: {written: nbrTargets().written, banked: nbrTargets().banked}, v: NBR_SUM_VERSION};
+    targets: {written: nbrTargets().written, banked: nbrTargets().banked}, sc: scSummary(), v: NBR_SUM_VERSION};
   const json = JSON.stringify(sum);
   if(json===nbrPublished) return;
   const stamp = Date.now();
@@ -15732,6 +15936,7 @@ function stopNbrListener(){
 function nbrRenderSoon(){ clearTimeout(nbrRenderTimer); nbrRenderTimer = setTimeout(renderNbrVisible, nbrFullReady() || nbrViewer() ? 80 : 30); }
 function nbrPageShown(p){ const el = document.getElementById('page-'+p); return el && !el.classList.contains('hidden'); }
 function renderNbrVisible(){
+  if(nbrPageShown('insights')) renderScorecard();
   if(nbrPageShown('nbrBoard')) renderNbrBoard();
   if(nbrPageShown('nbrReg')) renderNbrReg();
   if(nbrPageShown('nbrBible')) renderNbrBible();
@@ -15854,6 +16059,106 @@ function nbrLists(){
     saleTypes: arr(L.saleTypes).length ? uniq(arr(L.saleTypes)) : NBR_SALE_TYPES.slice()};
 }
 function nbrDefaultSource(){ return NBR_CFG.defaultSource || 'HLP'; }
+
+/* ---- My scorecard: each advisor's figures from the Bible ----
+   Worked out by Admin / Management from the full Bible and added to the Salesboard summary (totals only, never a
+   client's details), which is where MAPAs read them from. Per advisor and financial year (this one and last):
+   - protection conversion by client: clients with a Proc Fee, Remo or product transfer line (not NPW), counted once
+     however many lines they have, and how many of them took protection: the Bible's Life column says Y on one of
+     their lines, or they have a Life Ins line (not NPW) from up to 12 months before. Standalone protection (Life SA)
+     has no mortgage, so it's counted on its own.
+   - how long cases take (typical = median, in days): application → offer → completion for mortgage cases (Proc Fee,
+     Remo and Mums Fee lines, one per client and application date), completion → paid, and protection application →
+     on risk.
+   - NPW cases, fees still to come, clawbacks; and now: offers made 90 days to a year ago not completed, upfront fees owed.
+   '_all' is the whole team, with n = the number of advisors who had cases that year. */
+const SC_MORT = new Set(['Proc Fee','Remo','Prod Tfr','BTL PT']), SC_PT = new Set(['Prod Tfr','BTL PT']), SC_CASE = new Set(['Proc Fee','Remo','Mums Fee']);
+const SC_STUCK_DAYS = 90;
+function scClientKey(c){ return [...nbrNameToks(c)].sort().join(' '); }
+function scDays(a, b){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(a||'') || !/^\d{4}-\d{2}-\d{2}$/.test(b||'')) return null;
+  const d = Math.round((Date.parse(b+'T00:00:00Z') - Date.parse(a+'T00:00:00Z'))/86400000);
+  return isFinite(d) && d >= 0 && d < 730 ? d : null;
+}
+function scMed(arr){ const m = median(arr); return m==null ? null : [Math.round(m*2)/2, arr.length]; }
+function scYmBack(ym, n){ const d = new Date(Date.UTC(+ym.slice(0,4), +ym.slice(5,7)-1-n, 1)); return d.toISOString().slice(0,7); }
+function scFys(){ const cur = nbrFyOf(nbrThisYm()); return [cur, 'FY'+nbrPad((+cur.slice(2)+99) % 100)]; }
+let scCache = null;
+function scBibleStats(){
+  if(scCache && scCache.v===nbrVer && scCache.day===nbrToday()) return scCache.out;
+  const fys = scFys(), today = nbrToday(), lines = Object.values(NBR_BIB).filter(l=> l && !l.bc && /^\d{4}-\d{2}$/.test(l.month||''));
+  // Life Ins lines (not NPW) by client, with their months.
+  const lifeBy = {};
+  lines.forEach(l=>{ if(nbrBankProd(l.product)==='Life Ins' && !l.npw){ const k = scClientKey(l.client); if(k) (lifeBy[k] = lifeBy[k] || []).push(l.month); } });
+  const cells = {}, cell = (g, fy)=>{ const a = cells[g] || (cells[g] = {}); return a[fy] || (a[fy] = {mc:{}, lifeY:new Set(), sa:new Set(), prot:new Set(), protAmt:0, cases:{}, cpP:[], cpL:[], al:[], all:{}, unb:0, claw:0, clawN:0}); };
+  const now = {}, nowCell = g=> now[g] || (now[g] = {stuck:0, owedN:0, owed:0});
+  const stuck = {};
+  lines.forEach(l=>{
+    const fy = nbrFyOf(l.month), p = nbrBankProd(l.product), k = scClientKey(l.client), adv = nbrLineGroup(l);
+    const groups = adv && !/^(bc:|wills$)/.test(adv) ? [adv, '_all'] : ['_all'];
+    // Offers made 90 days to a year ago with no completion yet: one per case (client and application date).
+    if((SC_CASE.has(p) || SC_PT.has(p)) && !l.npw && k){
+      const ck = k+'|'+(l.appDate || l.month), x = stuck[ck] || (stuck[ck] = {groups, offer:'', done:false});
+      if(l.offerDate && (!x.offer || l.offerDate < x.offer)) x.offer = l.offerDate;
+      if(l.compDate || (p!=='Mums Fee' && nbrLineAnyPaid(l))) x.done = true;
+    }
+    if(!fys.includes(fy)) return;
+    groups.forEach(g=>{
+      const c = cell(g, fy);
+      if(k && String(l.life||'').toUpperCase()==='Y') c.lifeY.add(k);
+      if(SC_MORT.has(p) && !l.npw && k){
+        const m = c.mc[k] || (c.mc[k] = {pp:false, ym:l.month});
+        if(!SC_PT.has(p)) m.pp = true;
+        if(l.month < m.ym) m.ym = l.month;
+      }
+      if(p==='Life Ins' && !l.npw && k){
+        if(String(l.life||'').toUpperCase()==='SA') c.sa.add(k);
+        c.prot.add(k); c.protAmt += n0(l.amount);
+        const ar = scDays(l.appDate, l.compDate); if(ar!=null) c.al.push(ar);
+        const cp = scDays(l.compDate, l.datePaid); if(cp!=null) c.cpL.push(cp);
+      }
+      if(SC_MORT.has(p) && !l.npw){ const cp = scDays(l.compDate, l.datePaid); if(cp!=null) c.cpP.push(cp); }
+      if(SC_CASE.has(p) && !l.npw && k && l.appDate){
+        const ck = k+'|'+l.appDate, x = c.cases[ck] || (c.cases[ck] = {app:l.appDate, offer:'', comp:''});
+        if(l.offerDate && (!x.offer || l.offerDate < x.offer)) x.offer = l.offerDate;
+        if(l.compDate && (!x.comp || l.compDate < x.comp)) x.comp = l.compDate;
+      }
+      if((SC_MORT.has(p) || p==='Mums Fee') && k) c.all[k] = (c.all[k]==null ? true : c.all[k]) && !!l.npw;
+      if(p==='Clawback'){ c.claw += Math.max(Math.abs(n0(l.amount)), Math.abs(nbrLinePaidTotal(l))); c.clawN++; }
+      else if(!l.npw) c.unb += nbrLineOutstanding(l);
+    });
+  });
+  Object.values(stuck).forEach(x=>{ const d = x.offer && !x.done ? scDays(x.offer, today) : null; if(d!=null && d > SC_STUCK_DAYS && d <= 365) x.groups.forEach(g=> nowCell(g).stuck++); });
+  nbrUpfrontOwed().forEach(x=>{ const adv = nbrLineGroup(x.l); (adv && !/^(bc:|wills$)/.test(adv) ? [adv, '_all'] : ['_all']).forEach(g=>{ const c = nowCell(g); c.owedN++; c.owed += x.amount; }); });
+  const r2 = v=> Math.round(v*100)/100, out = {fys, by:{}};
+  Object.entries(cells).forEach(([g, byFy])=>{
+    const o = out.by[g] = {};
+    Object.entries(byFy).forEach(([fy, c])=>{
+      let mc = 0, pr = 0, ppC = 0, ppP = 0;
+      Object.entries(c.mc).forEach(([k, m])=>{
+        const from = scYmBack(m.ym, 12), took = c.lifeY.has(k) || (lifeBy[k] || []).some(ym=> ym >= from);
+        mc++; if(took) pr++; if(m.pp){ ppC++; if(took) ppP++; }
+      });
+      const cases = Object.values(c.cases), all = Object.values(c.all);
+      const x = {mc, pr, ppC, ppP, sa:c.sa.size, protN:c.prot.size, protAmt:r2(c.protAmt),
+        ao: scMed(cases.map(z=> scDays(z.app, z.offer)).filter(d=> d!=null)), oc: scMed(cases.map(z=> scDays(z.offer, z.comp)).filter(d=> d!=null)),
+        ac: scMed(cases.map(z=> scDays(z.app, z.comp)).filter(d=> d!=null)), cpP: scMed(c.cpP), cpL: scMed(c.cpL), al: scMed(c.al),
+        cs: all.length, npw: all.filter(Boolean).length, unb:r2(c.unb), claw:r2(c.claw), clawN:c.clawN};
+      Object.keys(x).forEach(k=>{ if(x[k]==null) delete x[k]; });
+      o[fy] = x;
+    });
+  });
+  fys.forEach(fy=>{ const t = out.by._all && out.by._all[fy]; if(t) t.n = Object.keys(out.by).filter(g=> g!=='_all' && out.by[g][fy] && out.by[g][fy].cs).length; });
+  Object.entries(now).forEach(([g, c])=>{ const o = out.by[g] || (out.by[g] = {}); o.now = {stuck:c.stuck, owedN:c.owedN, owed:r2(c.owed)}; });
+  // Each advisor's target for this calendar year (Targets page).
+  const y = new Date().getFullYear(), tg = {};
+  nbrTgtRows(y).forEach(t=>{ if(t.adv && t.adv!=='wills' && n0(t.banked) > 0) tg[t.adv] = {b: n0(t.banked), w: n0(t.written)}; });
+  out.tgt = {y, by:tg};
+  scCache = {v:nbrVer, day:today, out};
+  return out;
+}
+// The scorecard's Bible figures: worked out here for Admin / Management with the full data, otherwise from the summary.
+function scData(){ return nbrOnSummary() ? ((NBR_SUMMARY && NBR_SUMMARY.sc) || null) : (nbrFullReady() ? scBibleStats() : null); }
 
 /* Written by advisor and month (from the NBR), NPW by advisor and month,
    banked by advisor and month (from the Bible: amount paid, by the month paid).
@@ -16993,6 +17298,8 @@ function renderNbrReg(){
   document.getElementById('nbrAddEnt').addEventListener('click', ()=> openNbrEntry(null));
   document.getElementById('nbrAddWill').addEventListener('click', ()=> openNbrWill(null, {date: ym===nbrThisYm() ? nbrToday() : ym+'-01', fromReg:true}));
   document.getElementById('nbrAddNpw').addEventListener('click', ()=> openNbrNpw(null));
+  // The month's column headings stay in view while scrolling down the cases.
+  el.querySelectorAll('.nbr-reg-table').forEach(t=> stickyHead(t.parentElement));
 }
 
 /* ============================== BIBLE ============================== */

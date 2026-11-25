@@ -782,6 +782,19 @@ body:not(.mode-nbr) .nbr-only{display:none !important;}
 .nbr-colf-note{margin:-6px 0 10px;}
 .nbr-bib-table tr.bl-more td{border-top:1px dashed var(--border-2);}
 .nbr-pivot td .linkish{font-weight:inherit;}
+/* New Business tables fit across the screen on a laptop or wider: headings wrap, tighter spacing, smaller text;
+   amounts stay on one line, words wrap. (All lines in the Bible has its own fixed layout.) Phones scroll across. */
+@media (min-width:1100px){
+  .nbr-table:not(.nbr-bib-fit){width:100%;}
+  .nbr-table:not(.nbr-bib-fit) th{white-space:normal; font-size:9.5px; letter-spacing:.1px; padding:6px 4px; vertical-align:bottom; line-height:1.2;}
+  .nbr-table:not(.nbr-bib-fit) td{padding:6px 4px; font-size:11.5px;}
+  .nbr-table:not(.nbr-bib-fit) td:not(.num){white-space:normal;}
+  .nbr-table:not(.nbr-bib-fit) td.num{white-space:nowrap;}
+}
+@media (min-width:1100px) and (max-width:1500px){
+  .nbr-table:not(.nbr-bib-fit) td{padding:5px 3px; font-size:10.5px;}
+  .nbr-table:not(.nbr-bib-fit) th{padding:5px 3px;}
+}
 /* Tables across the dashboard: text sits in the middle of each column, across and top to bottom (headings too). */
 table.nml-table th, table.nml-table td, table.mini-table th, table.mini-table td, table.users-table th, table.users-table td,
 table.nbr-m-tbl th, table.nbr-m-tbl td, .ask-tbl th, .ask-tbl td{text-align:center !important; vertical-align:middle;}

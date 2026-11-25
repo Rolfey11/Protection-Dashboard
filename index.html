@@ -16994,7 +16994,7 @@ const NBR_BIB_COLS = [
   ['paid', 'Paid', r=> [n0(r.paid) > 0 ? nbrMoney(r.paid) : NBR_BLANK], 'money', r=> `<td class="num">${nbrMoneyCell(r.paid)}</td>`, 'num'],
   ['life', 'Life', r=> [nbrColTxt(r.l.life)], '', r=> `<td>${esc(r.l.life||'')}</td>`],
   ['address', 'Address', r=> [nbrColTxt(r.l.address)], '', r=> `<td class="wrap nbr-bib-addr">${esc(r.l.address||'')}</td>`],
-  ['status', 'Status', r=> [BIB_STATUS[r.st][0]], '', r=> `<td class="nbr-bib-st"><span class="bl-chip bl-chip-${r.st}">${BIB_STATUS[r.st][0]}</span>${r.st!=='paid' && r.st!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(r.l.id)}" title="${r.st==='part' ? 'Add the next payment' : 'Mark as paid'}">${r.st==='part' ? '+ Payment' : 'Paid'}</button>` : ''}</td>`],
+  ['status', 'Status', r=> [BIB_STATUS[r.st][0]], '', r=> `<td class="nbr-bib-st"><span class="bl-chip bl-chip-${r.st}">${BIB_STATUS[r.st][0]}</span>${r.st!=='paid' && r.st!=='npw' ? ` <button type="button" class="btn btn-secondary btn-sm" data-nbr-pay="${esc(r.l.id)}" title="${r.st==='part' ? 'Add the next payment' : 'Mark as paid'}">${r.st==='part' ? '+ Payment' : 'Pay Fee'}</button>` : ''}</td>`],
   ['owed', 'Outstanding', r=> [r.owed < 0.01 ? 'None' : nbrMoney(r.owed)], 'money', r=> `<td class="num ${r.st==='part' ? 'nbr-owed' : ''}">${r.st==='npw' ? '<span class="nbr-zero">–</span>' : nbrMoneyCell(r.owed)}</td>`, 'num'],
 ];
 function nbrBibColSort(kind){
@@ -17213,7 +17213,7 @@ function renderNbrBible(){
   if(nbrUI.bibView==='switch'){ renderNbrBibleSwitch(el); return; }
   if(nbrUI.bibView==='upfront'){ renderNbrBibleUpfront(el); return; }
   const fys = nbrBibFys();
-  if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = fys[0];
+  if(!nbrUI.bibFY || (nbrUI.bibFY!=='none' && !fys.includes(nbrUI.bibFY))) nbrUI.bibFY = nbrFyOf(nbrThisYm());
   const fy = nbrUI.bibFY, fyMonths = fy==='none' ? [] : nbrFyMonths(fy);
   // One row per Excel Bible row: a line with payment lines is a row per part.
   const lines = nbrBibFiltered().sort((a,b)=> (a.l.month||'').localeCompare(b.l.month||'') || nbrAdvName(a.l.adv).localeCompare(nbrAdvName(b.l.adv)) || (a.l.client||'').localeCompare(b.l.client||'') || String(a.id).localeCompare(String(b.id)) || a.i - b.i);

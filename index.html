@@ -16768,7 +16768,11 @@ function renderNbrBoard(){
     .map(id=> ({id, name:nbrAdvName(id), special:isSpecial(id), office: id==='wills' ? 'W' : /^bc:/.test(id) ? id.slice(3) : (AM[id]||{}).office || ''}))
     .sort((a,b)=> ({F:0,G:1,C:2,W:3}[a.office] ?? 4) - ({F:0,G:1,C:2,W:3}[b.office] ?? 4) || (a.special - b.special) || a.name.localeCompare(b.name));
   const monthTot = ym=> nbrSum(ids.map(id=> nbrRow(id, ym)));
-  const year = yms.map(monthTot), lastYear = prev.map(monthTot), yt = nbrSum(year);
+  const year = yms.map(monthTot), lastYear = prev.map(monthTot);
+  // A year with signed-off written figures shows those (the NPWs come off them for "exc NPW").
+  const fixY = nbrFixedWritten(Y), fixL = nbrFixedWritten(Y-1);
+  [[year, fixY], [lastYear, fixL]].forEach(([rows, f])=>{ if(f) rows.forEach((r, i)=>{ if(f[i]!=null){ r.total = f[i]; r.excl = f[i] - n0(r.npw); } }); });
+  const yt = nbrSum(year);
   // Commercial (its own column, as the spreadsheet's "Signed Sales by Product"): already in every total.
   const comIds = ids.filter(id=> (AM[id]||{}).office==='C');
   const com = yms.map(ym=> nbrSum(comIds.map(id=> nbrRow(id, ym)))), comT = nbrSum(com);
@@ -16969,7 +16973,7 @@ function renderNbrBoard(){
     ${boardTable}${mineTab ? '' : boardMob}</div>`}
     ${view ? `<div class="${mineTab ? '' : 'nbr-desk'}">${myHtml}</div>` : tab==='year' ? `${unassigned.banked ? `<p class="field-hint">Banked from Bible lines with no advisor set: ${nbrMoney(unassigned.banked)} this year (included in the totals below).</p>` : ''}
     <h2 class="nbr-h2">${Y} by month</h2>
-    ${yearTable}${yearMob}` : tab==='prod' ? `<h2 class="nbr-h2">${Y} written by product</h2>
+    ${yearTable}${yearMob}${fixY || fixL ? `<p class="field-hint">Written ${fixY ? Y : Y-1}${fixY && fixL ? ' and '+(Y-1) : ''}: the signed-off figures for each month (New Business → Advisors &amp; upload), not worked out from the Bible.</p>` : ''}` : tab==='prod' ? `<h2 class="nbr-h2">${Y} written by product</h2>
     ${prodTable}${prodMob}` : tab==='advs' ? `<h2 class="nbr-h2">Each advisor by month</h2>
     <div class="nbr-adv-cards nbr-desk">${advCards || '<div class="nml-empty">No advisors yet.</div>'}</div>${advCards ? advMob : '<div class="nml-empty nbr-mob">No advisors yet.</div>'}` : ''}`;
   if(openRows.size) el.querySelectorAll('details[data-mk]').forEach(d=>{ if(d.dataset.mk && openRows.has(d.dataset.mk)) d.open = true; });
@@ -17056,6 +17060,14 @@ window.addEventListener('resize', ()=> stickyHeadsAll(true));
    {name, adv (advisor id, or 'wills'), office (G/F/B/W), written, banked, dap (minimum before DAP),
     wAct / bAct (written / banked recorded on the spreadsheet, used for years the dashboard has no figures for), note, se, order}. */
 const TGT_OFFICES = [['G','Gurkha Mortgages'],['F','Frimley'],['B','Basingstoke'],['W','Wills & Estate Planning'],['','Other']];
+/* Signed-off written figures: a past year's company totals by month (written, including Wills and NPWs), as
+   reported at the time. Typed in under Advisors & upload; where a month has one, the Salesboard's by-month view
+   shows it instead of the total worked out from the Bible / NBRs (e.g. 2025, before the NBRs were here). */
+function nbrFixedWritten(y){
+  const o = (NBR_CFG.fixedWritten || {})[String(y)]; if(!o) return null;
+  const a = Array.from({length:12}, (_,i)=>{ const v = o['m'+nbrPad(i+1)]; return v==null || v==='' || !isFinite(+v) ? null : +v; });
+  return a.some(v=> v!=null) ? a : null;
+}
 function nbrTgtRows(y){
   const ord = o=> { const i = TGT_OFFICES.findIndex(x=> x[0]===(o||'')); return i<0 ? 9 : i; };
   return Object.entries(NBR_TGT[y] || {}).filter(([,t])=> t && typeof t==='object').map(([id,t])=> ({id, ...t}))
@@ -17863,9 +17875,11 @@ function nbrSetupCommercial(){
   });
   nbrWrite(up).then(()=> toast('Commercial NBRs added for Mitch and Joanne.', 'success')).catch(err=> toast('Could not add them: '+err.message, 'error'));
 }
+function nbrFixYears(){ const y = new Date().getFullYear(); return [y-1, y-2, y-3]; }
 function renderNbrSetup(){
   const el = document.getElementById('nbrSetupBody');
   if(nbrNotReady(el)) return;
+  if(!nbrFixYears().includes(nbrUI.fixY)) nbrUI.fixY = nbrFixYears()[0];
   const advs = nbrAdvs(true), L = NBR_CFG.lists || {}, T = {written: n0(NBR_CFG.targetWritten) || 3000000, banked: n0(NBR_CFG.targetBanked) || 2300000};
   const listVal = k=> (Array.isArray(L[k]) ? L[k] : Object.values(L[k]||{})).join('\n');
   const cN = {}, bN = {};
@@ -17903,6 +17917,13 @@ function renderNbrSetup(){
         <button type="button" class="btn btn-primary btn-sm" id="nbrSaveTargets">Save</button>
       </section>
       <section class="nbr-card">
+        <div class="nbr-card-head"><h2>Signed-off written figures</h2></div>
+        <p class="nbr-p">For a past year, the company's written total each month as reported at the time (including Wills and NPWs). The Salesboard's <b>by month</b> view shows these for that year instead of working them out from the Bible. Leave a month blank to use the Bible.</p>
+        <div class="field"><label for="nbrFixY">Year</label><select id="nbrFixY">${nbrFixYears().map(y=> `<option value="${y}" ${y===nbrUI.fixY ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
+        <div class="nbr-grid nbr-fix-grid">${NBR_MONTHS.map((m, i)=>{ const f = nbrFixedWritten(nbrUI.fixY); return nfMoney('nbrFix'+i, m, f && f[i]!=null ? f[i] : ''); }).join('')}</div>
+        <button type="button" class="btn btn-primary btn-sm" id="nbrSaveFix">Save ${nbrUI.fixY}</button>
+      </section>
+      <section class="nbr-card">
         <div class="nbr-card-head"><h2>Drop-down lists</h2></div>
         <p class="nbr-p">One per line. Uploading an advisor's NBR adds its lists here.</p>
         <div class="nbr-grid nbr-grid-2">
@@ -17929,6 +17950,11 @@ function renderNbrSetup(){
   document.getElementById('nbrSaveTargets').addEventListener('click', ()=>{
     const w = nfn('nbrTgtW'), b = nfn('nbrTgtB');
     nbrWrite({'config/targetWritten': w || null, 'config/targetBanked': b || null, 'config/defaultSource': nfv('nbrDefSrc') || null}).then(()=> toast('Saved.', 'success')).catch(err=> toast('Could not save: '+err.message, 'error'));
+  });
+  document.getElementById('nbrFixY').addEventListener('change', e=>{ nbrUI.fixY = +e.target.value; renderNbrSetup(); });
+  document.getElementById('nbrSaveFix').addEventListener('click', ()=>{
+    const o = {}; NBR_MONTHS.forEach((m, i)=>{ const raw = String(document.getElementById('nbrFix'+i).value||'').trim(); if(raw!=='') o['m'+nbrPad(i+1)] = Math.round(nfn('nbrFix'+i)*100)/100; });
+    nbrWrite({['config/fixedWritten/'+nbrUI.fixY]: Object.keys(o).length ? o : null}).then(()=> toast(`Saved the signed-off figures for ${nbrUI.fixY}.`, 'success')).catch(err=> toast('Could not save: '+err.message, 'error'));
   });
   document.getElementById('nbrSaveLists').addEventListener('click', ()=>{
     const lines = id=> [...new Set(document.getElementById(id).value.split('\n').map(s=> s.trim()).filter(Boolean))];

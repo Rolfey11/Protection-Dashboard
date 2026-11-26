@@ -16947,7 +16947,7 @@ function renderNbrBoard(){
   if(!nbrUI.boardTab){ try{ nbrUI.boardTab = localStorage.getItem('plt_boardTab') || ''; }catch(e){ nbrUI.boardTab = ''; } }
   // On a phone each is its own screen, with shorter names; MAPAs get their own figures as a third screen there
   // (on a bigger screen they're underneath, and "mine" shows Written).
-  const boardTabs = [['written','Written','Written'], ['banked','Banked','Banked'], ...(view ? [['mine','My figures','My figures']] : [['year', `${Y} by month`, 'By month'], ['prod', `${Y} written by product`, 'By product'], ['advs', 'Advisor month by month', 'Advisors']])];
+  const boardTabs = [['written','Written','Written'], ['banked','Banked','Banked'], ...(view ? [['mine','My figures','My figures']] : [['advs', 'Advisor month by month', 'Advisors'], ['year', `${Y} by month`, 'By month'], ['prod', `${Y} written by product`, 'By product']])];
   const tab = boardTabs.some(([k])=> k===nbrUI.boardTab) ? nbrUI.boardTab : 'written';
   const mineTab = tab==='mine', offMine = mineTab ? 'nbr-desk' : '';
   const openRows = new Set([...el.querySelectorAll('details[data-mk][open]')].map(d=> d.dataset.mk));

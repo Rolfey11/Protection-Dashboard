@@ -4318,7 +4318,7 @@ function saveBootCache(){
     if(!currentUser || !leadsLive || !auth.currentUser || bootCacheTooBig) return;
     const users = {};
     Object.entries(USERS).forEach(([id,u])=>{ if(u && u.name) users[id] = {name:u.name, role:u.role}; }); // never keep PINs
-    try{ sessionStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({uid:auth.currentUser.uid, colleagueId:currentUser.id, at:Date.now(), users, leads:LEADS, notifs:NOTIFS})); }
+    try{ sessionStorage.setItem(BOOT_CACHE_KEY, JSON.stringify({uid:auth.currentUser.uid, colleagueId:currentUser.id, at:Date.now(), users, leads:LEADS, notifs:NOTIFS, aiUrl:aiUrl()})); }
     catch(e){ bootCacheTooBig = true; try{ sessionStorage.removeItem(BOOT_CACHE_KEY); }catch(e2){} } // too big for this browser: just load normally
   }, 1500);
 }
@@ -4336,6 +4336,7 @@ function bootFromCache(){
   USERS = c.users; usersLoaded = true;
   LEADS = c.leads || {}; leadsLoaded = true; leadsLive = false;
   NOTIFS = c.notifs || {};
+  if(c.aiUrl && !(CONFIG && CONFIG.aiUrl)) CONFIG = {...(CONFIG || {}), aiUrl:c.aiUrl}; // the Ask Claude button shows once the sign-in is confirmed
   renderUserSelect();
   currentUser = {id:c.colleagueId, name:u.name, role:u.role};
   bootedFromCacheUid = c.uid;
@@ -4799,6 +4800,7 @@ auth.onAuthStateChanged(user=>{
     currentUser = null; // carry on with the normal sign-in steps (links the account, starts live data)
   }
   tryResolveSession();
+  if(currentUser) aiSync();
 });
 
 function tryResolveSession(){
@@ -6148,17 +6150,23 @@ function ensureSibLoaded(){
 function prefetchSections(){
   clearTimeout(prefetchSections.t);
   prefetchSections.armed = true;
-  prefetchSections.t = setTimeout(prefetchSectionsNow, leadsLoaded ? 300 : 3000);
+  // After a refresh the cases on screen are the tab's saved copy: wait for the live ones (their arrival starts
+  // this straight away), so the other sections don't share the connection with them. 12s at most.
+  prefetchSections.t = setTimeout(prefetchSectionsNow, leadsLive ? 300 : 12000);
 }
 function prefetchSectionsNow(){
   clearTimeout(prefetchSections.t);
-  if(currentUser){ startSibListener(); startComListener(); if(nbrAccess()) startNbrListener(); }
+  if(!currentUser) return;
+  startSibListener(); startComListener();
+  // New Business is the biggest download (several MB): it starts once Send in Blue is in, 8s at most.
+  if(nbrAccess()){ clearTimeout(prefetchSectionsNow.nbr); prefetchSectionsNow.nbr = setTimeout(()=>{ if(currentUser && nbrAccess()) startNbrListener(); }, sibLoaded ? 0 : 8000); }
 }
 function startSibListener(){
   if(sibListening || !currentUser) return;
   sibListening = true;
   db.ref('sib/cases').on('value', snap=>{
-    SIB = snap.val() || {}; sibLoaded = true;
+    SIB = snap.val() || {}; const firstSib = !sibLoaded; sibLoaded = true;
+    if(firstSib && prefetchSectionsNow.nbr){ clearTimeout(prefetchSectionsNow.nbr); prefetchSectionsNow.nbr = null; if(currentUser && nbrAccess()) setTimeout(startNbrListener, 0); }
     if(SPEED.marks['Send in Blue loaded']==null){ speedMark('Send in Blue loaded'); speedSizeLater('Send in Blue', ()=> SIB); }
     if(!document.getElementById('page-sib').classList.contains('hidden')) renderSib();
     renderSibInsights();
@@ -7593,6 +7601,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-27c', date:'2026-11-27', items:[ {text:"⚡ <b>Faster start</b>: after a refresh the <b>✨ Ask Claude</b> button shows straight away, and your cases now load first, before Send in Blue, Commercial and New Business download in the background (one after another, so they don't hold up the cases)."} ]},
   {id:'2026-11-27b', date:'2026-11-27', items:[ {text:"🤖 <b>Ask Claude</b> can now read the Bible's <b>Address / notes</b> column (postcode, first line and notes such as policy types), plus Dept / ref, the Life column, when / how paid, Mums fee type and NPW notes, and the notes on NBR cases and NPWs.", roles:['admin','management']} ]},
   {id:'2026-11-27a', date:'2026-11-27', items:[ {text:"📒 <b>Signed-off written figures</b>: in <b>New Business → Advisors &amp; upload</b> you can type a past year's written total for each month and its totals by product (e.g. 2025 from last year's Salesboard). The Salesboard then shows those: <b>Written 2025</b> on the by-month view, and a <b>2025 totals</b> row under <b>written by product</b>.", roles:['admin','management']} ]},
   {id:'2026-11-26e', date:'2026-11-26', items:[ {text:"🔠 <b>Tables</b>: column headings are now darker and bolder, so they stand out from the figures."} ]},
@@ -8619,6 +8628,14 @@ function startAuthedListeners(){
   if(realtimeListenersStarted) return;
   realtimeListenersStarted = true;
 
+  // The settings first: they're small, and they switch on Ask Claude (so its button doesn't wait for the cases).
+  db.ref('config').on('value', snap=>{
+    CONFIG = snap.val() || {};
+    aiSync(); saveBootCache();
+    resetReferenceData();
+    if(currentUser && currentUser.role==='management' && !document.getElementById('page-settings').classList.contains('hidden')) renderContentSettings();
+  }, ()=>{ CONFIG = {}; }); // older rules without /config: the standard versions are used
+
   db.ref('leads').on('value', snap=>{
     LEADS = snap.val() || {};
     if(SPEED.marks['Protection cases loaded']==null){ speedMark('Protection cases loaded'); requestAnimationFrame(()=>{ speedMark('Protection board drawn'); if(prefetchSections.armed) setTimeout(prefetchSectionsNow, 50); }); speedSizeLater('Protection cases', ()=> LEADS); }
@@ -8652,13 +8669,6 @@ function startAuthedListeners(){
 
   const DEFAULT_CLIENT_SOURCES = ['Resi Purchase','Resi Remo','Resi FA','Resi PT','BTL Purchase','BTL Remo','BTL FA','BTL PT','Equity Release','Bridge'];
   startPinsListener();
-
-  db.ref('config').on('value', snap=>{
-    CONFIG = snap.val() || {};
-    aiSync();
-    resetReferenceData();
-    if(currentUser && currentUser.role==='management' && !document.getElementById('page-settings').classList.contains('hidden')) renderContentSettings();
-  }, ()=>{ CONFIG = {}; }); // older rules without /config: the standard versions are used
 
   let clientSourcesSeeded = false;
   db.ref('clientSources').on('value', snap=>{

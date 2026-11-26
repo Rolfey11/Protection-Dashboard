@@ -7587,6 +7587,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-26d', date:'2026-11-26', items:[ {text:"🎯 <b>Targets</b>: the Wills row's banked figure is now the net value (the total ÷ 1.2), the same as on the Salesboard, instead of the full amount written.", roles:['admin','management']} ]},
   {id:'2026-11-26c', date:'2026-11-26', items:[ {text:"🏦 <b>Scorecard</b>: a new <b>How long cases take, by lender</b> card shows application → offer → completion for each lender, next to the team's typical time for that lender. And protection conversion now also finds a client's Life Ins when it's in a joint name or a slightly different name at the same postcode or address.", roles:['mapa','admin','management']} ]},
   {id:'2026-11-26b', date:'2026-11-26', items:[ {text:"📅 <b>Calendar years</b>: your <b>Scorecard</b> now runs January to December (this year so far, next to the same point last year), like the Salesboard.", roles:['mapa']},
     {text:"📅 <b>Calendar years</b>: the <b>Scorecard</b>, the <b>Bible</b>'s year filter and its <b>Banked</b> / pipeline views now run January to December, like the Salesboard. Uploading an Excel Bible still reads its own financial-year columns, so nothing changes there.", roles:['admin','management']} ]},
@@ -17059,12 +17060,12 @@ function nbrTgtYears(){ return Object.keys(NBR_TGT).map(Number).filter(y=> y>200
 // Does the dashboard hold figures for that year (from the NBRs or the Bible)?
 function nbrTgtLive(y){ return nbrAllAdvIds().some(id=> nbrYearHasData(id, y)); }
 // Written (excluding NPWs) and banked for a target row, month by month where the dashboard has them.
-// Wills aren't in the Bible, so the Wills row counts what's written as banked, as the spreadsheet does.
+// Wills aren't in the Bible: the Wills row's banked is the net value (the total ÷ 1.2), the same as the Salesboard.
 function nbrTgtActual(t, y, live){
   if(live && t.adv){
     // An advisor's Commercial NBR counts towards their target too (the spreadsheet adds the Commercial block).
     const ids = [t.adv, ...(t.adv!=='wills' && nbrComTwinOf(t.adv) ? [nbrComTwinOf(t.adv)] : [])];
-    const months = nbrYearMonths(y).map(ym=>{ const r = nbrSum(ids.map(id=> nbrRow(id, ym))); return {w: r.excl, b: t.adv==='wills' ? r.excl : r.banked}; });
+    const months = nbrYearMonths(y).map(ym=>{ const r = nbrSum(ids.map(id=> nbrRow(id, ym))); return {w: r.excl, b: r.banked}; });
     return {live:true, months, w: months.reduce((s,m)=> s + m.w, 0), b: months.reduce((s,m)=> s + m.b, 0)};
   }
   return {live:false, months:null, w: t.wAct==null || t.wAct==='' ? null : n0(t.wAct), b: t.bAct==null || t.bAct==='' ? null : n0(t.bAct)};

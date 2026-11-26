@@ -13807,15 +13807,15 @@ function scCardsHTML(F){
   </div>`;
   // How long cases take by lender: the lenders with the most cases first, the team's typical times alongside.
   const lend = Object.entries(me.lend || {}).sort((a,b)=> (b[1].n||0) - (a[1].n||0) || String(a[1].nm).localeCompare(String(b[1].nm)));
-  const tLend = team.lend || {}, lendShown = scUI.allLend ? lend : lend.slice(0, SC_LEND_TOP);
+  const tLend = team.lend || {}, lendAll = T || scUI.allLend, lendShown = lendAll ? lend : lend.slice(0, SC_LEND_TOP);
   const lcell = (v, tv)=> `<td class="num">${v ? `${scDayTxt(v[0])} <span class="sc-n">· ${v[1]}</span>` : '—'}${!T && tv ? `<br><span class="sc-n">team ${scDayTxt(tv[0])}</span>` : ''}</td>`;
   const lenderCard = `<div class="sib-score sc-wide"><div class="sib-score-hd"><b>How long cases take, by lender</b><span>typical</span></div>
-    ${lend.length ? `<div class="sib-ins-wrap"><table class="mini-table sc-table sc-lend"><thead><tr><th>Lender</th><th class="num">Cases</th><th class="num">Application → offer</th><th class="num">Offer → completion</th><th class="num">Application → completion</th></tr></thead><tbody>
-      ${lendShown.map(([k, v])=>{ const t = tLend[k] || {}; return `<tr><td><b>${esc(v.nm)}</b></td><td class="num">${v.n||0}</td>${lcell(v.ao, t.ao)}${lcell(v.oc, t.oc)}${lcell(v.ac, t.ac)}</tr>`; }).join('')}
+    ${lend.length ? `<div class="sib-ins-wrap"><table class="mini-table sc-table sc-lend"><thead><tr><th>Lender</th><th class="num">Cases</th><th class="num">Application → offer</th><th class="num">Offer → completion</th><th class="num">Application → completion</th><th class="num">Completion → paid</th></tr></thead><tbody>
+      ${lendShown.map(([k, v])=>{ const t = tLend[k] || {}; return `<tr><td><b>${esc(v.nm)}</b></td><td class="num">${v.n||0}</td>${lcell(v.ao, t.ao)}${lcell(v.oc, t.oc)}${lcell(v.ac, t.ac)}${lcell(v.cp, t.cp)}</tr>`; }).join('')}
     </tbody></table></div>
-    ${lend.length > SC_LEND_TOP ? `<p class="sc-foot" style="margin-top:6px;"><button type="button" class="linkish" data-sc-lend>${scUI.allLend ? `Show the top ${SC_LEND_TOP} only` : `Show all ${lend.length} lenders`}</button></p>` : ''}`
+    ${lend.length > SC_LEND_TOP && !T ? `<p class="sc-foot" style="margin-top:6px;"><button type="button" class="linkish" data-sc-lend>${scUI.allLend ? `Show the top ${SC_LEND_TOP} only` : `Show all ${lend.length} lenders`}</button></p>` : ''}`
     : '<p class="sc-foot">No mortgage cases with a lender and dates yet.</p>'}
-    <p class="sc-foot">Typical = the middle case (median), from the Bible's dates; the small number is how many cases it's from${T ? '' : ', with the team\'s typical time for that lender below'}. Lender = the provider on the case's Proc Fee or Remo line (or Mums Fee line).</p>
+    <p class="sc-foot">Typical = the middle case (median), from the Bible's dates; the small number is how many cases it's from${T ? '' : ', with the team\'s typical time for that lender below'}. Lender = the provider on the case's Proc Fee or Remo line (or Mums Fee line); paid = when its proc fee came in.${T ? ` All ${lend.length} lenders.` : ''}</p>
   </div>`;
   // Lost and owed
   const npwP = pct(me.npw||0, me.cs||0), tNpwP = pct(team.npw||0, team.cs||0), now = F.now || {}, tNow = F.teamNow || {};
@@ -13842,7 +13842,7 @@ function scCardsHTML(F){
   const chart = `<div class="sib-score sc-wide"><div class="sib-score-hd"><b>Banked month by month</b><span><i class="sc-key cur"></i>${esc(F.fy)} <i class="sc-key prev"></i>year before</span></div>
     <div class="sc-chart" role="img" aria-label="Banked each month this year and the year before">${ms.map((ym, i)=> `<div class="sc-col" title="${esc(nbrYmLabel(ym, true))}: ${ym > cutoff ? 'to come' : scMoney(cur[i])} · year before ${scMoney(prev[i])}"><div class="sc-bars"><i class="prev" style="height:${prev[i] > 0 ? Math.max(2, prev[i]/max*100) : 0}%"></i><i class="cur" style="height:${cur[i] > 0 ? Math.max(2, cur[i]/max*100) : 0}%"></i></div><span>${esc(NBR_MONTHS[+ym.slice(5,7)-1])}</span></div>`).join('')}</div>
   </div>`;
-  return `${noAdv}${loading}<div class="sib-score-grid sc-grid">${bankCard}${convCard}${timeCard}${lostCard}${lenderCard}${leadCard}${chart}</div>`;
+  return `${noAdv}${loading}<div class="sib-score-grid sc-grid">${bankCard}${convCard}${timeCard}${lostCard}${leadCard}${lenderCard}${chart}</div>`;
 }
 // The whole team's figures for the "Everyone" card.
 function scTeamFigures(fy){
@@ -15868,7 +15868,7 @@ function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || cur
 function nbrViewer(){ return !!currentUser && currentUser.role==='mapa'; }
 function nbrSeeAccess(){ return nbrAccess() || nbrViewer(); }
 let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null, nbrShare = null, nbrLiveSumV = null;
-const NBR_SUM_VERSION = 6;
+const NBR_SUM_VERSION = 7;
 function nbrFullReady(){ return Object.values(nbrLoaded).every(Boolean); }
 function nbrReady(){ return nbrViewer() ? nbrSumLoaded : nbrFullReady(); }
 // Figures come from the summary: always for MAPAs; for Admin / Management only until the full data has arrived.
@@ -16209,8 +16209,10 @@ function scBibleStats(){
       }
       if(SC_MORT.has(p) && !l.npw){ const cp = scDays(l.compDate, l.datePaid); if(cp!=null) c.cpP.push(cp); }
       if(SC_CASE.has(p) && !l.npw && k && l.appDate){
-        const ck = k+'|'+l.appDate, x = c.cases[ck] || (c.cases[ck] = {app:l.appDate, offer:'', comp:'', lender:'', lenderMums:true});
+        const ck = k+'|'+l.appDate, x = c.cases[ck] || (c.cases[ck] = {app:l.appDate, offer:'', comp:'', paid:'', lender:'', lenderMums:true});
         if(l.offerDate && (!x.offer || l.offerDate < x.offer)) x.offer = l.offerDate;
+        // Paid: when the proc fee (or remortgage fee) came in.
+        if(p!=='Mums Fee' && /^\d{4}-\d{2}-\d{2}/.test(l.datePaid||'') && (!x.paid || l.datePaid < x.paid)) x.paid = String(l.datePaid).slice(0,10);
         // The lender: the Proc Fee / Remo line's provider, or the Mums Fee line's when that's all there is.
         // (A Mums Fee line's provider is sometimes the fee type, "Initial" or "Comp", not the lender.)
         if(String(l.provider||'').trim() && !SC_NOT_LENDER.test(String(l.provider).trim()) && (!x.lender || (x.lenderMums && p!=='Mums Fee'))){ x.lender = String(l.provider).trim().replace(/\s+/g, ' '); x.lenderMums = p==='Mums Fee'; }
@@ -16244,8 +16246,8 @@ function scBibleStats(){
       Object.entries(lg).forEach(([lk, e])=>{
         const t = {nm: Object.entries(e.names).sort((a,b)=> b[1]-a[1])[0][0], n: e.list.length,
           ao: scMed(e.list.map(z=> scDays(z.app, z.offer)).filter(d=> d!=null)), oc: scMed(e.list.map(z=> scDays(z.offer, z.comp)).filter(d=> d!=null)),
-          ac: scMed(e.list.map(z=> scDays(z.app, z.comp)).filter(d=> d!=null))};
-        if(!t.ao && !t.oc && !t.ac) return;
+          ac: scMed(e.list.map(z=> scDays(z.app, z.comp)).filter(d=> d!=null)), cp: scMed(e.list.map(z=> scDays(z.comp, z.paid)).filter(d=> d!=null))};
+        if(!t.ao && !t.oc && !t.ac && !t.cp) return;
         Object.keys(t).forEach(q=>{ if(t[q]==null) delete t[q]; });
         lend[lk.replace(/ /g, '_')] = t;
       });

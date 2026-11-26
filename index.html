@@ -7587,6 +7587,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-26c', date:'2026-11-26', items:[ {text:"🏦 <b>Scorecard</b>: a new <b>How long cases take, by lender</b> card shows application → offer → completion for each lender, next to the team's typical time for that lender. And protection conversion now also finds a client's Life Ins when it's in a joint name or a slightly different name at the same postcode or address.", roles:['mapa','admin','management']} ]},
   {id:'2026-11-26b', date:'2026-11-26', items:[ {text:"📅 <b>Calendar years</b>: your <b>Scorecard</b> now runs January to December (this year so far, next to the same point last year), like the Salesboard.", roles:['mapa']},
     {text:"📅 <b>Calendar years</b>: the <b>Scorecard</b>, the <b>Bible</b>'s year filter and its <b>Banked</b> / pipeline views now run January to December, like the Salesboard. Uploading an Excel Bible still reads its own financial-year columns, so nothing changes there.", roles:['admin','management']} ]},
   {id:'2026-11-26a', date:'2026-11-26', items:[ {text:"📊 <b>Scorecard</b>: picking <b>Everyone</b> now shows the same cards for the whole team (banked, conversion, timings, NPWs and leads), with each MAPA side by side underneath. A MAPA's login that isn't linked to their NBR now says so in the table; link it in <b>New Business → Advisors &amp; upload</b> under <b>Dashboard login</b>. And the MAPAs' scorecard boxes no longer go blank when a copy of the tracker from before an update is left open somewhere.", roles:['admin','management']} ]},
@@ -13692,7 +13693,8 @@ try{ setPinsTab(localStorage.getItem('plt_insTab') || 'score'); }catch(e){}
    their protection leads are handled (from the cases here). MAPAs see their own; Management see everyone side by
    side, or one MAPA's card when they pick that MAPA in the advisor filter. */
 const SC_MIN = 5; // fewer than this and the comparison with the team isn't meaningful
-let scUI = {fy:'', uid:''};
+let scUI = {fy:'', uid:'', allLend:false};
+const SC_LEND_TOP = 10;
 function scMoney(v){ return (v < 0 ? '-£' : '£') + Math.round(Math.abs(n0(v))).toLocaleString('en-GB'); }
 function scDayTxt(d){ return d==null ? '—' : `${d} day${d===1 ? '' : 's'}`; }
 function scFyRange(fy){ const y = +fy; return [new Date(y, 0, 1).getTime(), new Date(y+1, 0, 1).getTime() - 1]; }
@@ -13794,7 +13796,7 @@ function scCardsHTML(F){
     ${row('Product transfers', ptC ? `${pctTxt(ptP, ptC)} (${ptP} of ${ptC})` : '—', pct(ptP, ptC), `team ${pctTxt(tptP, tptC)}`, pct(tptP, tptC), true, ptC >= SC_MIN)}
     ${row('Average protection written per client', me.protN ? scMoney(me.protAmt/me.protN) : '—', me.protN ? me.protAmt/me.protN : null, team.protN ? `team ${scMoney(team.protAmt/team.protN)}` : '', team.protN ? team.protAmt/team.protN : null, true, (me.protN||0) >= SC_MIN)}
     ${row('Standalone protection clients (no mortgage)', String(me.sa||0), me.sa||0, `team average ${Math.round((team.sa||0)/nT*10)/10} per advisor`, (team.sa||0)/nT, true, false, `average ${Math.round((me.sa||0)/nT*10)/10} per advisor`)}
-    <p class="sc-foot">A client counts once, however many lines they have. They took protection when the Bible's Life column says Y, or they have a Life Ins line. NPWs left out.</p>
+    <p class="sc-foot">A client counts once, however many lines they have. They took protection when the Bible's Life column says Y on one of their lines, or there's a Life Ins line (from up to a year before) in the same name, or sharing a name and the same postcode or first line of address. NPWs left out.</p>
   </div>`;
   // Timings
   const tm = (lbl, k)=>{ const a = me[k], b = team[k]; return row(lbl, a ? scDayTxt(a[0]) : '—', a ? a[0] : null, b ? `team ${scDayTxt(b[0])}${a ? ` · from ${a[1]} case${a[1]===1 ? '' : 's'}` : ''}` : '', b ? b[0] : null, false, !!a && a[1] >= SC_MIN, a ? `from ${a[1]} case${a[1]===1 ? '' : 's'}` : ''); };
@@ -13802,6 +13804,18 @@ function scCardsHTML(F){
     ${tm('Application → offer', 'ao')}${tm('Offer → completion', 'oc')}${tm('Application → completion', 'ac')}
     ${tm('Completion → paid (proc fees)', 'cpP')}${tm('Completion → paid (protection)', 'cpL')}${tm('Protection application → on risk', 'al')}
     <p class="sc-foot">Typical = the middle case (median), from the Bible's dates. Mortgage cases are the Proc Fee, Remo and Mums Fee lines.</p>
+  </div>`;
+  // How long cases take by lender: the lenders with the most cases first, the team's typical times alongside.
+  const lend = Object.entries(me.lend || {}).sort((a,b)=> (b[1].n||0) - (a[1].n||0) || String(a[1].nm).localeCompare(String(b[1].nm)));
+  const tLend = team.lend || {}, lendShown = scUI.allLend ? lend : lend.slice(0, SC_LEND_TOP);
+  const lcell = (v, tv)=> `<td class="num">${v ? `${scDayTxt(v[0])} <span class="sc-n">· ${v[1]}</span>` : '—'}${!T && tv ? `<br><span class="sc-n">team ${scDayTxt(tv[0])}</span>` : ''}</td>`;
+  const lenderCard = `<div class="sib-score sc-wide"><div class="sib-score-hd"><b>How long cases take, by lender</b><span>typical</span></div>
+    ${lend.length ? `<div class="sib-ins-wrap"><table class="mini-table sc-table sc-lend"><thead><tr><th>Lender</th><th class="num">Cases</th><th class="num">Application → offer</th><th class="num">Offer → completion</th><th class="num">Application → completion</th></tr></thead><tbody>
+      ${lendShown.map(([k, v])=>{ const t = tLend[k] || {}; return `<tr><td><b>${esc(v.nm)}</b></td><td class="num">${v.n||0}</td>${lcell(v.ao, t.ao)}${lcell(v.oc, t.oc)}${lcell(v.ac, t.ac)}</tr>`; }).join('')}
+    </tbody></table></div>
+    ${lend.length > SC_LEND_TOP ? `<p class="sc-foot" style="margin-top:6px;"><button type="button" class="linkish" data-sc-lend>${scUI.allLend ? `Show the top ${SC_LEND_TOP} only` : `Show all ${lend.length} lenders`}</button></p>` : ''}`
+    : '<p class="sc-foot">No mortgage cases with a lender and dates yet.</p>'}
+    <p class="sc-foot">Typical = the middle case (median), from the Bible's dates; the small number is how many cases it's from${T ? '' : ', with the team\'s typical time for that lender below'}. Lender = the provider on the case's Proc Fee or Remo line (or Mums Fee line).</p>
   </div>`;
   // Lost and owed
   const npwP = pct(me.npw||0, me.cs||0), tNpwP = pct(team.npw||0, team.cs||0), now = F.now || {}, tNow = F.teamNow || {};
@@ -13828,7 +13842,7 @@ function scCardsHTML(F){
   const chart = `<div class="sib-score sc-wide"><div class="sib-score-hd"><b>Banked month by month</b><span><i class="sc-key cur"></i>${esc(F.fy)} <i class="sc-key prev"></i>year before</span></div>
     <div class="sc-chart" role="img" aria-label="Banked each month this year and the year before">${ms.map((ym, i)=> `<div class="sc-col" title="${esc(nbrYmLabel(ym, true))}: ${ym > cutoff ? 'to come' : scMoney(cur[i])} · year before ${scMoney(prev[i])}"><div class="sc-bars"><i class="prev" style="height:${prev[i] > 0 ? Math.max(2, prev[i]/max*100) : 0}%"></i><i class="cur" style="height:${cur[i] > 0 ? Math.max(2, cur[i]/max*100) : 0}%"></i></div><span>${esc(NBR_MONTHS[+ym.slice(5,7)-1])}</span></div>`).join('')}</div>
   </div>`;
-  return `${noAdv}${loading}<div class="sib-score-grid sc-grid">${bankCard}${convCard}${timeCard}${lostCard}${leadCard}${chart}</div>`;
+  return `${noAdv}${loading}<div class="sib-score-grid sc-grid">${bankCard}${convCard}${timeCard}${lostCard}${lenderCard}${leadCard}${chart}</div>`;
 }
 // The whole team's figures for the "Everyone" card.
 function scTeamFigures(fy){
@@ -13864,6 +13878,7 @@ function renderScorecard(){
   body.innerHTML = head + (waiting ? '<div class="nml-empty">Loading the Bible figures…</div>' : uid ? scCardsHTML(scFigures(uid, scUI.fy)) : scCardsHTML(scTeamFigures(scUI.fy)) + scTeamTableHTML(scUI.fy));
   document.getElementById('scFy').addEventListener('change', e=>{ scUI.fy = e.target.value; renderScorecard(); });
   const pick = document.getElementById('scUser'); if(pick) pick.addEventListener('change', e=>{ scUI.uid = e.target.value; renderScorecard(); });
+  body.querySelectorAll('[data-sc-lend]').forEach(b=> b.addEventListener('click', ()=>{ scUI.allLend = !scUI.allLend; renderScorecard(); }));
   body.querySelectorAll('[data-sc-user]').forEach(tr=>{
     const go = ()=>{ scUI.uid = tr.dataset.scUser; renderScorecard(); };
     tr.addEventListener('click', go); tr.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
@@ -15853,7 +15868,7 @@ function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || cur
 function nbrViewer(){ return !!currentUser && currentUser.role==='mapa'; }
 function nbrSeeAccess(){ return nbrAccess() || nbrViewer(); }
 let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null, nbrShare = null, nbrLiveSumV = null;
-const NBR_SUM_VERSION = 5;
+const NBR_SUM_VERSION = 6;
 function nbrFullReady(){ return Object.values(nbrLoaded).every(Boolean); }
 function nbrReady(){ return nbrViewer() ? nbrSumLoaded : nbrFullReady(); }
 // Figures come from the summary: always for MAPAs; for Admin / Management only until the full data has arrived.
@@ -16129,15 +16144,41 @@ function scDays(a, b){
   return isFinite(d) && d >= 0 && d < 730 ? d : null;
 }
 function scMed(arr){ const m = median(arr); return m==null ? null : [Math.round(m*2)/2, arr.length]; }
+// Postcode (e.g. "AB12CD") and the first line of an address (letters and numbers only, e.g. "12highstreet").
+const SC_PC = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
+function scPostcode(a){ const m = String(a||'').match(SC_PC); return m ? (m[1]+m[2]).toUpperCase() : ''; }
+function scAddr1(a){ const t = String(a||'').replace(SC_PC, ' ').split(/[,\n]/)[0].toLowerCase().replace(/[^a-z0-9]/g, ''); return t.length >= 5 && /\d/.test(t) && /[a-z]/.test(t) ? t : ''; }
+// A lender's name as a database key, and as shown.
+const SC_NOT_LENDER = /^(initial|comp|completion|pur|purchase|sale|n\/?a|tbc|tba|-+|\?+)$/i;
+function scLenderKey(p){ return String(p||'').trim().toLowerCase().replace(/[.#$\/\[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60); }
 function scYmBack(ym, n){ const d = new Date(Date.UTC(+ym.slice(0,4), +ym.slice(5,7)-1-n, 1)); return d.toISOString().slice(0,7); }
 function scFys(){ const cur = nbrYrOf(nbrThisYm()); return [cur, String(+cur - 1)]; }
 let scCache = null;
 function scBibleStats(){
   if(scCache && scCache.v===nbrVer && scCache.day===nbrToday()) return scCache.out;
   const fys = scFys(), today = nbrToday(), lines = Object.values(NBR_BIB).filter(l=> l && !l.bc && /^\d{4}-\d{2}$/.test(l.month||''));
-  // Life Ins lines (not NPW) by client, with their months.
-  const lifeBy = {};
-  lines.forEach(l=>{ if(nbrBankProd(l.product)==='Life Ins' && !l.npw){ const k = scClientKey(l.client); if(k) (lifeBy[k] = lifeBy[k] || []).push(l.month); } });
+  /* Life Ins lines (not NPW), to find each mortgage client's protection. A line is theirs when it's the same name,
+     when one name has all of the other's (e.g. "John Smith" and "John & Jane Smith"), or when they share a name and
+     the same postcode or first line of address (the mortgage lines' address has the postcode). */
+  const life = [], lifeTok = {};
+  lines.forEach(l=>{
+    if(nbrBankProd(l.product)!=='Life Ins' || l.npw) return;
+    const toks = nbrNameToks(l.client); if(!toks.size) return;
+    const i = life.push({toks, key:[...toks].sort().join(' '), ym:l.month, pc:scPostcode(l.address), a1:scAddr1(l.address)}) - 1;
+    toks.forEach(t=> (lifeTok[t] = lifeTok[t] || []).push(i));
+  });
+  const tookLife = (m, from)=>{
+    const seen = new Set();
+    for(const t of m.toks) for(const i of (lifeTok[t] || [])){
+      if(seen.has(i)) continue; seen.add(i);
+      const x = life[i]; if(x.ym < from) continue;
+      if(x.key===m.key) return true;
+      let hit = 0; x.toks.forEach(w=>{ if(m.toks.has(w)) hit++; });
+      if(hit >= 2 && (hit===x.toks.size || hit===m.toks.size)) return true;
+      if(hit >= 1 && ((x.pc && m.pcs.has(x.pc)) || (x.a1 && m.a1s.has(x.a1)))) return true;
+    }
+    return false;
+  };
   const cells = {}, cell = (g, fy)=>{ const a = cells[g] || (cells[g] = {}); return a[fy] || (a[fy] = {mc:{}, lifeY:new Set(), sa:new Set(), prot:new Set(), protAmt:0, cases:{}, cpP:[], cpL:[], al:[], all:{}, unb:0, claw:0, clawN:0}); };
   const now = {}, nowCell = g=> now[g] || (now[g] = {stuck:0, owedN:0, owed:0});
   const stuck = {};
@@ -16155,9 +16196,10 @@ function scBibleStats(){
       const c = cell(g, fy);
       if(k && String(l.life||'').toUpperCase()==='Y') c.lifeY.add(k);
       if(SC_MORT.has(p) && !l.npw && k){
-        const m = c.mc[k] || (c.mc[k] = {pp:false, ym:l.month});
+        const m = c.mc[k] || (c.mc[k] = {pp:false, ym:l.month, key:k, toks:nbrNameToks(l.client), pcs:new Set(), a1s:new Set()});
         if(!SC_PT.has(p)) m.pp = true;
         if(l.month < m.ym) m.ym = l.month;
+        const pc = scPostcode(l.address), a1 = scAddr1(l.address); if(pc) m.pcs.add(pc); if(a1) m.a1s.add(a1);
       }
       if(p==='Life Ins' && !l.npw && k){
         if(String(l.life||'').toUpperCase()==='SA') c.sa.add(k);
@@ -16167,8 +16209,11 @@ function scBibleStats(){
       }
       if(SC_MORT.has(p) && !l.npw){ const cp = scDays(l.compDate, l.datePaid); if(cp!=null) c.cpP.push(cp); }
       if(SC_CASE.has(p) && !l.npw && k && l.appDate){
-        const ck = k+'|'+l.appDate, x = c.cases[ck] || (c.cases[ck] = {app:l.appDate, offer:'', comp:''});
+        const ck = k+'|'+l.appDate, x = c.cases[ck] || (c.cases[ck] = {app:l.appDate, offer:'', comp:'', lender:'', lenderMums:true});
         if(l.offerDate && (!x.offer || l.offerDate < x.offer)) x.offer = l.offerDate;
+        // The lender: the Proc Fee / Remo line's provider, or the Mums Fee line's when that's all there is.
+        // (A Mums Fee line's provider is sometimes the fee type, "Initial" or "Comp", not the lender.)
+        if(String(l.provider||'').trim() && !SC_NOT_LENDER.test(String(l.provider).trim()) && (!x.lender || (x.lenderMums && p!=='Mums Fee'))){ x.lender = String(l.provider).trim().replace(/\s+/g, ' '); x.lenderMums = p==='Mums Fee'; }
         if(l.compDate && (!x.comp || l.compDate < x.comp)) x.comp = l.compDate;
       }
       if((SC_MORT.has(p) || p==='Mums Fee') && k) c.all[k] = (c.all[k]==null ? true : c.all[k]) && !!l.npw;
@@ -16184,7 +16229,7 @@ function scBibleStats(){
     Object.entries(byFy).forEach(([fy, c])=>{
       let mc = 0, pr = 0, ppC = 0, ppP = 0;
       Object.entries(c.mc).forEach(([k, m])=>{
-        const from = scYmBack(m.ym, 12), took = c.lifeY.has(k) || (lifeBy[k] || []).some(ym=> ym >= from);
+        const from = scYmBack(m.ym, 12), took = c.lifeY.has(k) || tookLife(m, from);
         mc++; if(took) pr++; if(m.pp){ ppC++; if(took) ppP++; }
       });
       const cases = Object.values(c.cases), all = Object.values(c.all);
@@ -16192,6 +16237,19 @@ function scBibleStats(){
         ao: scMed(cases.map(z=> scDays(z.app, z.offer)).filter(d=> d!=null)), oc: scMed(cases.map(z=> scDays(z.offer, z.comp)).filter(d=> d!=null)),
         ac: scMed(cases.map(z=> scDays(z.app, z.comp)).filter(d=> d!=null)), cpP: scMed(c.cpP), cpL: scMed(c.cpL), al: scMed(c.al),
         cs: all.length, npw: all.filter(Boolean).length, unb:r2(c.unb), claw:r2(c.claw), clawN:c.clawN};
+      // How long cases take with each lender.
+      const lg = {};
+      cases.forEach(z=>{ const lk = scLenderKey(z.lender); if(!lk) return; const e = lg[lk] || (lg[lk] = {names:{}, list:[]}); e.names[z.lender] = (e.names[z.lender]||0) + 1; e.list.push(z); });
+      const lend = {};
+      Object.entries(lg).forEach(([lk, e])=>{
+        const t = {nm: Object.entries(e.names).sort((a,b)=> b[1]-a[1])[0][0], n: e.list.length,
+          ao: scMed(e.list.map(z=> scDays(z.app, z.offer)).filter(d=> d!=null)), oc: scMed(e.list.map(z=> scDays(z.offer, z.comp)).filter(d=> d!=null)),
+          ac: scMed(e.list.map(z=> scDays(z.app, z.comp)).filter(d=> d!=null))};
+        if(!t.ao && !t.oc && !t.ac) return;
+        Object.keys(t).forEach(q=>{ if(t[q]==null) delete t[q]; });
+        lend[lk.replace(/ /g, '_')] = t;
+      });
+      if(Object.keys(lend).length) x.lend = lend;
       Object.keys(x).forEach(k=>{ if(x[k]==null) delete x[k]; });
       o[fy] = x;
     });

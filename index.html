@@ -1078,6 +1078,8 @@ table.nbr-m-tbl th, table.nbr-m-tbl td, .ask-tbl th, .ask-tbl td{text-align:cent
 .modal.nbr-wide{max-width:860px;}
 .nbr-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:0 14px;}
 .nbr-grid.nbr-grid-2{grid-template-columns:repeat(2, minmax(0,1fr));}
+.nbr-grid.nbr-fix-grid{grid-template-columns:repeat(4, minmax(0,1fr));}
+@media (max-width:700px){ .nbr-grid.nbr-fix-grid{grid-template-columns:repeat(2, minmax(0,1fr));} }
 @media (max-width:700px){ .nbr-grid,.nbr-grid.nbr-grid-2{grid-template-columns:1fr;} }
 body.mode-com .prot-only{display:none !important;}
 body:not(.mode-com) .com-only{display:none !important;}
@@ -7591,6 +7593,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-27a', date:'2026-11-27', items:[ {text:"📒 <b>Signed-off written figures</b>: in <b>New Business → Advisors &amp; upload</b> you can type a past year's written total for each month and its totals by product (e.g. 2025 from last year's Salesboard). The Salesboard then shows those: <b>Written 2025</b> on the by-month view, and a <b>2025 totals</b> row under <b>written by product</b>.", roles:['admin','management']} ]},
   {id:'2026-11-26e', date:'2026-11-26', items:[ {text:"🔠 <b>Tables</b>: column headings are now darker and bolder, so they stand out from the figures."} ]},
   {id:'2026-11-26d', date:'2026-11-26', items:[ {text:"🎯 <b>Targets</b>: the Wills row's banked figure is now the net value (the total ÷ 1.2), the same as on the Salesboard, instead of the full amount written.", roles:['admin','management']} ]},
   {id:'2026-11-26c', date:'2026-11-26', items:[ {text:"🏦 <b>Scorecard</b>: a new <b>How long cases take, by lender</b> card shows application → offer → completion for each lender, next to the team's typical time for that lender. And protection conversion now also finds a client's Life Ins when it's in a joint name or a slightly different name at the same postcode or address.", roles:['mapa','admin','management']} ]},
@@ -16861,16 +16864,21 @@ function renderNbrBoard(){
       <tr class="nbr-tot"><td>Against target</td><td></td><td class="num">${nbrMoney(yt.total - T.written)}</td><td colspan="6" class="nbr-note">Written target ${nbrMoney(T.written)}</td><td class="num">${nbrMoney(yt.banked - T.banked)}</td><td class="nbr-note">Banked target ${nbrMoney(T.banked)}</td></tr>
     </tbody></table></div>`;
 
-  // 3) Written by product by month.
+  // 3) Written by product by month, with last year's totals underneath (the signed-off ones where typed in).
+  const comLT = nbrSum(prev.map(ym=> nbrSum(comIds.map(id=> nbrRow(id, ym))))), lyS = nbrSum(lastYear), fixP = nbrFixedProd(Y-1);
+  const lyProd = Object.fromEntries(NBR_FIX_PRODS.map(([k])=> [k, fixP && fixP[k]!=null ? fixP[k] : k==='com' ? comLT.total : n0(lyS[k]) - n0(comLT[k])]));
+  const lyProdT = NBR_FIX_PRODS.reduce((t, [k])=> t + lyProd[k], 0);
   const prodDet = (r, c)=> [...BOARD_CATS.filter(([k])=> nbrRound(r[k] - c[k])).map(([k, l])=> [esc(l), nbrMoney(r[k] - c[k])]), nbrRound(c.total) ? ['Commercial', nbrMoney(c.total)] : null];
   const prodMob = `<div class="nbr-mob">${nbrMobGroup('The year', [...BOARD_CATS.map(([k, l])=> [l, yt[k] - comT[k]]), ['Commercial', comT.total]].map(([l, v])=> nbrMobRow({name:esc(l), main:nbrMoneyCell(v), side: nbrRound(v) ? `${nbrPct(v, yt.total)} of the year` : ''})).join('')
-    + nbrMobRow({cls:'m-tot', name:`${Y} total`, main:nbrMoneyCell(yt.total)}))}
+    + nbrMobRow({cls:'m-tot', name:`${Y} total`, main:nbrMoneyCell(yt.total)})
+    + nbrMobRow({k:'p:ly', cls:'m-tot', name:`${Y-1} total`, main:nbrMoneyCell(lyProdT), det: NBR_FIX_PRODS.filter(([k])=> nbrRound(lyProd[k])).map(([k, l])=> [esc(l), nbrMoney(lyProd[k])])}))}
     ${nbrMobGroup('Month by month', yms.map((ym,i)=>{ const r = year[i]; return nbrMobRow({k:'p:'+i, cls: ym===selYm ? 'm-sel' : '', name:NBR_MONTHS_LONG[i], main:nbrMoneyCell(r.total), side: r.total ? `${nbrPct(r.total, yt.total)} of the year` : '', det:prodDet(r, com[i])}); }).join(''))}</div>`;
   const prodTable = `<div class="nml-table-wrap nbr-desk"><table class="nml-table nbr-table">
     <thead><tr><th>Month</th>${BOARD_CATS.map(([,l])=> `<th class="num">${esc(l)}</th>`).join('')}<th class="num">Commercial</th><th class="num">Total</th><th class="num">% of year</th></tr></thead>
     <tbody>${yms.map((ym,i)=>{ const r = year[i], c = com[i]; return `<tr class="${ym===selYm ? 'nbr-sel' : ''}"><td>${NBR_MONTHS[i]}</td>${BOARD_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(r[k] - c[k])}</td>`).join('')}<td class="num">${nbrMoneyCell(c.total)}</td><td class="num b">${nbrMoneyCell(r.total)}</td><td class="num">${nbrPct(r.total, yt.total)}</td></tr>`; }).join('')}
       <tr class="nbr-grand"><td>Total</td>${BOARD_CATS.map(([k])=> `<td class="num">${nbrMoneyCell(yt[k] - comT[k])}</td>`).join('')}<td class="num">${nbrMoneyCell(comT.total)}</td><td class="num b">${nbrMoneyCell(yt.total)}</td><td class="num">${yt.total ? '100%' : '–'}</td></tr>
-    </tbody></table></div>`;
+      <tr class="nbr-tot nbr-ly-tot"><td>${Y-1} totals</td>${NBR_FIX_PRODS.map(([k])=> `<td class="num">${nbrMoneyCell(lyProd[k])}</td>`).join('')}<td class="num b">${nbrMoneyCell(lyProdT)}</td><td class="num"></td></tr>
+    </tbody></table></div>${fixP ? `<p class="field-hint">${Y-1} totals: the signed-off figures (New Business → Advisors &amp; upload).</p>` : ''}`;
 
   // 4) Each advisor by month (the spreadsheet's "Advisor by Mth").
   const advCards = advs.filter(a=> !a.special).map(a=>{
@@ -17067,6 +17075,13 @@ function nbrFixedWritten(y){
   const o = (NBR_CFG.fixedWritten || {})[String(y)]; if(!o) return null;
   const a = Array.from({length:12}, (_,i)=>{ const v = o['m'+nbrPad(i+1)]; return v==null || v==='' || !isFinite(+v) ? null : +v; });
   return a.some(v=> v!=null) ? a : null;
+}
+// A past year's signed-off totals by product (proc, mums, prot, sols, val, bc, wills, com), where typed in.
+const NBR_FIX_PRODS = [...BOARD_CATS, ['com','Commercial']];
+function nbrFixedProd(y){
+  const o = ((NBR_CFG.fixedWritten || {})[String(y)] || {}).p; if(!o) return null;
+  const out = {}; NBR_FIX_PRODS.forEach(([k])=>{ const v = o[k]; if(v!=null && v!=='' && isFinite(+v)) out[k] = +v; });
+  return Object.keys(out).length ? out : null;
 }
 function nbrTgtRows(y){
   const ord = o=> { const i = TGT_OFFICES.findIndex(x=> x[0]===(o||'')); return i<0 ? 9 : i; };
@@ -17921,6 +17936,9 @@ function renderNbrSetup(){
         <p class="nbr-p">For a past year, the company's written total each month as reported at the time (including Wills and NPWs). The Salesboard's <b>by month</b> view shows these for that year instead of working them out from the Bible. Leave a month blank to use the Bible.</p>
         <div class="field"><label for="nbrFixY">Year</label><select id="nbrFixY">${nbrFixYears().map(y=> `<option value="${y}" ${y===nbrUI.fixY ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
         <div class="nbr-grid nbr-fix-grid">${NBR_MONTHS.map((m, i)=>{ const f = nbrFixedWritten(nbrUI.fixY); return nfMoney('nbrFix'+i, m, f && f[i]!=null ? f[i] : ''); }).join('')}</div>
+        <h3 class="nbr-h3">Year totals by product</h3>
+        <p class="nbr-p">Shown as the "${nbrUI.fixY} totals" row under the Salesboard's <b>written by product</b> table for ${nbrUI.fixY+1}. Leave one blank to use the Bible.</p>
+        <div class="nbr-grid nbr-fix-grid">${NBR_FIX_PRODS.map(([k, l])=>{ const f = nbrFixedProd(nbrUI.fixY); return nfMoney('nbrFixP_'+k, esc(l), f && f[k]!=null ? f[k] : ''); }).join('')}</div>
         <button type="button" class="btn btn-primary btn-sm" id="nbrSaveFix">Save ${nbrUI.fixY}</button>
       </section>
       <section class="nbr-card">
@@ -17954,6 +17972,8 @@ function renderNbrSetup(){
   document.getElementById('nbrFixY').addEventListener('change', e=>{ nbrUI.fixY = +e.target.value; renderNbrSetup(); });
   document.getElementById('nbrSaveFix').addEventListener('click', ()=>{
     const o = {}; NBR_MONTHS.forEach((m, i)=>{ const raw = String(document.getElementById('nbrFix'+i).value||'').trim(); if(raw!=='') o['m'+nbrPad(i+1)] = Math.round(nfn('nbrFix'+i)*100)/100; });
+    const pr = {}; NBR_FIX_PRODS.forEach(([k])=>{ const id = 'nbrFixP_'+k, raw = String(document.getElementById(id).value||'').trim(); if(raw!=='') pr[k] = Math.round(nfn(id)*100)/100; });
+    if(Object.keys(pr).length) o.p = pr;
     nbrWrite({['config/fixedWritten/'+nbrUI.fixY]: Object.keys(o).length ? o : null}).then(()=> toast(`Saved the signed-off figures for ${nbrUI.fixY}.`, 'success')).catch(err=> toast('Could not save: '+err.message, 'error'));
   });
   document.getElementById('nbrSaveLists').addEventListener('click', ()=>{

@@ -7587,8 +7587,9 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-26a', date:'2026-11-26', items:[ {text:"📊 <b>Scorecard</b>: picking <b>Everyone</b> now shows the same cards for the whole team (banked, conversion, timings, NPWs and leads), with each MAPA side by side underneath. A MAPA's login that isn't linked to their NBR now says so in the table; link it in <b>New Business → Advisors &amp; upload</b> under <b>Dashboard login</b>. And the MAPAs' scorecard boxes no longer go blank when a copy of the tracker from before an update is left open somewhere.", roles:['admin','management']} ]},
   {id:'2026-11-25a', date:'2026-11-25', items:[ {text:"📊 <b>My scorecard</b>: a new <b>Scorecard</b> tab on Insights with your financial year at a glance, each figure next to the team: <b>banked by product</b> from the Bible (and against last year and your target), <b>protection conversion by client</b> (a client with several lines counts once), <b>how long cases take</b> (application → offer → completion → paid), NPWs, clawbacks and fees to come, and how quickly your protection leads are contacted. ▲ ahead of the team, ▼ behind.", roles:['mapa']},
-    {text:"📊 <b>Scorecard</b>: a new tab on Insights with each MAPA's financial year next to the team: banked by product, protection conversion by client, how long cases take, NPWs, clawbacks, fees to come and how quickly protection leads are contacted. Pick <b>Everyone side by side</b> or one MAPA. MAPAs see their own figures once you've opened New Business after this update.", roles:['management']},
+    {text:"📊 <b>Scorecard</b>: a new tab on Insights with each MAPA's financial year next to the team: banked by product, protection conversion by client, how long cases take, NPWs, clawbacks, fees to come and how quickly protection leads are contacted. Pick <b>Everyone</b> or one MAPA. MAPAs see their own figures once you've opened New Business after this update.", roles:['management']},
     {text:"📌 <b>Advisor NBR</b>: the column headings (Client, Lender, Proc fee… Paid) now stay at the top while you scroll down a month's cases.", roles:['admin','management']} ]},
   {id:'2026-11-24c', date:'2026-11-24', items:[ {text:"📒 <b>The Bible here now reads as your Excel Bible</b>: one row per Excel row (a Mums Fee's Initial and Comp, or Sols PUR and SALE, are separate rows), with every Excel column in the same order, and a dropdown filter under each column. Uploading the Bible now <b>matches to the Excel Bible</b>: lines take the Excel's client, amount, dates and payments (advisors' written figures still come from their NBRs). <b>Upload the latest Bible again</b> to bring everything in line.", roles:['admin','management']},
     {text:"💷 <b>Upfront fees owed</b>: a new view on the Bible page listing the Initial (£99 / £100) Mums Fee parts not paid yet, with a total and Download to Excel. Ask Claude now knows what \u201cupfront\u201d and \u201coutstanding\u201d mean too.", roles:['admin','management']} ]},
@@ -13768,7 +13769,7 @@ function scCardsHTML(F){
   const me = F.me || {}, team = F.team || {}, nT = Math.max(1, team.n || 1), fyLbl = nbrFyLabel(F.fy);
   const total = scSum(F.bank), lastTotal = scSum(F.last), teamAvg = F.nTeam ? scSum(F.teamBank) / F.nTeam : null;
   const prods = NBR_BANK_PRODS.filter(p=> Math.abs(F.bank[p]||0) >= 0.5 || Math.abs(F.teamBank[p]||0) >= 0.5);
-  const noAdv = !F.adv && !T ? `<p class="nml-note" style="margin:0 0 12px;">${F.uid===currentUser.id ? 'Your login' : 'This login'} isn't linked to an advisor's NBR yet, so there are no Bible figures. Management can link it in <b>New Business → Advisors &amp; upload</b>.</p>` : '';
+  const noAdv = !F.adv && !T ? `<p class="nml-note" style="margin:0 0 12px;">${F.uid===currentUser.id ? 'Your login' : 'This login'} isn't linked to an advisor's NBR yet, so there are no Bible figures. Management can link it in <b>New Business → Advisors &amp; upload</b>: open the advisor and pick the login under <b>Dashboard login</b>.</p>` : '';
   const loading = !F.loaded ? `<p class="nml-note" style="margin:0 0 12px;">The Bible figures appear once Management have opened New Business since this update.</p>` : '';
   const big = (v, lbl)=> `<div class="sib-score-big"><span class="v">${v}</span><span class="l">${lbl}</span></div>`;
   // Banked by product
@@ -13843,7 +13844,7 @@ function scTeamTableHTML(fy){
   const cell = (v, txt)=> v==null ? '<td class="num">—</td>' : `<td class="num">${txt}</td>`;
   return `<div class="insights-card"><h4>Everyone side by side</h4><div class="sib-ins-wrap"><table class="mini-table sc-table"><thead><tr><th>MAPA</th><th class="num">Banked</th><th class="num">Protection conversion</th><th class="num">Application → completion</th><th class="num">NPW</th><th class="num">Lead → first attempt</th><th class="num">Tried within 24h</th><th class="num">No next step</th></tr></thead><tbody>
     ${rows.map(({u, F})=>{ const me = F.me || {}, m = F.mine;
-      return `<tr class="nbr-click" data-sc-user="${esc(F.uid)}" tabindex="0"><td><b>${esc(u.name)}</b></td>${cell(F.adv ? 1 : null, scMoney(scSum(F.bank)))}${cell(me.mc ? 1 : null, `${pctTxt(me.pr, me.mc)} <span class="sc-n">(${me.pr} of ${me.mc})</span>`)}${cell(me.ac ? 1 : null, me.ac ? scDayTxt(me.ac[0]) : '')}${cell(me.cs ? 1 : null, `${pctTxt(me.npw||0, me.cs)}`)}${cell(m.first, fmtDur(m.first))}${cell(m.within[1] || null, pctTxt(m.within[0], m.within[1]))}<td class="num">${m.noNext}</td></tr>`; }).join('')}
+      return `<tr class="nbr-click" data-sc-user="${esc(F.uid)}" tabindex="0"><td><b>${esc(u.name)}</b>${F.adv ? '' : ' <span class="sc-n">· not linked to an NBR</span>'}</td>${cell(F.adv ? 1 : null, scMoney(scSum(F.bank)))}${cell(me.mc ? 1 : null, `${pctTxt(me.pr, me.mc)} <span class="sc-n">(${me.pr} of ${me.mc})</span>`)}${cell(me.ac ? 1 : null, me.ac ? scDayTxt(me.ac[0]) : '')}${cell(me.cs ? 1 : null, `${pctTxt(me.npw||0, me.cs)}`)}${cell(m.first, fmtDur(m.first))}${cell(m.within[1] || null, pctTxt(m.within[0], m.within[1]))}<td class="num">${m.noNext}</td></tr>`; }).join('')}
   </tbody></table></div><p class="nml-note" style="margin-bottom:0;">Click a MAPA for their full scorecard. Banked is ${esc(nbrFyLabel(fy))}${fy===nbrFyOf(nbrThisYm()) ? ' so far' : ''}.</p></div>`;
 }
 function renderScorecard(){
@@ -15849,7 +15850,7 @@ function nbrAccess(){ return !!currentUser && (currentUser.role==='admin' || cur
 // MAPAs and protection advisers see the Salesboard only, from a summary (names and totals, no client details).
 function nbrViewer(){ return !!currentUser && currentUser.role==='mapa'; }
 function nbrSeeAccess(){ return nbrAccess() || nbrViewer(); }
-let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null, nbrShare = null;
+let NBR_SUMMARY = null, nbrSumLoaded = false, nbrSumListening = false, nbrPublished = '', nbrPublishTimer = null, nbrShare = null, nbrLiveSumV = null;
 const NBR_SUM_VERSION = 4;
 function nbrFullReady(){ return Object.values(nbrLoaded).every(Boolean); }
 function nbrReady(){ return nbrViewer() ? nbrSumLoaded : nbrFullReady(); }
@@ -15894,8 +15895,22 @@ function scSummary(){
   Object.entries(S.tgt.by).forEach(([g, v])=>{ if(okKey(g)) tg[g] = v; });
   return {fys:S.fys, by, tgt:{y:S.tgt.y, by:tg}};
 }
+/* The tracker doesn't reload itself after an update, so a copy left open on someone's computer from before it can
+   save the summary again in its older form (e.g. without the scorecard's figures), and the MAPAs then see the
+   banked table but empty boxes. So Admin / Management watch the summary's version, put the current one back when
+   it's older, and never replace a newer one. */
+function watchNbrSumVersion(on){
+  const ref = db.ref('nbrBoard/v');
+  ref.off(); nbrLiveSumV = null;
+  if(!on) return;
+  ref.on('value', snap=>{
+    nbrLiveSumV = snap.val();
+    if(!(n0(nbrLiveSumV) >= NBR_SUM_VERSION)){ nbrPublished = ''; nbrPublishSoon(); }
+  }, ()=>{});
+}
 function nbrPublishSummary(){
   if(!nbrAccess() || !nbrListening || !Object.values(nbrLoaded).every(Boolean)) return;
+  if(n0(nbrLiveSumV) > NBR_SUM_VERSION) return; // saved by a newer version of the tracker: leave it
   const A = nbrAgg(), r2 = v=> Math.round(n0(v)*100)/100, key = k=> k || '_';
   // Only keys the database accepts: advisor ids and YYYY-MM months.
   const okKey = k=> /^[^.#$\/\[\]]+$/.test(k), okYm = ym=> /^\d{4}-\d{2}$/.test(ym);
@@ -15924,6 +15939,7 @@ function startNbrListener(){
   // the sign-in check behind them. They start as soon as the sign-in is confirmed.
   if(bootedFromCacheUid) return;
   nbrListening = true; nbrError = '';
+  watchNbrSumVersion(true);
   Object.keys(nbrLoaded).forEach(k=>{
     db.ref('nbr/'+k).on('value', snap=>{
       const v = snap.val() || {};
@@ -15938,7 +15954,7 @@ function startNbrListener(){
   });
 }
 function stopNbrListener(){
-  clearTimeout(nbrPublishTimer); nbrPublished = '';
+  clearTimeout(nbrPublishTimer); nbrPublished = ''; watchNbrSumVersion(false);
   if(nbrSumListening) stopNbrSummary();
   Object.keys(nbrLoaded).forEach(k=>{ db.ref('nbr/'+k).off(); nbrLoaded[k] = false; });
   nbrListening = false; NBR_ADV = {}; NBR_ENT = {}; NBR_NPW = {}; NBR_BIB = {}; NBR_BIB_ALL = {}; NBR_CFG = {}; NBR_BC = {}; NBR_WILLS = {}; NBR_TGT = {}; nbrVer++; nbrUI.upload = null; nbrUI.tgtUp = null;
@@ -15979,9 +15995,24 @@ function nbrAdvMap(){ return nbrOnSummary() ? ((NBR_SUMMARY && NBR_SUMMARY.advis
 function nbrAdvForUser(uid){
   const M = nbrAdvMap(), u = USERS[uid]; if(!uid) return '';
   const linked = Object.keys(M).find(id=> M[id] && M[id].userId===uid); if(linked) return linked;
-  const nm = String(u && u.name || '').trim().toLowerCase();
-  return nm ? (Object.keys(M).find(id=> M[id] && !M[id].userId && String(M[id].name||'').trim().toLowerCase()===nm) || '') : '';
+  const nm = String(u && u.name || '').trim().toLowerCase(); if(!nm) return '';
+  const same = Object.keys(M).find(id=> M[id] && !M[id].userId && String(M[id].name||'').trim().toLowerCase()===nm); if(same) return same;
+  if(u.role!=='mapa') return '';
+  // Failing that, a near match both ways round: "Sam" or "Samuel Jones" for "Sam Jones" (one advisor, one MAPA login).
+  const near = (x, y)=>{
+    const a = nbrPersonToks(x), b = nbrPersonToks(y); if(!a.length || !b.length) return false;
+    const pre = (p, q)=> p===q || (p.length >= 3 && q.length >= 3 && (p.startsWith(q) || q.startsWith(p)));
+    if(!pre(a[0], b[0])) return false;
+    if(a.length < 2 || b.length < 2) return true;
+    const l1 = a[a.length-1], l2 = b[b.length-1];
+    return l1===l2 || ((l1.length===1 || l2.length===1) && l1[0]===l2[0]);
+  };
+  const advs = Object.keys(M).filter(id=> M[id] && !M[id].userId && !M[id].special && M[id].office!=='C' && M[id].office!=='W' && near(M[id].name, u.name));
+  if(advs.length!==1) return '';
+  const others = Object.entries(USERS).filter(([k, x])=> k!==uid && x && x.role==='mapa' && near(M[advs[0]].name, x.name));
+  return others.length ? '' : advs[0];
 }
+function nbrPersonToks(s){ return String(s||'').toLowerCase().replace(/\(.*?\)/g, ' ').split(/[^a-z]+/).filter(Boolean); }
 function nbrLoginOptions(){ return [['', '— not linked —'], ...Object.entries(USERS).filter(([,u])=> u && u.role==='mapa').sort((a,b)=> String(a[1].name).localeCompare(String(b[1].name))).map(([id,u])=> [id, u.name + (u.protAdviser ? ' (Protection Adviser)' : '')])]; }
 function nbrAdvName(id){
   if(id==='wills') return 'Wills cases';

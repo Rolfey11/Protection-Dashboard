@@ -7593,6 +7593,7 @@ function openSibFromLead(key){
    seen" works), so keep ids as they are once published. date: the date shown.
    ---------------------------------------------------------------------------- */
 const WHATS_NEW = [
+  {id:'2026-11-27b', date:'2026-11-27', items:[ {text:"🤖 <b>Ask Claude</b> can now read the Bible's <b>Address / notes</b> column (postcode, first line and notes such as policy types), plus Dept / ref, the Life column, when / how paid, Mums fee type and NPW notes, and the notes on NBR cases and NPWs.", roles:['admin','management']} ]},
   {id:'2026-11-27a', date:'2026-11-27', items:[ {text:"📒 <b>Signed-off written figures</b>: in <b>New Business → Advisors &amp; upload</b> you can type a past year's written total for each month and its totals by product (e.g. 2025 from last year's Salesboard). The Salesboard then shows those: <b>Written 2025</b> on the by-month view, and a <b>2025 totals</b> row under <b>written by product</b>.", roles:['admin','management']} ]},
   {id:'2026-11-26e', date:'2026-11-26', items:[ {text:"🔠 <b>Tables</b>: column headings are now darker and bolder, so they stand out from the figures."} ]},
   {id:'2026-11-26d', date:'2026-11-26', items:[ {text:"🎯 <b>Targets</b>: the Wills row's banked figure is now the net value (the total ÷ 1.2), the same as on the Salesboard, instead of the full amount written.", roles:['admin','management']} ]},
@@ -12380,18 +12381,19 @@ const AIQ_SETS = {
     fields: [['advisor','t','Advisor'], ['office','t','Office'], ['month','m','Month written'], ['week','d','Week (its start)'], ['client','t','Client'], ['lender','t','Lender'],
       ['sale_type','t','Type of sale (Pur, Remo, Prod.Trans, BTL PT…)'], ['lead_source','t','Lead provider'], ['proc_fee','n','Proc fee £'], ['mums_fee','n','Mums (client) fee £'],
       ['protection','n','Protection £'], ['sols_ref','n','Sols referral £'], ['val_ref','n','Val referral £'], ['total','n','All the fees £'],
-      ['app_submitted','d','Date the application was submitted'], ['switch_date','d','Date a product transfer switches']],
+      ['app_submitted','d','Date the application was submitted'], ['switch_date','d','Date a product transfer switches'],
+      ['notes','t','The NBR\'s notes column: postcode, first line of address, switch date for PTs and free-text notes. Use contains to search it.']],
     rows: ()=> Object.values(NBR_ENT).filter(e=> e && e.month).map(e=> ({advisor:nbrAdvName(e.adv), office:aiqAdvOffice(e.adv), month:aiqYm(e.month), week:aiqDate(e.week),
       client:e.client || '', lender:e.lender || '', sale_type:e.saleType || '', lead_source:e.leadProvider || e.leadProv || '', proc_fee:aiqNum(e.proc), mums_fee:aiqNum(e.mums),
-      protection:aiqNum(e.prot), sols_ref:aiqNum(e.sols), val_ref:aiqNum(e.val), total:nbrRound(nbrEntTotal(e)), app_submitted:aiqDate(e.appSub), switch_date:aiqDate(e.switchDate)})),
+      protection:aiqNum(e.prot), sols_ref:aiqNum(e.sols), val_ref:aiqNum(e.val), total:nbrRound(nbrEntTotal(e)), app_submitted:aiqDate(e.appSub), switch_date:aiqDate(e.switchDate), notes:String(e.notes||'')})),
   },
   nbr_npw: {
     about: "NPWs (not proceeding) from the advisors' NBRs, taken off written in the month they are recorded.",
     start: ()=> startNbrListener(), ready: aiqNbrOk, allowed: ()=> nbrAccess(),
     fields: [['advisor','t','Advisor'], ['office','t','Office'], ['month','m','Month recorded'], ['client','t','Client'], ['lender','t','Lender / insurer'],
-      ['proc_fee','n','Proc fee £'], ['mums_fee','n','Mums fee £'], ['protection','n','Protection £'], ['sols_ref','n','Sols £'], ['total','n','Total £']],
+      ['proc_fee','n','Proc fee £'], ['mums_fee','n','Mums fee £'], ['protection','n','Protection £'], ['sols_ref','n','Sols £'], ['total','n','Total £'], ['notes','t','Notes']],
     rows: ()=> Object.values(NBR_NPW).filter(x=> x && x.month).map(x=> ({advisor:nbrAdvName(x.adv), office:aiqAdvOffice(x.adv), month:aiqYm(x.month), client:x.client || '',
-      lender:x.lender || '', proc_fee:aiqNum(x.proc), mums_fee:aiqNum(x.mums), protection:aiqNum(x.prot), sols_ref:aiqNum(x.sols), total:nbrRound(nbrNpwTotal(x))})),
+      lender:x.lender || '', proc_fee:aiqNum(x.proc), mums_fee:aiqNum(x.mums), protection:aiqNum(x.prot), sols_ref:aiqNum(x.sols), total:nbrRound(nbrNpwTotal(x)), notes:String(x.notes||'')})),
   },
   bible_lines: {
     about: 'The Bible: one line per piece of income (a fee) with what has been paid. A fee that is more than one row in the Excel Bible (a Mums Fee Initial and Comp, or Sols PUR and SALE) is one line here; bible_fee_parts has a row for each. Products include Proc Fee, Prod Tfr, BTL PT, Remo, Mums Fee, Sols Fee, Val Fee, Life Ins, Gen Ins (B&C), Commercial (C …). status is Written, Offered, Completed, Part-Paid, Paid or NPW. The dashboard reports by calendar year (January to December); the Excel Bible\'s own financial year runs March to February (FY26 = Mar 2026 to Feb 2027). For money banked use bible_payments.',
@@ -12400,12 +12402,16 @@ const AIQ_SETS = {
       ['lead_source','t','Source'], ['amount','n','The whole fee £ (a Mums Fee paid in parts is one line here: see bible_fee_parts)'], ['month_written','m','Month written'], ['status','t','Written, Offered, Completed, Part-Paid, Paid or NPW'],
       ['paid','n','Paid so far £'], ['outstanding','n','Still to come £'], ['date_paid','d','First payment date'], ['last_date_paid','d','Latest payment date'],
       ['app_date','d','Application date'], ['offer_date','d','Offer date'], ['completion_date','d','Completion date'], ['switch_date','d','Product transfer switch date'],
-      ['npw','b','Not proceeding'], ['from_nbr','b','Made from an NBR case']],
+      ['npw','b','Not proceeding'], ['from_nbr','b','Made from an NBR case'],
+      ['address_notes','t','The Excel Bible\'s Address column: postcode, first line of address and free-text notes (e.g. the policy types, switch details). Use contains to search it.'],
+      ['dept_ref','t','Dept / ref'], ['life','t','Life column: Y = protection taken with the mortgage, SA = standalone protection'],
+      ['when','t','When the fee is due (upfront, on offer, on comp…)'], ['how','t','How it was paid'], ['mums_fee_type','t','Mums fee type'], ['npw_note','t','Why it is NPW (note)']],
     rows: ()=> Object.values(NBR_BIB).filter(Boolean).map(l=>{ const pays = nbrLinePays(l).map(x=> aiqDate(x.datePaid)).filter(Boolean).sort();
       return {advisor:nbrAdvName(nbrLineGroup(l)), office:AIQ_OFFICE[nbrLineOffice(l)] || '', client:l.client || '', product:l.product || '', provider:l.provider || '',
         lead_source:l.source || '', amount:aiqNum(l.amount), month_written:aiqYm(l.month), status:(BIB_STATUS[nbrBibStatus(l)] || [''])[0], paid:nbrRound(nbrLinePaidTotal(l)),
         outstanding:nbrRound(nbrLineOutstanding(l)), date_paid:pays[0] || '', last_date_paid:pays[pays.length-1] || '', app_date:aiqDate(l.appDate), offer_date:aiqDate(l.offerDate),
-        completion_date:aiqDate(l.compDate), switch_date:aiqDate(l.switchDate), npw:aiqYN(l.npw), from_nbr:aiqYN(l.entry)}; }),
+        completion_date:aiqDate(l.compDate), switch_date:aiqDate(l.switchDate), npw:aiqYN(l.npw), from_nbr:aiqYN(l.entry),
+        address_notes:String(l.address||''), dept_ref:String(l.dept||''), life:String(l.life||''), when:String(l.when||''), how:String(l.how||''), mums_fee_type:String(l.mumsType||''), npw_note:String(l.npwNote||'')}; }),
   },
   bible_fee_parts: {
     about: "Each part of a Bible fee, paid or not. A fee paid in more than one go is one line in bible_lines but a row per part here. A Mums Fee is usually an Initial part (the £99 / £100 upfront fee: the Excel Bible's Provider column says Initial) and a Comp part (the rest, on offer or completion); sometimes Admin. For outstanding initial fees, use part = Initial and status = Outstanding (not the whole line's status). A line with one payment is one part.",
